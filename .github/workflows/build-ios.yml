@@ -21,12 +21,13 @@ jobs:
         run: |
           flutter pub get
           flutter create . --platforms=ios
+          echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Debug.xcconfig
+          echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Release.xcconfig
+          sed -i '' 's/DEVELOPMENT_TEAM = "";/DEVELOPMENT_TEAM = "0000000000";/g' ios/Runner.xcodeproj/project.pbxproj
           cd ios && pod install && cd ..
 
       - name: Build unsigned .ipa
         run: |
-          sed -i '' 's/DEVELOPMENT_TEAM = "";/DEVELOPMENT_TEAM = "0000000000";/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/PRODUCT_BUNDLE_IDENTIFIER = "";/PRODUCT_BUNDLE_IDENTIFIER = com.example.melodi;/g' ios/Runner.xcodeproj/project.pbxproj
           flutter build ios --debug --no-codesign
           mkdir -p build/unsigned_ipa/Payload
           cp -r build/ios/debug/iphoneos/Runner.app build/unsigned_ipa/Payload/
