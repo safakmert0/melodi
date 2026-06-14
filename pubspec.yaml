@@ -23,7 +23,7 @@ dependencies:
   # Music Scanning & Metadata
   on_audio_query: ^2.9.0
   permission_handler: ^11.3.1
-  audio_metadata_reader: ^0.5.0
+  audio_metadata_reader: ^1.6.0
 
   # File Import
   file_picker: ^8.0.3
@@ -38,7 +38,7 @@ dependencies:
   cached_network_image: ^3.3.1
   google_fonts: ^6.2.1
   shimmer: ^3.0.0
-  sliding_up_panel: ^2.8.3
+  sliding_up_panel: ^2.0.0+1
   flutter_animate: ^4.5.0
 
   # Utilities
