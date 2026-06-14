@@ -81,7 +81,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   Duration get bufferedPosition => _player.bufferedPosition;
   Duration get duration => _player.duration ?? Duration.zero;
   Stream<Duration> get positionStream => _player.positionStream;
-  Stream<Duration> get durationStream => _player.durationStream;
+  Stream<Duration> get durationStream => _player.durationStream.map((d) => d ?? Duration.zero);
   Stream<PlayerState> get playerStateStream => _player.playerStateStream;
   Stream<ProcessingState> get processingStateStream =>
       _player.processingStateStream;
@@ -172,7 +172,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (_currentIndex == -1) _currentIndex = 0;
   }
 
-  Future<void> setRepeatMode(RepeatMode mode) async {
+  Future<void> _setRepeatMode(RepeatMode mode) async {
     _repeatMode = mode;
     switch (mode) {
       case RepeatMode.off:
@@ -317,14 +317,14 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
     switch (repeatMode) {
       case AudioServiceRepeatMode.none:
-        await setRepeatMode(RepeatMode.off);
+        await _setRepeatMode(RepeatMode.off);
         break;
       case AudioServiceRepeatMode.one:
-        await setRepeatMode(RepeatMode.one);
+        await _setRepeatMode(RepeatMode.one);
         break;
       case AudioServiceRepeatMode.all:
       case AudioServiceRepeatMode.group:
-        await setRepeatMode(RepeatMode.all);
+        await _setRepeatMode(RepeatMode.all);
         break;
     }
   }
@@ -343,8 +343,11 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   @override
   Future<int> addQueueItem(MediaItem mediaItem) async {
-    final song = _queue.firstWhereOrNull((s) => s.id == mediaItem.id);
-    if (song != null) {
+    final song = _queue.firstWhere(
+      (s) => s.id == mediaItem.id,
+      orElse: () => _queue[0],
+    );
+    if (song.id == mediaItem.id) {
       await addToQueue(song);
       return _queue.length - 1;
     }
@@ -357,7 +360,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   @override
-  Future<void> click([MediaButton button = MediaButton.aa]) async {
+  Future<void> click([MediaButton button = MediaButton.play]) async {
     if (_player.playing) {
       await pause();
     } else {
@@ -369,4 +372,5 @@ class AudioPlayerHandler extends BaseAudioHandler
     _player.dispose();
   }
 }
+
 enum RepeatMode { off, all, one }
