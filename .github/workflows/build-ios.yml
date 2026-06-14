@@ -7,13 +7,14 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Flutter
-        uses: kuhnroyal/flutter-fvm-action@v3
+        uses: subosito/flutter-action@v2
         with:
+          channel: stable
           flutter-version: 3.44.2
 
       - name: Install dependencies
