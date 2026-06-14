@@ -27,7 +27,7 @@ class PlayerProvider extends ChangeNotifier {
   Duration get duration => _handler.duration;
   int get currentIndex => _handler.currentIndex;
   Stream<Duration> get positionStream => _handler.positionStream;
-  Stream<Duration> get durationStream => _handler.durationStream;
+  Stream<Duration?> get durationStream => _handler.durationStream;
 
   void _setupListeners() {
     _positionSub = _handler.positionStream.listen((_) {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
@@ -74,11 +75,12 @@ class AudioPlayerHandler extends BaseAudioHandler
           : null;
   bool get isShuffled => _isShuffled;
   LoopStyle get repeatMode => _repeatMode;
+  bool get isPlaying => _player.playing;
   Duration get position => _player.position;
   Duration get bufferedPosition => _player.bufferedPosition;
   Duration get duration => _player.duration ?? Duration.zero;
   Stream<Duration> get positionStream => _player.positionStream;
-  Stream<Duration> get durationStream => _player.durationStream;
+  Stream<Duration?> get durationStream => _player.durationStream;
   Stream<PlayerState> get playerStateStream => _player.playerStateStream;
   Stream<ProcessingState> get processingStateStream =>
       _player.processingStateStream;
@@ -189,14 +191,16 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   @override
-  Future<void> seekForward([Duration offset = const Duration(seconds: 10)]) async {
+  Future<void> seekForward([bool immediate = true]) async {
+    final offset = const Duration(seconds: immediate ? 10 : 30);
     final newPos = _player.position + offset;
     final dur = _player.duration ?? Duration.zero;
     await _player.seek(newPos > dur ? dur : newPos);
   }
 
   @override
-  Future<void> seekBackward([Duration offset = const Duration(seconds: 10)]) async {
+  Future<void> seekBackward([bool immediate = true]) async {
+    final offset = const Duration(seconds: immediate ? 10 : 30);
     final newPos = _player.position - offset;
     await _player.seek(newPos < Duration.zero ? Duration.zero : newPos);
   }

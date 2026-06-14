@@ -39,7 +39,7 @@ Future<void> main() async {
       androidNotificationOngoing: true,
       androidStopForegroundOnPause: true,
       androidShowNotificationBadge: true,
-      notificationColor: 0xFF1DB954,
+      notificationColor: const Color(0xFF1DB954),
       fastForwardInterval: const Duration(seconds: 10),
       rewindInterval: const Duration(seconds: 10),
     ),
