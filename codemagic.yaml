@@ -1,0 +1,30 @@
+workflows:
+  melodi-ios:
+    name: Melodi iOS Build
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      vars:
+        APP_ID: com.melodi.app
+        APP_NAME: Melodi
+    scripts:
+      - name: Install dependencies
+        script: |
+          flutter pub get
+          cd ios && pod install && cd ..
+      - name: Build iOS (unsigned .ipa)
+        script: |
+          flutter build ios --debug --no-codesign
+          mkdir -p build/unsigned_ipa/Payload
+          cp -r build/ios/debug/iphoneos/Runner.app build/unsigned_ipa/Payload/
+          cd build/unsigned_ipa
+          zip -r ../Melodi-unsigned.ipa Payload/
+    artifacts:
+      - build/Melodi-unsigned.ipa
+      - build/ios/debug/iphoneos/Runner.app
+    publishing:
+      email:
+        recipients:
+          - user@example.com
