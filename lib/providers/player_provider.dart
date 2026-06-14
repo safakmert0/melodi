@@ -19,10 +19,10 @@ class PlayerProvider extends ChangeNotifier {
   AudioPlayerHandler get handler => _handler;
 
   SongModel? get currentSong => _handler.currentSong;
-  List<SongModel> get queue => _handler.queue;
-  bool get isPlaying => _handler.playbackState.value.playing;
+  List<SongModel> get queue => _handler.songQueue;
+  bool get isPlaying => _handler.isPlaying;
   bool get isShuffled => _handler.isShuffled;
-  RepeatMode get repeatMode => _handler.repeatMode;
+  LoopStyle get repeatMode => _handler.repeatMode;
   Duration get position => _handler.position;
   Duration get duration => _handler.duration;
   int get currentIndex => _handler.currentIndex;
@@ -62,7 +62,7 @@ class PlayerProvider extends ChangeNotifier {
   }
 
   Future<void> playPause() async {
-    if (_handler.playbackState.value.playing) {
+    if (_handler.isPlaying) {
       await pause();
     } else {
       await play();
@@ -101,14 +101,14 @@ class PlayerProvider extends ChangeNotifier {
 
   Future<void> cycleRepeatMode() async {
     switch (_handler.repeatMode) {
-      case RepeatMode.off:
-        await _handler._setRepeatMode(RepeatMode.all);
+      case LoopStyle.off:
+        await _handler.setLoopStyle(LoopStyle.all);
         break;
-      case RepeatMode.all:
-        await _handler._setRepeatMode(RepeatMode.one);
+      case LoopStyle.all:
+        await _handler.setLoopStyle(LoopStyle.one);
         break;
-      case RepeatMode.one:
-        await _handler._setRepeatMode(RepeatMode.off);
+      case LoopStyle.one:
+        await _handler.setLoopStyle(LoopStyle.off);
         break;
     }
     notifyListeners();

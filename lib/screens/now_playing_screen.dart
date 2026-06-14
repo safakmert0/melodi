@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../core/extensions/duration_ext.dart';
 import '../providers/player_provider.dart';
-import '../services/audio_handler.dart' show RepeatMode;
+import '../services/audio_handler.dart';
 import '../widgets/seek_bar.dart';
 import '../widgets/image_with_fallback.dart';
 import '../widgets/queue_sheet.dart';
@@ -223,7 +223,7 @@ class NowPlayingScreen extends StatelessWidget {
                         IconButton(
                           icon: Icon(
                             Icons.repeat_rounded,
-                            color: player.repeatMode != RepeatMode.off
+                            color: player.repeatMode != LoopStyle.off
                                 ? AppTheme.primaryColor
                                 : AppTheme.textSecondary,
                             size: 24,
@@ -235,10 +235,10 @@ class NowPlayingScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   // Repeat mode indicator
-                  if (player.repeatMode != RepeatMode.off)
+                  if (player.repeatMode != LoopStyle.off)
                     Center(
                       child: Text(
-                        player.repeatMode == RepeatMode.all
+                        player.repeatMode == LoopStyle.all
                             ? 'Repeat All'
                             : 'Repeat One',
                         style: const TextStyle(

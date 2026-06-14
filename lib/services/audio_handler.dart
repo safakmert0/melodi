@@ -15,7 +15,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   List<SongModel> _originalQueue = [];
   int _currentIndex = -1;
   bool _isShuffled = false;
-  RepeatMode _repeatMode = RepeatMode.off;
+  LoopStyle _repeatMode = LoopStyle.off;
   bool _isInitialized = false;
 
   AudioPlayerHandler() {
@@ -61,14 +61,11 @@ class AudioPlayerHandler extends BaseAudioHandler
       androidCompactActionIndices: const [0, 1, 3],
       processingState: AudioProcessingState.ready,
       playing: isPlaying,
-      position: _player.position,
-      bufferedPosition: _player.bufferedPosition,
-      speed: _player.speed,
       queueIndex: index,
     ));
   }
 
-  List<SongModel> get queue => List.unmodifiable(_queue);
+  List<SongModel> get songQueue => List.unmodifiable(_queue);
   List<SongModel> get originalQueue => List.unmodifiable(_originalQueue);
   int get currentIndex => _currentIndex;
   SongModel? get currentSong =>
@@ -76,12 +73,12 @@ class AudioPlayerHandler extends BaseAudioHandler
           ? _queue[_currentIndex]
           : null;
   bool get isShuffled => _isShuffled;
-  RepeatMode get repeatMode => _repeatMode;
+  LoopStyle get repeatMode => _repeatMode;
   Duration get position => _player.position;
   Duration get bufferedPosition => _player.bufferedPosition;
   Duration get duration => _player.duration ?? Duration.zero;
   Stream<Duration> get positionStream => _player.positionStream;
-  Stream<Duration> get durationStream => _player.durationStream.map((d) => d ?? Duration.zero);
+  Stream<Duration> get durationStream => _player.durationStream;
   Stream<PlayerState> get playerStateStream => _player.playerStateStream;
   Stream<ProcessingState> get processingStateStream =>
       _player.processingStateStream;
@@ -172,16 +169,16 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (_currentIndex == -1) _currentIndex = 0;
   }
 
-  Future<void> _setRepeatMode(RepeatMode mode) async {
+  Future<void> setLoopStyle(LoopStyle mode) async {
     _repeatMode = mode;
     switch (mode) {
-      case RepeatMode.off:
+      case LoopStyle.off:
         _player.setLoopMode(LoopMode.off);
         break;
-      case RepeatMode.all:
+      case LoopStyle.all:
         _player.setLoopMode(LoopMode.all);
         break;
-      case RepeatMode.one:
+      case LoopStyle.one:
         _player.setLoopMode(LoopMode.one);
         break;
     }
@@ -191,19 +188,21 @@ class AudioPlayerHandler extends BaseAudioHandler
     await _player.seek(position);
   }
 
-  Future<void> seekForward() async {
-    final newPos = _player.position + const Duration(seconds: 10);
+  @override
+  Future<void> seekForward([Duration offset = const Duration(seconds: 10)]) async {
+    final newPos = _player.position + offset;
     final dur = _player.duration ?? Duration.zero;
     await _player.seek(newPos > dur ? dur : newPos);
   }
 
-  Future<void> seekBackward() async {
-    final newPos = _player.position - const Duration(seconds: 10);
+  @override
+  Future<void> seekBackward([Duration offset = const Duration(seconds: 10)]) async {
+    final newPos = _player.position - offset;
     await _player.seek(newPos < Duration.zero ? Duration.zero : newPos);
   }
 
   void _onTrackComplete() {
-    if (_repeatMode == RepeatMode.one) {
+    if (_repeatMode == LoopStyle.one) {
       _player.seek(Duration.zero);
       _player.play();
       return;
@@ -213,7 +212,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (nextIndex < _queue.length) {
       _currentIndex = nextIndex;
       _playCurrent();
-    } else if (_repeatMode == RepeatMode.all) {
+    } else if (_repeatMode == LoopStyle.all) {
       _currentIndex = 0;
       _playCurrent();
     }
@@ -263,7 +262,7 @@ class AudioPlayerHandler extends BaseAudioHandler
               duration: song.duration,
             ))
         .toList();
-    queue.add(items);
+    super.queue.add(items);
   }
 
   @override
@@ -280,7 +279,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (_currentIndex + 1 < _queue.length) {
       _currentIndex++;
       await _playCurrent();
-    } else if (_repeatMode == RepeatMode.all) {
+    } else if (_repeatMode == LoopStyle.all) {
       _currentIndex = 0;
       await _playCurrent();
     }
@@ -317,14 +316,14 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
     switch (repeatMode) {
       case AudioServiceRepeatMode.none:
-        await _setRepeatMode(RepeatMode.off);
+        await setLoopStyle(LoopStyle.off);
         break;
       case AudioServiceRepeatMode.one:
-        await _setRepeatMode(RepeatMode.one);
+        await setLoopStyle(LoopStyle.one);
         break;
       case AudioServiceRepeatMode.all:
       case AudioServiceRepeatMode.group:
-        await _setRepeatMode(RepeatMode.all);
+        await setLoopStyle(LoopStyle.all);
         break;
     }
   }
@@ -343,11 +342,8 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   @override
   Future<int> addQueueItem(MediaItem mediaItem) async {
-    final song = _queue.firstWhere(
-      (s) => s.id == mediaItem.id,
-      orElse: () => _queue[0],
-    );
-    if (song.id == mediaItem.id) {
+    final song = _queue.firstWhereOrNull((s) => s.id == mediaItem.id);
+    if (song != null) {
       await addToQueue(song);
       return _queue.length - 1;
     }
@@ -360,7 +356,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   @override
-  Future<void> click([MediaButton button = MediaButton.play]) async {
+  Future<void> click([MediaButton? button]) async {
     if (_player.playing) {
       await pause();
     } else {
@@ -372,5 +368,4 @@ class AudioPlayerHandler extends BaseAudioHandler
     _player.dispose();
   }
 }
-
-enum RepeatMode { off, all, one }
+enum LoopStyle { off, all, one }
