@@ -342,12 +342,10 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   Future<void> enableGaplessPlayback() async {
     _gaplessPlaybackEnabled = true;
-    await _player.setGaplessPlaybackEnabled(true);
   }
 
   Future<void> disableGaplessPlayback() async {
     _gaplessPlaybackEnabled = false;
-    await _player.setGaplessPlaybackEnabled(false);
   }
 
   Future<void> setGaplessPlaybackEnabled(bool enabled) async {
@@ -360,7 +358,6 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   Future<void> setCrossfade(Duration duration) async {
     _crossfadeDuration = duration;
-    await _player.setCrossfade(duration);
   }
 
   Future<void> setAutoShuffle(bool enabled) async {

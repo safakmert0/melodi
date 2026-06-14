@@ -4,6 +4,7 @@ import '../core/constants.dart';
 import '../core/extensions/duration_ext.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
+import '../models/song_model.dart';
 import '../providers/playlist_provider.dart';
 import '../services/audio_handler.dart';
 import '../widgets/seek_bar.dart';

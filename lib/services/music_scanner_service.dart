@@ -25,6 +25,28 @@ class MusicScannerService {
     return await Permission.storage.status;
   }
 
+  String? _getFilePath(dynamic raw) {
+    try { return raw.filePath as String?; } catch (_) {}
+    try { return raw.data as String?; } catch (_) {}
+    try { return raw.uri as String?; } catch (_) {}
+    return null;
+  }
+
+  int? _getTrackNumber(dynamic raw) {
+    try { return raw.trackNumber as int?; } catch (_) {}
+    return null;
+  }
+
+  int? _getDiscNumber(dynamic raw) {
+    try { return raw.discNumber as int?; } catch (_) {}
+    return null;
+  }
+
+  int? _getYear(dynamic raw) {
+    try { return raw.year as int?; } catch (_) {}
+    return null;
+  }
+
   Future<List<app.SongModel>> scanMediaLibrary() async {
     final hasPermission = await requestMediaLibraryPermission();
     if (!hasPermission) return [];
@@ -38,13 +60,26 @@ class MusicScannerService {
 
       final songs = <app.SongModel>[];
       for (final raw in rawSongs) {
-        if (raw.filePath == null || raw.filePath!.isEmpty) continue;
-        if (raw.title == null || raw.title!.isEmpty) continue;
+        final filePath = _getFilePath(raw);
+        if (filePath == null || filePath.isEmpty) continue;
+
+        String title;
+        try { title = raw.title ?? raw.displayName ?? 'Unknown'; } catch (_) { title = 'Unknown'; }
+        String artist;
+        try { artist = raw.artist ?? 'Unknown Artist'; } catch (_) { artist = 'Unknown Artist'; }
+        String album;
+        try { album = raw.album ?? 'Unknown Album'; } catch (_) { album = 'Unknown Album'; }
+        int durationMs;
+        try { durationMs = raw.duration ?? 0; } catch (_) { durationMs = 0; }
+        int fileSize;
+        try { fileSize = raw.size ?? 0; } catch (_) { fileSize = 0; }
+        int idInt;
+        try { idInt = raw.id as int; } catch (_) { idInt = 0; }
 
         Uint8List? artwork;
         try {
           final art = await _audioQuery.queryArtwork(
-            raw.id,
+            idInt,
             ArtworkType.AUDIO,
             size: 500,
           );
@@ -52,19 +87,19 @@ class MusicScannerService {
         } catch (_) {}
 
         songs.add(app.SongModel(
-          id: raw.id.toString(),
-          title: raw.title ?? raw.displayName ?? 'Unknown',
-          artist: raw.artist ?? 'Unknown Artist',
-          album: raw.album ?? 'Unknown Album',
+          id: idInt.toString(),
+          title: title,
+          artist: artist,
+          album: album,
           albumArtist: null,
-          duration: Duration(milliseconds: raw.duration ?? 0),
-          filePath: raw.filePath!,
+          duration: Duration(milliseconds: durationMs),
+          filePath: filePath,
           albumArt: artwork,
           genre: null,
-          trackNumber: raw.trackNumber,
-          discNumber: raw.discNumber,
-          year: raw.year,
-          fileSize: raw.size ?? 0,
+          trackNumber: _getTrackNumber(raw),
+          discNumber: _getDiscNumber(raw),
+          year: _getYear(raw),
+          fileSize: fileSize,
         ));
       }
 
@@ -133,7 +168,7 @@ class MusicScannerService {
   Future<List<String>> getCommonMusicDirectories() async {
     final dirs = <String>[];
     if (Platform.isIOS) {
-      final home = Directory.home.path;
+      final home = Platform.environment['HOME'] ?? '';
       final possibleDirs = [
         '$home/Music',
         '$home/iTunes',
