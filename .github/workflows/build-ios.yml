@@ -22,6 +22,10 @@ jobs:
           flutter pub get
           flutter clean
 
+      - name: Create iOS project
+        run: |
+          flutter create . --platforms=ios --org com.melodiapp
+
       - name: Build unsigned .ipa
         run: |
           flutter build ios --release --no-codesign
