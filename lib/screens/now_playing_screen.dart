@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../core/extensions/duration_ext.dart';
 import '../providers/player_provider.dart';
+import '../services/audio_handler.dart';
 import '../widgets/seek_bar.dart';
 import '../widgets/image_with_fallback.dart';
 import '../widgets/queue_sheet.dart';

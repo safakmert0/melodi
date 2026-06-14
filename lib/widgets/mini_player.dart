@@ -39,7 +39,7 @@ class MiniPlayer extends StatelessWidget {
             );
           },
           child: Container(
-            height: AppTheme.miniPlayerHeight,
+            height: AppConstants.miniPlayerHeight,
             decoration: BoxDecoration(
               color: AppTheme.darkSurface,
               border: Border(
