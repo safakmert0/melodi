@@ -36,16 +36,14 @@ class MetadataService {
         title: metadata.title ?? nameWithoutExt,
         artist: metadata.artist ?? 'Unknown Artist',
         album: metadata.album ?? 'Unknown Album',
-        albumArtist: metadata.albumArtist,
-        duration: Duration(
-            milliseconds: metadata.durationMs?.toInt() ?? 0),
+        duration: metadata.duration ?? Duration.zero,
         filePath: filePath,
         albumArt: albumArt,
-        genre: metadata.genre,
+        genre: metadata.genres.isNotEmpty ? metadata.genres.first : null,
         trackNumber: metadata.trackNumber,
         discNumber: metadata.discNumber,
-        year: metadata.year,
-        bitrate: metadata.bitrate?.toInt(),
+        year: metadata.year?.year,
+        bitrate: metadata.bitrate,
         fileSize: fileSize,
       );
     } catch (e) {
