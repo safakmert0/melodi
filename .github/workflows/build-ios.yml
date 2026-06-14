@@ -20,19 +20,16 @@ jobs:
       - name: Install dependencies
         run: |
           flutter pub get
-          flutter create . --platforms=ios
-          echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Debug.xcconfig
-          echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Release.xcconfig
-          sed -i '' 's/DEVELOPMENT_TEAM = "";/DEVELOPMENT_TEAM = "0000000000";/g' ios/Runner.xcodeproj/project.pbxproj
-          cd ios && pod install && cd ..
+          flutter clean
 
       - name: Build unsigned .ipa
         run: |
-          flutter build ios --debug --no-codesign
+          flutter build ios --release --no-codesign
           mkdir -p build/unsigned_ipa/Payload
-          cp -r build/ios/debug/iphoneos/Runner.app build/unsigned_ipa/Payload/
+          cp -r build/ios/release/iphoneos/Runner.app build/unsigned_ipa/Payload/
           cd build/unsigned_ipa
           zip -r ../Melodi-unsigned.ipa Payload/
+          cd ../../
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
