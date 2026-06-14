@@ -20,6 +20,7 @@ jobs:
       - name: Install dependencies
         run: |
           flutter pub get
+          flutter create . --platforms=ios
           cd ios && pod install && cd ..
 
       - name: Build unsigned .ipa
