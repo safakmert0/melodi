@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart' as app;
 import 'metadata_service.dart';
 import 'database_service.dart';
@@ -39,6 +38,7 @@ class MusicScannerService {
 
       final songs = <app.SongModel>[];
       for (final raw in rawSongs) {
+        if (raw.filePath == null || raw.filePath!.isEmpty) continue;
         if (raw.title == null || raw.title!.isEmpty) continue;
 
         Uint8List? artwork;
@@ -58,12 +58,12 @@ class MusicScannerService {
           album: raw.album ?? 'Unknown Album',
           albumArtist: null,
           duration: Duration(milliseconds: raw.duration ?? 0),
-          filePath: raw.data ?? '',
+          filePath: raw.filePath!,
           albumArt: artwork,
           genre: null,
-          trackNumber: null,
-          discNumber: null,
-          year: null,
+          trackNumber: raw.trackNumber,
+          discNumber: raw.discNumber,
+          year: raw.year,
           fileSize: raw.size ?? 0,
         ));
       }
@@ -133,11 +133,11 @@ class MusicScannerService {
   Future<List<String>> getCommonMusicDirectories() async {
     final dirs = <String>[];
     if (Platform.isIOS) {
-      final home = await getApplicationDocumentsDirectory();
+      final home = Directory.home.path;
       final possibleDirs = [
-        '${home.path}/Music',
-        '${home.parent.path}/iTunes',
-        '${home.parent.path}/iTunes/Music',
+        '$home/Music',
+        '$home/iTunes',
+        '$home/iTunes/Music',
         '/var/mobile/Media',
         '/private/var/mobile/Media',
       ];

@@ -1,0 +1,30 @@
+=== MELODI - Build Instructions for Mac User ===
+
+1. Install Flutter (https://flutter.dev):
+   flutter --version  # should be 3.44+ with iOS support
+
+2. Generate iOS project files:
+   cd /path/to/melodi
+   flutter create . --platforms=ios
+
+3. Install dependencies:
+   flutter pub get
+   cd ios && pod install && cd ..
+
+4. Open in Xcode & set your Apple Developer team:
+   open ios/Runner.xcworkspace
+   Go to Signing & Capabilities -> select your Team
+
+5. Build:
+   flutter build ios --debug     # for debug .app
+   flutter build ios --release   # for release .ipa (requires paid dev account)
+
+6. For unsigned IPA (sideload via AltStore/Sideloadly):
+   flutter build ios --debug --no-codesign
+   mkdir -p build/unsigned_ipa/Payload
+   cp -r build/ios/debug/iphoneos/Runner.app build/unsigned_ipa/Payload/
+   cd build/unsigned_ipa && zip -r ../Melodi-unsigned.ipa Payload/
+
+Note: set DEVELOPMENT_TEAM in ios/Runner.xcodeproj/project.pbxproj if needed:
+  sed -i '' 's/DEVELOPMENT_TEAM = "";/DEVELOPMENT_TEAM = "0000000000";/' ios/Runner.xcodeproj/project.pbxproj
+

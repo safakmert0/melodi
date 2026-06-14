@@ -25,15 +25,30 @@ class DatabaseService {
   Future<Database> _initDatabase() async {
     final dir = await getApplicationDocumentsDirectory();
     final path = p.join(dir.path, 'melodi.db');
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: _onCreate,
-    );
+      return await openDatabase(
+        path,
+        version: 2,
+        onCreate: _onCreate,
+        onUpgrade: _onUpgrade,
+      );
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        ALTER TABLE songs ADD COLUMN lyrics TEXT
+      ''');
+      await db.execute('''
+        ALTER TABLE songs ADD COLUMN playbackSpeed REAL DEFAULT 1.0
+      ''');
+      await db.execute('''
+        ALTER TABLE songs ADD COLUMN volumeBoost REAL DEFAULT 1.0
+      ''');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    await db.execute('''
+      await db.execute('''
       CREATE TABLE songs (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
@@ -53,7 +68,10 @@ class DatabaseService {
         dateAdded TEXT NOT NULL,
         isFavorite INTEGER DEFAULT 0,
         playCount INTEGER DEFAULT 0,
-        lastPlayed TEXT
+        lastPlayed TEXT,
+        lyrics TEXT,
+        playbackSpeed REAL DEFAULT 1.0,
+        volumeBoost REAL DEFAULT 1.0
       )
     ''');
 

@@ -21,6 +21,9 @@ class SongModel {
   final bool isFavorite;
   final int playCount;
   final DateTime? lastPlayed;
+  final String? lyrics;
+  final double playbackSpeed;
+  final double volumeBoost;
 
   SongModel({
     required this.id,
@@ -43,6 +46,9 @@ class SongModel {
     this.isFavorite = false,
     this.playCount = 0,
     this.lastPlayed,
+    this.lyrics,
+    this.playbackSpeed = 1.0,
+    this.volumeBoost = 1.0,
   }) : dateAdded = dateAdded ?? DateTime.now();
 
   Map<String, dynamic> toMap() {
@@ -66,6 +72,9 @@ class SongModel {
       'isFavorite': isFavorite ? 1 : 0,
       'playCount': playCount,
       'lastPlayed': lastPlayed?.toIso8601String(),
+      'lyrics': lyrics,
+      'playbackSpeed': playbackSpeed,
+      'volumeBoost': volumeBoost,
     };
   }
 
@@ -94,6 +103,9 @@ class SongModel {
       lastPlayed: map['lastPlayed'] != null
           ? DateTime.parse(map['lastPlayed'] as String)
           : null,
+      lyrics: map['lyrics'] as String?,
+      playbackSpeed: (map['playbackSpeed'] as num?)?.toDouble() ?? 1.0,
+      volumeBoost: (map['volumeBoost'] as num?)?.toDouble() ?? 1.0,
     );
   }
 
@@ -118,6 +130,9 @@ class SongModel {
     bool? isFavorite,
     int? playCount,
     DateTime? lastPlayed,
+    String? lyrics,
+    double? playbackSpeed,
+    double? volumeBoost,
   }) {
     return SongModel(
       id: id ?? this.id,
@@ -140,6 +155,9 @@ class SongModel {
       isFavorite: isFavorite ?? this.isFavorite,
       playCount: playCount ?? this.playCount,
       lastPlayed: lastPlayed ?? this.lastPlayed,
+      lyrics: lyrics ?? this.lyrics,
+      playbackSpeed: playbackSpeed ?? this.playbackSpeed,
+      volumeBoost: volumeBoost ?? this.volumeBoost,
     );
   }
 

@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
 import '../models/song_model.dart';
 import '../core/constants.dart';
 import '../core/extensions/duration_ext.dart';
+import '../providers/player_provider.dart';
+import '../providers/library_provider.dart';
+import '../providers/playlist_provider.dart';
 import 'image_with_fallback.dart';
+import 'queue_sheet.dart';
 
 class SongTile extends StatelessWidget {
   final SongModel song;
@@ -118,7 +123,10 @@ class SongTile extends StatelessWidget {
                         : AppTheme.textTertiary,
                     size: 20,
                   ),
-                  onPressed: onFavorite,
+                  onPressed: onFavorite ??
+                      () => context
+                          .read<LibraryProvider>()
+                          .toggleFavorite(song),
                 ),
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_horiz,
@@ -126,13 +134,23 @@ class SongTile extends StatelessWidget {
                 onSelected: (value) {
                   switch (value) {
                     case 'queue':
-                      onAddToQueue?.call();
+                      (onAddToQueue ??
+                          () => context
+                              .read<PlayerProvider>()
+                              .addToQueue(song))
+                          .call();
                       break;
                     case 'playNext':
-                      onPlayNext?.call();
+                      (onPlayNext ??
+                          () => context
+                              .read<PlayerProvider>()
+                              .insertNext(song))
+                          .call();
                       break;
                     case 'playlist':
-                      onAddToPlaylist?.call();
+                      (onAddToPlaylist ??
+                          () => _showAddToPlaylistSheet(context))
+                          .call();
                       break;
                     case 'album':
                       onViewAlbum?.call();
@@ -190,5 +208,17 @@ class SongTile extends StatelessWidget {
           ),
       minLeadingWidth: artworkSize + 8,
     ).animate().fadeIn(duration: 300.ms);
+  }
+
+  void _showAddToPlaylistSheet(BuildContext context) {
+    final playlists = context.read<PlaylistProvider>().playlists;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => AddToPlaylistSheet(
+        song: song,
+        playlists: playlists,
+      ),
+    );
   }
 }

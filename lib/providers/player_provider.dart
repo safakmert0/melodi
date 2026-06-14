@@ -7,14 +7,20 @@ import '../services/database_service.dart';
 class PlayerProvider extends ChangeNotifier {
   final AudioPlayerHandler _handler;
   final DatabaseService _db = DatabaseService.instance;
+  Timer? _periodicTimer;
 
   PlayerProvider(this._handler) {
     _setupListeners();
+    _periodicTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (hasListeners) notifyListeners();
+    });
   }
 
   StreamSubscription? _positionSub;
   StreamSubscription? _stateSub;
   StreamSubscription? _durationSub;
+  StreamSubscription? _playingSub;
+  StreamSubscription? _processingSub;
 
   AudioPlayerHandler get handler => _handler;
 
@@ -26,8 +32,25 @@ class PlayerProvider extends ChangeNotifier {
   Duration get position => _handler.position;
   Duration get duration => _handler.duration;
   int get currentIndex => _handler.currentIndex;
+  double get playbackSpeed => _handler.playbackSpeed;
+  double get volumeBoost => _handler.volume * 2.0;
+
+  set playbackSpeed(double speed) {
+    _handler.setPlaybackSpeed(speed);
+    notifyListeners();
+  }
+  bool get autoShuffleEnabled => _handler.autoShuffleEnabled;
+  bool get gaplessPlaybackEnabled => _handler.gaplessPlaybackEnabled;
+  Duration get crossfadeDuration => _handler.crossfadeDuration;
+
   Stream<Duration> get positionStream => _handler.positionStream;
   Stream<Duration?> get durationStream => _handler.durationStream;
+  Stream<bool> get playingStream => _handler.playingStream;
+
+  set volume(double volume) {
+    _handler.setVolume(volume);
+    notifyListeners();
+  }
 
   void _setupListeners() {
     _positionSub = _handler.positionStream.listen((_) {
@@ -37,6 +60,12 @@ class PlayerProvider extends ChangeNotifier {
       if (hasListeners) notifyListeners();
     });
     _durationSub = _handler.durationStream.listen((_) {
+      if (hasListeners) notifyListeners();
+    });
+    _playingSub = _handler.playingStream.listen((_) {
+      if (hasListeners) notifyListeners();
+    });
+    _processingSub = _handler.processingStateStream.listen((_) {
       if (hasListeners) notifyListeners();
     });
   }
@@ -134,8 +163,28 @@ class PlayerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setPlaybackSpeed(double speed) async {
+    await _handler.setPlaybackSpeed(speed);
+    notifyListeners();
+  }
+
   Future<void> setVolume(double volume) async {
-    await _handler.setSpeed(volume);
+    await _handler.setVolume(volume);
+    notifyListeners();
+  }
+
+  Future<void> setAutoShuffle(bool enabled) async {
+    await _handler.setAutoShuffle(enabled);
+    notifyListeners();
+  }
+
+  Future<void> setGaplessPlayback(bool enabled) async {
+    await _handler.setGaplessPlaybackEnabled(enabled);
+    notifyListeners();
+  }
+
+  Future<void> setCrossfade(Duration duration) async {
+    await _handler.setCrossfade(duration);
     notifyListeners();
   }
 
@@ -149,9 +198,12 @@ class PlayerProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _periodicTimer?.cancel();
     _positionSub?.cancel();
     _stateSub?.cancel();
     _durationSub?.cancel();
+    _playingSub?.cancel();
+    _processingSub?.cancel();
     super.dispose();
   }
 }

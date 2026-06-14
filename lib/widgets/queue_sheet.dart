@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../core/extensions/duration_ext.dart';
 import '../models/song_model.dart';
+import '../models/playlist_model.dart';
 import '../providers/player_provider.dart';
+import '../providers/playlist_provider.dart';
 import 'image_with_fallback.dart';
 
 class QueueSheet extends StatelessWidget {
@@ -163,12 +165,12 @@ class QueueSheet extends StatelessWidget {
 
 class AddToPlaylistSheet extends StatelessWidget {
   final SongModel song;
-  final List<String> playlistNames;
+  final List<PlaylistModel> playlists;
 
   const AddToPlaylistSheet({
     super.key,
     required this.song,
-    required this.playlistNames,
+    required this.playlists,
   });
 
   @override
@@ -201,18 +203,29 @@ class AddToPlaylistSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          if (playlistNames.isEmpty)
+          if (playlists.isEmpty)
             const Text(
               'No playlists yet. Create one first.',
               style: TextStyle(color: AppTheme.textSecondary),
             )
           else
-            ...playlistNames.map((name) => ListTile(
-                  title: Text(name,
+            ...playlists.map((pl) => ListTile(
+                  title: Text(pl.name,
                       style: const TextStyle(color: AppTheme.textPrimary)),
                   leading: const Icon(Icons.playlist_play_rounded,
                       color: AppTheme.textSecondary),
-                  onTap: () => Navigator.pop(context, name),
+                  onTap: () {
+                    context
+                        .read<PlaylistProvider>()
+                        .addSongToPlaylist(pl.id, song);
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Added to ${pl.name}'),
+                        backgroundColor: AppTheme.primaryColor,
+                      ),
+                    );
+                  },
                 )),
           const SizedBox(height: 8),
           ListTile(
@@ -221,8 +234,64 @@ class AddToPlaylistSheet extends StatelessWidget {
             title: const Text('Create New Playlist',
                 style: TextStyle(color: AppTheme.primaryColor)),
             onTap: () {
-              Navigator.pop(context, '__create_new__');
+              Navigator.pop(context);
+              _showCreatePlaylistDialog(context);
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCreatePlaylistDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.darkSurface,
+        title: const Text('New Playlist',
+            style: TextStyle(color: AppTheme.textPrimary)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: AppTheme.textPrimary),
+          decoration: InputDecoration(
+            hintText: 'Playlist name',
+            hintStyle: const TextStyle(color: AppTheme.textTertiary),
+            filled: true,
+            fillColor: AppTheme.darkCard,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel',
+                style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (controller.text.trim().isNotEmpty) {
+                final pl = await context
+                    .read<PlaylistProvider>()
+                    .createPlaylist(controller.text.trim());
+                context
+                    .read<PlaylistProvider>()
+                    .addSongToPlaylist(pl.id, song);
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Created and added to ${pl.name}'),
+                    backgroundColor: AppTheme.primaryColor,
+                  ),
+                );
+              }
+            },
+            child: const Text('Create',
+                style: TextStyle(color: AppTheme.primaryColor)),
           ),
         ],
       ),

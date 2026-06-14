@@ -31,6 +31,11 @@ class MetadataService {
         albumArt = metadata.pictures!.first.bytes;
       }
 
+      String? lyrics;
+      try {
+        lyrics = metadata.lyrics;
+      } catch (_) {}
+
       return SongModel(
         id: id,
         title: metadata.title ?? nameWithoutExt,
@@ -45,6 +50,7 @@ class MetadataService {
         year: metadata.year?.year,
         bitrate: metadata.bitrate,
         fileSize: fileSize,
+        lyrics: lyrics,
       );
     } catch (e) {
       return _createFallbackMetadata(filePath);

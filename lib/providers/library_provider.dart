@@ -74,6 +74,7 @@ class LibraryProvider extends ChangeNotifier {
         id: entry.key,
         name: first.album,
         artist: first.artist,
+        artwork: first.albumArt,
         songCount: songs.length,
         totalDuration: totalDur,
         year: first.year ?? 0,

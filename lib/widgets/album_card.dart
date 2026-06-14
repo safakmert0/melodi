@@ -1,7 +1,11 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
 import '../models/album_model.dart';
+import '../models/song_model.dart';
 import '../core/constants.dart';
+import '../providers/library_provider.dart';
 import 'image_with_fallback.dart';
 
 class AlbumCard extends StatelessWidget {
@@ -33,52 +37,55 @@ class AlbumCard extends StatelessWidget {
                   color: AppTheme.darkCard,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (album.songIds.isNotEmpty)
-                      FutureBuilder(
-                        future: Future.value(null),
-                        builder: (context, snapshot) {
-                          return Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  AppTheme.darkCard,
-                                  AppTheme.darkCardHover,
-                                ],
-                              ),
+                child: Consumer<LibraryProvider>(
+                  builder: (context, lib, _) {
+                    final songs = lib.getSongsForAlbum(album);
+                    final artBytes = songs.isNotEmpty ? songs.first.albumArt : null;
+                    if (artBytes != null && artBytes.isNotEmpty) {
+                      return Image.memory(artBytes, fit: BoxFit.cover);
+                    }
+                    return Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                AppTheme.darkCard,
+                                AppTheme.darkCardHover,
+                              ],
                             ),
-                            child: const Icon(
-                              Icons.album_rounded,
-                              size: 64,
-                              color: AppTheme.textTertiary,
-                            ),
-                          );
-                        },
-                      ),
-                    Positioned(
-                      bottom: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${album.songCount} songs',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
+                          ),
+                          child: const Icon(
+                            Icons.album_rounded,
+                            size: 64,
+                            color: AppTheme.textTertiary,
                           ),
                         ),
-                      ),
-                    ),
-                  ],
+                        Positioned(
+                          bottom: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${album.songCount} songs',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),

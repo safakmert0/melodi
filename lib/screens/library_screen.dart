@@ -220,9 +220,10 @@ class _AlbumsTab extends StatelessWidget {
           itemCount: albums.length,
           itemBuilder: (context, index) {
             final album = albums[index];
+            final songs = library.getSongsForAlbum(album);
+            final artBytes = songs.isNotEmpty ? songs.first.albumArt : null;
             return GestureDetector(
               onTap: () {
-                final songs = library.getSongsForAlbum(album);
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => _AlbumGridDetailScreen(
@@ -241,16 +242,16 @@ class _AlbumsTab extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppTheme.darkCardHover,
-                          borderRadius:
-                              const BorderRadius.vertical(top: Radius.circular(12)),
-                        ),
-                        child: const Center(
-                          child: Icon(Icons.album_rounded,
-                              size: 48, color: AppTheme.textTertiary),
-                        ),
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                        child: artBytes != null && artBytes.isNotEmpty
+                            ? Image.memory(artBytes, fit: BoxFit.cover, width: double.infinity)
+                            : Container(
+                                color: AppTheme.darkCardHover,
+                                child: const Center(
+                                  child: Icon(Icons.album_rounded, size: 48, color: AppTheme.textTertiary),
+                                ),
+                              ),
                       ),
                     ),
                     Padding(

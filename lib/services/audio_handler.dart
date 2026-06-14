@@ -18,6 +18,9 @@ class AudioPlayerHandler extends BaseAudioHandler
   bool _isShuffled = false;
   LoopStyle _repeatMode = LoopStyle.off;
   bool _isInitialized = false;
+  bool _autoShuffleEnabled = false;
+  bool _gaplessPlaybackEnabled = false;
+  Duration _crossfadeDuration = Duration.zero;
 
   AudioPlayerHandler() {
     _initPlayer();
@@ -32,7 +35,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     });
 
     _player.positionStream.listen((_) {
-      _broadcastState();
+      if (_isInitialized) _broadcastState();
     });
 
     _player.durationStream.listen((duration) {
@@ -40,10 +43,17 @@ class AudioPlayerHandler extends BaseAudioHandler
         mediaItem.add(mediaItem.value?.copyWith(duration: duration));
       }
     });
+
+    _player.playingStream.listen((_) {
+      _broadcastState();
+    });
+
+    _player.processingStateStream.listen((_) {
+      _broadcastState();
+    });
   }
 
   void _broadcastState() {
-    if (!_isInitialized) return;
     final index = _currentIndex;
     if (index < 0 || index >= _queue.length) return;
 
@@ -84,6 +94,12 @@ class AudioPlayerHandler extends BaseAudioHandler
   Stream<PlayerState> get playerStateStream => _player.playerStateStream;
   Stream<ProcessingState> get processingStateStream =>
       _player.processingStateStream;
+  Stream<bool> get playingStream => _player.playingStream;
+  double get playbackSpeed => _player.speed;
+  double get volume => _player.volume;
+  bool get gaplessPlaybackEnabled => _gaplessPlaybackEnabled;
+  Duration get crossfadeDuration => _crossfadeDuration;
+  bool get autoShuffleEnabled => _autoShuffleEnabled;
 
   Future<void> playSong(SongModel song) async {
     await setQueue([song], initialIndex: 0);
@@ -108,11 +124,7 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   Future<void> addToQueue(SongModel song) async {
     _originalQueue.add(song);
-    if (_isShuffled) {
-      _queue.add(song);
-    } else {
-      _queue.add(song);
-    }
+    _queue.add(song);
     await _updateMediaQueue();
   }
 
@@ -234,6 +246,14 @@ class AudioPlayerHandler extends BaseAudioHandler
         preload: true,
         initialPosition: Duration.zero,
       );
+
+      if (_playbackSpeedOverride != null) {
+        await _player.setSpeed(_playbackSpeedOverride!);
+      }
+      if (_volumeOverride != null) {
+        await _player.setVolume(_volumeOverride!.clamp(0.5, 2.0) / 2.0);
+      }
+
       await _player.play();
 
       final mediaItem = MediaItem(
@@ -250,6 +270,7 @@ class AudioPlayerHandler extends BaseAudioHandler
 
       await _db.updatePlayCount(song.id);
       _isInitialized = true;
+      _broadcastState();
     } catch (e) {
       _isInitialized = true;
       _onTrackComplete();
@@ -306,6 +327,48 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   @override
   Future<void> setSpeed(double speed) => _player.setSpeed(speed);
+
+  double? _playbackSpeedOverride;
+  Future<void> setPlaybackSpeed(double speed) async {
+    _playbackSpeedOverride = speed;
+    await _player.setSpeed(speed);
+  }
+
+  double? _volumeOverride;
+  Future<void> setVolume(double boost) async {
+    _volumeOverride = boost.clamp(0.5, 2.0);
+    await _player.setVolume(_volumeOverride! / 2.0);
+  }
+
+  Future<void> enableGaplessPlayback() async {
+    _gaplessPlaybackEnabled = true;
+    await _player.setGaplessPlaybackEnabled(true);
+  }
+
+  Future<void> disableGaplessPlayback() async {
+    _gaplessPlaybackEnabled = false;
+    await _player.setGaplessPlaybackEnabled(false);
+  }
+
+  Future<void> setGaplessPlaybackEnabled(bool enabled) async {
+    if (enabled) {
+      await enableGaplessPlayback();
+    } else {
+      await disableGaplessPlayback();
+    }
+  }
+
+  Future<void> setCrossfade(Duration duration) async {
+    _crossfadeDuration = duration;
+    await _player.setCrossfade(duration);
+  }
+
+  Future<void> setAutoShuffle(bool enabled) async {
+    _autoShuffleEnabled = enabled;
+    if (enabled && !_isShuffled) {
+      await toggleShuffle();
+    }
+  }
 
   @override
   Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
