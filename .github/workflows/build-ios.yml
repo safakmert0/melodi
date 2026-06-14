@@ -28,7 +28,7 @@ jobs:
 
       - name: Build for iOS Simulator
         run: |
-          flutter build ios --release --simulator
+          flutter build ios --debug --simulator
           mkdir -p build/unsigned_ipa/Payload
           cp -r build/ios/release/iphonesimulator/Runner.app build/unsigned_ipa/Payload/
           cd build/unsigned_ipa
