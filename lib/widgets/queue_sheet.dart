@@ -76,24 +76,24 @@ class QueueSheet extends StatelessWidget {
               const Divider(color: AppTheme.darkDivider),
               Expanded(
                 child: queue.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.queue_music_rounded,
+                            const Icon(Icons.queue_music_rounded,
                                 size: 64, color: AppTheme.textTertiary),
-                            SizedBox(height: 16),
+                            const SizedBox(height: 16),
                             Text(
                               AppLocale.tr('queue_is_empty'),
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: AppTheme.textSecondary,
                                 fontSize: 16,
                               ),
                             ),
-                            SizedBox(height: 8),
+                            const SizedBox(height: 8),
                             Text(
                               AppLocale.tr('add_songs_to_start'),
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: AppTheme.textTertiary,
                                 fontSize: 14,
                               ),

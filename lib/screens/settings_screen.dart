@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import '../core/constants.dart';
@@ -21,6 +22,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _selectedLanguage = _localeName(AppLocale.currentLocale);
+    _loadWatchedFolder();
   }
 
   String _localeName(String code) {
@@ -36,12 +38,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _autoShuffle = false;
   bool _gaplessPlayback = true;
   String _watchedFolderPath = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadWatchedFolder();
-  }
 
   Future<void> _loadWatchedFolder() async {
     final path = await context.read<LibraryProvider>().getWatchedFolder();
@@ -119,7 +115,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         context.read<LibraryProvider>().importFromDirectory(),
                   ),
                   _SettingsTile(
-                    icon: Icons.sync_folder_rounded,
+                    icon: Icons.folder_sync_rounded,
                     iconColor: Colors.deepPurple,
                     title: AppLocale.tr('watched_folder'),
                     subtitle: _watchedFolderPath.isNotEmpty

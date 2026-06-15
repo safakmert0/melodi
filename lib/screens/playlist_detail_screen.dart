@@ -82,13 +82,13 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           ? const Center(
               child: CircularProgressIndicator(color: AppTheme.primaryColor))
           : _songs.isEmpty
-              ? const Center(
+              ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.playlist_add_rounded,
+                      const Icon(Icons.playlist_add_rounded,
                           size: 64, color: AppTheme.textTertiary),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       Text(
                         AppLocale.tr('no_songs_in_playlist'),
                         style: const TextStyle(color: AppTheme.textSecondary),
