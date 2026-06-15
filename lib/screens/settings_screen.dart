@@ -115,7 +115,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         context.read<LibraryProvider>().importFromDirectory(),
                   ),
                   _SettingsTile(
-                    icon: Icons.folder_sync_rounded,
+                    icon: Icons.folder_rounded,
                     iconColor: Colors.deepPurple,
                     title: AppLocale.tr('watched_folder'),
                     subtitle: _watchedFolderPath.isNotEmpty
