@@ -563,11 +563,9 @@ class _AlbumDetailScreen extends StatelessWidget {
                   onViewArtist: () => _navigateToArtistFromSong(context, song),
                 );
               },
-            ),
+              ),
           ),
         );
-      },
-    );
   }
 
   void _navigateToArtistFromSong(BuildContext context, SongModel song) {

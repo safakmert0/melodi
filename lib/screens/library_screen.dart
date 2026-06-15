@@ -281,30 +281,31 @@ class _SongsTab extends StatelessWidget {
     );
   }
 
-  void _navigateToAlbum(BuildContext context, SongModel song) {
-    final lib = context.read<LibraryProvider>();
-    final albums = lib.albums.where((a) => a.name == song.album && a.artist == song.artist).toList();
-    if (albums.isNotEmpty) {
-      final albumSongs = lib.getSongsForAlbum(albums.first);
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => _AlbumGridDetailScreen(album: albums.first, songs: albumSongs),
-        ),
-      );
-    }
-  }
+}
 
-  void _navigateToArtist(BuildContext context, SongModel song) {
-    final lib = context.read<LibraryProvider>();
-    final artists = lib.artists.where((a) => a.name == song.artist).toList();
-    if (artists.isNotEmpty) {
-      final artistSongs = lib.getSongsForArtist(artists.first);
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => _ArtistDetailScreen(artistName: artists.first.name, songs: artistSongs),
-        ),
-      );
-    }
+void _navigateToAlbum(BuildContext context, SongModel song) {
+  final lib = context.read<LibraryProvider>();
+  final albums = lib.albums.where((a) => a.name == song.album && a.artist == song.artist).toList();
+  if (albums.isNotEmpty) {
+    final albumSongs = lib.getSongsForAlbum(albums.first);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _AlbumGridDetailScreen(album: albums.first, songs: albumSongs),
+      ),
+    );
+  }
+}
+
+void _navigateToArtist(BuildContext context, SongModel song) {
+  final lib = context.read<LibraryProvider>();
+  final artists = lib.artists.where((a) => a.name == song.artist).toList();
+  if (artists.isNotEmpty) {
+    final artistSongs = lib.getSongsForArtist(artists.first);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _ArtistDetailScreen(artistName: artists.first.name, songs: artistSongs),
+      ),
+    );
   }
 }
 
