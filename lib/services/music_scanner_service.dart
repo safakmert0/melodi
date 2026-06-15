@@ -154,6 +154,23 @@ class MusicScannerService {
 
   Future<List<app.SongModel>> importFromDirectory() async {
     try {
+      if (Platform.isIOS) {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowMultiple: true,
+          allowedExtensions: const [
+            'mp3', 'm4a', 'flac', 'wav', 'aac', 'ogg', 'wma',
+            'alac', 'aiff', 'opus', 'ape', 'wv',
+          ],
+        );
+        if (result == null || result.files.isEmpty) return [];
+        final paths = result.files
+            .where((f) => f.path != null)
+            .map((f) => f.path!)
+            .toList();
+        return await importFromPaths(paths);
+      }
+
       String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
       if (selectedDirectory == null) return [];
 
