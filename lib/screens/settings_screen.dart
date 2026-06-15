@@ -635,9 +635,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       selectedDirectory = await FilePicker.platform.getDirectoryPath();
     }
 
-    if (selectedDirectory != null && selectedDirectory.isNotEmpty) {
-      await lib.setWatchedFolder(selectedDirectory);
-      setState(() => _watchedFolderPath = selectedDirectory);
+    final dir = selectedDirectory;
+    if (dir != null && dir.isNotEmpty) {
+      await lib.setWatchedFolder(dir);
+      setState(() => _watchedFolderPath = dir);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
