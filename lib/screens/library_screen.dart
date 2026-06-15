@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
+import '../core/localization.dart';
 import '../providers/library_provider.dart';
 import '../providers/player_provider.dart';
 import '../providers/playlist_provider.dart';
@@ -32,14 +33,14 @@ class _LibraryScreenState extends State<LibraryScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<LibraryProvider>(
-      builder: (context, library, _) {
+    return Consumer2<LibraryProvider, LocaleNotifier>(
+      builder: (context, library, locale, _) {
         return NestedScrollView(
           headerSliverBuilder: (context, innerBoxIsScrolled) => [
             SliverAppBar(
-              title: const Text(
-                'Library',
-                style: TextStyle(
+              title: Text(
+                AppLocale.tr('library'),
+                style: const TextStyle(
                   color: AppTheme.textPrimary,
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -52,11 +53,11 @@ class _LibraryScreenState extends State<LibraryScreen>
                 indicatorColor: AppTheme.primaryColor,
                 labelColor: AppTheme.textPrimary,
                 unselectedLabelColor: AppTheme.textTertiary,
-                tabs: const [
-                  Tab(text: 'Songs'),
-                  Tab(text: 'Albums'),
-                  Tab(text: 'Artists'),
-                  Tab(text: 'Genres'),
+                tabs: [
+                  Tab(text: AppLocale.tr('songs')),
+                  Tab(text: AppLocale.tr('albums')),
+                  Tab(text: AppLocale.tr('artists')),
+                  Tab(text: AppLocale.tr('genres')),
                 ],
               ),
             ),
@@ -85,27 +86,27 @@ class _LibraryScreenState extends State<LibraryScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.library_music_outlined,
+          Icon(Icons.library_music_outlined,
               size: 80, color: AppTheme.textTertiary),
           const SizedBox(height: 24),
-          const Text(
-            'Your library is empty',
-            style: TextStyle(
+          Text(
+            AppLocale.tr('your_library_is_empty'),
+            style: const TextStyle(
               color: AppTheme.textPrimary,
               fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Import music from your device',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 15),
+          Text(
+            AppLocale.tr('import_music_from_device'),
+            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 15),
           ),
           const SizedBox(height: 32),
           FilledButton.icon(
             onPressed: () => context.read<LibraryProvider>().scanMusic(),
             icon: const Icon(Icons.refresh_rounded),
-            label: const Text('Scan Music Library'),
+            label: Text(AppLocale.tr('scan_music_library')),
             style: FilledButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
               foregroundColor: Colors.black,
@@ -135,7 +136,7 @@ class _SongsTab extends StatelessWidget {
               child: Row(
                 children: [
                   Text(
-                    '${songs.length} songs',
+                    '${songs.length} ${AppLocale.tr('songs').toLowerCase()}',
                     style: const TextStyle(
                       color: AppTheme.textSecondary,
                       fontSize: 13,
@@ -147,25 +148,25 @@ class _SongsTab extends StatelessWidget {
                         color: AppTheme.textSecondary, size: 20),
                     onSelected: (value) {},
                     itemBuilder: (context) => [
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'title',
-                        child: Text('Sort by Title'),
+                        child: Text(AppLocale.tr('sort_by_title')),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'artist',
-                        child: Text('Sort by Artist'),
+                        child: Text(AppLocale.tr('sort_by_artist')),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'album',
-                        child: Text('Sort by Album'),
+                        child: Text(AppLocale.tr('sort_by_album')),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'duration',
-                        child: Text('Sort by Duration'),
+                        child: Text(AppLocale.tr('sort_by_duration')),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'date',
-                        child: Text('Sort by Date Added'),
+                        child: Text(AppLocale.tr('sort_by_date_added')),
                       ),
                     ],
                   ),
@@ -204,9 +205,9 @@ class _AlbumsTab extends StatelessWidget {
       builder: (context, library, _) {
         final albums = library.albums;
         if (albums.isEmpty) {
-          return const Center(
-            child: Text('No albums found',
-                style: TextStyle(color: AppTheme.textSecondary)),
+          return Center(
+            child: Text(AppLocale.tr('no_albums_found'),
+                style: const TextStyle(color: AppTheme.textSecondary)),
           );
         }
         return GridView.builder(
@@ -270,7 +271,7 @@ class _AlbumsTab extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '${album.artist} · ${album.songCount} songs',
+                            '${album.artist} · ${album.songCount} ${AppLocale.tr('songs').toLowerCase()}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -327,9 +328,9 @@ class _ArtistsTab extends StatelessWidget {
       builder: (context, library, _) {
         final artists = library.artists;
         if (artists.isEmpty) {
-          return const Center(
-            child: Text('No artists found',
-                style: TextStyle(color: AppTheme.textSecondary)),
+          return Center(
+            child: Text(AppLocale.tr('no_artists_found'),
+                style: const TextStyle(color: AppTheme.textSecondary)),
           );
         }
         return ListView.builder(
@@ -346,7 +347,7 @@ class _ArtistsTab extends StatelessWidget {
               title: Text(artist.name,
                   style: const TextStyle(color: AppTheme.textPrimary)),
               subtitle: Text(
-                '${artist.songCount} songs · ${artist.albumCount} albums',
+                '${artist.songCount} ${AppLocale.tr('songs').toLowerCase()} · ${artist.albumCount} ${AppLocale.tr('albums').toLowerCase()}',
                 style: const TextStyle(color: AppTheme.textSecondary),
               ),
               trailing: const Icon(Icons.chevron_right,
@@ -406,9 +407,9 @@ class _GenresTab extends StatelessWidget {
       builder: (context, library, _) {
         final genres = library.genres;
         if (genres.isEmpty) {
-          return const Center(
-            child: Text('No genres found',
-                style: TextStyle(color: AppTheme.textSecondary)),
+          return Center(
+            child: Text(AppLocale.tr('no_genres_found'),
+                style: const TextStyle(color: AppTheme.textSecondary)),
           );
         }
         return ListView.builder(
@@ -428,7 +429,7 @@ class _GenresTab extends StatelessWidget {
               ),
               title: Text(genre.name,
                   style: const TextStyle(color: AppTheme.textPrimary)),
-              subtitle: Text('${genre.songCount} songs',
+              subtitle: Text('${genre.songCount} ${AppLocale.tr('songs').toLowerCase()}',
                   style: const TextStyle(color: AppTheme.textSecondary)),
               trailing: const Icon(Icons.chevron_right,
                   color: AppTheme.textTertiary),

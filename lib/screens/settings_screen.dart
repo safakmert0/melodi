@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
+import '../core/localization.dart';
 import '../providers/library_provider.dart';
 import '../providers/player_provider.dart';
 import '../services/database_service.dart';
@@ -13,7 +15,21 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  String _selectedLanguage = 'English';
+  late String _selectedLanguage;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedLanguage = _localeName(AppLocale.currentLocale);
+  }
+
+  String _localeName(String code) {
+    switch (code) {
+      case 'tr': return AppLocale.tr('turkish');
+      case 'de': return AppLocale.tr('german');
+      default: return AppLocale.tr('english');
+    }
+  }
   double _crossfadeSeconds = 0;
   double _defaultPlaybackSpeed = 1.0;
   double _defaultVolumeBoost = 1.0;
@@ -22,14 +38,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<LibraryProvider, PlayerProvider>(
-      builder: (context, library, player, _) {
+    return Consumer3<LibraryProvider, PlayerProvider, LocaleNotifier>(
+      builder: (context, library, player, locale, _) {
         return CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
             SliverAppBar(
-              title: const Text(
-                'Settings',
+              title: Text(
+                AppLocale.tr('settings'),
                 style: TextStyle(
                   color: AppTheme.textPrimary,
                   fontSize: 28,
@@ -44,11 +60,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Language section
-                  const _SectionTitle('Language'),
+                  _SectionTitle(AppLocale.tr('language')),
                   _SettingsTile(
                     icon: Icons.language_rounded,
                     iconColor: Colors.teal,
-                    title: 'App Language',
+                    title: AppLocale.tr('app_language'),
                     subtitle: _selectedLanguage,
                     trailing: const Icon(Icons.chevron_right,
                         color: AppTheme.textTertiary),
@@ -56,12 +72,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const Divider(color: AppTheme.darkDivider, height: 1),
                   // Library section
-                  const _SectionTitle('Music Library'),
+                  _SectionTitle(AppLocale.tr('music_library')),
                   _SettingsTile(
                     icon: Icons.refresh_rounded,
                     iconColor: AppTheme.primaryColor,
-                    title: 'Rescan Library',
-                    subtitle: 'Scan device for new or removed music',
+                    title: AppLocale.tr('rescan_library'),
+                    subtitle: AppLocale.tr('scan_device_for_music'),
                     trailing: library.isScanning
                         ? const SizedBox(
                             width: 20,
@@ -77,22 +93,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _SettingsTile(
                     icon: Icons.folder_open_rounded,
                     iconColor: Colors.orange,
-                    title: 'Import from Files',
-                    subtitle: 'Browse and import audio files',
+                    title: AppLocale.tr('import_from_files'),
+                    subtitle: AppLocale.tr('browse_and_import'),
                     onTap: () =>
                         context.read<LibraryProvider>().importFromFiles(),
                   ),
                   _SettingsTile(
                     icon: Icons.folder_special_rounded,
                     iconColor: Colors.purple,
-                    title: 'Import from Folder',
-                    subtitle: 'Scan a specific folder for music',
+                    title: AppLocale.tr('import_from_folder_title'),
+                    subtitle: AppLocale.tr('scan_folder_for_music'),
                     onTap: () =>
                         context.read<LibraryProvider>().importFromDirectory(),
                   ),
                   const Divider(color: AppTheme.darkDivider, height: 1),
                   // Storage section
-                  const _SectionTitle('Storage'),
+                  _SectionTitle(AppLocale.tr('storage')),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
@@ -104,15 +120,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Local Songs',
-                                style: TextStyle(
+                              Text(
+                                AppLocale.tr('local_songs'),
+                                style: const TextStyle(
                                   color: AppTheme.textPrimary,
                                   fontSize: 15,
                                 ),
                               ),
                               Text(
-                                '${library.songCount} songs in library',
+                                '${library.songCount} ${AppLocale.tr('songs_in_library')}',
                                 style: const TextStyle(
                                   color: AppTheme.textSecondary,
                                   fontSize: 13,
@@ -128,24 +144,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _SettingsTile(
                     icon: Icons.delete_sweep_rounded,
                     iconColor: AppTheme.errorColor,
-                    title: 'Clear Library',
-                    subtitle: 'Remove all cached music data',
+                    title: AppLocale.tr('clear_library'),
+                    subtitle: AppLocale.tr('remove_cached_data'),
                     onTap: () => _confirmClearLibrary(context),
                   ),
                   const Divider(color: AppTheme.darkDivider, height: 1),
                   // Audio section
-                  const _SectionTitle('Audio'),
+                  _SectionTitle(AppLocale.tr('audio')),
                   _SettingsTile(
                     icon: Icons.equalizer_rounded,
                     iconColor: Colors.teal,
-                    title: 'Equalizer',
-                    subtitle: 'Adjust sound frequencies',
-                    onTap: () {},
+                    title: AppLocale.tr('equalizer'),
+                    subtitle: AppLocale.tr('adjust_sound_frequencies'),
+                    onTap: () => _showEqualizerComingSoon(context),
                   ),
                   _SettingsTile(
                     icon: Icons.speed_rounded,
                     iconColor: Colors.cyan,
-                    title: 'Default Playback Speed',
+                    title: AppLocale.tr('default_playback_speed'),
                     subtitle: '${_defaultPlaybackSpeed.toStringAsFixed(2)}x',
                     trailing: const Icon(Icons.chevron_right,
                         color: AppTheme.textTertiary),
@@ -154,7 +170,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _SettingsTile(
                     icon: Icons.volume_up_rounded,
                     iconColor: Colors.blue,
-                    title: 'Volume Boost',
+                    title: AppLocale.tr('volume_boost'),
                     subtitle: '${(_defaultVolumeBoost * 100).round()}%',
                     trailing: const Icon(Icons.chevron_right,
                         color: AppTheme.textTertiary),
@@ -162,12 +178,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const Divider(color: AppTheme.darkDivider, height: 1),
                   // Playback section
-                  const _SectionTitle('Playback'),
+                  _SectionTitle(AppLocale.tr('playback')),
                   _SettingsTile(
                     icon: Icons.shuffle_rounded,
                     iconColor: Colors.amber,
-                    title: 'Auto Shuffle',
-                    subtitle: 'Automatically shuffle when playing',
+                    title: AppLocale.tr('auto_shuffle'),
+                    subtitle: AppLocale.tr('automatically_shuffle'),
                     trailing: Switch(
                       value: _autoShuffle,
                       onChanged: (v) {
@@ -184,8 +200,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _SettingsTile(
                     icon: Icons.waves_rounded,
                     iconColor: Colors.pink,
-                    title: 'Gapless Playback',
-                    subtitle: 'Seamless transition between songs',
+                    title: AppLocale.tr('gapless_playback'),
+                    subtitle: AppLocale.tr('seamless_transition'),
                     trailing: Switch(
                       value: _gaplessPlayback,
                       onChanged: (v) {
@@ -202,32 +218,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _SettingsTile(
                     icon: Icons.swap_horiz_rounded,
                     iconColor: Colors.indigo,
-                    title: 'Crossfade',
-                    subtitle: '${_crossfadeSeconds.toInt()}s crossfade',
+                    title: AppLocale.tr('crossfade'),
+                    subtitle: '${_crossfadeSeconds.toInt()}${AppLocale.tr('seconds_crossfade')}',
                     trailing: const Icon(Icons.chevron_right,
                         color: AppTheme.textTertiary),
                     onTap: () => _showCrossfadeSlider(context, player),
                   ),
                   const Divider(color: AppTheme.darkDivider, height: 1),
+                  // Developer section
+                  _SectionTitle(AppLocale.tr('developer')),
+                  _SettingsTile(
+                    icon: Icons.code_rounded,
+                    iconColor: Colors.grey,
+                    title: 'GitHub',
+                    subtitle: 'safakmert0',
+                    onTap: () {
+                      Clipboard.setData(const ClipboardData(text: 'safakmert0'));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('GitHub: safakmert0'),
+                          backgroundColor: AppTheme.primaryColor,
+                        ),
+                      );
+                    },
+                  ),
+                  _SettingsTile(
+                    icon: Icons.send_rounded,
+                    iconColor: Colors.lightBlue,
+                    title: 'Telegram',
+                    subtitle: '@safakmert',
+                    onTap: () {
+                      Clipboard.setData(const ClipboardData(text: '@safakmert'));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Telegram: https://t.me/safakmert'),
+                          backgroundColor: AppTheme.primaryColor,
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(color: AppTheme.darkDivider, height: 1),
                   // About section
-                  const _SectionTitle('About'),
+                  _SectionTitle(AppLocale.tr('about')),
                   _SettingsTile(
                     icon: Icons.info_outline_rounded,
                     iconColor: AppTheme.textSecondary,
                     title: 'Melodi',
-                    subtitle: 'Version ${AppConstants.appVersion}',
-                  ),
-                  _SettingsTile(
-                    icon: Icons.code_rounded,
-                    iconColor: AppTheme.textSecondary,
-                    title: 'Flutter Music Player',
-                    subtitle: 'Built with Flutter & Love',
+                    subtitle: '${AppLocale.tr('version')} ${AppConstants.appVersion}',
                   ),
                   _SettingsTile(
                     icon: Icons.favorite_rounded,
                     iconColor: AppTheme.favoriteColor,
-                    title: 'Credits',
-                    subtitle: 'Open source components & licenses',
+                    title: AppLocale.tr('credits'),
+                    subtitle: AppLocale.tr('open_source_licenses'),
                     onTap: () {},
                   ),
                   const SizedBox(height: 32),
@@ -260,16 +303,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const Text('App Language',
-                style: TextStyle(
+            Text(AppLocale.tr('app_language'),
+                style: const TextStyle(
                     color: AppTheme.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             ...[
-              ('English', 'en'),
-              ('Turkish', 'tr'),
-              ('German', 'de'),
+              (AppLocale.tr('english'), 'en'),
+              (AppLocale.tr('turkish'), 'tr'),
+              (AppLocale.tr('german'), 'de'),
             ].map((entry) {
               return ListTile(
                 title: Text(entry.$1,
@@ -278,7 +321,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ? const Icon(Icons.check, color: AppTheme.primaryColor)
                     : null,
                 onTap: () {
-                  setState(() => _selectedLanguage = entry.$1);
+                  setState(() {
+                    _selectedLanguage = entry.$1;
+                    AppLocale.change(entry.$2);
+                    context.read<LocaleNotifier>().change(entry.$2);
+                  });
                   Navigator.pop(ctx);
                 },
               );
@@ -311,8 +358,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const Text('Default Playback Speed',
-                style: TextStyle(
+            Text(AppLocale.tr('default_playback_speed'),
+                style: const TextStyle(
                     color: AppTheme.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.bold)),
@@ -363,8 +410,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  const Text('Volume Boost',
-                      style: TextStyle(
+                  Text(AppLocale.tr('volume_boost'),
+                      style: const TextStyle(
                           color: AppTheme.textPrimary,
                           fontSize: 20,
                           fontWeight: FontWeight.bold)),
@@ -405,7 +452,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         backgroundColor: AppTheme.primaryColor,
                         foregroundColor: Colors.black,
                       ),
-                      child: const Text('Apply'),
+                      child: Text(AppLocale.tr('apply')),
                     ),
                   ),
                 ],
@@ -442,13 +489,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  const Text('Crossfade',
-                      style: TextStyle(
+                  Text(AppLocale.tr('crossfade'),
+                      style: const TextStyle(
                           color: AppTheme.textPrimary,
                           fontSize: 20,
                           fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  Text('${localCrossfade.toInt()} seconds',
+                  Text('${localCrossfade.toInt()} ${AppLocale.tr('seconds')}',
                       style: const TextStyle(
                           color: AppTheme.primaryColor, fontSize: 32, fontWeight: FontWeight.bold)),
                   Slider(
@@ -465,8 +512,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Off',
-                          style: TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
+                      Text(AppLocale.tr('off'),
+                          style: const TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
                       Text('12s',
                           style: TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
                     ],
@@ -484,7 +531,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         backgroundColor: AppTheme.primaryColor,
                         foregroundColor: Colors.black,
                       ),
-                      child: const Text('Apply'),
+                      child: Text(AppLocale.tr('apply')),
                     ),
                   ),
                 ],
@@ -496,30 +543,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _showEqualizerComingSoon(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.darkSurface,
+        title: Text(AppLocale.tr('equalizer'),
+            style: const TextStyle(color: AppTheme.textPrimary)),
+        content: Text(
+          AppLocale.tr('equalizer_coming_soon'),
+          style: const TextStyle(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(AppLocale.tr('cancel'),
+                style: const TextStyle(color: AppTheme.textSecondary)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _confirmClearLibrary(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.darkSurface,
-        title: const Text('Clear Library',
-            style: TextStyle(color: AppTheme.textPrimary)),
-        content: const Text(
-          'This will remove all cached music data. Your actual music files will not be deleted.',
-          style: TextStyle(color: AppTheme.textSecondary),
+        title: Text(AppLocale.tr('clear_library_title'),
+            style: const TextStyle(color: AppTheme.textPrimary)),
+        content: Text(
+          AppLocale.tr('clear_library_confirm'),
+          style: const TextStyle(color: AppTheme.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppTheme.textSecondary)),
+            child: Text(AppLocale.tr('cancel'),
+                style: const TextStyle(color: AppTheme.textSecondary)),
           ),
           TextButton(
             onPressed: () {
               context.read<LibraryProvider>().clearLibrary();
               Navigator.pop(context);
             },
-            child: const Text('Clear',
-                style: TextStyle(color: AppTheme.errorColor)),
+            child: Text(AppLocale.tr('delete'),
+                style: const TextStyle(color: AppTheme.errorColor)),
           ),
         ],
       ),

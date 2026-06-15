@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
+import '../core/localization.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
 import '../widgets/mini_player.dart';
@@ -38,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<LocaleNotifier>();
     return Scaffold(
       extendBody: true,
       body: Column(
@@ -48,12 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: _pages,
             ),
           ),
-          Consumer<PlayerProvider>(
-            builder: (context, player, _) {
-              if (player.currentSong == null) return const SizedBox.shrink();
-              return const MiniPlayer();
-            },
-          ),
+          const MiniPlayer(),
         ],
       ),
       bottomNavigationBar: Container(
@@ -67,22 +64,22 @@ class _HomeScreenState extends State<HomeScreen> {
         child: BottomNavigationBar(
           currentIndex: _currentPage,
           onTap: (index) => setState(() => _currentPage = index),
-          items: const [
+          items: [
             BottomNavigationBarItem(
-              icon: Icon(Icons.home_rounded),
-              label: 'Home',
+              icon: const Icon(Icons.home_rounded),
+              label: AppLocale.tr('home'),
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.my_library_music_rounded),
-              label: 'Library',
+              icon: const Icon(Icons.my_library_music_rounded),
+              label: AppLocale.tr('library'),
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.search_rounded),
-              label: 'Search',
+              icon: const Icon(Icons.search_rounded),
+              label: AppLocale.tr('search'),
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.settings_rounded),
-              label: 'Settings',
+              icon: const Icon(Icons.settings_rounded),
+              label: AppLocale.tr('settings'),
             ),
           ],
           selectedFontSize: 11,
@@ -98,8 +95,8 @@ class _HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<LibraryProvider, PlaylistProvider>(
-      builder: (context, library, playlistProvider, _) {
+    return Consumer3<LibraryProvider, PlaylistProvider, LocaleNotifier>(
+      builder: (context, library, playlistProvider, locale, _) {
         return RefreshIndicator(
           onRefresh: () async => await library.loadAll(),
           color: AppTheme.primaryColor,
@@ -110,15 +107,26 @@ class _HomeTab extends StatelessWidget {
                 floating: true,
                 pinned: false,
                 backgroundColor: Colors.transparent,
-                title: const Text(
-                  'Melodi',
-                  style: TextStyle(
+                title: Text(
+                  AppLocale.tr('melodi'),
+                  style: const TextStyle(
                     color: AppTheme.textPrimary,
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 actions: [
+                  IconButton(
+                    icon: const Icon(Icons.music_note_rounded),
+                    tooltip: AppLocale.tr('now_playing'),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const NowPlayingScreen(),
+                        ),
+                      );
+                    },
+                  ),
                   if (library.isScanning)
                     const Padding(
                       padding: EdgeInsets.only(right: 16),
@@ -134,7 +142,7 @@ class _HomeTab extends StatelessWidget {
                   else
                     IconButton(
                       icon: const Icon(Icons.download_rounded),
-                      tooltip: 'Import music',
+                      tooltip: AppLocale.tr('import_music'),
                       onPressed: () => _showImportOptions(context),
                     ),
                 ],
@@ -161,24 +169,24 @@ class _HomeTab extends StatelessWidget {
             const Icon(Icons.music_note_rounded,
                 size: 80, color: AppTheme.textTertiary),
             const SizedBox(height: 24),
-            const Text(
-              'Your music awaits',
-              style: TextStyle(
+            Text(
+              AppLocale.tr('your_music_awaits'),
+              style: const TextStyle(
                 color: AppTheme.textPrimary,
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Import songs from your device to get started',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 15),
+            Text(
+              AppLocale.tr('import_songs_to_start'),
+              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 15),
             ),
             const SizedBox(height: 32),
             FilledButton.icon(
               onPressed: () => _showImportOptions(context),
               icon: const Icon(Icons.library_music_rounded),
-              label: const Text('Import Music'),
+              label: Text(AppLocale.tr('import_music')),
               style: FilledButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
                 foregroundColor: Colors.black,
@@ -205,7 +213,7 @@ class _HomeTab extends StatelessWidget {
         // Recently Played
         if (recentlyPlayed.isNotEmpty) ...[
           _SectionHeader(
-            title: 'Recently Played',
+            title: AppLocale.tr('recently_played'),
             onSeeAll: () {},
           ),
           SizedBox(
@@ -228,8 +236,8 @@ class _HomeTab extends StatelessWidget {
         ],
         // Favorites
         if (favorites.isNotEmpty) ...[
-          const _SectionHeader(
-            title: 'Liked Songs',
+          _SectionHeader(
+            title: AppLocale.tr('liked_songs'),
             onSeeAll: null,
           ),
           SizedBox(
@@ -252,8 +260,8 @@ class _HomeTab extends StatelessWidget {
         ],
         // Albums
         if (library.albums.isNotEmpty) ...[
-          const _SectionHeader(
-            title: 'Albums',
+          _SectionHeader(
+            title: AppLocale.tr('albums'),
             onSeeAll: null,
           ),
           SizedBox(
@@ -274,8 +282,8 @@ class _HomeTab extends StatelessWidget {
         ],
         // Artists
         if (library.artists.isNotEmpty) ...[
-          const _SectionHeader(
-            title: 'Popular Artists',
+          _SectionHeader(
+            title: AppLocale.tr('popular_artists'),
             onSeeAll: null,
           ),
           SizedBox(
@@ -296,8 +304,8 @@ class _HomeTab extends StatelessWidget {
         ],
         // Playlists
         if (playlistProvider.playlists.isNotEmpty) ...[
-          const _SectionHeader(
-            title: 'Playlists',
+          _SectionHeader(
+            title: AppLocale.tr('playlists'),
             onSeeAll: null,
           ),
           SizedBox(
@@ -341,9 +349,9 @@ class _HomeTab extends StatelessWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const Text(
-              'Import Music',
-              style: TextStyle(
+            Text(
+              AppLocale.tr('import_music'),
+              style: const TextStyle(
                 color: AppTheme.textPrimary,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -360,10 +368,10 @@ class _HomeTab extends StatelessWidget {
                 child: const Icon(Icons.library_music_rounded,
                     color: AppTheme.primaryColor),
               ),
-              title: const Text('Scan Media Library',
-                  style: TextStyle(color: AppTheme.textPrimary)),
-              subtitle: const Text('Import from Apple Music library',
-                  style: TextStyle(color: AppTheme.textTertiary)),
+              title: Text(AppLocale.tr('scan_media_library'),
+                  style: const TextStyle(color: AppTheme.textPrimary)),
+              subtitle: Text(AppLocale.tr('import_from_apple_music'),
+                  style: const TextStyle(color: AppTheme.textTertiary)),
               onTap: () {
                 Navigator.pop(context);
                 context.read<LibraryProvider>().scanMusic();
@@ -379,10 +387,10 @@ class _HomeTab extends StatelessWidget {
                 child: const Icon(Icons.folder_open_rounded,
                     color: Colors.orange),
               ),
-              title: const Text('Browse Files',
-                  style: TextStyle(color: AppTheme.textPrimary)),
-              subtitle: const Text('Select audio files from Files app',
-                  style: TextStyle(color: AppTheme.textTertiary)),
+              title: Text(AppLocale.tr('browse_files'),
+                  style: const TextStyle(color: AppTheme.textPrimary)),
+              subtitle: Text(AppLocale.tr('select_audio_files'),
+                  style: const TextStyle(color: AppTheme.textTertiary)),
               onTap: () {
                 Navigator.pop(context);
                 context.read<LibraryProvider>().importFromFiles();
@@ -398,10 +406,10 @@ class _HomeTab extends StatelessWidget {
                 child: const Icon(Icons.folder_special_rounded,
                     color: Colors.purple),
               ),
-              title: const Text('Import from Folder',
-                  style: TextStyle(color: AppTheme.textPrimary)),
-              subtitle: const Text('Scan a specific folder',
-                  style: TextStyle(color: AppTheme.textTertiary)),
+              title: Text(AppLocale.tr('import_from_folder_title'),
+                  style: const TextStyle(color: AppTheme.textPrimary)),
+              subtitle: Text(AppLocale.tr('scan_specific_folder'),
+                  style: const TextStyle(color: AppTheme.textTertiary)),
               onTap: () {
                 Navigator.pop(context);
                 context.read<LibraryProvider>().importFromDirectory();
@@ -465,9 +473,9 @@ class _SectionHeader extends StatelessWidget {
           if (onSeeAll != null)
             GestureDetector(
               onTap: onSeeAll,
-              child: const Text(
-                'See All',
-                style: TextStyle(
+              child: Text(
+                AppLocale.tr('see_all'),
+                style: const TextStyle(
                   color: AppTheme.textSecondary,
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
@@ -546,7 +554,7 @@ class _AlbumDetailScreen extends StatelessWidget {
         title: Text(album.name),
       ),
       body: songs.isEmpty
-          ? const Center(child: Text('No songs', style: TextStyle(color: AppTheme.textSecondary)))
+          ? Center(child: Text(AppLocale.tr('no_songs'), style: const TextStyle(color: AppTheme.textSecondary)))
           : ListView.builder(
               itemCount: songs.length,
               itemBuilder: (context, index) {
@@ -576,8 +584,8 @@ class _ArtistDetailScreen extends StatelessWidget {
         title: Text(artist.name),
       ),
       body: songs.isEmpty
-          ? const Center(
-              child: Text('No songs', style: TextStyle(color: AppTheme.textSecondary)))
+          ? Center(
+              child: Text(AppLocale.tr('no_songs'), style: const TextStyle(color: AppTheme.textSecondary)))
           : ListView.builder(
               itemCount: songs.length,
               itemBuilder: (context, index) {

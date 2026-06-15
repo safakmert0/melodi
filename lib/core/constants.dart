@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'localization.dart';
+
+export 'localization.dart' show AppLocale;
 
 class AppConstants {
   static const String appName = 'Melodi';

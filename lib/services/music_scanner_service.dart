@@ -58,10 +58,14 @@ class MusicScannerService {
         uriType: UriType.EXTERNAL,
       );
 
+      final existingPaths = _db.getAllSongs().then((s) => s.map((e) => e.filePath).toSet());
+      final paths = await existingPaths;
+
       final songs = <app.SongModel>[];
       for (final raw in rawSongs) {
         final filePath = _getFilePath(raw);
         if (filePath == null || filePath.isEmpty) continue;
+        if (paths.contains(filePath)) continue;
 
         String title;
         try { title = raw.title ?? raw.displayName ?? 'Unknown'; } catch (_) { title = 'Unknown'; }
@@ -128,7 +132,9 @@ class MusicScannerService {
           .map((f) => f.path!)
           .toList();
 
-      final songs = await MetadataService.extractMultipleMetadata(paths);
+      var songs = await MetadataService.extractMultipleMetadata(paths);
+      final existingPaths = await _db.getAllSongs().then((s) => s.map((e) => e.filePath).toSet());
+      songs = songs.where((s) => !existingPaths.contains(s.filePath)).toList();
       await _db.insertSongs(songs);
       return songs;
     } catch (e) {
@@ -141,8 +147,10 @@ class MusicScannerService {
       String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
       if (selectedDirectory == null) return [];
 
-      final songs =
+      var songs =
           await MetadataService.scanDirectory(selectedDirectory);
+      final existingPaths = await _db.getAllSongs().then((s) => s.map((e) => e.filePath).toSet());
+      songs = songs.where((s) => !existingPaths.contains(s.filePath)).toList();
       await _db.insertSongs(songs);
       return songs;
     } catch (e) {

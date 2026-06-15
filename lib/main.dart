@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:audio_service/audio_service.dart';
 import 'core/constants.dart';
+import 'core/localization.dart';
 import 'services/audio_handler.dart';
 import 'services/database_service.dart';
 import 'providers/player_provider.dart';
@@ -68,6 +69,9 @@ class MelodiApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => SearchProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => LocaleNotifier(),
         ),
       ],
       child: MaterialApp(

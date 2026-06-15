@@ -251,10 +251,16 @@ class AudioPlayerHandler extends BaseAudioHandler
         await _player.setSpeed(_playbackSpeedOverride!);
       }
       if (_volumeOverride != null) {
-        await _player.setVolume(_volumeOverride!.clamp(0.5, 2.0) / 2.0);
+        await _player.setVolume(_volumeOverride!.clamp(0.5, 2.0));
       }
 
       await _player.play();
+
+      if (_player.playing) {
+        if (_currentIndex < 0 || _currentIndex >= _queue.length) {
+          _currentIndex = _queue.isNotEmpty ? 0 : -1;
+        }
+      }
 
       final mediaItem = MediaItem(
         id: song.id,
@@ -337,7 +343,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   double? _volumeOverride;
   Future<void> setVolume(double boost) async {
     _volumeOverride = boost.clamp(0.5, 2.0);
-    await _player.setVolume(_volumeOverride! / 2.0);
+    await _player.setVolume(_volumeOverride!);
   }
 
   Future<void> enableGaplessPlayback() async {

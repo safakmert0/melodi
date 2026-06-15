@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
+import '../core/localization.dart';
 import '../core/extensions/duration_ext.dart';
 import '../models/song_model.dart';
 import '../models/playlist_model.dart';
@@ -13,8 +14,8 @@ class QueueSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<PlayerProvider>(
-      builder: (context, player, _) {
+    return Consumer2<PlayerProvider, LocaleNotifier>(
+      builder: (context, player, locale, _) {
         final queue = player.queue;
         final currentIndex = player.currentIndex;
         final currentSong = player.currentSong;
@@ -41,9 +42,9 @@ class QueueSheet extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Queue',
-                      style: TextStyle(
+                    Text(
+                      AppLocale.tr('queue'),
+                      style: const TextStyle(
                         color: AppTheme.textPrimary,
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -83,7 +84,7 @@ class QueueSheet extends StatelessWidget {
                                 size: 64, color: AppTheme.textTertiary),
                             SizedBox(height: 16),
                             Text(
-                              'Queue is empty',
+                              AppLocale.tr('queue_is_empty'),
                               style: TextStyle(
                                 color: AppTheme.textSecondary,
                                 fontSize: 16,
@@ -91,7 +92,7 @@ class QueueSheet extends StatelessWidget {
                             ),
                             SizedBox(height: 8),
                             Text(
-                              'Add songs to start playing',
+                              AppLocale.tr('add_songs_to_start'),
                               style: TextStyle(
                                 color: AppTheme.textTertiary,
                                 fontSize: 14,
@@ -194,9 +195,9 @@ class AddToPlaylistSheet extends StatelessWidget {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const Text(
-            'Add to Playlist',
-            style: TextStyle(
+          Text(
+            AppLocale.tr('add_to_playlist'),
+            style: const TextStyle(
               color: AppTheme.textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -204,9 +205,9 @@ class AddToPlaylistSheet extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           if (playlists.isEmpty)
-            const Text(
-              'No playlists yet. Create one first.',
-              style: TextStyle(color: AppTheme.textSecondary),
+            Text(
+              AppLocale.tr('no_playlists_yet'),
+              style: const TextStyle(color: AppTheme.textSecondary),
             )
           else
             ...playlists.map((pl) => ListTile(
@@ -221,7 +222,7 @@ class AddToPlaylistSheet extends StatelessWidget {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Added to ${pl.name}'),
+                        content: Text('${AppLocale.tr('added_to')} ${pl.name}'),
                         backgroundColor: AppTheme.primaryColor,
                       ),
                     );
@@ -231,8 +232,8 @@ class AddToPlaylistSheet extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.add_circle_outline,
                 color: AppTheme.primaryColor),
-            title: const Text('Create New Playlist',
-                style: TextStyle(color: AppTheme.primaryColor)),
+            title: Text(AppLocale.tr('create_new_playlist'),
+                style: const TextStyle(color: AppTheme.primaryColor)),
             onTap: () {
               Navigator.pop(context);
               _showCreatePlaylistDialog(context);
@@ -249,14 +250,14 @@ class AddToPlaylistSheet extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.darkSurface,
-        title: const Text('New Playlist',
-            style: TextStyle(color: AppTheme.textPrimary)),
+        title: Text(AppLocale.tr('new_playlist'),
+            style: const TextStyle(color: AppTheme.textPrimary)),
         content: TextField(
           controller: controller,
           autofocus: true,
           style: const TextStyle(color: AppTheme.textPrimary),
           decoration: InputDecoration(
-            hintText: 'Playlist name',
+            hintText: AppLocale.tr('playlist_name'),
             hintStyle: const TextStyle(color: AppTheme.textTertiary),
             filled: true,
             fillColor: AppTheme.darkCard,
@@ -269,8 +270,8 @@ class AddToPlaylistSheet extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppTheme.textSecondary)),
+            child: Text(AppLocale.tr('cancel'),
+                style: const TextStyle(color: AppTheme.textSecondary)),
           ),
           TextButton(
             onPressed: () async {
@@ -284,14 +285,14 @@ class AddToPlaylistSheet extends StatelessWidget {
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Created and added to ${pl.name}'),
+                    content: Text('${AppLocale.tr('created_and_added_to')} ${pl.name}'),
                     backgroundColor: AppTheme.primaryColor,
                   ),
                 );
               }
             },
-            child: const Text('Create',
-                style: TextStyle(color: AppTheme.primaryColor)),
+            child: Text(AppLocale.tr('create'),
+                style: const TextStyle(color: AppTheme.primaryColor)),
           ),
         ],
       ),

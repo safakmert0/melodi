@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../models/song_model.dart';
 import '../core/constants.dart';
+import '../core/localization.dart';
 import '../core/extensions/duration_ext.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
@@ -161,44 +162,44 @@ class SongTile extends StatelessWidget {
                   }
                 },
                 itemBuilder: (context) => [
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'queue',
                     child: ListTile(
-                      leading: Icon(Icons.queue_music),
-                      title: Text('Add to Queue'),
+                      leading: const Icon(Icons.queue_music),
+                      title: Text(AppLocale.tr('add_to_queue')),
                       dense: true,
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'playNext',
                     child: ListTile(
-                      leading: Icon(Icons.playlist_play),
-                      title: Text('Play Next'),
+                      leading: const Icon(Icons.playlist_play),
+                      title: Text(AppLocale.tr('play_next')),
                       dense: true,
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'playlist',
                     child: ListTile(
-                      leading: Icon(Icons.playlist_add),
-                      title: Text('Add to Playlist'),
+                      leading: const Icon(Icons.playlist_add),
+                      title: Text(AppLocale.tr('add_to_playlist')),
                       dense: true,
                     ),
                   ),
                   const PopupMenuDivider(),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'album',
                     child: ListTile(
-                      leading: Icon(Icons.album),
-                      title: Text('View Album'),
+                      leading: const Icon(Icons.album),
+                      title: Text(AppLocale.tr('view_album')),
                       dense: true,
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'artist',
                     child: ListTile(
-                      leading: Icon(Icons.person),
-                      title: Text('View Artist'),
+                      leading: const Icon(Icons.person),
+                      title: Text(AppLocale.tr('view_artist')),
                       dense: true,
                     ),
                   ),

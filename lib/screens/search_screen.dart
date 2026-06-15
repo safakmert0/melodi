@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
+import '../core/localization.dart';
 import '../providers/search_provider.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
@@ -27,15 +28,15 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<SearchProvider, LibraryProvider>(
-      builder: (context, searchProvider, library, _) {
+    return Consumer3<SearchProvider, LibraryProvider, LocaleNotifier>(
+      builder: (context, searchProvider, library, locale, _) {
         return CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
             SliverAppBar(
-              title: const Text(
-                'Search',
-                style: TextStyle(
+              title: Text(
+                AppLocale.tr('search'),
+                style: const TextStyle(
                   color: AppTheme.textPrimary,
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -57,7 +58,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   },
                   style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16),
                   decoration: InputDecoration(
-                    hintText: 'What do you want to listen to?',
+                    hintText: AppLocale.tr('what_to_listen'),
                     hintStyle:
                         const TextStyle(color: AppTheme.textTertiary, fontSize: 16),
                     filled: true,
@@ -113,7 +114,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             size: 64, color: AppTheme.textTertiary),
                         const SizedBox(height: 16),
                         Text(
-                          'No results for "${searchProvider.query}"',
+                          '${AppLocale.tr('no_results_for')} "${searchProvider.query}"',
                           style: const TextStyle(
                             color: AppTheme.textSecondary,
                             fontSize: 16,
@@ -153,9 +154,9 @@ class _SearchScreenState extends State<SearchScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Recent Searches',
-                          style: TextStyle(
+                        Text(
+                          AppLocale.tr('recent_searches'),
+                          style: const TextStyle(
                             color: AppTheme.textPrimary,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -163,9 +164,9 @@ class _SearchScreenState extends State<SearchScreen> {
                         ),
                         GestureDetector(
                           onTap: searchProvider.clearRecentSearches,
-                          child: const Text(
-                            'Clear',
-                            style: TextStyle(
+                          child: Text(
+                            AppLocale.tr('clear'),
+                            style: const TextStyle(
                               color: AppTheme.textSecondary,
                               fontSize: 13,
                             ),
@@ -205,9 +206,9 @@ class _SearchScreenState extends State<SearchScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Browse All',
-                        style: TextStyle(
+                      Text(
+                        AppLocale.tr('browse_all'),
+                        style: const TextStyle(
                           color: AppTheme.textPrimary,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

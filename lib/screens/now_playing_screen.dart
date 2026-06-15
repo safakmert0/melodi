@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
+import '../core/localization.dart';
 import '../core/extensions/duration_ext.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
@@ -24,16 +25,16 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<PlayerProvider>(
-      builder: (context, player, _) {
+    return Consumer2<PlayerProvider, LocaleNotifier>(
+      builder: (context, player, locale, _) {
         final song = player.currentSong;
         if (song == null) {
-          return const Scaffold(
+          return Scaffold(
             backgroundColor: AppTheme.darkBackground,
             body: Center(
               child: Text(
-                'No song playing',
-                style: TextStyle(color: AppTheme.textSecondary),
+                AppLocale.tr('no_song_playing'),
+                style: const TextStyle(color: AppTheme.textSecondary),
               ),
             ),
           );
@@ -48,9 +49,9 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 28),
               onPressed: () => Navigator.pop(context),
             ),
-            title: const Text(
-              'Now Playing',
-              style: TextStyle(
+            title: Text(
+              AppLocale.tr('now_playing'),
+              style: const TextStyle(
                 color: AppTheme.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -243,8 +244,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                     Center(
                       child: Text(
                         player.repeatMode == LoopStyle.all
-                            ? 'Repeat All'
-                            : 'Repeat One',
+                            ? AppLocale.tr('repeat_all')
+                            : AppLocale.tr('repeat_one'),
                         style: const TextStyle(
                           color: AppTheme.primaryColor,
                           fontSize: 11,
@@ -447,8 +448,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.playlist_add, color: AppTheme.textSecondary),
-              title: const Text('Add to Playlist',
-                  style: TextStyle(color: AppTheme.textPrimary)),
+              title: Text(AppLocale.tr('add_to_playlist'),
+                  style: const TextStyle(color: AppTheme.textPrimary)),
               onTap: () {
                 Navigator.pop(context);
                 _showAddToPlaylist(context, song);
@@ -456,20 +457,20 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.info_outline, color: AppTheme.textSecondary),
-              title: const Text('Song Info',
-                  style: TextStyle(color: AppTheme.textPrimary)),
+              title: Text(AppLocale.tr('song_info'),
+                  style: const TextStyle(color: AppTheme.textPrimary)),
               onTap: () => Navigator.pop(context),
             ),
             ListTile(
               leading: const Icon(Icons.share_outlined, color: AppTheme.textSecondary),
-              title: const Text('Share',
-                  style: TextStyle(color: AppTheme.textPrimary)),
+              title: Text(AppLocale.tr('share'),
+                  style: const TextStyle(color: AppTheme.textPrimary)),
               onTap: () => Navigator.pop(context),
             ),
             ListTile(
               leading: const Icon(Icons.timer, color: AppTheme.textSecondary),
-              title: const Text('Sleep Timer',
-                  style: TextStyle(color: AppTheme.textPrimary)),
+              title: Text(AppLocale.tr('sleep_timer'),
+                  style: const TextStyle(color: AppTheme.textPrimary)),
               onTap: () => Navigator.pop(context),
             ),
             const SizedBox(height: 16),

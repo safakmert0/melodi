@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
+import '../core/localization.dart';
 import '../models/playlist_model.dart';
 import '../models/song_model.dart';
 import '../services/database_service.dart';
@@ -65,13 +66,13 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'rename',
-                child: Text('Rename Playlist'),
+                child: Text(AppLocale.tr('rename_playlist')),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'delete',
-                child: Text('Delete Playlist'),
+                child: Text(AppLocale.tr('delete_playlist')),
               ),
             ],
           ),
@@ -89,13 +90,13 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                           size: 64, color: AppTheme.textTertiary),
                       SizedBox(height: 16),
                       Text(
-                        'No songs in this playlist',
-                        style: TextStyle(color: AppTheme.textSecondary),
+                        AppLocale.tr('no_songs_in_playlist'),
+                        style: const TextStyle(color: AppTheme.textSecondary),
                       ),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       Text(
-                        'Add songs from the library',
-                        style: TextStyle(color: AppTheme.textTertiary),
+                        AppLocale.tr('add_songs_from_library'),
+                        style: const TextStyle(color: AppTheme.textTertiary),
                       ),
                     ],
                   ),
@@ -139,7 +140,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '${_songs.length} songs',
+                                  '${_songs.length} ${AppLocale.tr('songs').toLowerCase()}',
                                   style: const TextStyle(
                                     color: AppTheme.textSecondary,
                                     fontSize: 14,
@@ -154,7 +155,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                         .playFromQueue(_songs, 0),
                                     icon: const Icon(Icons.play_arrow_rounded,
                                         size: 20),
-                                    label: const Text('Play'),
+                                    label: Text(AppLocale.tr('play')),
                                     style: FilledButton.styleFrom(
                                       backgroundColor: AppTheme.primaryColor,
                                       foregroundColor: Colors.black,
@@ -232,8 +233,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.darkSurface,
-        title: const Text('Rename Playlist',
-            style: TextStyle(color: AppTheme.textPrimary)),
+        title: Text(AppLocale.tr('rename_playlist'),
+            style: const TextStyle(color: AppTheme.textPrimary)),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -250,8 +251,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppTheme.textSecondary)),
+            child: Text(AppLocale.tr('cancel'),
+                style: const TextStyle(color: AppTheme.textSecondary)),
           ),
           TextButton(
             onPressed: () {
@@ -262,8 +263,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 Navigator.pop(context);
               }
             },
-            child: const Text('Rename',
-                style: TextStyle(color: AppTheme.primaryColor)),
+            child: Text(AppLocale.tr('rename'),
+                style: const TextStyle(color: AppTheme.primaryColor)),
           ),
         ],
       ),
@@ -275,17 +276,17 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.darkSurface,
-        title: const Text('Delete Playlist',
-            style: TextStyle(color: AppTheme.textPrimary)),
+        title: Text(AppLocale.tr('delete_playlist'),
+            style: const TextStyle(color: AppTheme.textPrimary)),
         content: Text(
-          'Delete "${widget.playlist.name}"?',
+          '${AppLocale.tr('delete')} "${widget.playlist.name}"?',
           style: const TextStyle(color: AppTheme.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppTheme.textSecondary)),
+            child: Text(AppLocale.tr('cancel'),
+                style: const TextStyle(color: AppTheme.textSecondary)),
           ),
           TextButton(
             onPressed: () {
@@ -295,8 +296,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               Navigator.pop(context);
               Navigator.pop(context);
             },
-            child: const Text('Delete',
-                style: TextStyle(color: AppTheme.errorColor)),
+            child: Text(AppLocale.tr('delete'),
+                style: const TextStyle(color: AppTheme.errorColor)),
           ),
         ],
       ),
