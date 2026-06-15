@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
-import 'package:package_info_plus/package_info_plus.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
 import '../providers/library_provider.dart';
@@ -20,7 +19,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late String _selectedLanguage;
-  String _appVersion = '1.0.0';
 
   @override
   void initState() {
@@ -28,14 +26,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _selectedLanguage = _localeName(AppLocale.currentLocale);
     _loadWatchedFolder();
     _loadPlaybackSettings();
-    _loadAppVersion();
-  }
-
-  Future<void> _loadAppVersion() async {
-    try {
-      final info = await PackageInfo.fromPlatform();
-      if (mounted) setState(() => _appVersion = '${info.version}+${info.buildNumber}');
-    } catch (_) {}
   }
 
   Future<void> _loadPlaybackSettings() async {
@@ -311,7 +301,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.info_outline_rounded,
                     iconColor: AppTheme.textSecondary,
                     title: 'Melodi',
-                    subtitle: '${AppLocale.tr('version')} $_appVersion',
+                    subtitle: '${AppLocale.tr('version')} ${AppConstants.appVersion}',
                   ),
                   _SettingsTile(
                     icon: Icons.favorite_rounded,
