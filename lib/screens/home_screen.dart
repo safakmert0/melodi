@@ -564,7 +564,6 @@ class _AlbumDetailScreen extends StatelessWidget {
                 );
               },
               ),
-          ),
         );
   }
 
