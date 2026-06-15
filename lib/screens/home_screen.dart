@@ -14,7 +14,6 @@ import '../models/album_model.dart';
 import '../models/artist_model.dart';
 import '../models/playlist_model.dart';
 import '../providers/playlist_provider.dart';
-import 'now_playing_screen.dart';
 import 'library_screen.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
@@ -116,17 +115,6 @@ class _HomeTab extends StatelessWidget {
                   ),
                 ),
                 actions: [
-                  IconButton(
-                    icon: const Icon(Icons.music_note_rounded),
-                    tooltip: AppLocale.tr('now_playing'),
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const NowPlayingScreen(),
-                        ),
-                      );
-                    },
-                  ),
                   if (library.isScanning)
                     const Padding(
                       padding: EdgeInsets.only(right: 16),

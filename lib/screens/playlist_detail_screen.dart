@@ -205,7 +205,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                               context
                                   .read<PlaylistProvider>()
                                   .removeSongFromPlaylist(playlist.id, song.id);
-                              _songs.removeAt(index);
+                              setState(() => _songs.removeAt(index));
                             },
                             child: SongTile(
                               song: song,

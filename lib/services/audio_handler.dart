@@ -147,6 +147,25 @@ class AudioPlayerHandler extends BaseAudioHandler
     await _updateMediaQueue();
   }
 
+  Future<void> moveInQueue(int oldIndex, int newIndex) async {
+    if (oldIndex < 0 || oldIndex >= _queue.length) return;
+    if (newIndex < 0 || newIndex >= _queue.length) return;
+    if (oldIndex == newIndex) return;
+
+    final item = _queue.removeAt(oldIndex);
+    _queue.insert(newIndex, item);
+
+    if (_currentIndex == oldIndex) {
+      _currentIndex = newIndex;
+    } else if (oldIndex < _currentIndex && newIndex >= _currentIndex) {
+      _currentIndex--;
+    } else if (oldIndex > _currentIndex && newIndex <= _currentIndex) {
+      _currentIndex++;
+    }
+
+    await _updateMediaQueue();
+  }
+
   Future<void> clearQueue() async {
     _queue.clear();
     _originalQueue.clear();

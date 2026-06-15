@@ -7,6 +7,8 @@ import '../models/genre_model.dart';
 import '../services/database_service.dart';
 import '../services/music_scanner_service.dart';
 
+enum SongSortField { title, artist, album, duration, dateAdded }
+
 class LibraryProvider extends ChangeNotifier {
   final DatabaseService _db = DatabaseService.instance;
   final MusicScannerService _scanner = MusicScannerService();
@@ -23,6 +25,61 @@ class LibraryProvider extends ChangeNotifier {
   bool _isScanning = false;
   String? _error;
   double _scanProgress = 0;
+  SongSortField _sortField = SongSortField.title;
+  bool _sortAscending = true;
+
+  SongSortField get sortField => _sortField;
+  bool get sortAscending => _sortAscending;
+
+  void setSortField(SongSortField field) {
+    _sortField = field;
+    _songs = _applySort(_songs);
+    notifyListeners();
+  }
+
+  void toggleSortDirection() {
+    _sortAscending = !_sortAscending;
+    _songs = _applySort(_songs);
+    notifyListeners();
+  }
+
+  List<SongModel> _applySort(List<SongModel> songs) {
+    final sorted = List<SongModel>.from(songs);
+    switch (_sortField) {
+      case SongSortField.title:
+        sorted.sort((a, b) => a.title.compareTo(b.title));
+        break;
+      case SongSortField.artist:
+        sorted.sort((a, b) => a.artist.compareTo(b.artist));
+        break;
+      case SongSortField.album:
+        sorted.sort((a, b) => a.album.compareTo(b.album));
+        break;
+      case SongSortField.duration:
+        sorted.sort((a, b) => a.duration.compareTo(b.duration));
+        break;
+      case SongSortField.dateAdded:
+        sorted.sort((a, b) => a.dateAdded.compareTo(b.dateAdded));
+        break;
+    }
+    if (!_sortAscending) {
+      sorted.sort((a, b) {
+        switch (_sortField) {
+          case SongSortField.title:
+            return b.title.compareTo(a.title);
+          case SongSortField.artist:
+            return b.artist.compareTo(a.artist);
+          case SongSortField.album:
+            return b.album.compareTo(a.album);
+          case SongSortField.duration:
+            return b.duration.compareTo(a.duration);
+          case SongSortField.dateAdded:
+            return b.dateAdded.compareTo(a.dateAdded);
+        }
+      });
+    }
+    return sorted;
+  }
 
   List<SongModel> get songs => List.unmodifiable(_songs);
   List<AlbumModel> get albums => List.unmodifiable(_albums);
@@ -48,7 +105,7 @@ class LibraryProvider extends ChangeNotifier {
         await _scanner.scanDirectoryAndSync(watchedFolder);
       }
 
-      _songs = await _db.getAllSongs();
+      _songs = _applySort(await _db.getAllSongs());
       _favorites = await _db.getFavoriteSongs();
       _recent = await _db.getRecentSongs();
       _mostPlayed = await _db.getMostPlayedSongs();
@@ -68,14 +125,15 @@ class LibraryProvider extends ChangeNotifier {
   Future<void> setWatchedFolder(String? path) async {
     if (path != null && path.isNotEmpty) {
       await _db.setSetting('watched_folder', path);
-      final newSongs = await _scanner.scanDirectoryAndSync(path);
+      final newSongs = await _scanner.importFromDirectoryPath(path);
       if (newSongs.isNotEmpty) {
         _songs.addAll(newSongs);
-        _buildAlbums();
-        _buildArtists();
-        _buildGenres();
-        notifyListeners();
       }
+      _songs = _applySort(_songs);
+      _buildAlbums();
+      _buildArtists();
+      _buildGenres();
+      notifyListeners();
     } else {
       await _db.setSetting('watched_folder', '');
     }
@@ -159,7 +217,7 @@ class LibraryProvider extends ChangeNotifier {
 
     try {
       final songs = await _scanner.scanAllSources();
-      _songs = songs;
+      _songs = _applySort(songs);
       _buildAlbums();
       _buildArtists();
       _buildGenres();

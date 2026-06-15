@@ -7,6 +7,7 @@ import '../providers/player_provider.dart';
 import '../providers/playlist_provider.dart';
 import '../widgets/song_tile.dart';
 import '../models/song_model.dart';
+import '../models/album_model.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -146,27 +147,97 @@ class _SongsTab extends StatelessWidget {
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.sort_rounded,
                         color: AppTheme.textSecondary, size: 20),
-                    onSelected: (value) {},
+                    onSelected: (value) {
+                      switch (value) {
+                        case 'title':
+                          library.setSortField(SongSortField.title);
+                          break;
+                        case 'artist':
+                          library.setSortField(SongSortField.artist);
+                          break;
+                        case 'album':
+                          library.setSortField(SongSortField.album);
+                          break;
+                        case 'duration':
+                          library.setSortField(SongSortField.duration);
+                          break;
+                        case 'date':
+                          library.setSortField(SongSortField.dateAdded);
+                          break;
+                        case 'toggleDirection':
+                          library.toggleSortDirection();
+                          break;
+                      }
+                    },
                     itemBuilder: (context) => [
                       PopupMenuItem(
                         value: 'title',
-                        child: Text(AppLocale.tr('sort_by_title')),
+                        child: Row(
+                          children: [
+                            Expanded(child: Text(AppLocale.tr('sort_by_title'))),
+                            if (library.sortField == SongSortField.title)
+                              Icon(library.sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                                  size: 16, color: AppTheme.primaryColor),
+                          ],
+                        ),
                       ),
                       PopupMenuItem(
                         value: 'artist',
-                        child: Text(AppLocale.tr('sort_by_artist')),
+                        child: Row(
+                          children: [
+                            Expanded(child: Text(AppLocale.tr('sort_by_artist'))),
+                            if (library.sortField == SongSortField.artist)
+                              Icon(library.sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                                  size: 16, color: AppTheme.primaryColor),
+                          ],
+                        ),
                       ),
                       PopupMenuItem(
                         value: 'album',
-                        child: Text(AppLocale.tr('sort_by_album')),
+                        child: Row(
+                          children: [
+                            Expanded(child: Text(AppLocale.tr('sort_by_album'))),
+                            if (library.sortField == SongSortField.album)
+                              Icon(library.sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                                  size: 16, color: AppTheme.primaryColor),
+                          ],
+                        ),
                       ),
                       PopupMenuItem(
                         value: 'duration',
-                        child: Text(AppLocale.tr('sort_by_duration')),
+                        child: Row(
+                          children: [
+                            Expanded(child: Text(AppLocale.tr('sort_by_duration'))),
+                            if (library.sortField == SongSortField.duration)
+                              Icon(library.sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                                  size: 16, color: AppTheme.primaryColor),
+                          ],
+                        ),
                       ),
                       PopupMenuItem(
                         value: 'date',
-                        child: Text(AppLocale.tr('sort_by_date_added')),
+                        child: Row(
+                          children: [
+                            Expanded(child: Text(AppLocale.tr('sort_by_date_added'))),
+                            if (library.sortField == SongSortField.dateAdded)
+                              Icon(library.sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                                  size: 16, color: AppTheme.primaryColor),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(),
+                      PopupMenuItem(
+                        value: 'toggleDirection',
+                        child: Row(
+                          children: [
+                            Icon(
+                              library.sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                              size: 16, color: AppTheme.textSecondary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(library.sortAscending ? 'A-Z' : 'Z-A'),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -294,7 +365,7 @@ class _AlbumsTab extends StatelessWidget {
 }
 
 class _AlbumGridDetailScreen extends StatelessWidget {
-  final dynamic album;
+  final AlbumModel album;
   final List<SongModel> songs;
 
   const _AlbumGridDetailScreen({required this.album, required this.songs});

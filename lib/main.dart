@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:audio_service/audio_service.dart';
@@ -29,7 +30,14 @@ Future<void> main() async {
   ));
 
   // Initialize database
-  await DatabaseService.instance.database;
+  final db = DatabaseService.instance;
+  await db.database;
+
+  // Load saved locale
+  final savedLocale = await db.getSetting('app_locale');
+  if (savedLocale != null && savedLocale.isNotEmpty) {
+    AppLocale.currentLocale = savedLocale;
+  }
 
   // Initialize audio handler with service
   final audioHandler = await AudioService.init(
@@ -79,6 +87,26 @@ class MelodiApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
         home: const HomeScreen(),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('en'),
+          Locale('tr'),
+          Locale('de'),
+        ],
+        localeResolutionCallback: (locale, supportedLocales) {
+          if (locale != null) {
+            for (final supported in supportedLocales) {
+              if (supported.languageCode == locale.languageCode) {
+                return supported;
+              }
+            }
+          }
+          return const Locale('en');
+        },
       ),
     );
   }

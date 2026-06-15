@@ -141,6 +141,7 @@ class AppLocale {
       'auto_scan_folder': 'Auto-scan a folder on every launch',
       'watching': 'Watching',
       'folder_set': 'Folder set',
+      'could_not_open_link': 'Could not open link',
     },
     'tr': {
       'home': 'Ana Sayfa',
@@ -260,6 +261,7 @@ class AppLocale {
       'auto_scan_folder': 'Her açılışta bir klasörü otomatik tara',
       'watching': 'İzleniyor',
       'folder_set': 'Klasör ayarlandı',
+      'could_not_open_link': 'Link açılamadı',
     },
     'de': {
       'home': 'Startseite',
@@ -379,6 +381,7 @@ class AppLocale {
       'auto_scan_folder': 'Ordner bei jedem Start automatisch scannen',
       'watching': 'Überwacht',
       'folder_set': 'Ordner festgelegt',
+      'could_not_open_link': 'Link konnte nicht geöffnet werden',
     },
   };
 

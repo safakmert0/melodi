@@ -105,7 +105,7 @@ class QueueSheet extends StatelessWidget {
                         itemCount: queue.length,
                         onReorder: (oldIndex, newIndex) {
                           if (oldIndex < newIndex) newIndex--;
-                          player.removeFromQueue(oldIndex);
+                          player.moveInQueue(oldIndex, newIndex);
                         },
                         itemBuilder: (context, index) {
                           final song = queue[index];

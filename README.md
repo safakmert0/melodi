@@ -100,11 +100,13 @@ flutter build ios --debug --no-codesign
 
 ```
 lib/
-├── app.dart                  # App entry point with providers
 ├── main.dart                 # Main entry + audio service init
+├── app.dart                  # App-level utilities
 ├── core/
 │   ├── constants.dart        # Theme, colors, app constants
-│   └── extensions/           # Duration extensions
+│   ├── localization.dart     # Multi-language support (EN/TR/DE)
+│   └── extensions/
+│       └── duration_ext.dart
 ├── models/
 │   ├── song_model.dart
 │   ├── album_model.dart

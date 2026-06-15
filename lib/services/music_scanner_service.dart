@@ -147,11 +147,20 @@ class MusicScannerService {
       String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
       if (selectedDirectory == null) return [];
 
-      var songs =
-          await MetadataService.scanDirectory(selectedDirectory);
+      return await importFromDirectoryPath(selectedDirectory);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<app.SongModel>> importFromDirectoryPath(String directoryPath) async {
+    try {
+      var songs = await MetadataService.scanDirectory(directoryPath);
       final existingPaths = await _db.getAllSongs().then((s) => s.map((e) => e.filePath).toSet());
       songs = songs.where((s) => !existingPaths.contains(s.filePath)).toList();
-      await _db.insertSongs(songs);
+      if (songs.isNotEmpty) {
+        await _db.insertSongs(songs);
+      }
       return songs;
     } catch (e) {
       return [];
@@ -178,10 +187,14 @@ class MusicScannerService {
       await _db.insertSongs(newSongs);
     }
 
-    final missingPaths = existingPaths.difference(scannedPaths);
-    final toRemove = existing.where((s) => missingPaths.contains(s.filePath)).toList();
-    for (final s in toRemove) {
-      await _db.deleteSong(s.id);
+    // Only remove songs if the scan actually found files
+    // (avoids deleting library when directory is temporarily inaccessible)
+    if (scannedPaths.isNotEmpty) {
+      final missingPaths = existingPaths.difference(scannedPaths);
+      final toRemove = existing.where((s) => missingPaths.contains(s.filePath)).toList();
+      for (final s in toRemove) {
+        await _db.deleteSong(s.id);
+      }
     }
 
     return newSongs;

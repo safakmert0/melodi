@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
 import '../providers/library_provider.dart';
@@ -23,6 +24,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     _selectedLanguage = _localeName(AppLocale.currentLocale);
     _loadWatchedFolder();
+    _loadPlaybackSettings();
+  }
+
+  Future<void> _loadPlaybackSettings() async {
+    final db = DatabaseService.instance;
+    final speed = await db.getSetting('default_playback_speed');
+    final volume = await db.getSetting('default_volume_boost');
+    final crossfade = await db.getSetting('crossfade_seconds');
+    final shuffle = await db.getSetting('auto_shuffle');
+    final gapless = await db.getSetting('gapless_playback');
+    if (mounted) {
+      setState(() {
+        _defaultPlaybackSpeed = double.tryParse(speed ?? '') ?? 1.0;
+        _defaultVolumeBoost = double.tryParse(volume ?? '') ?? 1.0;
+        _crossfadeSeconds = double.tryParse(crossfade ?? '') ?? 0;
+        _autoShuffle = shuffle == 'true';
+        _gaplessPlayback = gapless != 'false';
+      });
+    }
   }
 
   String _localeName(String code) {
@@ -215,12 +235,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onChanged: (v) {
                         setState(() => _autoShuffle = v);
                         player.setAutoShuffle(v);
+                        DatabaseService.instance.setSetting('auto_shuffle', v.toString());
                       },
                       activeColor: AppTheme.primaryColor,
                     ),
                     onTap: () {
-                      setState(() => _autoShuffle = !_autoShuffle);
-                      player.setAutoShuffle(_autoShuffle);
+                      final v = !_autoShuffle;
+                      setState(() => _autoShuffle = v);
+                      player.setAutoShuffle(v);
+                      DatabaseService.instance.setSetting('auto_shuffle', v.toString());
                     },
                   ),
                   _SettingsTile(
@@ -233,12 +256,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onChanged: (v) {
                         setState(() => _gaplessPlayback = v);
                         player.setGaplessPlayback(v);
+                        DatabaseService.instance.setSetting('gapless_playback', v.toString());
                       },
                       activeColor: AppTheme.primaryColor,
                     ),
                     onTap: () {
-                      setState(() => _gaplessPlayback = !_gaplessPlayback);
-                      player.setGaplessPlayback(_gaplessPlayback);
+                      final v = !_gaplessPlayback;
+                      setState(() => _gaplessPlayback = v);
+                      player.setGaplessPlayback(v);
+                      DatabaseService.instance.setSetting('gapless_playback', v.toString());
                     },
                   ),
                   _SettingsTile(
@@ -258,30 +284,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     iconColor: Colors.grey,
                     title: 'GitHub',
                     subtitle: 'safakmert0',
-                    onTap: () {
-                      Clipboard.setData(const ClipboardData(text: 'safakmert0'));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('GitHub: safakmert0'),
-                          backgroundColor: AppTheme.primaryColor,
-                        ),
-                      );
-                    },
+                    onTap: () => _openUrl('https://github.com/safakmert0'),
                   ),
                   _SettingsTile(
                     icon: Icons.send_rounded,
                     iconColor: Colors.lightBlue,
                     title: 'Telegram',
                     subtitle: '@safakmert',
-                    onTap: () {
-                      Clipboard.setData(const ClipboardData(text: '@safakmert'));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Telegram: https://t.me/safakmert'),
-                          backgroundColor: AppTheme.primaryColor,
-                        ),
-                      );
-                    },
+                    onTap: () => _openUrl('https://t.me/safakmert'),
                   ),
                   const Divider(color: AppTheme.darkDivider, height: 1),
                   // About section
@@ -351,6 +361,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _selectedLanguage = entry.$1;
                     AppLocale.change(entry.$2);
                     context.read<LocaleNotifier>().change(entry.$2);
+                    DatabaseService.instance.setSetting('app_locale', entry.$2);
                   });
                   Navigator.pop(ctx);
                 },
@@ -390,7 +401,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     fontSize: 20,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            ...speeds.map((speed) {
+              ...speeds.map((speed) {
               return ListTile(
                 title: Text('${speed}x',
                     style: const TextStyle(color: AppTheme.textPrimary)),
@@ -399,7 +410,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     : null,
                 onTap: () {
                   setState(() => _defaultPlaybackSpeed = speed);
-                  context.read<PlayerProvider>().setPlaybackSpeed(speed);
+                  final playerProv = context.read<PlayerProvider>();
+                  playerProv.setPlaybackSpeed(speed);
+                  DatabaseService.instance.setSetting('default_playback_speed', speed.toString());
                   Navigator.pop(ctx);
                 },
               );
@@ -472,6 +485,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onPressed: () {
                         setState(() => _defaultVolumeBoost = localVolume);
                         context.read<PlayerProvider>().setVolume(localVolume);
+                        DatabaseService.instance.setSetting('default_volume_boost', localVolume.toString());
                         Navigator.pop(ctx);
                       },
                       style: FilledButton.styleFrom(
@@ -551,6 +565,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onPressed: () {
                         setState(() => _crossfadeSeconds = localCrossfade);
                         player.setCrossfade(Duration(seconds: localCrossfade.toInt()));
+                        DatabaseService.instance.setSetting('crossfade_seconds', localCrossfade.toString());
                         Navigator.pop(ctx);
                       },
                       style: FilledButton.styleFrom(
@@ -602,6 +617,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SnackBar(
             content: Text('Watching: $selectedDirectory'),
             backgroundColor: AppTheme.primaryColor,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _openUrl(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocale.tr('could_not_open_link')),
+            backgroundColor: AppTheme.errorColor,
           ),
         );
       }

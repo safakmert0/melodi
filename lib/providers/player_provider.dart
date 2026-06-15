@@ -164,6 +164,11 @@ class PlayerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> moveInQueue(int oldIndex, int newIndex) async {
+    await _handler.moveInQueue(oldIndex, newIndex);
+    notifyListeners();
+  }
+
   Future<void> setPlaybackSpeed(double speed) async {
     await _handler.setPlaybackSpeed(speed);
     notifyListeners();
