@@ -132,10 +132,20 @@ class MusicScannerService {
           .map((f) => f.path!)
           .toList();
 
+      return await importFromPaths(paths);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<app.SongModel>> importFromPaths(List<String> paths) async {
+    try {
       var songs = await MetadataService.extractMultipleMetadata(paths);
       final existingPaths = await _db.getAllSongs().then((s) => s.map((e) => e.filePath).toSet());
       songs = songs.where((s) => !existingPaths.contains(s.filePath)).toList();
-      await _db.insertSongs(songs);
+      if (songs.isNotEmpty) {
+        await _db.insertSongs(songs);
+      }
       return songs;
     } catch (e) {
       return [];
@@ -144,6 +154,25 @@ class MusicScannerService {
 
   Future<List<app.SongModel>> importFromDirectory() async {
     try {
+      if (Platform.isIOS) {
+        // On iOS, use file picker with multiple selection instead of directory path,
+        // because security-scoped directory access expires before we can read files.
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowMultiple: true,
+          allowedExtensions: const [
+            'mp3', 'm4a', 'flac', 'wav', 'aac', 'ogg', 'wma',
+            'alac', 'aiff', 'opus', 'ape', 'wv',
+          ],
+        );
+        if (result == null || result.files.isEmpty) return [];
+        final paths = result.files
+            .where((f) => f.path != null)
+            .map((f) => f.path!)
+            .toList();
+        return await importFromPaths(paths);
+      }
+
       String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
       if (selectedDirectory == null) return [];
 

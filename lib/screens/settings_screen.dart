@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:io';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
 import '../providers/library_provider.dart';
@@ -18,6 +20,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late String _selectedLanguage;
+  String _appVersion = '1.0.0';
 
   @override
   void initState() {
@@ -25,6 +28,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _selectedLanguage = _localeName(AppLocale.currentLocale);
     _loadWatchedFolder();
     _loadPlaybackSettings();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (mounted) setState(() => _appVersion = '${info.version}+${info.buildNumber}');
+    } catch (_) {}
   }
 
   Future<void> _loadPlaybackSettings() async {
@@ -300,7 +311,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.info_outline_rounded,
                     iconColor: AppTheme.textSecondary,
                     title: 'Melodi',
-                    subtitle: '${AppLocale.tr('version')} ${AppConstants.appVersion}',
+                    subtitle: '${AppLocale.tr('version')} $_appVersion',
                   ),
                   _SettingsTile(
                     icon: Icons.favorite_rounded,
@@ -608,8 +619,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _pickWatchedFolder(BuildContext context) async {
     final lib = context.read<LibraryProvider>();
-    String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
-    if (selectedDirectory != null) {
+    String? selectedDirectory;
+
+    if (Platform.isIOS) {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowMultiple: true,
+        allowedExtensions: const [
+          'mp3', 'm4a', 'flac', 'wav', 'aac', 'ogg', 'wma',
+          'alac', 'aiff', 'opus', 'ape', 'wv',
+        ],
+      );
+      if (result != null && result.files.isNotEmpty && result.files.first.path != null) {
+        final firstPath = result.files.first.path!;
+        selectedDirectory = firstPath.substring(0, firstPath.lastIndexOf('/'));
+        final paths = result.files
+            .where((f) => f.path != null)
+            .map((f) => f.path!)
+            .toList();
+        if (paths.isNotEmpty) {
+          await lib.importFromFilePaths(paths);
+        }
+      }
+    } else {
+      selectedDirectory = await FilePicker.platform.getDirectoryPath();
+    }
+
+    if (selectedDirectory != null && selectedDirectory.isNotEmpty) {
       await lib.setWatchedFolder(selectedDirectory);
       setState(() => _watchedFolderPath = selectedDirectory);
       if (context.mounted) {

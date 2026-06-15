@@ -360,6 +360,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     );
   }
 
+  String _stripLrcTimestamp(String line) {
+    return line.replaceAll(RegExp(r'^\[\d{2}:\d{2}(\.\d{2,3})?\]\s*'), '');
+  }
+
   Widget _buildLyricsView(String lyrics, PlayerProvider player) {
     final lines = lyrics.split('\n');
     final positionMs = player.position.inMilliseconds;
@@ -376,7 +380,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
           children: [
             Text(
               currentLineIndex < lines.length
-                  ? lines[currentLineIndex].trim()
+                  ? _stripLrcTimestamp(lines[currentLineIndex])
                   : '',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -389,7 +393,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
             const SizedBox(height: 4),
             Text(
               currentLineIndex + 1 < lines.length
-                  ? lines[currentLineIndex + 1].trim()
+                  ? _stripLrcTimestamp(lines[currentLineIndex + 1])
                   : '',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

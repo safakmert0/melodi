@@ -40,7 +40,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     context.watch<LocaleNotifier>();
     return Scaffold(
-      extendBody: true,
       body: Column(
         children: [
           Expanded(
