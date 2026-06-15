@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:io';
 import '../core/constants.dart';
 import '../core/localization.dart';
 import '../providers/library_provider.dart';
@@ -609,33 +608,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _pickWatchedFolder(BuildContext context) async {
     final lib = context.read<LibraryProvider>();
-    String? selectedDirectory;
-
-    if (Platform.isIOS) {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowMultiple: true,
-        allowedExtensions: const [
-          'mp3', 'm4a', 'flac', 'wav', 'aac', 'ogg', 'wma',
-          'alac', 'aiff', 'opus', 'ape', 'wv',
-        ],
-      );
-      if (result != null && result.files.isNotEmpty && result.files.first.path != null) {
-        final firstPath = result.files.first.path!;
-        selectedDirectory = firstPath.substring(0, firstPath.lastIndexOf('/'));
-        final paths = result.files
-            .where((f) => f.path != null)
-            .map((f) => f.path!)
-            .toList();
-        if (paths.isNotEmpty) {
-          await lib.importFromFilePaths(paths);
-        }
-      }
-    } else {
-      selectedDirectory = await FilePicker.platform.getDirectoryPath();
-    }
-
-    if (selectedDirectory != null && selectedDirectory.isNotEmpty) {
+    String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+    if (selectedDirectory != null) {
       await lib.setWatchedFolder(selectedDirectory);
       setState(() => _watchedFolderPath = selectedDirectory);
       if (context.mounted) {

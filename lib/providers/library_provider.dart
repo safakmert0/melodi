@@ -275,27 +275,6 @@ class LibraryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> importFromFilePaths(List<String> paths) async {
-    _isScanning = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      final songs = await _scanner.importFromPaths(paths);
-      if (songs.isNotEmpty) {
-        _songs.addAll(songs);
-        _buildAlbums();
-        _buildArtists();
-        _buildGenres();
-      }
-    } catch (e) {
-      _error = 'Import failed: $e';
-    }
-
-    _isScanning = false;
-    notifyListeners();
-  }
-
   Future<void> toggleFavorite(SongModel song) async {
     final newFav = !song.isFavorite;
     await _db.updateFavoriteStatus(song.id, newFav);
