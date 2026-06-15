@@ -137,6 +137,10 @@ class AppLocale {
       'play_next': 'Play Next',
       'view_album': 'View Album',
       'view_artist': 'View Artist',
+      'watched_folder': 'Watched Folder',
+      'auto_scan_folder': 'Auto-scan a folder on every launch',
+      'watching': 'Watching',
+      'folder_set': 'Folder set',
     },
     'tr': {
       'home': 'Ana Sayfa',
@@ -252,6 +256,10 @@ class AppLocale {
       'play_next': 'Sıradaki',
       'view_album': 'Albümü Gör',
       'view_artist': 'Sanatçıyı Gör',
+      'watched_folder': 'İzlenen Klasör',
+      'auto_scan_folder': 'Her açılışta bir klasörü otomatik tara',
+      'watching': 'İzleniyor',
+      'folder_set': 'Klasör ayarlandı',
     },
     'de': {
       'home': 'Startseite',
@@ -367,6 +375,10 @@ class AppLocale {
       'play_next': 'Als Nächstes abspielen',
       'view_album': 'Album anzeigen',
       'view_artist': 'Künstler anzeigen',
+      'watched_folder': 'Überwachter Ordner',
+      'auto_scan_folder': 'Ordner bei jedem Start automatisch scannen',
+      'watching': 'Überwacht',
+      'folder_set': 'Ordner festgelegt',
     },
   };
 

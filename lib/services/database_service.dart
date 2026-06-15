@@ -27,7 +27,7 @@ class DatabaseService {
     final path = p.join(dir.path, 'melodi.db');
       return await openDatabase(
         path,
-        version: 2,
+        version: 3,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
       );
@@ -45,6 +45,27 @@ class DatabaseService {
         ALTER TABLE songs ADD COLUMN volumeBoost REAL DEFAULT 1.0
       ''');
     }
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS settings (
+          key TEXT PRIMARY KEY,
+          value TEXT
+        )
+      ''');
+    }
+  }
+
+  Future<String?> getSetting(String key) async {
+    final db = await database;
+    final maps = await db.query('settings', where: 'key = ?', whereArgs: [key]);
+    if (maps.isEmpty) return null;
+    return maps.first['value'] as String?;
+  }
+
+  Future<void> setSetting(String key, String value) async {
+    final db = await database;
+    await db.insert('settings', {'key': key, 'value': value},
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -92,6 +113,13 @@ class DatabaseService {
         songId TEXT PRIMARY KEY,
         artwork BLOB,
         FOREIGN KEY (songId) REFERENCES songs(id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE settings (
+        key TEXT PRIMARY KEY,
+        value TEXT
       )
     ''');
 

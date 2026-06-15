@@ -43,6 +43,11 @@ class LibraryProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final watchedFolder = await _db.getSetting('watched_folder');
+      if (watchedFolder != null && watchedFolder.isNotEmpty) {
+        await _scanner.scanDirectoryAndSync(watchedFolder);
+      }
+
       _songs = await _db.getAllSongs();
       _favorites = await _db.getFavoriteSongs();
       _recent = await _db.getRecentSongs();
@@ -55,6 +60,29 @@ class LibraryProvider extends ChangeNotifier {
     }
 
     _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<String?> getWatchedFolder() => _db.getSetting('watched_folder');
+
+  Future<void> setWatchedFolder(String? path) async {
+    if (path != null && path.isNotEmpty) {
+      await _db.setSetting('watched_folder', path);
+      final newSongs = await _scanner.scanDirectoryAndSync(path);
+      if (newSongs.isNotEmpty) {
+        _songs.addAll(newSongs);
+        _buildAlbums();
+        _buildArtists();
+        _buildGenres();
+        notifyListeners();
+      }
+    } else {
+      await _db.setSetting('watched_folder', '');
+    }
+  }
+
+  Future<void> clearWatchedFolder() async {
+    await _db.setSetting('watched_folder', '');
     notifyListeners();
   }
 

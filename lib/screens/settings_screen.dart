@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
 import '../providers/library_provider.dart';
@@ -35,6 +35,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   double _defaultVolumeBoost = 1.0;
   bool _autoShuffle = false;
   bool _gaplessPlayback = true;
+  String _watchedFolderPath = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWatchedFolder();
+  }
+
+  Future<void> _loadWatchedFolder() async {
+    final path = await context.read<LibraryProvider>().getWatchedFolder();
+    if (mounted) setState(() => _watchedFolderPath = path ?? '');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -105,6 +117,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: AppLocale.tr('scan_folder_for_music'),
                     onTap: () =>
                         context.read<LibraryProvider>().importFromDirectory(),
+                  ),
+                  _SettingsTile(
+                    icon: Icons.sync_folder_rounded,
+                    iconColor: Colors.deepPurple,
+                    title: AppLocale.tr('watched_folder'),
+                    subtitle: _watchedFolderPath.isNotEmpty
+                        ? '${AppLocale.tr('watching')}: $_watchedFolderPath'
+                        : AppLocale.tr('auto_scan_folder'),
+                    trailing: _watchedFolderPath.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.close, color: AppTheme.textTertiary, size: 18),
+                            onPressed: () async {
+                              await context.read<LibraryProvider>().clearWatchedFolder();
+                              setState(() => _watchedFolderPath = '');
+                            },
+                          )
+                        : null,
+                    onTap: () => _pickWatchedFolder(context),
                   ),
                   const Divider(color: AppTheme.darkDivider, height: 1),
                   // Storage section
@@ -563,6 +593,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _pickWatchedFolder(BuildContext context) async {
+    final lib = context.read<LibraryProvider>();
+    String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+    if (selectedDirectory != null) {
+      await lib.setWatchedFolder(selectedDirectory);
+      setState(() => _watchedFolderPath = selectedDirectory);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Watching: $selectedDirectory'),
+            backgroundColor: AppTheme.primaryColor,
+          ),
+        );
+      }
+    }
   }
 
   void _confirmClearLibrary(BuildContext context) {

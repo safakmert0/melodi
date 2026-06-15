@@ -167,6 +167,26 @@ class MusicScannerService {
     return allSongs;
   }
 
+  Future<List<app.SongModel>> scanDirectoryAndSync(String directoryPath) async {
+    final scanned = await MetadataService.scanDirectory(directoryPath);
+    final existing = await _db.getAllSongs();
+    final existingPaths = existing.map((s) => s.filePath).toSet();
+    final scannedPaths = scanned.map((s) => s.filePath).toSet();
+
+    final newSongs = scanned.where((s) => !existingPaths.contains(s.filePath)).toList();
+    if (newSongs.isNotEmpty) {
+      await _db.insertSongs(newSongs);
+    }
+
+    final missingPaths = existingPaths.difference(scannedPaths);
+    final toRemove = existing.where((s) => missingPaths.contains(s.filePath)).toList();
+    for (final s in toRemove) {
+      await _db.deleteSong(s.id);
+    }
+
+    return newSongs;
+  }
+
   Future<void> rescanLibrary() async {
     final songs = await scanAllSources();
     final validPaths = songs.map((s) => s.filePath).toSet();
