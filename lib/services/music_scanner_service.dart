@@ -132,10 +132,20 @@ class MusicScannerService {
           .map((f) => f.path!)
           .toList();
 
+      return await importFromPaths(paths);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<app.SongModel>> importFromPaths(List<String> paths) async {
+    try {
       var songs = await MetadataService.extractMultipleMetadata(paths);
       final existingPaths = await _db.getAllSongs().then((s) => s.map((e) => e.filePath).toSet());
       songs = songs.where((s) => !existingPaths.contains(s.filePath)).toList();
-      await _db.insertSongs(songs);
+      if (songs.isNotEmpty) {
+        await _db.insertSongs(songs);
+      }
       return songs;
     } catch (e) {
       return [];
