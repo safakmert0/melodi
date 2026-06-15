@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
@@ -217,6 +218,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                   .read<LibraryProvider>()
                                   .toggleFavorite(song),
                               showArtwork: true,
+                              onViewAlbum: () => _navigateToAlbum(context, song),
+                              onViewArtist: () => _navigateToArtist(context, song),
                             ),
                           );
                         },
@@ -271,6 +274,38 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     );
   }
 
+  void _navigateToAlbum(BuildContext context, SongModel song) {
+    final lib = context.read<LibraryProvider>();
+    final albums = lib.albums.where((a) => a.name == song.album && a.artist == song.artist).toList();
+    if (albums.isEmpty) return;
+    final albumSongs = lib.getSongsForAlbum(albums.first);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _SimpleAlbumScreen(
+          albumName: albums.first.name,
+          artistName: albums.first.artist,
+          artwork: albums.first.artwork,
+          songs: albumSongs,
+        ),
+      ),
+    );
+  }
+
+  void _navigateToArtist(BuildContext context, SongModel song) {
+    final lib = context.read<LibraryProvider>();
+    final artists = lib.artists.where((a) => a.name == song.artist).toList();
+    if (artists.isEmpty) return;
+    final artistSongs = lib.getSongsForArtist(artists.first);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _SimpleArtistScreen(
+          artistName: artists.first.name,
+          songs: artistSongs,
+        ),
+      ),
+    );
+  }
+
   void _confirmDelete(BuildContext context) {
     showDialog(
       context: context,
@@ -300,6 +335,68 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 style: const TextStyle(color: AppTheme.errorColor)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SimpleAlbumScreen extends StatelessWidget {
+  final String albumName;
+  final String artistName;
+  final Uint8List? artwork;
+  final List<SongModel> songs;
+
+  const _SimpleAlbumScreen({
+    required this.albumName,
+    required this.artistName,
+    this.artwork,
+    required this.songs,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.darkBackground,
+      appBar: AppBar(title: Text(albumName)),
+      body: ListView.builder(
+        itemCount: songs.length,
+        itemBuilder: (context, index) {
+          final song = songs[index];
+          return SongTile(
+            song: song,
+            onTap: () => context.read<PlayerProvider>().playFromQueue(songs, index),
+            onFavorite: () => context.read<LibraryProvider>().toggleFavorite(song),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _SimpleArtistScreen extends StatelessWidget {
+  final String artistName;
+  final List<SongModel> songs;
+
+  const _SimpleArtistScreen({
+    required this.artistName,
+    required this.songs,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.darkBackground,
+      appBar: AppBar(title: Text(artistName)),
+      body: ListView.builder(
+        itemCount: songs.length,
+        itemBuilder: (context, index) {
+          final song = songs[index];
+          return SongTile(
+            song: song,
+            onTap: () => context.read<PlayerProvider>().playFromQueue(songs, index),
+            onFavorite: () => context.read<LibraryProvider>().toggleFavorite(song),
+          );
+        },
       ),
     );
   }

@@ -10,7 +10,8 @@ import '../models/song_model.dart';
 import '../models/album_model.dart';
 
 class LibraryScreen extends StatefulWidget {
-  const LibraryScreen({super.key});
+  final int initialTab;
+  const LibraryScreen({super.key, this.initialTab = 0});
 
   @override
   State<LibraryScreen> createState() => _LibraryScreenState();
@@ -23,8 +24,18 @@ class _LibraryScreenState extends State<LibraryScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 4, vsync: this, initialIndex: widget.initialTab);
   }
+
+  @override
+  void didUpdateWidget(LibraryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialTab != oldWidget.initialTab) {
+      _tabController.animateTo(widget.initialTab);
+    }
+  }
+
+
 
   @override
   void dispose() {
@@ -258,6 +269,8 @@ class _SongsTab extends StatelessWidget {
                         player.playFromQueue(songs, index),
                     onFavorite: () =>
                         context.read<LibraryProvider>().toggleFavorite(song),
+                    onViewAlbum: () => _navigateToAlbum(context, song),
+                    onViewArtist: () => _navigateToArtist(context, song),
                   );
                 },
               ),
@@ -266,6 +279,32 @@ class _SongsTab extends StatelessWidget {
         );
       },
     );
+  }
+
+  void _navigateToAlbum(BuildContext context, SongModel song) {
+    final lib = context.read<LibraryProvider>();
+    final albums = lib.albums.where((a) => a.name == song.album && a.artist == song.artist).toList();
+    if (albums.isNotEmpty) {
+      final albumSongs = lib.getSongsForAlbum(albums.first);
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => _AlbumGridDetailScreen(album: albums.first, songs: albumSongs),
+        ),
+      );
+    }
+  }
+
+  void _navigateToArtist(BuildContext context, SongModel song) {
+    final lib = context.read<LibraryProvider>();
+    final artists = lib.artists.where((a) => a.name == song.artist).toList();
+    if (artists.isNotEmpty) {
+      final artistSongs = lib.getSongsForArtist(artists.first);
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => _ArtistDetailScreen(artistName: artists.first.name, songs: artistSongs),
+        ),
+      );
+    }
   }
 }
 
@@ -385,6 +424,8 @@ class _AlbumGridDetailScreen extends StatelessWidget {
                 context.read<PlayerProvider>().playFromQueue(songs, index),
             onFavorite: () =>
                 context.read<LibraryProvider>().toggleFavorite(song),
+            onViewAlbum: () {},
+            onViewArtist: () => _navigateToArtist(context, song),
           );
         },
       ),
@@ -464,6 +505,8 @@ class _ArtistDetailScreen extends StatelessWidget {
                 context.read<PlayerProvider>().playFromQueue(songs, index),
             onFavorite: () =>
                 context.read<LibraryProvider>().toggleFavorite(song),
+            onViewAlbum: () => _navigateToAlbum(context, song),
+            onViewArtist: () {},
           );
         },
       ),
@@ -545,6 +588,8 @@ class _GenreDetailScreen extends StatelessWidget {
                 context.read<PlayerProvider>().playFromQueue(songs, index),
             onFavorite: () =>
                 context.read<LibraryProvider>().toggleFavorite(song),
+            onViewAlbum: () => _navigateToAlbum(context, song),
+            onViewArtist: () => _navigateToArtist(context, song),
           );
         },
       ),

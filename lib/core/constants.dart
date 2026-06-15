@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'dart:ui' show Brightness;
 import 'localization.dart';
 
 export 'localization.dart' show AppLocale;
 
 class AppConstants {
   static const String appName = 'Melodi';
-  static const String appVersion = '1.4.0';
+  static const String appVersion = '1.5.0';
 
   static const List<String> supportedAudioExtensions = [
     'mp3', 'm4a', 'flac', 'wav', 'aac', 'ogg', 'wma',
@@ -48,8 +49,75 @@ class AppTheme {
   static const Color gradientStart = Color(0xFF1DB954);
   static const Color gradientEnd = Color(0xFF169C46);
 
+  // Light theme colors
+  static const Color lightBackground = Color(0xFFF5F5F5);
+  static const Color lightSurface = Color(0xFFFFFFFF);
+  static const Color lightCard = Color(0xFFEEEEEE);
+  static const Color lightCardHover = Color(0xFFE0E0E0);
+  static const Color lightDivider = Color(0xFFD0D0D0);
+  static const Color lightTextPrimary = Color(0xFF1A1A1A);
+  static const Color lightTextSecondary = Color(0xFF666666);
+  static const Color lightTextTertiary = Color(0xFF999999);
+
   static const Color appleMusicRed = Color(0xFFFA233B);
   static const Color spotifyBlack = Color(0xFF191414);
+
+  static ThemeData get lightTheme {
+    return ThemeData(
+      brightness: Brightness.light,
+      primaryColor: primaryColor,
+      scaffoldBackgroundColor: lightBackground,
+      colorScheme: const ColorScheme.light(
+        primary: primaryColor,
+        secondary: primaryColor,
+        surface: lightSurface,
+        error: errorColor,
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        titleTextStyle: TextStyle(
+          color: lightTextPrimary,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+        ),
+        iconTheme: IconThemeData(color: lightTextPrimary),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: lightSurface,
+        selectedItemColor: lightTextPrimary,
+        unselectedItemColor: lightTextTertiary,
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
+      ),
+      cardTheme: CardThemeData(
+        color: lightCard,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      iconTheme: const IconThemeData(color: lightTextPrimary),
+      textTheme: const TextTheme(
+        headlineLarge: TextStyle(color: lightTextPrimary, fontWeight: FontWeight.bold),
+        headlineMedium: TextStyle(color: lightTextPrimary, fontWeight: FontWeight.w600),
+        titleLarge: TextStyle(color: lightTextPrimary, fontWeight: FontWeight.w600),
+        titleMedium: TextStyle(color: lightTextPrimary, fontWeight: FontWeight.w500),
+        bodyLarge: TextStyle(color: lightTextPrimary),
+        bodyMedium: TextStyle(color: lightTextSecondary),
+        bodySmall: TextStyle(color: lightTextTertiary),
+      ),
+      dividerTheme: const DividerThemeData(color: lightDivider, thickness: 0.5),
+      sliderTheme: SliderThemeData(
+        activeTrackColor: primaryColor,
+        inactiveTrackColor: lightDivider,
+        thumbColor: lightTextPrimary,
+        overlayColor: primaryColor.withValues(alpha: 0.2),
+        trackHeight: 4,
+      ),
+    );
+  }
 
   static ThemeData get darkTheme {
     return ThemeData(

@@ -12,6 +12,7 @@ import 'providers/player_provider.dart';
 import 'providers/library_provider.dart';
 import 'providers/playlist_provider.dart';
 import 'providers/search_provider.dart';
+import 'providers/theme_provider.dart';
 import 'screens/home_screen.dart';
 
 Future<void> main() async {
@@ -81,31 +82,40 @@ class MelodiApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => LocaleNotifier(),
         ),
+        ChangeNotifierProvider(
+          create: (_) => ThemeProvider(),
+        ),
       ],
-      child: MaterialApp(
-        title: 'Melodi',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.darkTheme,
-        home: const HomeScreen(),
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [
-          Locale('en'),
-          Locale('tr'),
-          Locale('de'),
-        ],
-        localeResolutionCallback: (locale, supportedLocales) {
-          if (locale != null) {
-            for (final supported in supportedLocales) {
-              if (supported.languageCode == locale.languageCode) {
-                return supported;
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          return MaterialApp(
+            title: 'Melodi',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProvider.themeMode,
+            home: const HomeScreen(),
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('en'),
+              Locale('tr'),
+              Locale('de'),
+            ],
+            localeResolutionCallback: (locale, supportedLocales) {
+              if (locale != null) {
+                for (final supported in supportedLocales) {
+                  if (supported.languageCode == locale.languageCode) {
+                    return supported;
+                  }
+                }
               }
-            }
-          }
-          return const Locale('en');
+              return const Locale('en');
+            },
+          );
         },
       ),
     );

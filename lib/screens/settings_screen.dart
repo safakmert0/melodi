@@ -8,6 +8,7 @@ import '../core/constants.dart';
 import '../core/localization.dart';
 import '../providers/library_provider.dart';
 import '../providers/player_provider.dart';
+import '../providers/theme_provider.dart';
 import '../services/database_service.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -88,6 +89,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Theme section
+                  _SectionTitle(AppLocale.tr('appearance')),
+                  Consumer<ThemeProvider>(
+                    builder: (context, themeProvider, _) {
+                      final themeLabel = themeProvider.isDark
+                          ? AppLocale.tr('dark')
+                          : themeProvider.isLight
+                              ? AppLocale.tr('light')
+                              : AppLocale.tr('system');
+                      return _SettingsTile(
+                        icon: Icons.dark_mode_rounded,
+                        iconColor: Colors.amber,
+                        title: AppLocale.tr('theme'),
+                        subtitle: themeLabel,
+                        trailing: const Icon(Icons.chevron_right,
+                            color: AppTheme.textTertiary),
+                        onTap: () => _showThemePicker(context, themeProvider),
+                      );
+                    },
+                  ),
+                  const Divider(color: AppTheme.darkDivider, height: 1),
                   // Language section
                   _SectionTitle(AppLocale.tr('language')),
                   _SettingsTile(
@@ -317,6 +339,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         );
       },
+    );
+  }
+
+  void _showThemePicker(BuildContext context, ThemeProvider themeProvider) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.darkSurface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.darkDivider,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(AppLocale.tr('theme'),
+                style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: Icon(Icons.dark_mode_rounded, color: themeProvider.isDark ? AppTheme.primaryColor : AppTheme.textTertiary),
+              title: Text(AppLocale.tr('dark'), style: const TextStyle(color: AppTheme.textPrimary)),
+              trailing: themeProvider.isDark ? const Icon(Icons.check, color: AppTheme.primaryColor) : null,
+              onTap: () {
+                themeProvider.setThemeMode(ThemeMode.dark);
+                Navigator.pop(ctx);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.light_mode_rounded, color: themeProvider.isLight ? AppTheme.primaryColor : AppTheme.textTertiary),
+              title: Text(AppLocale.tr('light'), style: const TextStyle(color: AppTheme.textPrimary)),
+              trailing: themeProvider.isLight ? const Icon(Icons.check, color: AppTheme.primaryColor) : null,
+              onTap: () {
+                themeProvider.setThemeMode(ThemeMode.light);
+                Navigator.pop(ctx);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.settings_brightness_rounded, color: themeProvider.isSystem ? AppTheme.primaryColor : AppTheme.textTertiary),
+              title: Text(AppLocale.tr('system'), style: const TextStyle(color: AppTheme.textPrimary)),
+              trailing: themeProvider.isSystem ? const Icon(Icons.check, color: AppTheme.primaryColor) : null,
+              onTap: () {
+                themeProvider.setThemeMode(ThemeMode.system);
+                Navigator.pop(ctx);
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
     );
   }
 

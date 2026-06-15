@@ -28,10 +28,18 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentPage = 0;
+  int _libraryTab = 0;
 
-  final List<Widget> _pages = const [
-    _HomeTab(),
-    LibraryScreen(),
+  void _switchToLibrary([int tab = 0]) {
+    setState(() {
+      _libraryTab = tab;
+      _currentPage = 1;
+    });
+  }
+
+  List<Widget> get _pages => [
+    _HomeTab(onNavigateToLibrary: _switchToLibrary),
+    LibraryScreen(initialTab: _libraryTab),
     SearchScreen(),
     SettingsScreen(),
   ];
@@ -89,7 +97,8 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _HomeTab extends StatelessWidget {
-  const _HomeTab();
+  final void Function([int])? onNavigateToLibrary;
+  const _HomeTab({this.onNavigateToLibrary});
 
   @override
   Widget build(BuildContext context) {
@@ -201,7 +210,7 @@ class _HomeTab extends StatelessWidget {
         if (recentlyPlayed.isNotEmpty) ...[
           _SectionHeader(
             title: AppLocale.tr('recently_played'),
-            onSeeAll: () {},
+            onSeeAll: () => onNavigateToLibrary?.call(0),
           ),
           SizedBox(
             height: 160,
@@ -225,7 +234,7 @@ class _HomeTab extends StatelessWidget {
         if (favorites.isNotEmpty) ...[
           _SectionHeader(
             title: AppLocale.tr('liked_songs'),
-            onSeeAll: null,
+            onSeeAll: () => onNavigateToLibrary?.call(0),
           ),
           SizedBox(
             height: 160,
@@ -249,7 +258,7 @@ class _HomeTab extends StatelessWidget {
         if (library.albums.isNotEmpty) ...[
           _SectionHeader(
             title: AppLocale.tr('albums'),
-            onSeeAll: null,
+            onSeeAll: () => onNavigateToLibrary?.call(1),
           ),
           SizedBox(
             height: 220,
@@ -271,7 +280,7 @@ class _HomeTab extends StatelessWidget {
         if (library.artists.isNotEmpty) ...[
           _SectionHeader(
             title: AppLocale.tr('popular_artists'),
-            onSeeAll: null,
+            onSeeAll: () => onNavigateToLibrary?.call(2),
           ),
           SizedBox(
             height: 180,
@@ -293,7 +302,7 @@ class _HomeTab extends StatelessWidget {
         if (playlistProvider.playlists.isNotEmpty) ...[
           _SectionHeader(
             title: AppLocale.tr('playlists'),
-            onSeeAll: null,
+            onSeeAll: () => onNavigateToLibrary?.call(0),
           ),
           SizedBox(
             height: 220,
@@ -550,10 +559,28 @@ class _AlbumDetailScreen extends StatelessWidget {
                   song: song,
                   onTap: () => context.read<PlayerProvider>().playFromQueue(songs, index),
                   onFavorite: () => context.read<LibraryProvider>().toggleFavorite(song),
+                  onViewAlbum: () {},
+                  onViewArtist: () => _navigateToArtistFromSong(context, song),
                 );
               },
             ),
+          ),
+        );
+      },
     );
+  }
+
+  void _navigateToArtistFromSong(BuildContext context, SongModel song) {
+    final lib = context.read<LibraryProvider>();
+    final artists = lib.artists.where((a) => a.name == song.artist).toList();
+    if (artists.isNotEmpty) {
+      final artistSongs = lib.getSongsForArtist(artists.first);
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => _ArtistDetailScreen(artist: artists.first, songs: artistSongs),
+        ),
+      );
+    }
   }
 }
 
@@ -583,9 +610,24 @@ class _ArtistDetailScreen extends StatelessWidget {
                       context.read<PlayerProvider>().playFromQueue(songs, index),
                   onFavorite: () =>
                       context.read<LibraryProvider>().toggleFavorite(song),
+                  onViewAlbum: () => _navigateToAlbumFromSong(context, song),
+                  onViewArtist: () {},
                 );
               },
             ),
+     );
+  }
+}
+
+void _navigateToAlbumFromSong(BuildContext context, SongModel song) {
+  final lib = context.read<LibraryProvider>();
+  final albums = lib.albums.where((a) => a.name == song.album && a.artist == song.artist).toList();
+  if (albums.isNotEmpty) {
+    final albumSongs = lib.getSongsForAlbum(albums.first);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _AlbumDetailScreen(album: albums.first, songs: albumSongs),
+      ),
     );
   }
 }
