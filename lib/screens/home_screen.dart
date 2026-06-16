@@ -116,7 +116,7 @@ class _HomeTab extends StatelessWidget {
                 backgroundColor: Colors.transparent,
                 title: Text(
                   AppLocale.tr('melodi'),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppTheme.textPrimary,
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -162,12 +162,12 @@ class _HomeTab extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.music_note_rounded,
+            Icon(Icons.music_note_rounded,
                 size: 80, color: AppTheme.textTertiary),
             const SizedBox(height: 24),
             Text(
               AppLocale.tr('your_music_awaits'),
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.textPrimary,
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -176,7 +176,7 @@ class _HomeTab extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               AppLocale.tr('import_songs_to_start'),
-              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 15),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 15),
             ),
             const SizedBox(height: 32),
             FilledButton.icon(
@@ -347,7 +347,7 @@ class _HomeTab extends StatelessWidget {
             ),
             Text(
               AppLocale.tr('import_music'),
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.textPrimary,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -365,9 +365,9 @@ class _HomeTab extends StatelessWidget {
                     color: AppTheme.primaryColor),
               ),
               title: Text(AppLocale.tr('scan_media_library'),
-                  style: const TextStyle(color: AppTheme.textPrimary)),
+                  style: TextStyle(color: AppTheme.textPrimary)),
               subtitle: Text(AppLocale.tr('import_from_apple_music'),
-                  style: const TextStyle(color: AppTheme.textTertiary)),
+                  style: TextStyle(color: AppTheme.textTertiary)),
               onTap: () {
                 Navigator.pop(context);
                 context.read<LibraryProvider>().scanMusic();
@@ -384,9 +384,9 @@ class _HomeTab extends StatelessWidget {
                     color: Colors.orange),
               ),
               title: Text(AppLocale.tr('browse_files'),
-                  style: const TextStyle(color: AppTheme.textPrimary)),
+                  style: TextStyle(color: AppTheme.textPrimary)),
               subtitle: Text(AppLocale.tr('select_audio_files'),
-                  style: const TextStyle(color: AppTheme.textTertiary)),
+                  style: TextStyle(color: AppTheme.textTertiary)),
               onTap: () {
                 Navigator.pop(context);
                 context.read<LibraryProvider>().importFromFiles();
@@ -403,9 +403,9 @@ class _HomeTab extends StatelessWidget {
                     color: Colors.purple),
               ),
               title: Text(AppLocale.tr('import_from_folder_title'),
-                  style: const TextStyle(color: AppTheme.textPrimary)),
+                  style: TextStyle(color: AppTheme.textPrimary)),
               subtitle: Text(AppLocale.tr('scan_specific_folder'),
-                  style: const TextStyle(color: AppTheme.textTertiary)),
+                  style: TextStyle(color: AppTheme.textTertiary)),
               onTap: () {
                 Navigator.pop(context);
                 context.read<LibraryProvider>().importFromDirectory();
@@ -460,7 +460,7 @@ class _SectionHeader extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppTheme.textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -471,7 +471,7 @@ class _SectionHeader extends StatelessWidget {
               onTap: onSeeAll,
               child: Text(
                 AppLocale.tr('see_all'),
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppTheme.textSecondary,
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
@@ -513,7 +513,7 @@ class _RecentSongCard extends StatelessWidget {
                     ? Image.memory(song.albumArt!, fit: BoxFit.cover)
                     : Container(
                         color: AppTheme.card,
-                        child: const Icon(Icons.music_note_rounded,
+                        child: Icon(Icons.music_note_rounded,
                             size: 40, color: AppTheme.textTertiary),
                       ),
               ),
@@ -523,7 +523,7 @@ class _RecentSongCard extends StatelessWidget {
               song.title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.textPrimary,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -550,7 +550,7 @@ class _AlbumDetailScreen extends StatelessWidget {
         title: Text(album.name),
       ),
       body: songs.isEmpty
-          ? Center(child: Text(AppLocale.tr('no_songs'), style: const TextStyle(color: AppTheme.textSecondary)))
+          ? Center(child: Text(AppLocale.tr('no_songs'), style: TextStyle(color: AppTheme.textSecondary)))
           : ListView.builder(
               itemCount: songs.length,
               itemBuilder: (context, index) {
@@ -595,7 +595,7 @@ class _ArtistDetailScreen extends StatelessWidget {
       ),
       body: songs.isEmpty
           ? Center(
-              child: Text(AppLocale.tr('no_songs'), style: const TextStyle(color: AppTheme.textSecondary)))
+              child: Text(AppLocale.tr('no_songs'), style: TextStyle(color: AppTheme.textSecondary)))
           : ListView.builder(
               itemCount: songs.length,
               itemBuilder: (context, index) {

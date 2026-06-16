@@ -58,7 +58,7 @@ class AlbumCard extends StatelessWidget {
                               ],
                             ),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.album_rounded,
                             size: 64,
                             color: AppTheme.textTertiary,
@@ -94,7 +94,7 @@ class AlbumCard extends StatelessWidget {
               album.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.textPrimary,
                 fontWeight: FontWeight.w500,
                 fontSize: 14,
@@ -104,7 +104,7 @@ class AlbumCard extends StatelessWidget {
               album.artist,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.textSecondary,
                 fontSize: 12,
               ),

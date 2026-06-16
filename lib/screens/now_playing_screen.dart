@@ -78,7 +78,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
             ),
             title: Text(
               AppLocale.tr('now_playing'),
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -88,7 +88,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
             centerTitle: true,
             actions: [
               IconButton(
-                icon: const Icon(Icons.more_horiz_rounded,
+                icon: Icon(Icons.more_horiz_rounded,
                     color: AppTheme.textSecondary),
                 onPressed: () => _showOptions(context, player),
               ),
@@ -155,7 +155,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Row(
                         children: [
-                          const Icon(Icons.volume_down_rounded,
+                          Icon(Icons.volume_down_rounded,
                               color: AppTheme.textTertiary, size: 16),
                           Expanded(
                             child: Slider(
@@ -167,7 +167,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               inactiveColor: AppTheme.divider,
                             ),
                           ),
-                          const Icon(Icons.volume_up_rounded,
+                          Icon(Icons.volume_up_rounded,
                               color: AppTheme.textTertiary, size: 16),
                         ],
                       ),
@@ -192,14 +192,14 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                       children: [
                         Text(
                           player.position.toFormattedString(),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppTheme.textTertiary,
                             fontSize: 11,
                           ),
                         ),
                         Text(
                           player.duration.toFormattedString(),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppTheme.textTertiary,
                             fontSize: 11,
                           ),
@@ -225,7 +225,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                           onPressed: player.toggleShuffle,
                         ),
                         IconButton(
-                          icon: const Icon(Icons.skip_previous_rounded,
+                          icon: Icon(Icons.skip_previous_rounded,
                               color: AppTheme.textPrimary, size: 32),
                           onPressed: player.skipToPrevious,
                         ),
@@ -248,7 +248,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.skip_next_rounded,
+                          icon: Icon(Icons.skip_next_rounded,
                               color: AppTheme.textPrimary, size: 32),
                           onPressed: player.skipToNext,
                         ),
@@ -288,7 +288,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.speaker_group_rounded,
+                          icon: Icon(Icons.speaker_group_rounded,
                               color: AppTheme.textSecondary, size: 22),
                           onPressed: () {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -315,14 +315,14 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                   player.setAutoShuffle(!player.autoShuffleEnabled),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.queue_music_rounded,
+                              icon: Icon(Icons.queue_music_rounded,
                                   color: AppTheme.textSecondary, size: 22),
                               onPressed: () => _showQueue(context),
                             ),
                           ],
                         ),
                         IconButton(
-                          icon: const Icon(Icons.devices_rounded,
+                          icon: Icon(Icons.devices_rounded,
                               color: AppTheme.textSecondary, size: 22),
                           onPressed: () {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -362,7 +362,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                   song.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppTheme.textPrimary,
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -373,7 +373,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                   song.artist,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppTheme.textSecondary,
                     fontSize: 15,
                   ),
@@ -425,7 +425,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                   : '',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.textPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -438,7 +438,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                   : '',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.textTertiary,
                 fontSize: 14,
               ),
@@ -475,7 +475,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.surface,
         title: Text(song.title,
-            style: const TextStyle(color: AppTheme.textPrimary)),
+            style: TextStyle(color: AppTheme.textPrimary)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -494,7 +494,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(AppLocale.tr('cancel'),
-                style: const TextStyle(color: AppTheme.textSecondary)),
+                style: TextStyle(color: AppTheme.textSecondary)),
           ),
         ],
       ),
@@ -510,12 +510,12 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
           SizedBox(
             width: 80,
             child: Text(label,
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppTheme.textSecondary, fontSize: 13)),
           ),
           Expanded(
             child: Text(value,
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppTheme.textPrimary, fontSize: 13)),
           ),
         ],
@@ -541,13 +541,13 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                 const Icon(Icons.check_circle, color: AppTheme.primaryColor, size: 48),
                 const SizedBox(height: 16),
                 Text(AppLocale.tr('share'),
-                    style: const TextStyle(
+                    style: TextStyle(
                         color: AppTheme.textPrimary,
                         fontSize: 18,
                         fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Text(song.title,
-                    style: const TextStyle(color: AppTheme.textSecondary),
+                    style: TextStyle(color: AppTheme.textSecondary),
                     textAlign: TextAlign.center),
                 const SizedBox(height: 24),
                 FilledButton.icon(
@@ -599,7 +599,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               ),
             ),
             Text(AppLocale.tr('sleep_timer'),
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppTheme.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.bold)),
@@ -608,7 +608,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               final label = '$minutes ${AppLocale.tr('seconds')}';
               return ListTile(
                 title: Text(label,
-                    style: const TextStyle(color: AppTheme.textPrimary)),
+                    style: TextStyle(color: AppTheme.textPrimary)),
                 onTap: () {
                   final timerDuration = Duration(minutes: minutes);
                   player.handler.setSleepTimer(timerDuration);
@@ -625,7 +625,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
             ListTile(
               leading: const Icon(Icons.close, color: AppTheme.errorColor),
               title: Text(AppLocale.tr('off'),
-                  style: const TextStyle(color: AppTheme.errorColor)),
+                  style: TextStyle(color: AppTheme.errorColor)),
               onTap: () {
                 player.handler.setSleepTimer(Duration.zero);
                 Navigator.pop(ctx);
@@ -661,36 +661,36 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.playlist_add, color: AppTheme.textSecondary),
+              leading: Icon(Icons.playlist_add, color: AppTheme.textSecondary),
               title: Text(AppLocale.tr('add_to_playlist'),
-                  style: const TextStyle(color: AppTheme.textPrimary)),
+                  style: TextStyle(color: AppTheme.textPrimary)),
               onTap: () {
                 Navigator.pop(context);
                 _showAddToPlaylist(context, song);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.info_outline, color: AppTheme.textSecondary),
+              leading: Icon(Icons.info_outline, color: AppTheme.textSecondary),
               title: Text(AppLocale.tr('song_info'),
-                  style: const TextStyle(color: AppTheme.textPrimary)),
+                  style: TextStyle(color: AppTheme.textPrimary)),
               onTap: () {
                 Navigator.pop(context);
                 _showSongInfo(context, song!);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.share_outlined, color: AppTheme.textSecondary),
+              leading: Icon(Icons.share_outlined, color: AppTheme.textSecondary),
               title: Text(AppLocale.tr('share'),
-                  style: const TextStyle(color: AppTheme.textPrimary)),
+                  style: TextStyle(color: AppTheme.textPrimary)),
               onTap: () {
                 Navigator.pop(context);
                 _shareSong(context, song!);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.timer, color: AppTheme.textSecondary),
+              leading: Icon(Icons.timer, color: AppTheme.textSecondary),
               title: Text(AppLocale.tr('sleep_timer'),
-                  style: const TextStyle(color: AppTheme.textPrimary)),
+                  style: TextStyle(color: AppTheme.textPrimary)),
               onTap: () {
                 Navigator.pop(context);
                 _showSleepTimer(context, player);
@@ -750,11 +750,11 @@ class _SpeedButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.speed, color: AppTheme.textSecondary, size: 16),
+            Icon(Icons.speed, color: AppTheme.textSecondary, size: 16),
             const SizedBox(width: 4),
             Text(
               '${currentSpeed.toStringAsFixed(2)}x'.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), ''),
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.textPrimary,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,

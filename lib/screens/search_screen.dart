@@ -6,6 +6,7 @@ import '../providers/search_provider.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/youtube_provider.dart';
+import '../services/youtube_service.dart';
 import '../widgets/song_tile.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -306,7 +307,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     children: [
                       Text(
                         AppLocale.tr('recent_searches'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppTheme.textPrimary,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -358,7 +359,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   children: [
                     Text(
                       AppLocale.tr('browse_all'),
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppTheme.textPrimary,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -459,7 +460,7 @@ class _YouTubeResultTile extends StatelessWidget {
           width: 48,
           height: 48,
           color: AppTheme.card,
-          child: const Icon(Icons.play_circle_outline, color: AppTheme.textTertiary),
+          child: Icon(Icons.play_circle_outline, color: AppTheme.textTertiary),
         ),
       ),
       title: Text(
@@ -495,7 +496,7 @@ class _YouTubeResultTile extends StatelessWidget {
         ],
       ),
       trailing: IconButton(
-        icon: const Icon(Icons.download_rounded, size: 20),
+        icon: Icon(Icons.download_rounded, size: 20),
         color: AppTheme.textSecondary,
         onPressed: onDownload,
       ),

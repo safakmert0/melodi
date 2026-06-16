@@ -28,9 +28,9 @@ class YouTubeService {
 
   Future<List<YouTubeVideo>> search(String query) async {
     try {
-      final results = await _yt.search(query);
+      final results = await _yt.search.search(query);
       final videos = <YouTubeVideo>[];
-      await for (final video in results) {
+      for (final video in results) {
         if (video.duration != null && video.duration!.inSeconds > 0) {
           videos.add(YouTubeVideo(
             id: video.id.value,
@@ -50,12 +50,13 @@ class YouTubeService {
 
   Future<String?> getAudioUrl(String videoId) async {
     try {
-      final manifest = await _yt.videos.streamsClient.getManifest(videoId);
+      final manifest = await _yt.videos.streams.getManifest(videoId);
       final audioStreams = manifest.audioOnly;
       if (audioStreams.isEmpty) return null;
-      final bestAudio = audioStreams
-          .where((s) => s.bitrate > 0)
-          .reduce((a, b) => a.bitrate > b.bitrate ? a : b);
+      final sorted = List<AudioOnlyStreamInfo>.from(audioStreams)
+        ..sort((a, b) => b.bitrate.bitsPerSecond.compareTo(a.bitrate.bitsPerSecond));
+      final bestAudio = sorted.isNotEmpty ? sorted.first : null;
+      if (bestAudio == null) return null;
       return bestAudio.url.toString();
     } catch (e) {
       return null;

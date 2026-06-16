@@ -22,7 +22,7 @@ class QueueSheet extends StatelessWidget {
 
         return Container(
           height: MediaQuery.of(context).size.height * 0.7,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: AppTheme.surface,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
@@ -44,7 +44,7 @@ class QueueSheet extends StatelessWidget {
                   children: [
                     Text(
                       AppLocale.tr('queue'),
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppTheme.textPrimary,
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -64,7 +64,7 @@ class QueueSheet extends StatelessWidget {
                           onPressed: player.toggleShuffle,
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_sweep_rounded,
+                          icon: Icon(Icons.delete_sweep_rounded,
                               color: AppTheme.textSecondary),
                           onPressed: player.clearQueue,
                         ),
@@ -73,19 +73,19 @@ class QueueSheet extends StatelessWidget {
                   ],
                 ),
               ),
-              const Divider(color: AppTheme.divider),
+              Divider(color: AppTheme.divider),
               Expanded(
                 child: queue.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.queue_music_rounded,
+                            Icon(Icons.queue_music_rounded,
                                 size: 64, color: AppTheme.textTertiary),
                             const SizedBox(height: 16),
                             Text(
                               AppLocale.tr('queue_is_empty'),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: AppTheme.textSecondary,
                                 fontSize: 16,
                               ),
@@ -93,7 +93,7 @@ class QueueSheet extends StatelessWidget {
                             const SizedBox(height: 8),
                             Text(
                               AppLocale.tr('add_songs_to_start'),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: AppTheme.textTertiary,
                                 fontSize: 14,
                               ),
@@ -143,7 +143,7 @@ class QueueSheet extends StatelessWidget {
                               ),
                               subtitle: Text(
                                 song.artist,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: AppTheme.textSecondary,
                                   fontSize: 12,
                                 ),
@@ -178,7 +178,7 @@ class AddToPlaylistSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppTheme.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -197,7 +197,7 @@ class AddToPlaylistSheet extends StatelessWidget {
           ),
           Text(
             AppLocale.tr('add_to_playlist'),
-            style: const TextStyle(
+            style: TextStyle(
               color: AppTheme.textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -207,13 +207,13 @@ class AddToPlaylistSheet extends StatelessWidget {
           if (playlists.isEmpty)
             Text(
               AppLocale.tr('no_playlists_yet'),
-              style: const TextStyle(color: AppTheme.textSecondary),
+              style: TextStyle(color: AppTheme.textSecondary),
             )
           else
             ...playlists.map((pl) => ListTile(
                   title: Text(pl.name,
-                      style: const TextStyle(color: AppTheme.textPrimary)),
-                  leading: const Icon(Icons.playlist_play_rounded,
+                      style: TextStyle(color: AppTheme.textPrimary)),
+                  leading: Icon(Icons.playlist_play_rounded,
                       color: AppTheme.textSecondary),
                   onTap: () {
                     context
@@ -233,7 +233,7 @@ class AddToPlaylistSheet extends StatelessWidget {
             leading: const Icon(Icons.add_circle_outline,
                 color: AppTheme.primaryColor),
             title: Text(AppLocale.tr('create_new_playlist'),
-                style: const TextStyle(color: AppTheme.primaryColor)),
+                style: TextStyle(color: AppTheme.primaryColor)),
             onTap: () {
               Navigator.pop(context);
               _showCreatePlaylistDialog(context);
@@ -251,14 +251,14 @@ class AddToPlaylistSheet extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.surface,
         title: Text(AppLocale.tr('new_playlist'),
-            style: const TextStyle(color: AppTheme.textPrimary)),
+            style: TextStyle(color: AppTheme.textPrimary)),
         content: TextField(
           controller: controller,
           autofocus: true,
-          style: const TextStyle(color: AppTheme.textPrimary),
+          style: TextStyle(color: AppTheme.textPrimary),
           decoration: InputDecoration(
             hintText: AppLocale.tr('playlist_name'),
-            hintStyle: const TextStyle(color: AppTheme.textTertiary),
+            hintStyle: TextStyle(color: AppTheme.textTertiary),
             filled: true,
             fillColor: AppTheme.card,
             border: OutlineInputBorder(
@@ -271,7 +271,7 @@ class AddToPlaylistSheet extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(AppLocale.tr('cancel'),
-                style: const TextStyle(color: AppTheme.textSecondary)),
+                style: TextStyle(color: AppTheme.textSecondary)),
           ),
           TextButton(
             onPressed: () async {

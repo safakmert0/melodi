@@ -90,20 +90,20 @@ class SongTile extends StatelessWidget {
               song.artist,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.textSecondary,
                 fontSize: 13,
               ),
             ),
           ),
           if (song.bitrate != null) ...[
-            const Text(
+            Text(
               ' · ',
               style: TextStyle(color: AppTheme.textTertiary, fontSize: 11),
             ),
             Text(
               '${song.bitrate} kbps',
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.textTertiary,
                 fontSize: 11,
               ),
@@ -130,7 +130,7 @@ class SongTile extends StatelessWidget {
                           .toggleFavorite(song),
                 ),
               PopupMenuButton<String>(
-                icon: const Icon(Icons.more_horiz,
+                icon: Icon(Icons.more_horiz,
                     color: AppTheme.textSecondary, size: 20),
                 onSelected: (value) {
                   switch (value) {

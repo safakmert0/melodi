@@ -103,13 +103,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: Colors.amber,
                         title: AppLocale.tr('theme'),
                         subtitle: themeLabel,
-                        trailing: const Icon(Icons.chevron_right,
+                        trailing: Icon(Icons.chevron_right,
                             color: AppTheme.textTertiary),
                         onTap: () => _showThemePicker(context, themeProvider),
                       );
                     },
                   ),
-                  const Divider(color: AppTheme.divider, height: 1),
+                  Divider(color: AppTheme.divider, height: 1),
                   // Language section
                   _SectionTitle(AppLocale.tr('language')),
                   _SettingsTile(
@@ -117,11 +117,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     iconColor: Colors.teal,
                     title: AppLocale.tr('app_language'),
                     subtitle: _selectedLanguage,
-                    trailing: const Icon(Icons.chevron_right,
+                    trailing: Icon(Icons.chevron_right,
                         color: AppTheme.textTertiary),
                     onTap: () => _showLanguagePicker(context),
                   ),
-                  const Divider(color: AppTheme.divider, height: 1),
+                  Divider(color: AppTheme.divider, height: 1),
                   // Library section
                   _SectionTitle(AppLocale.tr('music_library')),
                   _SettingsTile(
@@ -166,7 +166,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         : AppLocale.tr('auto_scan_folder'),
                     trailing: _watchedFolderPath.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.close, color: AppTheme.textTertiary, size: 18),
+                            icon: Icon(Icons.close, color: AppTheme.textTertiary, size: 18),
                             onPressed: () async {
                               await context.read<LibraryProvider>().clearWatchedFolder();
                               setState(() => _watchedFolderPath = '');
@@ -175,14 +175,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         : null,
                     onTap: () => _pickWatchedFolder(context),
                   ),
-                  const Divider(color: AppTheme.divider, height: 1),
+                  Divider(color: AppTheme.divider, height: 1),
                   // Storage section
                   _SectionTitle(AppLocale.tr('storage')),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       children: [
-                        const Icon(Icons.storage_rounded,
+                        Icon(Icons.storage_rounded,
                             color: AppTheme.textSecondary, size: 20),
                         const SizedBox(width: 16),
                         Expanded(
@@ -191,14 +191,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             children: [
                               Text(
                                 AppLocale.tr('local_songs'),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: AppTheme.textPrimary,
                                   fontSize: 15,
                                 ),
                               ),
                               Text(
                                 '${library.songCount} ${AppLocale.tr('songs_in_library')}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: AppTheme.textSecondary,
                                   fontSize: 13,
                                 ),
@@ -217,7 +217,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: AppLocale.tr('remove_cached_data'),
                     onTap: () => _confirmClearLibrary(context),
                   ),
-                  const Divider(color: AppTheme.divider, height: 1),
+                  Divider(color: AppTheme.divider, height: 1),
                   // Audio section
                   _SectionTitle(AppLocale.tr('audio')),
                   _SettingsTile(
@@ -232,7 +232,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     iconColor: Colors.cyan,
                     title: AppLocale.tr('default_playback_speed'),
                     subtitle: '${_defaultPlaybackSpeed.toStringAsFixed(2)}x',
-                    trailing: const Icon(Icons.chevron_right,
+                    trailing: Icon(Icons.chevron_right,
                         color: AppTheme.textTertiary),
                     onTap: () => _showSpeedPicker(context),
                   ),
@@ -241,11 +241,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     iconColor: Colors.blue,
                     title: AppLocale.tr('volume_boost'),
                     subtitle: '${(_defaultVolumeBoost * 100).round()}%',
-                    trailing: const Icon(Icons.chevron_right,
+                    trailing: Icon(Icons.chevron_right,
                         color: AppTheme.textTertiary),
                     onTap: () => _showVolumeBoostSlider(context),
                   ),
-                  const Divider(color: AppTheme.divider, height: 1),
+                  Divider(color: AppTheme.divider, height: 1),
                   // Playback section
                   _SectionTitle(AppLocale.tr('playback')),
                   _SettingsTile(
@@ -295,11 +295,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     iconColor: Colors.indigo,
                     title: AppLocale.tr('crossfade'),
                     subtitle: '${_crossfadeSeconds.toInt()}${AppLocale.tr('seconds_crossfade')}',
-                    trailing: const Icon(Icons.chevron_right,
+                    trailing: Icon(Icons.chevron_right,
                         color: AppTheme.textTertiary),
                     onTap: () => _showCrossfadeSlider(context, player),
                   ),
-                  const Divider(color: AppTheme.divider, height: 1),
+                  Divider(color: AppTheme.divider, height: 1),
                   // Developer section
                   _SectionTitle(AppLocale.tr('developer')),
                   _SettingsTile(
@@ -316,7 +316,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: '@safakmert',
                     onTap: () => _openUrl('https://t.me/safakmert'),
                   ),
-                  const Divider(color: AppTheme.divider, height: 1),
+                  Divider(color: AppTheme.divider, height: 1),
                   // About section
                   _SectionTitle(AppLocale.tr('about')),
                   _SettingsTile(
@@ -363,14 +363,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             Text(AppLocale.tr('theme'),
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppTheme.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             ListTile(
               leading: Icon(Icons.dark_mode_rounded, color: themeProvider.isDark ? AppTheme.primaryColor : AppTheme.textTertiary),
-              title: Text(AppLocale.tr('dark'), style: const TextStyle(color: AppTheme.textPrimary)),
+              title: Text(AppLocale.tr('dark'), style: TextStyle(color: AppTheme.textPrimary)),
               trailing: themeProvider.isDark ? const Icon(Icons.check, color: AppTheme.primaryColor) : null,
               onTap: () {
                 themeProvider.setThemeMode(ThemeMode.dark);
@@ -379,7 +379,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             ListTile(
               leading: Icon(Icons.light_mode_rounded, color: themeProvider.isLight ? AppTheme.primaryColor : AppTheme.textTertiary),
-              title: Text(AppLocale.tr('light'), style: const TextStyle(color: AppTheme.textPrimary)),
+              title: Text(AppLocale.tr('light'), style: TextStyle(color: AppTheme.textPrimary)),
               trailing: themeProvider.isLight ? const Icon(Icons.check, color: AppTheme.primaryColor) : null,
               onTap: () {
                 themeProvider.setThemeMode(ThemeMode.light);
@@ -388,7 +388,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             ListTile(
               leading: Icon(Icons.settings_brightness_rounded, color: themeProvider.isSystem ? AppTheme.primaryColor : AppTheme.textTertiary),
-              title: Text(AppLocale.tr('system'), style: const TextStyle(color: AppTheme.textPrimary)),
+              title: Text(AppLocale.tr('system'), style: TextStyle(color: AppTheme.textPrimary)),
               trailing: themeProvider.isSystem ? const Icon(Icons.check, color: AppTheme.primaryColor) : null,
               onTap: () {
                 themeProvider.setThemeMode(ThemeMode.system);
@@ -423,7 +423,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             Text(AppLocale.tr('app_language'),
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppTheme.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.bold)),
@@ -435,7 +435,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ].map((entry) {
               return ListTile(
                 title: Text(entry.$1,
-                    style: const TextStyle(color: AppTheme.textPrimary)),
+                    style: TextStyle(color: AppTheme.textPrimary)),
                 trailing: _selectedLanguage == entry.$1
                     ? const Icon(Icons.check, color: AppTheme.primaryColor)
                     : null,
@@ -479,7 +479,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             Text(AppLocale.tr('default_playback_speed'),
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppTheme.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.bold)),
@@ -487,7 +487,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ...speeds.map((speed) {
               return ListTile(
                 title: Text('${speed}x',
-                    style: const TextStyle(color: AppTheme.textPrimary)),
+                    style: TextStyle(color: AppTheme.textPrimary)),
                 trailing: _defaultPlaybackSpeed == speed
                     ? const Icon(Icons.check, color: AppTheme.primaryColor)
                     : null,
@@ -533,7 +533,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   Text(AppLocale.tr('volume_boost'),
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: AppTheme.textPrimary,
                           fontSize: 20,
                           fontWeight: FontWeight.bold)),
@@ -613,7 +613,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   Text(AppLocale.tr('crossfade'),
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: AppTheme.textPrimary,
                           fontSize: 20,
                           fontWeight: FontWeight.bold)),
@@ -636,7 +636,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(AppLocale.tr('off'),
-                          style: const TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
+                          style: TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
                       Text('12s',
                           style: TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
                     ],
@@ -673,16 +673,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.surface,
         title: Text(AppLocale.tr('equalizer'),
-            style: const TextStyle(color: AppTheme.textPrimary)),
+            style: TextStyle(color: AppTheme.textPrimary)),
         content: Text(
           AppLocale.tr('equalizer_coming_soon'),
-          style: const TextStyle(color: AppTheme.textSecondary),
+          style: TextStyle(color: AppTheme.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(AppLocale.tr('cancel'),
-                style: const TextStyle(color: AppTheme.textSecondary)),
+                style: TextStyle(color: AppTheme.textSecondary)),
           ),
         ],
       ),
@@ -795,16 +795,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.surface,
         title: Text(AppLocale.tr('clear_library_title'),
-            style: const TextStyle(color: AppTheme.textPrimary)),
+            style: TextStyle(color: AppTheme.textPrimary)),
         content: Text(
           AppLocale.tr('clear_library_confirm'),
-          style: const TextStyle(color: AppTheme.textSecondary),
+          style: TextStyle(color: AppTheme.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(AppLocale.tr('cancel'),
-                style: const TextStyle(color: AppTheme.textSecondary)),
+                style: TextStyle(color: AppTheme.textSecondary)),
           ),
           TextButton(
             onPressed: () {
@@ -812,7 +812,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Navigator.pop(context);
             },
             child: Text(AppLocale.tr('delete'),
-                style: const TextStyle(color: AppTheme.errorColor)),
+                style: TextStyle(color: AppTheme.errorColor)),
           ),
         ],
       ),
@@ -831,7 +831,7 @@ class _SectionTitle extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       child: Text(
         title.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           color: AppTheme.textTertiary,
           fontSize: 12,
           fontWeight: FontWeight.w600,
@@ -871,10 +871,10 @@ class _SettingsTile extends StatelessWidget {
         child: Icon(icon, color: iconColor, size: 20),
       ),
       title: Text(title,
-          style: const TextStyle(
+          style: TextStyle(
               color: AppTheme.textPrimary, fontSize: 15)),
       subtitle: Text(subtitle,
-          style: const TextStyle(
+          style: TextStyle(
               color: AppTheme.textSecondary, fontSize: 12)),
       trailing: trailing,
       onTap: onTap,

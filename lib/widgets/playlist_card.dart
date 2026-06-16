@@ -53,7 +53,7 @@ class PlaylistCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     '${playlist.songCount} songs',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppTheme.textSecondary,
                       fontSize: 12,
                     ),
@@ -66,7 +66,7 @@ class PlaylistCard extends StatelessWidget {
               playlist.name,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppTheme.textPrimary,
                 fontWeight: FontWeight.w500,
                 fontSize: 14,

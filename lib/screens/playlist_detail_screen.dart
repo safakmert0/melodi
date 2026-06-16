@@ -55,7 +55,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
         title: Text(playlist.name),
         actions: [
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_horiz_rounded,
+            icon: Icon(Icons.more_horiz_rounded,
                 color: AppTheme.textSecondary),
             onSelected: (value) async {
               switch (value) {
@@ -88,17 +88,17 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.playlist_add_rounded,
+                      Icon(Icons.playlist_add_rounded,
                           size: 64, color: AppTheme.textTertiary),
                       const SizedBox(height: 16),
                       Text(
                         AppLocale.tr('no_songs_in_playlist'),
-                        style: const TextStyle(color: AppTheme.textSecondary),
+                        style: TextStyle(color: AppTheme.textSecondary),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         AppLocale.tr('add_songs_from_library'),
-                        style: const TextStyle(color: AppTheme.textTertiary),
+                        style: TextStyle(color: AppTheme.textTertiary),
                       ),
                     ],
                   ),
@@ -115,7 +115,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                             height: 120,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12),
-                              gradient: const LinearGradient(
+                              gradient: LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [
@@ -134,7 +134,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                               children: [
                                 Text(
                                   playlist.name,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: AppTheme.textPrimary,
                                     fontSize: 22,
                                     fontWeight: FontWeight.bold,
@@ -143,7 +143,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                 const SizedBox(height: 4),
                                 Text(
                                   '${_songs.length} ${AppLocale.tr('songs').toLowerCase()}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: AppTheme.textSecondary,
                                     fontSize: 14,
                                   ),
@@ -174,7 +174,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                         ],
                       ),
                     ),
-                    const Divider(color: AppTheme.divider, height: 1),
+                    Divider(color: AppTheme.divider, height: 1),
                     // Songs list
                     Expanded(
                       child: ReorderableListView.builder(
@@ -238,11 +238,11 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.surface,
         title: Text(AppLocale.tr('rename_playlist'),
-            style: const TextStyle(color: AppTheme.textPrimary)),
+            style: TextStyle(color: AppTheme.textPrimary)),
         content: TextField(
           controller: controller,
           autofocus: true,
-          style: const TextStyle(color: AppTheme.textPrimary),
+          style: TextStyle(color: AppTheme.textPrimary),
           decoration: InputDecoration(
             filled: true,
             fillColor: AppTheme.card,
@@ -256,7 +256,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(AppLocale.tr('cancel'),
-                style: const TextStyle(color: AppTheme.textSecondary)),
+                style: TextStyle(color: AppTheme.textSecondary)),
           ),
           TextButton(
             onPressed: () {
@@ -268,7 +268,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               }
             },
             child: Text(AppLocale.tr('rename'),
-                style: const TextStyle(color: AppTheme.primaryColor)),
+                style: TextStyle(color: AppTheme.primaryColor)),
           ),
         ],
       ),
@@ -313,16 +313,16 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.surface,
         title: Text(AppLocale.tr('delete_playlist'),
-            style: const TextStyle(color: AppTheme.textPrimary)),
+            style: TextStyle(color: AppTheme.textPrimary)),
         content: Text(
           '${AppLocale.tr('delete')} "${widget.playlist.name}"?',
-          style: const TextStyle(color: AppTheme.textSecondary),
+          style: TextStyle(color: AppTheme.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(AppLocale.tr('cancel'),
-                style: const TextStyle(color: AppTheme.textSecondary)),
+                style: TextStyle(color: AppTheme.textSecondary)),
           ),
           TextButton(
             onPressed: () {
@@ -333,7 +333,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               Navigator.pop(context);
             },
             child: Text(AppLocale.tr('delete'),
-                style: const TextStyle(color: AppTheme.errorColor)),
+                style: TextStyle(color: AppTheme.errorColor)),
           ),
         ],
       ),

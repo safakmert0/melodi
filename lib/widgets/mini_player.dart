@@ -84,7 +84,7 @@ class MiniPlayer extends StatelessWidget {
                                     song.title,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: AppTheme.textPrimary,
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
@@ -94,7 +94,7 @@ class MiniPlayer extends StatelessWidget {
                                     song.artist,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: AppTheme.textSecondary,
                                       fontSize: 12,
                                     ),
@@ -106,7 +106,7 @@ class MiniPlayer extends StatelessWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  icon: const Icon(Icons.skip_previous_rounded),
+                                  icon: Icon(Icons.skip_previous_rounded),
                                   color: AppTheme.textPrimary,
                                   iconSize: 24,
                                   onPressed: player.skipToPrevious,
@@ -122,7 +122,7 @@ class MiniPlayer extends StatelessWidget {
                                   onPressed: player.playPause,
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.skip_next_rounded),
+                                  icon: Icon(Icons.skip_next_rounded),
                                   color: AppTheme.textPrimary,
                                   iconSize: 24,
                                   onPressed: player.skipToNext,
@@ -143,7 +143,7 @@ class MiniPlayer extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           AppLocale.tr('no_music_playing'),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppTheme.textSecondary,
                             fontSize: 14,
                           ),

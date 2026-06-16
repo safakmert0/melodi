@@ -52,7 +52,7 @@ class _LibraryScreenState extends State<LibraryScreen>
             SliverAppBar(
               title: Text(
                 AppLocale.tr('library'),
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppTheme.textPrimary,
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -103,7 +103,7 @@ class _LibraryScreenState extends State<LibraryScreen>
           const SizedBox(height: 24),
           Text(
             AppLocale.tr('your_library_is_empty'),
-            style: const TextStyle(
+            style: TextStyle(
               color: AppTheme.textPrimary,
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -112,7 +112,7 @@ class _LibraryScreenState extends State<LibraryScreen>
           const SizedBox(height: 8),
           Text(
             AppLocale.tr('import_music_from_device'),
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 15),
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 15),
           ),
           const SizedBox(height: 32),
           FilledButton.icon(
@@ -149,14 +149,14 @@ class _SongsTab extends StatelessWidget {
                 children: [
                   Text(
                     '${songs.length} ${AppLocale.tr('songs').toLowerCase()}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppTheme.textSecondary,
                       fontSize: 13,
                     ),
                   ),
                   const Spacer(),
                   PopupMenuButton<String>(
-                    icon: const Icon(Icons.sort_rounded,
+                    icon: Icon(Icons.sort_rounded,
                         color: AppTheme.textSecondary, size: 20),
                     onSelected: (value) {
                       switch (value) {
@@ -318,7 +318,7 @@ class _AlbumsTab extends StatelessWidget {
         if (albums.isEmpty) {
           return Center(
             child: Text(AppLocale.tr('no_albums_found'),
-                style: const TextStyle(color: AppTheme.textSecondary)),
+                style: TextStyle(color: AppTheme.textSecondary)),
           );
         }
         return GridView.builder(
@@ -360,7 +360,7 @@ class _AlbumsTab extends StatelessWidget {
                             ? Image.memory(artBytes, fit: BoxFit.cover, width: double.infinity)
                             : Container(
                                 color: AppTheme.cardHover,
-                                child: const Center(
+                                child: Center(
                                   child: Icon(Icons.album_rounded, size: 48, color: AppTheme.textTertiary),
                                 ),
                               ),
@@ -375,7 +375,7 @@ class _AlbumsTab extends StatelessWidget {
                             album.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppTheme.textPrimary,
                               fontWeight: FontWeight.w500,
                             ),
@@ -385,7 +385,7 @@ class _AlbumsTab extends StatelessWidget {
                             '${album.artist} · ${album.songCount} ${AppLocale.tr('songs').toLowerCase()}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppTheme.textSecondary,
                               fontSize: 12,
                             ),
@@ -442,7 +442,7 @@ class _ArtistsTab extends StatelessWidget {
         if (artists.isEmpty) {
           return Center(
             child: Text(AppLocale.tr('no_artists_found'),
-                style: const TextStyle(color: AppTheme.textSecondary)),
+                style: TextStyle(color: AppTheme.textSecondary)),
           );
         }
         return ListView.builder(
@@ -457,12 +457,12 @@ class _ArtistsTab extends StatelessWidget {
                     color: AppTheme.textTertiary.withValues(alpha: 0.7)),
               ),
               title: Text(artist.name,
-                  style: const TextStyle(color: AppTheme.textPrimary)),
+                  style: TextStyle(color: AppTheme.textPrimary)),
               subtitle: Text(
                 '${artist.songCount} ${AppLocale.tr('songs').toLowerCase()} · ${artist.albumCount} ${AppLocale.tr('albums').toLowerCase()}',
-                style: const TextStyle(color: AppTheme.textSecondary),
+                style: TextStyle(color: AppTheme.textSecondary),
               ),
-              trailing: const Icon(Icons.chevron_right,
+              trailing: Icon(Icons.chevron_right,
                   color: AppTheme.textTertiary),
               onTap: () {
                 final songs = library.getSongsForArtist(artist);
@@ -522,7 +522,7 @@ class _GenresTab extends StatelessWidget {
         if (genres.isEmpty) {
           return Center(
             child: Text(AppLocale.tr('no_genres_found'),
-                style: const TextStyle(color: AppTheme.textSecondary)),
+                style: TextStyle(color: AppTheme.textSecondary)),
           );
         }
         return ListView.builder(
@@ -537,14 +537,14 @@ class _GenresTab extends StatelessWidget {
                   color: AppTheme.card,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.category_rounded,
+                child: Icon(Icons.category_rounded,
                     color: AppTheme.textSecondary),
               ),
               title: Text(genre.name,
-                  style: const TextStyle(color: AppTheme.textPrimary)),
+                  style: TextStyle(color: AppTheme.textPrimary)),
               subtitle: Text('${genre.songCount} ${AppLocale.tr('songs').toLowerCase()}',
-                  style: const TextStyle(color: AppTheme.textSecondary)),
-              trailing: const Icon(Icons.chevron_right,
+                  style: TextStyle(color: AppTheme.textSecondary)),
+              trailing: Icon(Icons.chevron_right,
                   color: AppTheme.textTertiary),
               onTap: () {
                 final songs = library.getSongsForGenre(genre);
