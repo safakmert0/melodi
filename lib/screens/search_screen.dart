@@ -41,11 +41,12 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Search bar
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+    return SafeArea(
+      child: Column(
+        children: [
+          // Search bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           child: TextField(
             controller: _searchController,
             focusNode: _searchFocus,
@@ -128,6 +129,7 @@ class _SearchScreenState extends State<SearchScreen> {
           child: _youtubeMode ? _buildYouTubeResults() : _buildLocalResults(),
         ),
       ],
+      ),
     );
   }
 
