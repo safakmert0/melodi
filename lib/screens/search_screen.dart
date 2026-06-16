@@ -6,6 +6,7 @@ import '../providers/search_provider.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/youtube_provider.dart';
+import '../models/song_model.dart';
 import '../services/youtube_service.dart';
 import '../widgets/song_tile.dart';
 
@@ -267,12 +268,16 @@ class _SearchScreenState extends State<SearchScreen> {
               onTap: () async {
                 final url = await ytProvider.getAudioUrl(video.id);
                 if (url != null && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${AppLocale.tr('loading_song')} ${video.title}'),
-                      backgroundColor: AppTheme.primaryColor,
-                    ),
+                  final song = SongModel(
+                    id: 'yt_${video.id}',
+                    title: video.title,
+                    artist: video.author,
+                    album: 'YouTube',
+                    duration: video.duration,
+                    filePath: url,
+                    fileSize: 0,
                   );
+                  context.read<PlayerProvider>().playSong(song);
                 }
               },
               onDownload: () async {

@@ -261,8 +261,11 @@ class AudioPlayerHandler extends BaseAudioHandler
     final song = _queue[_currentIndex];
 
     try {
+      final audioSource = song.filePath.startsWith('http')
+          ? AudioSource.uri(Uri.parse(song.filePath))
+          : AudioSource.file(song.filePath);
       await _player.setAudioSource(
-        AudioSource.file(song.filePath),
+        audioSource,
         preload: true,
         initialPosition: Duration.zero,
       );

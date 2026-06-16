@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
-import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
@@ -24,7 +23,6 @@ class YouTubeVideo {
 
 class YouTubeService {
   final YoutubeExplode _yt = YoutubeExplode();
-  final Dio _dio = Dio();
 
   Future<List<YouTubeVideo>> search(String query) async {
     try {
@@ -65,14 +63,23 @@ class YouTubeService {
 
   Future<String?> downloadAudio(String videoId, String title) async {
     try {
-      final audioUrl = await getAudioUrl(videoId);
-      if (audioUrl == null) return null;
+      final manifest = await _yt.videos.streams.getManifest(videoId);
+      final audioStreams = manifest.audioOnly;
+      if (audioStreams.isEmpty) return null;
+      final sorted = List<AudioOnlyStreamInfo>.from(audioStreams)
+        ..sort((a, b) => b.bitrate.bitsPerSecond.compareTo(a.bitrate.bitsPerSecond));
+      final bestAudio = sorted.isNotEmpty ? sorted.first : null;
+      if (bestAudio == null) return null;
 
       final dir = await getApplicationDocumentsDirectory();
       final sanitized = title.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
       final filePath = p.join(dir.path, '${sanitized}.mp4');
 
-      await _dio.download(audioUrl, filePath);
+      final stream = await _yt.videos.streams.get(bestAudio);
+      final file = File(filePath);
+      final sink = file.openWrite();
+      await sink.addStream(stream);
+      await sink.close();
       return filePath;
     } catch (e) {
       return null;
