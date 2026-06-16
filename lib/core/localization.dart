@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class LocaleNotifier extends ChangeNotifier {
-  String _locale = 'en';
+  String _locale = 'tr';
   String get locale => _locale;
 
   void change(String locale) {
@@ -12,7 +12,7 @@ class LocaleNotifier extends ChangeNotifier {
 }
 
 class AppLocale {
-  static String currentLocale = 'en';
+  static String currentLocale = 'tr';
 
   static bool get isEnglish => currentLocale == 'en';
   static bool get isTurkish => currentLocale == 'tr';
@@ -147,6 +147,22 @@ class AppLocale {
       'watching': 'Watching',
       'folder_set': 'Folder set',
       'could_not_open_link': 'Could not open link',
+      'youtube_search_hint': 'Search on YouTube',
+      'downloading': 'Downloading...',
+      'download_complete': 'Download complete',
+      'download_failed': 'Download failed',
+      'loading_song': 'Loading',
+      'sleep_timer_canceled': 'Sleep timer canceled',
+      'output_selection': 'Output selection coming soon',
+      'device_selection': 'Device selection coming soon',
+      'artist_label': 'Artist',
+      'album_label': 'Album',
+      'genre_label': 'Genre',
+      'year_label': 'Year',
+      'track_label': 'Track',
+      'bitrate_label': 'Bitrate',
+      'duration_label': 'Duration',
+      'file_label': 'File',
     },
     'tr': {
       'home': 'Ana Sayfa',
@@ -272,6 +288,22 @@ class AppLocale {
       'watching': 'İzleniyor',
       'folder_set': 'Klasör ayarlandı',
       'could_not_open_link': 'Link açılamadı',
+      'youtube_search_hint': 'YouTube\'da ara',
+      'downloading': 'İndiriliyor...',
+      'download_complete': 'İndirme tamamlandı',
+      'download_failed': 'İndirme başarısız',
+      'loading_song': 'Yükleniyor',
+      'sleep_timer_canceled': 'Uyku zamanlayıcı kapatıldı',
+      'output_selection': 'Ses çıkışı seçimi yakında',
+      'device_selection': 'Cihaz seçimi yakında',
+      'artist_label': 'Sanatçı',
+      'album_label': 'Albüm',
+      'genre_label': 'Tür',
+      'year_label': 'Yıl',
+      'track_label': 'Parça',
+      'bitrate_label': 'Bitrate',
+      'duration_label': 'Süre',
+      'file_label': 'Dosya',
     },
     'de': {
       'home': 'Startseite',
@@ -397,6 +429,22 @@ class AppLocale {
       'watching': 'Überwacht',
       'folder_set': 'Ordner festgelegt',
       'could_not_open_link': 'Link konnte nicht geöffnet werden',
+      'youtube_search_hint': 'Auf YouTube suchen',
+      'downloading': 'Herunterladen...',
+      'download_complete': 'Download abgeschlossen',
+      'download_failed': 'Download fehlgeschlagen',
+      'loading_song': 'Laden',
+      'sleep_timer_canceled': 'Schlaftimer abgebrochen',
+      'output_selection': 'Auswahl der Audioausgabe',
+      'device_selection': 'Geräteauswahl',
+      'artist_label': 'Künstler',
+      'album_label': 'Album',
+      'genre_label': 'Genre',
+      'year_label': 'Jahr',
+      'track_label': 'Titel',
+      'bitrate_label': 'Bitrate',
+      'duration_label': 'Dauer',
+      'file_label': 'Datei',
     },
   };
 

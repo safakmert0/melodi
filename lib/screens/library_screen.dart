@@ -347,7 +347,7 @@ class _AlbumsTab extends StatelessWidget {
               },
               child: Container(
                 decoration: BoxDecoration(
-                  color: AppTheme.darkCard,
+                  color: AppTheme.card,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -359,7 +359,7 @@ class _AlbumsTab extends StatelessWidget {
                         child: artBytes != null && artBytes.isNotEmpty
                             ? Image.memory(artBytes, fit: BoxFit.cover, width: double.infinity)
                             : Container(
-                                color: AppTheme.darkCardHover,
+                                color: AppTheme.cardHover,
                                 child: const Center(
                                   child: Icon(Icons.album_rounded, size: 48, color: AppTheme.textTertiary),
                                 ),
@@ -413,7 +413,7 @@ class _AlbumGridDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(title: Text(album.name)),
       body: ListView.builder(
         itemCount: songs.length,
@@ -425,7 +425,6 @@ class _AlbumGridDetailScreen extends StatelessWidget {
                 context.read<PlayerProvider>().playFromQueue(songs, index),
             onFavorite: () =>
                 context.read<LibraryProvider>().toggleFavorite(song),
-            onViewAlbum: () {},
             onViewArtist: () => _navigateToArtist(context, song),
           );
         },
@@ -453,7 +452,7 @@ class _ArtistsTab extends StatelessWidget {
             final artist = artists[index];
             return ListTile(
               leading: CircleAvatar(
-                backgroundColor: AppTheme.darkCard,
+                backgroundColor: AppTheme.card,
                 child: Icon(Icons.person_rounded,
                     color: AppTheme.textTertiary.withValues(alpha: 0.7)),
               ),
@@ -494,7 +493,7 @@ class _ArtistDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(title: Text(artistName)),
       body: ListView.builder(
         itemCount: songs.length,
@@ -507,7 +506,6 @@ class _ArtistDetailScreen extends StatelessWidget {
             onFavorite: () =>
                 context.read<LibraryProvider>().toggleFavorite(song),
             onViewAlbum: () => _navigateToAlbum(context, song),
-            onViewArtist: () {},
           );
         },
       ),
@@ -536,7 +534,7 @@ class _GenresTab extends StatelessWidget {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppTheme.darkCard,
+                  color: AppTheme.card,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.category_rounded,
@@ -577,7 +575,7 @@ class _GenreDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(title: Text(genreName)),
       body: ListView.builder(
         itemCount: songs.length,

@@ -23,7 +23,7 @@ class QueueSheet extends StatelessWidget {
         return Container(
           height: MediaQuery.of(context).size.height * 0.7,
           decoration: const BoxDecoration(
-            color: AppTheme.darkSurface,
+            color: AppTheme.surface,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
@@ -33,7 +33,7 @@ class QueueSheet extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppTheme.darkDivider,
+                  color: AppTheme.divider,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -73,7 +73,7 @@ class QueueSheet extends StatelessWidget {
                   ],
                 ),
               ),
-              const Divider(color: AppTheme.darkDivider),
+              const Divider(color: AppTheme.divider),
               Expanded(
                 child: queue.isEmpty
                     ? Center(
@@ -179,7 +179,7 @@ class AddToPlaylistSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: const BoxDecoration(
-        color: AppTheme.darkSurface,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
@@ -191,7 +191,7 @@ class AddToPlaylistSheet extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: AppTheme.darkDivider,
+              color: AppTheme.divider,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -249,7 +249,7 @@ class AddToPlaylistSheet extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.darkSurface,
+        backgroundColor: AppTheme.surface,
         title: Text(AppLocale.tr('new_playlist'),
             style: const TextStyle(color: AppTheme.textPrimary)),
         content: TextField(
@@ -260,7 +260,7 @@ class AddToPlaylistSheet extends StatelessWidget {
             hintText: AppLocale.tr('playlist_name'),
             hintStyle: const TextStyle(color: AppTheme.textTertiary),
             filled: true,
-            fillColor: AppTheme.darkCard,
+            fillColor: AppTheme.card,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide.none,

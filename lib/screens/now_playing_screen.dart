@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
 import '../core/extensions/duration_ext.dart';
@@ -30,18 +32,43 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
         final song = player.currentSong;
         if (song == null) {
           return Scaffold(
-            backgroundColor: AppTheme.darkBackground,
+            backgroundColor: AppTheme.background,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: IconButton(
+                icon: Icon(Icons.keyboard_arrow_down_rounded, size: 28, color: AppTheme.textPrimary),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: Text(
+                AppLocale.tr('now_playing'),
+                style: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              centerTitle: true,
+            ),
             body: Center(
-              child: Text(
-                AppLocale.tr('no_song_playing'),
-                style: const TextStyle(color: AppTheme.textSecondary),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.music_note_rounded, size: 80, color: AppTheme.textTertiary),
+                  const SizedBox(height: 24),
+                  Text(
+                    AppLocale.tr('no_song_playing'),
+                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 18),
+                  ),
+                ],
               ),
             ),
           );
         }
 
         return Scaffold(
-          backgroundColor: AppTheme.darkBackground,
+          backgroundColor: AppTheme.background,
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
@@ -137,7 +164,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               max: 2.0,
                               onChanged: (v) => player.setVolume(v),
                               activeColor: AppTheme.primaryColor,
-                              inactiveColor: AppTheme.darkDivider,
+                              inactiveColor: AppTheme.divider,
                             ),
                           ),
                           const Icon(Icons.volume_up_rounded,
@@ -263,7 +290,14 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         IconButton(
                           icon: const Icon(Icons.speaker_group_rounded,
                               color: AppTheme.textSecondary, size: 22),
-                          onPressed: () {},
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(AppLocale.tr('output_selection')),
+                                backgroundColor: AppTheme.primaryColor,
+                              ),
+                            );
+                          },
                         ),
                         Row(
                           children: [
@@ -290,7 +324,14 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         IconButton(
                           icon: const Icon(Icons.devices_rounded,
                               color: AppTheme.textSecondary, size: 22),
-                          onPressed: () {},
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(AppLocale.tr('device_selection')),
+                                backgroundColor: AppTheme.primaryColor,
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -415,15 +456,184 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppTheme.darkCard,
-            AppTheme.darkCardHover,
+            AppTheme.card,
+            AppTheme.cardHover,
           ],
         ),
       ),
-      child: const Icon(
+      child: Icon(
         Icons.music_note_rounded,
         size: 80,
         color: AppTheme.textTertiary,
+      ),
+    );
+  }
+
+  void _showSongInfo(BuildContext context, SongModel song) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: Text(song.title,
+            style: const TextStyle(color: AppTheme.textPrimary)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _infoRow(AppLocale.tr('artist_label'), song.artist),
+            _infoRow(AppLocale.tr('album_label'), song.album),
+            if (song.genre != null) _infoRow(AppLocale.tr('genre_label'), song.genre!),
+            if (song.year != null) _infoRow(AppLocale.tr('year_label'), '${song.year}'),
+            if (song.trackNumber != null) _infoRow(AppLocale.tr('track_label'), '${song.trackNumber}'),
+            if (song.bitrate != null) _infoRow(AppLocale.tr('bitrate_label'), '${song.bitrate} kbps'),
+            _infoRow(AppLocale.tr('duration_label'), song.duration.toFormattedString()),
+            _infoRow(AppLocale.tr('file_label'), song.filePath.split('/').last),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(AppLocale.tr('cancel'),
+                style: const TextStyle(color: AppTheme.textSecondary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(label,
+                style: const TextStyle(
+                    color: AppTheme.textSecondary, fontSize: 13)),
+          ),
+          Expanded(
+            child: Text(value,
+                style: const TextStyle(
+                    color: AppTheme.textPrimary, fontSize: 13)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _shareSong(BuildContext context, SongModel song) {
+    final file = File(song.filePath);
+    if (file.existsSync()) {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: AppTheme.surface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (ctx) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.check_circle, color: AppTheme.primaryColor, size: 48),
+                const SizedBox(height: 16),
+                Text(AppLocale.tr('share'),
+                    style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text(song.title,
+                    style: const TextStyle(color: AppTheme.textSecondary),
+                    textAlign: TextAlign.center),
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${song.title} - ${AppLocale.tr('share')}'),
+                        backgroundColor: AppTheme.primaryColor,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.ios_share),
+                  label: Text(AppLocale.tr('share')),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.black,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _showSleepTimer(BuildContext context, PlayerProvider player) {
+    final durations = [
+      5, 10, 15, 30, 45, 60, 90, 120
+    ];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.divider,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(AppLocale.tr('sleep_timer'),
+                style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            ...durations.map((minutes) {
+              final label = '$minutes ${AppLocale.tr('seconds')}';
+              return ListTile(
+                title: Text(label,
+                    style: const TextStyle(color: AppTheme.textPrimary)),
+                onTap: () {
+                  final timerDuration = Duration(minutes: minutes);
+                  player.handler.setSleepTimer(timerDuration);
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('$label'),
+                      backgroundColor: AppTheme.primaryColor,
+                    ),
+                  );
+                },
+              );
+            }),
+            ListTile(
+              leading: const Icon(Icons.close, color: AppTheme.errorColor),
+              title: Text(AppLocale.tr('off'),
+                  style: const TextStyle(color: AppTheme.errorColor)),
+              onTap: () {
+                player.handler.setSleepTimer(Duration.zero);
+                Navigator.pop(ctx);
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }
@@ -433,7 +643,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     if (song == null) return;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.darkSurface,
+      backgroundColor: AppTheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -446,7 +656,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.darkDivider,
+                color: AppTheme.divider,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -463,19 +673,28 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               leading: const Icon(Icons.info_outline, color: AppTheme.textSecondary),
               title: Text(AppLocale.tr('song_info'),
                   style: const TextStyle(color: AppTheme.textPrimary)),
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                _showSongInfo(context, song!);
+              },
             ),
             ListTile(
               leading: const Icon(Icons.share_outlined, color: AppTheme.textSecondary),
               title: Text(AppLocale.tr('share'),
                   style: const TextStyle(color: AppTheme.textPrimary)),
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                _shareSong(context, song!);
+              },
             ),
             ListTile(
               leading: const Icon(Icons.timer, color: AppTheme.textSecondary),
               title: Text(AppLocale.tr('sleep_timer'),
                   style: const TextStyle(color: AppTheme.textPrimary)),
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                _showSleepTimer(context, player);
+              },
             ),
             const SizedBox(height: 16),
           ],
@@ -524,9 +743,9 @@ class _SpeedButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: AppTheme.darkCard,
+          color: AppTheme.card,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.darkDivider),
+          border: Border.all(color: AppTheme.divider),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -566,10 +785,10 @@ class _VolumeBoostButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: showSlider ? AppTheme.primaryColor.withValues(alpha: 0.2) : AppTheme.darkCard,
+          color: showSlider ? AppTheme.primaryColor.withValues(alpha: 0.2) : AppTheme.card,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: showSlider ? AppTheme.primaryColor : AppTheme.darkDivider,
+            color: showSlider ? AppTheme.primaryColor : AppTheme.divider,
           ),
         ),
         child: Row(

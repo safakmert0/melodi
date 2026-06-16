@@ -9,6 +9,7 @@ import '../services/database_service.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/playlist_provider.dart';
+import '../models/album_model.dart';
 import '../widgets/song_tile.dart';
 import '../widgets/image_with_fallback.dart';
 
@@ -49,7 +50,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     final playlist = widget.playlist;
 
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: Text(playlist.name),
         actions: [
@@ -118,8 +119,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [
-                                  AppTheme.darkCard,
-                                  AppTheme.darkCardHover,
+                                  AppTheme.card,
+                                  AppTheme.cardHover,
                                 ],
                               ),
                             ),
@@ -173,7 +174,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                         ],
                       ),
                     ),
-                    const Divider(color: AppTheme.darkDivider, height: 1),
+                    const Divider(color: AppTheme.divider, height: 1),
                     // Songs list
                     Expanded(
                       child: ReorderableListView.builder(
@@ -235,7 +236,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.darkSurface,
+        backgroundColor: AppTheme.surface,
         title: Text(AppLocale.tr('rename_playlist'),
             style: const TextStyle(color: AppTheme.textPrimary)),
         content: TextField(
@@ -244,7 +245,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           style: const TextStyle(color: AppTheme.textPrimary),
           decoration: InputDecoration(
             filled: true,
-            fillColor: AppTheme.darkCard,
+            fillColor: AppTheme.card,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide.none,
@@ -310,7 +311,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.darkSurface,
+        backgroundColor: AppTheme.surface,
         title: Text(AppLocale.tr('delete_playlist'),
             style: const TextStyle(color: AppTheme.textPrimary)),
         content: Text(
@@ -356,7 +357,7 @@ class _SimpleAlbumScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(title: Text(albumName)),
       body: ListView.builder(
         itemCount: songs.length,
@@ -366,8 +367,24 @@ class _SimpleAlbumScreen extends StatelessWidget {
             song: song,
             onTap: () => context.read<PlayerProvider>().playFromQueue(songs, index),
             onFavorite: () => context.read<LibraryProvider>().toggleFavorite(song),
+            onViewArtist: () => _navigateToArtist(context, song),
           );
         },
+      ),
+    );
+  }
+
+  void _navigateToArtist(BuildContext context, SongModel song) {
+    final lib = context.read<LibraryProvider>();
+    final artists = lib.artists.where((a) => a.name == song.artist).toList();
+    if (artists.isEmpty) return;
+    final artistSongs = lib.getSongsForArtist(artists.first);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _SimpleArtistScreen(
+          artistName: artists.first.name,
+          songs: artistSongs,
+        ),
       ),
     );
   }
@@ -385,7 +402,7 @@ class _SimpleArtistScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(title: Text(artistName)),
       body: ListView.builder(
         itemCount: songs.length,
@@ -395,8 +412,26 @@ class _SimpleArtistScreen extends StatelessWidget {
             song: song,
             onTap: () => context.read<PlayerProvider>().playFromQueue(songs, index),
             onFavorite: () => context.read<LibraryProvider>().toggleFavorite(song),
+            onViewAlbum: () => _navigateToAlbum(context, song),
           );
         },
+      ),
+    );
+  }
+
+  void _navigateToAlbum(BuildContext context, SongModel song) {
+    final lib = context.read<LibraryProvider>();
+    final albums = lib.albums.where((a) => a.name == song.album && a.artist == song.artist).toList();
+    if (albums.isEmpty) return;
+    final albumSongs = lib.getSongsForAlbum(albums.first);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _SimpleAlbumScreen(
+          albumName: albums.first.name,
+          artistName: albums.first.artist,
+          artwork: albums.first.artwork,
+          songs: albumSongs,
+        ),
       ),
     );
   }

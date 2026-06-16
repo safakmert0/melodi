@@ -21,6 +21,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   bool _autoShuffleEnabled = false;
   bool _gaplessPlaybackEnabled = false;
   Duration _crossfadeDuration = Duration.zero;
+  Timer? _sleepTimer;
 
   AudioPlayerHandler() {
     _initPlayer();
@@ -442,6 +443,15 @@ class AudioPlayerHandler extends BaseAudioHandler
   @override
   Future<void> removeQueueItemAt(int index) async {
     await removeFromQueue(index);
+  }
+
+  Future<void> setSleepTimer(Duration duration) async {
+    _sleepTimer?.cancel();
+    if (duration == Duration.zero) return;
+    _sleepTimer = Timer(duration, () {
+      _player.pause();
+      _sleepTimer = null;
+    });
   }
 
   @override

@@ -13,6 +13,7 @@ import 'providers/library_provider.dart';
 import 'providers/playlist_provider.dart';
 import 'providers/search_provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/youtube_provider.dart';
 import 'screens/home_screen.dart';
 
 Future<void> main() async {
@@ -26,7 +27,7 @@ Future<void> main() async {
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: AppTheme.darkBackground,
+    systemNavigationBarColor: AppTheme.background,
     systemNavigationBarIconBrightness: Brightness.light,
   ));
 
@@ -38,6 +39,8 @@ Future<void> main() async {
   final savedLocale = await db.getSetting('app_locale');
   if (savedLocale != null && savedLocale.isNotEmpty) {
     AppLocale.currentLocale = savedLocale;
+  } else {
+    AppLocale.currentLocale = 'tr';
   }
 
   // Initialize audio handler with service
@@ -78,6 +81,9 @@ class MelodiApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => SearchProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => YouTubeProvider(),
         ),
         ChangeNotifierProvider(
           create: (_) => LocaleNotifier(),

@@ -63,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           border: Border(
             top: BorderSide(
-              color: AppTheme.darkDivider.withValues(alpha: 0.3),
+              color: AppTheme.divider.withValues(alpha: 0.3),
             ),
           ),
         ),
@@ -328,7 +328,7 @@ class _HomeTab extends StatelessWidget {
   void _showImportOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.darkSurface,
+      backgroundColor: AppTheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -341,7 +341,7 @@ class _HomeTab extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.darkDivider,
+                color: AppTheme.divider,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -505,14 +505,14 @@ class _RecentSongCard extends StatelessWidget {
               height: 120,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                color: AppTheme.darkCard,
+                color: AppTheme.card,
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: song.albumArt != null
                     ? Image.memory(song.albumArt!, fit: BoxFit.cover)
                     : Container(
-                        color: AppTheme.darkCard,
+                        color: AppTheme.card,
                         child: const Icon(Icons.music_note_rounded,
                             size: 40, color: AppTheme.textTertiary),
                       ),
@@ -545,7 +545,7 @@ class _AlbumDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: Text(album.name),
       ),
@@ -559,7 +559,6 @@ class _AlbumDetailScreen extends StatelessWidget {
                   song: song,
                   onTap: () => context.read<PlayerProvider>().playFromQueue(songs, index),
                   onFavorite: () => context.read<LibraryProvider>().toggleFavorite(song),
-                  onViewAlbum: () {},
                   onViewArtist: () => _navigateToArtistFromSong(context, song),
                 );
               },
@@ -590,7 +589,7 @@ class _ArtistDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: Text(artist.name),
       ),
@@ -608,7 +607,6 @@ class _ArtistDetailScreen extends StatelessWidget {
                   onFavorite: () =>
                       context.read<LibraryProvider>().toggleFavorite(song),
                   onViewAlbum: () => _navigateToAlbumFromSong(context, song),
-                  onViewArtist: () {},
                 );
               },
             ),

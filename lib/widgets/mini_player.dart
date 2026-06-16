@@ -17,33 +17,35 @@ class MiniPlayer extends StatelessWidget {
         final song = player.currentSong;
 
         return GestureDetector(
-          onTap: () {
-            Navigator.of(context).push(
-              PageRouteBuilder(
-                pageBuilder: (_, __, ___) => const NowPlayingScreen(),
-                transitionsBuilder: (_, animation, __, child) {
-                  return SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 1),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOutCubic,
-                    )),
-                    child: child,
+          onTap: song != null
+              ? () {
+                  Navigator.of(context).push(
+                    PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => const NowPlayingScreen(),
+                      transitionsBuilder: (_, animation, __, child) {
+                        return SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0, 1),
+                            end: Offset.zero,
+                          ).animate(CurvedAnimation(
+                            parent: animation,
+                            curve: Curves.easeOutCubic,
+                          )),
+                          child: child,
+                        );
+                      },
+                      fullscreenDialog: true,
+                    ),
                   );
-                },
-                fullscreenDialog: true,
-              ),
-            );
-          },
+                }
+              : null,
           child: Container(
             height: AppConstants.miniPlayerHeight,
             decoration: BoxDecoration(
-              color: AppTheme.darkSurface,
+              color: AppTheme.surface,
               border: Border(
                 top: BorderSide(
-                  color: AppTheme.darkDivider.withValues(alpha: 0.3),
+                  color: AppTheme.divider.withValues(alpha: 0.3),
                 ),
               ),
             ),

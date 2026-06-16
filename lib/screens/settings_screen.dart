@@ -109,7 +109,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       );
                     },
                   ),
-                  const Divider(color: AppTheme.darkDivider, height: 1),
+                  const Divider(color: AppTheme.divider, height: 1),
                   // Language section
                   _SectionTitle(AppLocale.tr('language')),
                   _SettingsTile(
@@ -121,7 +121,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: AppTheme.textTertiary),
                     onTap: () => _showLanguagePicker(context),
                   ),
-                  const Divider(color: AppTheme.darkDivider, height: 1),
+                  const Divider(color: AppTheme.divider, height: 1),
                   // Library section
                   _SectionTitle(AppLocale.tr('music_library')),
                   _SettingsTile(
@@ -175,7 +175,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         : null,
                     onTap: () => _pickWatchedFolder(context),
                   ),
-                  const Divider(color: AppTheme.darkDivider, height: 1),
+                  const Divider(color: AppTheme.divider, height: 1),
                   // Storage section
                   _SectionTitle(AppLocale.tr('storage')),
                   Padding(
@@ -217,7 +217,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: AppLocale.tr('remove_cached_data'),
                     onTap: () => _confirmClearLibrary(context),
                   ),
-                  const Divider(color: AppTheme.darkDivider, height: 1),
+                  const Divider(color: AppTheme.divider, height: 1),
                   // Audio section
                   _SectionTitle(AppLocale.tr('audio')),
                   _SettingsTile(
@@ -245,7 +245,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: AppTheme.textTertiary),
                     onTap: () => _showVolumeBoostSlider(context),
                   ),
-                  const Divider(color: AppTheme.darkDivider, height: 1),
+                  const Divider(color: AppTheme.divider, height: 1),
                   // Playback section
                   _SectionTitle(AppLocale.tr('playback')),
                   _SettingsTile(
@@ -299,7 +299,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: AppTheme.textTertiary),
                     onTap: () => _showCrossfadeSlider(context, player),
                   ),
-                  const Divider(color: AppTheme.darkDivider, height: 1),
+                  const Divider(color: AppTheme.divider, height: 1),
                   // Developer section
                   _SectionTitle(AppLocale.tr('developer')),
                   _SettingsTile(
@@ -316,7 +316,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: '@safakmert',
                     onTap: () => _openUrl('https://t.me/safakmert'),
                   ),
-                  const Divider(color: AppTheme.darkDivider, height: 1),
+                  const Divider(color: AppTheme.divider, height: 1),
                   // About section
                   _SectionTitle(AppLocale.tr('about')),
                   _SettingsTile(
@@ -330,7 +330,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     iconColor: AppTheme.favoriteColor,
                     title: AppLocale.tr('credits'),
                     subtitle: AppLocale.tr('open_source_licenses'),
-                    onTap: () {},
+                    onTap: () => _showCredits(context),
                   ),
                   const SizedBox(height: 32),
                 ],
@@ -345,7 +345,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showThemePicker(BuildContext context, ThemeProvider themeProvider) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.darkSurface,
+      backgroundColor: AppTheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -358,7 +358,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.darkDivider,
+                color: AppTheme.divider,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -405,7 +405,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showLanguagePicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.darkSurface,
+      backgroundColor: AppTheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -418,7 +418,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.darkDivider,
+                color: AppTheme.divider,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -461,7 +461,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.darkSurface,
+      backgroundColor: AppTheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -474,7 +474,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.darkDivider,
+                color: AppTheme.divider,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -510,7 +510,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showVolumeBoostSlider(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.darkSurface,
+      backgroundColor: AppTheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -528,7 +528,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: AppTheme.darkDivider,
+                      color: AppTheme.divider,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -547,7 +547,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     max: 2.0,
                     divisions: 30,
                     activeColor: AppTheme.primaryColor,
-                    inactiveColor: AppTheme.darkDivider,
+                    inactiveColor: AppTheme.divider,
                     onChanged: (v) {
                       setSheetState(() => localVolume = v);
                     },
@@ -590,7 +590,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showCrossfadeSlider(BuildContext context, PlayerProvider player) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.darkSurface,
+      backgroundColor: AppTheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -608,7 +608,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: AppTheme.darkDivider,
+                      color: AppTheme.divider,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -627,7 +627,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     max: 12,
                     divisions: 12,
                     activeColor: AppTheme.primaryColor,
-                    inactiveColor: AppTheme.darkDivider,
+                    inactiveColor: AppTheme.divider,
                     onChanged: (v) {
                       setSheetState(() => localCrossfade = v);
                     },
@@ -671,7 +671,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.darkSurface,
+        backgroundColor: AppTheme.surface,
         title: Text(AppLocale.tr('equalizer'),
             style: const TextStyle(color: AppTheme.textPrimary)),
         content: Text(
@@ -686,6 +686,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showCredits(BuildContext context) {
+    showLicensePage(
+      context: context,
+      applicationName: 'Melodi',
+      applicationVersion: AppConstants.appVersion,
+      applicationIcon: Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          color: AppTheme.primaryColor,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Icon(Icons.music_note_rounded, color: Colors.black, size: 32),
+      ),
+      applicationLegalese: 'Built with Flutter & Love',
     );
   }
 
@@ -714,7 +732,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       }
     } else {
-      selectedDirectory = await FilePicker.platform.getDirectoryPath();
+      try {
+        selectedDirectory = await FilePicker.platform.getDirectoryPath();
+      } catch (_) {
+        // Fallback to file picker on platforms where getDirectoryPath is not supported
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowMultiple: true,
+          allowedExtensions: const [
+            'mp3', 'm4a', 'flac', 'wav', 'aac', 'ogg', 'wma',
+            'alac', 'aiff', 'opus', 'ape', 'wv',
+          ],
+        );
+        if (result != null && result.files.isNotEmpty && result.files.first.path != null) {
+          final firstPath = result.files.first.path!;
+          selectedDirectory = firstPath.substring(0, firstPath.lastIndexOf('/'));
+          final paths = result.files
+              .where((f) => f.path != null)
+              .map((f) => f.path!)
+              .toList();
+          if (paths.isNotEmpty) {
+            await lib.importFromFilePaths(paths);
+          }
+        }
+      }
     }
 
     final dir = selectedDirectory;
@@ -724,7 +765,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Watching: $selectedDirectory'),
+            content: Text('${AppLocale.tr('watching')}: $dir'),
             backgroundColor: AppTheme.primaryColor,
           ),
         );
@@ -752,7 +793,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.darkSurface,
+        backgroundColor: AppTheme.surface,
         title: Text(AppLocale.tr('clear_library_title'),
             style: const TextStyle(color: AppTheme.textPrimary)),
         content: Text(

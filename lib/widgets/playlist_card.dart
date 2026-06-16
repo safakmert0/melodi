@@ -36,9 +36,9 @@ class PlaylistCard extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppTheme.darkCard,
-                    AppTheme.darkCardHover,
-                    AppTheme.darkCard,
+                    AppTheme.card,
+                    AppTheme.cardHover,
+                    AppTheme.card,
                   ],
                 ),
               ),

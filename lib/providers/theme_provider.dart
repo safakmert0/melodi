@@ -10,8 +10,24 @@ class ThemeProvider extends ChangeNotifier {
   bool get isLight => _themeMode == ThemeMode.light;
   bool get isSystem => _themeMode == ThemeMode.system;
 
+  void _syncIsLightMode() {
+    switch (_themeMode) {
+      case ThemeMode.light:
+        AppTheme.isLightMode = true;
+        break;
+      case ThemeMode.dark:
+        AppTheme.isLightMode = false;
+        break;
+      case ThemeMode.system:
+        final brightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
+        AppTheme.isLightMode = brightness == Brightness.light;
+        break;
+    }
+  }
+
   void setThemeMode(ThemeMode mode) {
     _themeMode = mode;
+    _syncIsLightMode();
     notifyListeners();
   }
 

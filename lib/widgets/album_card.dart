@@ -34,7 +34,7 @@ class AlbumCard extends StatelessWidget {
                 width: 160,
                 height: 160,
                 decoration: BoxDecoration(
-                  color: AppTheme.darkCard,
+                  color: AppTheme.card,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Consumer<LibraryProvider>(
@@ -53,8 +53,8 @@ class AlbumCard extends StatelessWidget {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                AppTheme.darkCard,
-                                AppTheme.darkCardHover,
+                                AppTheme.card,
+                                AppTheme.cardHover,
                               ],
                             ),
                           ),

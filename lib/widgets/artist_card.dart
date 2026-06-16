@@ -24,10 +24,10 @@ class ArtistCard extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 60,
-              backgroundColor: AppTheme.darkCard,
+              backgroundColor: AppTheme.card,
               child: CircleAvatar(
                 radius: 58,
-                backgroundColor: AppTheme.darkCardHover,
+                backgroundColor: AppTheme.cardHover,
                 child: Icon(
                   Icons.person_rounded,
                   size: 48,

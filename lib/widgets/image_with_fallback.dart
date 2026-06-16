@@ -46,8 +46,8 @@ class ArtworkImage extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                AppTheme.darkCard,
-                AppTheme.darkCardHover,
+                AppTheme.card,
+                AppTheme.cardHover,
               ],
             ),
           ),
@@ -82,13 +82,13 @@ class ArtworkBackground extends StatelessWidget {
             opacity: const AlwaysStoppedAnimation(0.3),
           ),
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
                   Colors.transparent,
-                  Color(0xFF121212),
+                  AppTheme.background,
                 ],
                 stops: [0.3, 1.0],
               ),

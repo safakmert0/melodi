@@ -6,7 +6,8 @@ export 'localization.dart' show AppLocale;
 
 class AppConstants {
   static const String appName = 'Melodi';
-  static const String appVersion = '1.5.1';
+  static const String appVersion = '1.6.0';
+  static const String buildNumber = '1';
 
   static const List<String> supportedAudioExtensions = [
     'mp3', 'm4a', 'flac', 'wav', 'aac', 'ogg', 'wma',
@@ -34,20 +35,15 @@ class AppConstants {
 }
 
 class AppTheme {
+  static bool isLightMode = false;
+
+  // Dark theme colors
   static const Color primaryColor = Color(0xFF1DB954);
   static const Color darkBackground = Color(0xFF121212);
   static const Color darkSurface = Color(0xFF1E1E1E);
   static const Color darkCard = Color(0xFF282828);
   static const Color darkCardHover = Color(0xFF333333);
   static const Color darkDivider = Color(0xFF404040);
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFB3B3B3);
-  static const Color textTertiary = Color(0xFF727272);
-  static const Color accentColor = Color(0xFF1DB954);
-  static const Color errorColor = Color(0xFFE74C3C);
-  static const Color favoriteColor = Color(0xFFE91E63);
-  static const Color gradientStart = Color(0xFF1DB954);
-  static const Color gradientEnd = Color(0xFF169C46);
 
   // Light theme colors
   static const Color lightBackground = Color(0xFFF5F5F5);
@@ -55,10 +51,24 @@ class AppTheme {
   static const Color lightCard = Color(0xFFEEEEEE);
   static const Color lightCardHover = Color(0xFFE0E0E0);
   static const Color lightDivider = Color(0xFFD0D0D0);
-  static const Color lightTextPrimary = Color(0xFF1A1A1A);
-  static const Color lightTextSecondary = Color(0xFF666666);
-  static const Color lightTextTertiary = Color(0xFF999999);
 
+  // Text colors - dynamic based on isLightMode
+  static Color get textPrimary => isLightMode ? const Color(0xFF1A1A1A) : const Color(0xFFFFFFFF);
+  static Color get textSecondary => isLightMode ? const Color(0xFF666666) : const Color(0xFFB3B3B3);
+  static Color get textTertiary => isLightMode ? const Color(0xFF999999) : const Color(0xFF727272);
+
+  // Background/surface colors - dynamic based on isLightMode
+  static Color get background => isLightMode ? lightBackground : darkBackground;
+  static Color get surface => isLightMode ? lightSurface : darkSurface;
+  static Color get card => isLightMode ? lightCard : darkCard;
+  static Color get cardHover => isLightMode ? lightCardHover : darkCardHover;
+  static Color get divider => isLightMode ? lightDivider : darkDivider;
+
+  static const Color accentColor = Color(0xFF1DB954);
+  static const Color errorColor = Color(0xFFE74C3C);
+  static const Color favoriteColor = Color(0xFFE91E63);
+  static const Color gradientStart = Color(0xFF1DB954);
+  static const Color gradientEnd = Color(0xFF169C46);
   static const Color appleMusicRed = Color(0xFFFA233B);
   static const Color spotifyBlack = Color(0xFF191414);
 
@@ -78,41 +88,41 @@ class AppTheme {
         elevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
-          color: lightTextPrimary,
+          color: Color(0xFF1A1A1A),
           fontSize: 18,
           fontWeight: FontWeight.w600,
         ),
-        iconTheme: IconThemeData(color: lightTextPrimary),
+        iconTheme: IconThemeData(color: Color(0xFF1A1A1A)),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: lightSurface,
-        selectedItemColor: lightTextPrimary,
-        unselectedItemColor: lightTextTertiary,
+        backgroundColor: Color(0xFFFFFFFF),
+        selectedItemColor: Color(0xFF1A1A1A),
+        unselectedItemColor: Color(0xFF999999),
         type: BottomNavigationBarType.fixed,
         elevation: 8,
       ),
       cardTheme: CardThemeData(
-        color: lightCard,
+        color: const Color(0xFFEEEEEE),
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
       ),
-      iconTheme: const IconThemeData(color: lightTextPrimary),
+      iconTheme: const IconThemeData(color: Color(0xFF1A1A1A)),
       textTheme: const TextTheme(
-        headlineLarge: TextStyle(color: lightTextPrimary, fontWeight: FontWeight.bold),
-        headlineMedium: TextStyle(color: lightTextPrimary, fontWeight: FontWeight.w600),
-        titleLarge: TextStyle(color: lightTextPrimary, fontWeight: FontWeight.w600),
-        titleMedium: TextStyle(color: lightTextPrimary, fontWeight: FontWeight.w500),
-        bodyLarge: TextStyle(color: lightTextPrimary),
-        bodyMedium: TextStyle(color: lightTextSecondary),
-        bodySmall: TextStyle(color: lightTextTertiary),
+        headlineLarge: TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.bold),
+        headlineMedium: TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.w600),
+        titleLarge: TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.w600),
+        titleMedium: TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.w500),
+        bodyLarge: TextStyle(color: Color(0xFF1A1A1A)),
+        bodyMedium: TextStyle(color: Color(0xFF666666)),
+        bodySmall: TextStyle(color: Color(0xFF999999)),
       ),
-      dividerTheme: const DividerThemeData(color: lightDivider, thickness: 0.5),
+      dividerTheme: const DividerThemeData(color: Color(0xFFD0D0D0), thickness: 0.5),
       sliderTheme: SliderThemeData(
         activeTrackColor: primaryColor,
-        inactiveTrackColor: lightDivider,
-        thumbColor: lightTextPrimary,
+        inactiveTrackColor: const Color(0xFFD0D0D0),
+        thumbColor: const Color(0xFF1A1A1A),
         overlayColor: primaryColor.withValues(alpha: 0.2),
         trackHeight: 4,
       ),
@@ -135,41 +145,41 @@ class AppTheme {
         elevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
-          color: textPrimary,
+          color: Colors.white,
           fontSize: 18,
           fontWeight: FontWeight.w600,
         ),
-        iconTheme: IconThemeData(color: textPrimary),
+        iconTheme: IconThemeData(color: Colors.white),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: darkSurface,
-        selectedItemColor: textPrimary,
-        unselectedItemColor: textTertiary,
+        backgroundColor: Color(0xFF1E1E1E),
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Color(0xFF727272),
         type: BottomNavigationBarType.fixed,
         elevation: 8,
       ),
       cardTheme: CardThemeData(
-        color: darkCard,
+        color: const Color(0xFF282828),
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
       ),
-      iconTheme: const IconThemeData(color: textPrimary),
+      iconTheme: const IconThemeData(color: Colors.white),
       textTheme: const TextTheme(
-        headlineLarge: TextStyle(color: textPrimary, fontWeight: FontWeight.bold),
-        headlineMedium: TextStyle(color: textPrimary, fontWeight: FontWeight.w600),
-        titleLarge: TextStyle(color: textPrimary, fontWeight: FontWeight.w600),
-        titleMedium: TextStyle(color: textPrimary, fontWeight: FontWeight.w500),
-        bodyLarge: TextStyle(color: textPrimary),
-        bodyMedium: TextStyle(color: textSecondary),
-        bodySmall: TextStyle(color: textTertiary),
+        headlineLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        headlineMedium: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        titleLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        titleMedium: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+        bodyLarge: TextStyle(color: Colors.white),
+        bodyMedium: TextStyle(color: Color(0xFFB3B3B3)),
+        bodySmall: TextStyle(color: Color(0xFF727272)),
       ),
-      dividerTheme: const DividerThemeData(color: darkDivider, thickness: 0.5),
+      dividerTheme: const DividerThemeData(color: Color(0xFF404040), thickness: 0.5),
       sliderTheme: SliderThemeData(
         activeTrackColor: primaryColor,
-        inactiveTrackColor: darkDivider,
-        thumbColor: textPrimary,
+        inactiveTrackColor: const Color(0xFF404040),
+        thumbColor: Colors.white,
         overlayColor: primaryColor.withValues(alpha: 0.2),
         trackHeight: 4,
       ),
