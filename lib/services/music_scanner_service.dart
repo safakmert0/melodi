@@ -200,6 +200,12 @@ class MusicScannerService {
     final librarySongs = await scanMediaLibrary();
     allSongs.addAll(librarySongs);
 
+    final watchedFolder = await _db.getSetting('watched_folder');
+    if (watchedFolder != null && watchedFolder.isNotEmpty) {
+      final dirSongs = await scanDirectoryAndSync(watchedFolder);
+      allSongs.addAll(dirSongs);
+    }
+
     return allSongs;
   }
 

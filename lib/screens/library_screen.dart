@@ -35,7 +35,9 @@ class _LibraryScreenState extends State<LibraryScreen>
     }
   }
 
-
+  Future<void> _onRefresh() async {
+    await context.read<LibraryProvider>().refresh();
+  }
 
   @override
   void dispose() {
@@ -82,10 +84,26 @@ class _LibraryScreenState extends State<LibraryScreen>
                   : TabBarView(
                       controller: _tabController,
                       children: [
-                        _SongsTab(),
-                        _AlbumsTab(),
-                        _ArtistsTab(),
-                        _GenresTab(),
+                        RefreshIndicator(
+                          onRefresh: _onRefresh,
+                          color: AppTheme.primaryColor,
+                          child: _SongsTab(),
+                        ),
+                        RefreshIndicator(
+                          onRefresh: _onRefresh,
+                          color: AppTheme.primaryColor,
+                          child: _AlbumsTab(),
+                        ),
+                        RefreshIndicator(
+                          onRefresh: _onRefresh,
+                          color: AppTheme.primaryColor,
+                          child: _ArtistsTab(),
+                        ),
+                        RefreshIndicator(
+                          onRefresh: _onRefresh,
+                          color: AppTheme.primaryColor,
+                          child: _GenresTab(),
+                        ),
                       ],
                     ),
         );
@@ -134,17 +152,67 @@ class _LibraryScreenState extends State<LibraryScreen>
   }
 }
 
-class _SongsTab extends StatelessWidget {
+class _SongsTab extends StatefulWidget {
+  @override
+  State<_SongsTab> createState() => _SongsTabState();
+}
+
+class _SongsTabState extends State<_SongsTab> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer2<LibraryProvider, PlayerProvider>(
       builder: (context, library, player, _) {
-        final songs = library.songs;
+        final allSongs = library.songs;
+        final songs = _searchQuery.isEmpty
+            ? allSongs
+            : library.search(_searchQuery);
         return Column(
           children: [
-            // Sort & Filter bar
+            // Search bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (v) => setState(() => _searchQuery = v),
+                style: TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: AppLocale.tr('what_to_listen'),
+                  hintStyle: TextStyle(color: AppTheme.textTertiary, fontSize: 14),
+                  prefixIcon: Icon(Icons.search_rounded, color: AppTheme.textTertiary, size: 20),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(Icons.clear, color: AppTheme.textTertiary, size: 18),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: AppTheme.surface,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ),
+            // Recently Added section (only when not searching)
+            if (_searchQuery.isEmpty && library.recent.isNotEmpty)
+              _RecentlyAddedSection(recent: library.recent),
+            // Sort & count bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: Row(
                 children: [
                   Text(
@@ -280,7 +348,82 @@ class _SongsTab extends StatelessWidget {
       },
     );
   }
+}
 
+class _RecentlyAddedSection extends StatelessWidget {
+  final List<SongModel> recent;
+
+  const _RecentlyAddedSection({required this.recent});
+
+  @override
+  Widget build(BuildContext context) {
+    final display = recent.take(5).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: Text(
+            AppLocale.tr('recently_played'),
+            style: TextStyle(
+              color: AppTheme.textPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 56,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: display.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final song = display[index];
+              return GestureDetector(
+                onTap: () => context.read<PlayerProvider>().playSong(song),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.card,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      if (song.albumArt != null && song.albumArt!.isNotEmpty)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.memory(song.albumArt!, width: 36, height: 36, fit: BoxFit.cover),
+                        )
+                      else
+                        Container(
+                          width: 36, height: 36,
+                          decoration: BoxDecoration(
+                            color: AppTheme.cardHover,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Icon(Icons.music_note_rounded, size: 18, color: AppTheme.textTertiary),
+                        ),
+                      const SizedBox(width: 8),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(song.title, style: TextStyle(color: AppTheme.textPrimary, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          Text(song.artist, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 void _navigateToAlbum(BuildContext context, SongModel song) {
@@ -321,83 +464,90 @@ class _AlbumsTab extends StatelessWidget {
                 style: TextStyle(color: AppTheme.textSecondary)),
           );
         }
-        return GridView.builder(
+        return ListView(
+          physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.all(16),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.85,
-          ),
-          itemCount: albums.length,
-          itemBuilder: (context, index) {
-            final album = albums[index];
-            final songs = library.getSongsForAlbum(album);
-            final artBytes = songs.isNotEmpty ? songs.first.albumArt : null;
-            return GestureDetector(
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => _AlbumGridDetailScreen(
-                      album: album,
-                      songs: songs,
+          children: [
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.85,
+              ),
+              itemCount: albums.length,
+              itemBuilder: (context, index) {
+                final album = albums[index];
+                final songs = library.getSongsForAlbum(album);
+                final artBytes = songs.isNotEmpty ? songs.first.albumArt : null;
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => _AlbumGridDetailScreen(
+                          album: album,
+                          songs: songs,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppTheme.card,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                            child: artBytes != null && artBytes.isNotEmpty
+                                ? Image.memory(artBytes, fit: BoxFit.cover, width: double.infinity)
+                                : Container(
+                                    color: AppTheme.cardHover,
+                                    child: Center(
+                                      child: Icon(Icons.album_rounded, size: 48, color: AppTheme.textTertiary),
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                album.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: AppTheme.textPrimary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${album.artist} · ${album.songCount} ${AppLocale.tr('songs').toLowerCase()}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );
               },
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppTheme.card,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                        child: artBytes != null && artBytes.isNotEmpty
-                            ? Image.memory(artBytes, fit: BoxFit.cover, width: double.infinity)
-                            : Container(
-                                color: AppTheme.cardHover,
-                                child: Center(
-                                  child: Icon(Icons.album_rounded, size: 48, color: AppTheme.textTertiary),
-                                ),
-                              ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            album.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: AppTheme.textPrimary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${album.artist} · ${album.songCount} ${AppLocale.tr('songs').toLowerCase()}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: AppTheme.textSecondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
+            ),
+          ],
         );
       },
     );

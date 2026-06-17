@@ -5,9 +5,19 @@ import '../services/database_service.dart';
 class ThemeProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.dark;
   Color _accentColor = const Color(0xFF1DB954);
+  Color? _customBackground;
+  Color? _customSurface;
+  Color? _customCard;
+  Color? _customTextPrimary;
+  Color? _customTextSecondary;
 
   ThemeMode get themeMode => _themeMode;
   Color get accentColor => _accentColor;
+  Color? get customBackground => _customBackground;
+  Color? get customSurface => _customSurface;
+  Color? get customCard => _customCard;
+  Color? get customTextPrimary => _customTextPrimary;
+  Color? get customTextSecondary => _customTextSecondary;
 
   bool get isDark => _themeMode == ThemeMode.dark;
   bool get isLight => _themeMode == ThemeMode.light;
@@ -28,6 +38,14 @@ class ThemeProvider extends ChangeNotifier {
     }
   }
 
+  void _applyCustomColors() {
+    AppTheme._customBackground = _customBackground;
+    AppTheme._customSurface = _customSurface;
+    AppTheme._customCard = _customCard;
+    AppTheme._customTextPrimary = _customTextPrimary;
+    AppTheme._customTextSecondary = _customTextSecondary;
+  }
+
   Future<void> loadSettings() async {
     final db = DatabaseService.instance;
     final mode = await db.getSetting('theme_mode');
@@ -39,8 +57,33 @@ class ThemeProvider extends ChangeNotifier {
       _accentColor = Color(int.parse(colorStr));
     }
     AppTheme.accentColor = _accentColor;
+
+    _customBackground = await _loadColor(db, 'custom_bg');
+    _customSurface = await _loadColor(db, 'custom_surface');
+    _customCard = await _loadColor(db, 'custom_card');
+    _customTextPrimary = await _loadColor(db, 'custom_text_primary');
+    _customTextSecondary = await _loadColor(db, 'custom_text_secondary');
+
+    _applyCustomColors();
     _syncIsLightMode();
     notifyListeners();
+  }
+
+  Future<Color?> _loadColor(DatabaseService db, String key) async {
+    final val = await db.getSetting(key);
+    if (val != null && val.isNotEmpty) {
+      return Color(int.parse(val));
+    }
+    return null;
+  }
+
+  Future<void> _saveColor(String key, Color? color) async {
+    final db = DatabaseService.instance;
+    if (color != null) {
+      await db.setSetting(key, color.value.toString());
+    } else {
+      await db.setSetting(key, '');
+    }
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
@@ -54,6 +97,59 @@ class ThemeProvider extends ChangeNotifier {
     _accentColor = color;
     AppTheme.accentColor = color;
     await DatabaseService.instance.setSetting('accent_color', color.value.toString());
+    notifyListeners();
+  }
+
+  Future<void> setCustomBackground(Color? color) async {
+    _customBackground = color;
+    AppTheme._customBackground = color;
+    await _saveColor('custom_bg', color);
+    notifyListeners();
+  }
+
+  Future<void> setCustomSurface(Color? color) async {
+    _customSurface = color;
+    AppTheme._customSurface = color;
+    await _saveColor('custom_surface', color);
+    notifyListeners();
+  }
+
+  Future<void> setCustomCard(Color? color) async {
+    _customCard = color;
+    AppTheme._customCard = color;
+    await _saveColor('custom_card', color);
+    notifyListeners();
+  }
+
+  Future<void> setCustomTextPrimary(Color? color) async {
+    _customTextPrimary = color;
+    AppTheme._customTextPrimary = color;
+    await _saveColor('custom_text_primary', color);
+    notifyListeners();
+  }
+
+  Future<void> setCustomTextSecondary(Color? color) async {
+    _customTextSecondary = color;
+    AppTheme._customTextSecondary = color;
+    await _saveColor('custom_text_secondary', color);
+    notifyListeners();
+  }
+
+  Future<void> resetCustomColors() async {
+    _customBackground = null;
+    _customSurface = null;
+    _customCard = null;
+    _customTextPrimary = null;
+    _customTextSecondary = null;
+    AppTheme._customBackground = null;
+    AppTheme._customSurface = null;
+    AppTheme._customCard = null;
+    AppTheme._customTextPrimary = null;
+    AppTheme._customTextSecondary = null;
+    final db = DatabaseService.instance;
+    for (final key in ['custom_bg', 'custom_surface', 'custom_card', 'custom_text_primary', 'custom_text_secondary']) {
+      await db.setSetting(key, '');
+    }
     notifyListeners();
   }
 
@@ -89,57 +185,74 @@ class ThemeProvider extends ChangeNotifier {
     }
   }
 
+  Color _bg() => _customBackground ?? AppTheme.lightBackground;
+  Color _surface() => _customSurface ?? AppTheme.lightSurface;
+  Color _card() => _customCard ?? AppTheme.lightCard;
+  Color _textPrimary() => _customTextPrimary ?? const Color(0xFF1A1A1A);
+  Color _textSecondary() => _customTextSecondary ?? const Color(0xFF666666);
+
+  Color _darkBg() => _customBackground ?? AppTheme.darkBackground;
+  Color _darkSurface() => _customSurface ?? AppTheme.darkSurface;
+  Color _darkCard() => _customCard ?? AppTheme.darkCard;
+  Color _darkTextPrimary() => _customTextPrimary ?? Colors.white;
+  Color _darkTextSecondary() => _customTextSecondary ?? const Color(0xFFB3B3B3);
+
   ThemeData _buildLightTheme() {
+    final bg = _bg();
+    final surface = _surface();
+    final card = _card();
+    final textPri = _textPrimary();
+    final textSec = _textSecondary();
     return ThemeData(
       brightness: Brightness.light,
       primaryColor: _accentColor,
-      scaffoldBackgroundColor: AppTheme.lightBackground,
+      scaffoldBackgroundColor: bg,
       colorScheme: ColorScheme.light(
         primary: _accentColor,
         secondary: _accentColor,
-        surface: AppTheme.lightSurface,
+        surface: surface,
         error: AppTheme.errorColor,
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
-          color: Color(0xFF1A1A1A),
+          color: textPri,
           fontSize: 18,
           fontWeight: FontWeight.w600,
         ),
-        iconTheme: IconThemeData(color: Color(0xFF1A1A1A)),
+        iconTheme: IconThemeData(color: textPri),
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: Color(0xFFFFFFFF),
-        selectedItemColor: Color(0xFF1A1A1A),
-        unselectedItemColor: Color(0xFF999999),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: surface,
+        selectedItemColor: textPri,
+        unselectedItemColor: textSec,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
       ),
       cardTheme: CardThemeData(
-        color: const Color(0xFFEEEEEE),
+        color: card,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
       ),
-      iconTheme: const IconThemeData(color: Color(0xFF1A1A1A)),
-      textTheme: const TextTheme(
-        headlineLarge: TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.bold),
-        headlineMedium: TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.w600),
-        titleLarge: TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.w600),
-        titleMedium: TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.w500),
-        bodyLarge: TextStyle(color: Color(0xFF1A1A1A)),
-        bodyMedium: TextStyle(color: Color(0xFF666666)),
-        bodySmall: TextStyle(color: Color(0xFF999999)),
+      iconTheme: IconThemeData(color: textPri),
+      textTheme: TextTheme(
+        headlineLarge: TextStyle(color: textPri, fontWeight: FontWeight.bold),
+        headlineMedium: TextStyle(color: textPri, fontWeight: FontWeight.w600),
+        titleLarge: TextStyle(color: textPri, fontWeight: FontWeight.w600),
+        titleMedium: TextStyle(color: textPri, fontWeight: FontWeight.w500),
+        bodyLarge: TextStyle(color: textPri),
+        bodyMedium: TextStyle(color: textSec),
+        bodySmall: TextStyle(color: AppTheme.textTertiary),
       ),
       dividerTheme: const DividerThemeData(color: Color(0xFFD0D0D0), thickness: 0.5),
       sliderTheme: SliderThemeData(
         activeTrackColor: _accentColor,
         inactiveTrackColor: const Color(0xFFD0D0D0),
-        thumbColor: const Color(0xFF1A1A1A),
+        thumbColor: textPri,
         overlayColor: _accentColor.withValues(alpha: 0.2),
         trackHeight: 4,
       ),
@@ -147,56 +260,61 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   ThemeData _buildDarkTheme() {
+    final bg = _darkBg();
+    final surface = _darkSurface();
+    final card = _darkCard();
+    final textPri = _darkTextPrimary();
+    final textSec = _darkTextSecondary();
     return ThemeData(
       brightness: Brightness.dark,
       primaryColor: _accentColor,
-      scaffoldBackgroundColor: AppTheme.darkBackground,
+      scaffoldBackgroundColor: bg,
       colorScheme: ColorScheme.dark(
         primary: _accentColor,
         secondary: _accentColor,
-        surface: AppTheme.darkSurface,
+        surface: surface,
         error: AppTheme.errorColor,
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
-          color: Colors.white,
+          color: textPri,
           fontSize: 18,
           fontWeight: FontWeight.w600,
         ),
-        iconTheme: IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: textPri),
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: Color(0xFF1E1E1E),
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Color(0xFF727272),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: surface,
+        selectedItemColor: textPri,
+        unselectedItemColor: textSec,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
       ),
       cardTheme: CardThemeData(
-        color: const Color(0xFF282828),
+        color: card,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
       ),
-      iconTheme: const IconThemeData(color: Colors.white),
-      textTheme: const TextTheme(
-        headlineLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        headlineMedium: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        titleLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        titleMedium: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
-        bodyLarge: TextStyle(color: Colors.white),
-        bodyMedium: TextStyle(color: Color(0xFFB3B3B3)),
-        bodySmall: TextStyle(color: Color(0xFF727272)),
+      iconTheme: IconThemeData(color: textPri),
+      textTheme: TextTheme(
+        headlineLarge: TextStyle(color: textPri, fontWeight: FontWeight.bold),
+        headlineMedium: TextStyle(color: textPri, fontWeight: FontWeight.w600),
+        titleLarge: TextStyle(color: textPri, fontWeight: FontWeight.w600),
+        titleMedium: TextStyle(color: textPri, fontWeight: FontWeight.w500),
+        bodyLarge: TextStyle(color: textPri),
+        bodyMedium: TextStyle(color: textSec),
+        bodySmall: TextStyle(color: AppTheme.textTertiary),
       ),
       dividerTheme: const DividerThemeData(color: Color(0xFF404040), thickness: 0.5),
       sliderTheme: SliderThemeData(
         activeTrackColor: _accentColor,
         inactiveTrackColor: const Color(0xFF404040),
-        thumbColor: Colors.white,
+        thumbColor: textPri,
         overlayColor: _accentColor.withValues(alpha: 0.2),
         trackHeight: 4,
       ),

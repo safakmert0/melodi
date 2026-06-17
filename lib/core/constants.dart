@@ -6,7 +6,7 @@ export 'localization.dart' show AppLocale;
 
 class AppConstants {
   static const String appName = 'Melodi';
-  static const String appVersion = '1.7.7';
+  static const String appVersion = '1.8.0';
   static const String buildNumber = '1';
 
   static const List<String> supportedAudioExtensions = [
@@ -58,17 +58,25 @@ class AppTheme {
   static const Color lightCardHover = Color(0xFFE0E0E0);
   static const Color lightDivider = Color(0xFFD0D0D0);
 
-  // Text colors - dynamic based on isLightMode
-  static Color get textPrimary => isLightMode ? const Color(0xFF1A1A1A) : const Color(0xFFFFFFFF);
-  static Color get textSecondary => isLightMode ? const Color(0xFF666666) : const Color(0xFFB3B3B3);
+  // Text colors - dynamic + custom overrides
   static Color get textTertiary => isLightMode ? const Color(0xFF999999) : const Color(0xFF727272);
 
-  // Background/surface colors - dynamic based on isLightMode
-  static Color get background => isLightMode ? lightBackground : darkBackground;
-  static Color get surface => isLightMode ? lightSurface : darkSurface;
-  static Color get card => isLightMode ? lightCard : darkCard;
+  // Background/surface colors - dynamic + custom overrides
+  // Custom color overrides (null = use default)
+  static Color? _customBackground;
+  static Color? _customSurface;
+  static Color? _customCard;
+  static Color? _customTextPrimary;
+  static Color? _customTextSecondary;
+
+  static Color get background => _customBackground ?? (isLightMode ? lightBackground : darkBackground);
+  static Color get surface => _customSurface ?? (isLightMode ? lightSurface : darkSurface);
+  static Color get card => _customCard ?? (isLightMode ? lightCard : darkCard);
   static Color get cardHover => isLightMode ? lightCardHover : darkCardHover;
   static Color get divider => isLightMode ? lightDivider : darkDivider;
+
+  static Color get textPrimary => _customTextPrimary ?? (isLightMode ? const Color(0xFF1A1A1A) : const Color(0xFFFFFFFF));
+  static Color get textSecondary => _customTextSecondary ?? (isLightMode ? const Color(0xFF666666) : const Color(0xFFB3B3B3));
 
   static const Color errorColor = Color(0xFFE74C3C);
   static const Color favoriteColor = Color(0xFFE91E63);

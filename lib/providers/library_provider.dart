@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:collection/collection.dart';
 import '../models/song_model.dart';
@@ -27,6 +28,7 @@ class LibraryProvider extends ChangeNotifier {
   double _scanProgress = 0;
   SongSortField _sortField = SongSortField.title;
   bool _sortAscending = true;
+  Timer? _watchTimer;
 
   SongSortField get sortField => _sortField;
   bool get sortAscending => _sortAscending;
@@ -103,6 +105,7 @@ class LibraryProvider extends ChangeNotifier {
       final watchedFolder = await _db.getSetting('watched_folder');
       if (watchedFolder != null && watchedFolder.isNotEmpty) {
         await _scanner.scanDirectoryAndSync(watchedFolder);
+        _startWatchTimer(watchedFolder);
       }
 
       _songs = _applySort(await _db.getAllSongs());
@@ -122,6 +125,23 @@ class LibraryProvider extends ChangeNotifier {
 
   Future<String?> getWatchedFolder() => _db.getSetting('watched_folder');
 
+  void _startWatchTimer(String path) {
+    _watchTimer?.cancel();
+    _watchTimer = Timer.periodic(const Duration(seconds: 60), (_) async {
+      try {
+        final newSongs = await _scanner.importFromDirectoryPath(path);
+        if (newSongs.isNotEmpty) {
+          _songs.addAll(newSongs);
+          _songs = _applySort(_songs);
+          _buildAlbums();
+          _buildArtists();
+          _buildGenres();
+          notifyListeners();
+        }
+      } catch (_) {}
+    });
+  }
+
   Future<void> setWatchedFolder(String? path) async {
     if (path != null && path.isNotEmpty) {
       await _db.setSetting('watched_folder', path);
@@ -133,6 +153,7 @@ class LibraryProvider extends ChangeNotifier {
       _buildAlbums();
       _buildArtists();
       _buildGenres();
+      _startWatchTimer(path);
       notifyListeners();
     } else {
       await _db.setSetting('watched_folder', '');
@@ -140,8 +161,16 @@ class LibraryProvider extends ChangeNotifier {
   }
 
   Future<void> clearWatchedFolder() async {
+    _watchTimer?.cancel();
+    _watchTimer = null;
     await _db.setSetting('watched_folder', '');
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _watchTimer?.cancel();
+    super.dispose();
   }
 
   void _buildAlbums() {

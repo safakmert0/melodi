@@ -123,6 +123,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                             onTap: () => _showAccentColorPicker(context, themeProvider),
                           ),
+                          const SizedBox(height: 8),
+                          _CustomColorTile(
+                            label: AppLocale.tr('background'),
+                            icon: Icons.wallpaper_rounded,
+                            currentColor: themeProvider.customBackground,
+                            defaultColor: AppTheme.isLightMode ? AppTheme.lightBackground : AppTheme.darkBackground,
+                            onChanged: (c) => themeProvider.setCustomBackground(c),
+                          ),
+                          const SizedBox(height: 8),
+                          _CustomColorTile(
+                            label: AppLocale.tr('surface'),
+                            icon: Icons.square_rounded,
+                            currentColor: themeProvider.customSurface,
+                            defaultColor: AppTheme.isLightMode ? AppTheme.lightSurface : AppTheme.darkSurface,
+                            onChanged: (c) => themeProvider.setCustomSurface(c),
+                          ),
+                          const SizedBox(height: 8),
+                          _CustomColorTile(
+                            label: AppLocale.tr('card'),
+                            icon: Icons.crop_square_rounded,
+                            currentColor: themeProvider.customCard,
+                            defaultColor: AppTheme.isLightMode ? AppTheme.lightCard : AppTheme.darkCard,
+                            onChanged: (c) => themeProvider.setCustomCard(c),
+                          ),
+                          const SizedBox(height: 8),
+                          _CustomColorTile(
+                            label: AppLocale.tr('text_primary'),
+                            icon: Icons.text_fields_rounded,
+                            currentColor: themeProvider.customTextPrimary,
+                            defaultColor: AppTheme.isLightMode ? const Color(0xFF1A1A1A) : Colors.white,
+                            onChanged: (c) => themeProvider.setCustomTextPrimary(c),
+                          ),
+                          const SizedBox(height: 8),
+                          _CustomColorTile(
+                            label: AppLocale.tr('text_secondary'),
+                            icon: Icons.text_fields_rounded,
+                            currentColor: themeProvider.customTextSecondary,
+                            defaultColor: AppTheme.isLightMode ? const Color(0xFF666666) : const Color(0xFFB3B3B3),
+                            onChanged: (c) => themeProvider.setCustomTextSecondary(c),
+                          ),
+                          if (themeProvider.customBackground != null ||
+                              themeProvider.customSurface != null ||
+                              themeProvider.customCard != null ||
+                              themeProvider.customTextPrimary != null ||
+                              themeProvider.customTextSecondary != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: TextButton.icon(
+                                onPressed: () => themeProvider.resetCustomColors(),
+                                icon: const Icon(Icons.restore_rounded, size: 18),
+                                label: Text(AppLocale.tr('reset_colors')),
+                              ),
+                            ),
                         ],
                       );
                     },
@@ -765,6 +818,150 @@ class _SectionTitle extends StatelessWidget {
           fontSize: 12,
           fontWeight: FontWeight.w600,
           letterSpacing: 1.5,
+        ),
+      ),
+    );
+  }
+}
+
+class _CustomColorTile extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color? currentColor;
+  final Color defaultColor;
+  final ValueChanged<Color?> onChanged;
+
+  const _CustomColorTile({
+    required this.label,
+    required this.icon,
+    required this.currentColor,
+    required this.defaultColor,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = currentColor ?? defaultColor;
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: color, size: 20),
+      ),
+      title: Text(label,
+          style: TextStyle(color: AppTheme.textPrimary, fontSize: 15)),
+      subtitle: Text(
+        currentColor != null
+            ? '#${currentColor!.value.toRadixString(16).substring(2).toUpperCase()}'
+            : AppLocale.tr('default_color'),
+        style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (currentColor != null)
+            IconButton(
+              icon: const Icon(Icons.close, size: 16),
+              onPressed: () => onChanged(null),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              color: AppTheme.textTertiary,
+            ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => _showColorPicker(context),
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppTheme.textTertiary, width: 2),
+              ),
+            ),
+          ),
+        ],
+      ),
+      onTap: () => _showColorPicker(context),
+    );
+  }
+
+  void _showColorPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.divider,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(label,
+                style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: _accentColors.map((c) {
+                  final isSelected = currentColor?.value == c.value;
+                  return GestureDetector(
+                    onTap: () {
+                      onChanged(c);
+                      Navigator.pop(ctx);
+                    },
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: c,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected ? Colors.white : Colors.transparent,
+                          width: 3,
+                        ),
+                        boxShadow: isSelected
+                            ? [BoxShadow(color: c.withValues(alpha: 0.5), blurRadius: 8)]
+                            : null,
+                      ),
+                      child: isSelected
+                          ? const Icon(Icons.check, color: Colors.black, size: 20)
+                          : null,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            if (currentColor != null) ...[
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: () {
+                  onChanged(null);
+                  Navigator.pop(ctx);
+                },
+                icon: const Icon(Icons.restore_rounded, size: 18),
+                label: Text(AppLocale.tr('default_color')),
+              ),
+            ],
+            const SizedBox(height: 24),
+          ],
         ),
       ),
     );
