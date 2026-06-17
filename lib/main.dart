@@ -19,51 +19,94 @@ import 'screens/home_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-
-  SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: AppTheme.background,
-    systemNavigationBarIconBrightness: Brightness.light,
-  ));
-
-  // Initialize database
-  final db = DatabaseService.instance;
-  await db.database;
-
-  // Load saved locale
-  final savedLocale = await db.getSetting('app_locale');
-  if (savedLocale != null && savedLocale.isNotEmpty) {
-    AppLocale.currentLocale = savedLocale;
-  } else {
-    AppLocale.currentLocale = 'tr';
-  }
-
-  // Initialize audio handler with service (with timeout)
-  late final AudioPlayerHandler audioHandler;
   try {
-    audioHandler = await AudioService.init(
-      builder: () => AudioPlayerHandler(),
-      config: AudioServiceConfig(
-        androidNotificationChannelId: 'com.melodi.channel',
-        androidNotificationChannelName: 'Melodi Playback',
-        androidNotificationOngoing: true,
-        androidStopForegroundOnPause: true,
-        androidShowNotificationBadge: true,
-        notificationColor: const Color(0xFF1DB954),
-        fastForwardInterval: const Duration(seconds: 10),
-        rewindInterval: const Duration(seconds: 10),
-      ),
-    ).timeout(const Duration(seconds: 8));
-  } catch (_) {
-    audioHandler = AudioPlayerHandler();
-  }
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
 
-  runApp(MelodiApp(audioHandler: audioHandler));
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: const Color(0xFF121212),
+      systemNavigationBarIconBrightness: Brightness.light,
+    ));
+
+    final db = DatabaseService.instance;
+    await db.database;
+
+    final savedLocale = await db.getSetting('app_locale');
+    if (savedLocale != null && savedLocale.isNotEmpty) {
+      AppLocale.currentLocale = savedLocale;
+    } else {
+      AppLocale.currentLocale = 'tr';
+    }
+
+    late final AudioPlayerHandler audioHandler;
+    try {
+      audioHandler = await AudioService.init(
+        builder: () => AudioPlayerHandler(),
+        config: AudioServiceConfig(
+          androidNotificationChannelId: 'com.melodi.channel',
+          androidNotificationChannelName: 'Melodi Playback',
+          androidNotificationOngoing: true,
+          androidStopForegroundOnPause: true,
+          androidShowNotificationBadge: true,
+          notificationColor: const Color(0xFF1DB954),
+          fastForwardInterval: const Duration(seconds: 10),
+          rewindInterval: const Duration(seconds: 10),
+        ),
+      ).timeout(const Duration(seconds: 8));
+    } catch (_) {
+      audioHandler = AudioPlayerHandler();
+    }
+
+    ErrorWidget.builder = (details) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF121212),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Build Error:',
+                    style: TextStyle(color: Colors.red, fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Text(
+                      '${details.exception}',
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    };
+
+    runApp(MelodiApp(audioHandler: audioHandler));
+  } catch (e) {
+    runApp(MaterialApp(
+      home: Scaffold(
+        backgroundColor: const Color(0xFF121212),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'Startup error:\n$e',
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    ));
+  }
 }
 
 class MelodiApp extends StatelessWidget {

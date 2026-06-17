@@ -23,12 +23,17 @@ class YouTubeVideo {
 }
 
 class YouTubeService {
-  final YoutubeExplode _yt = YoutubeExplode();
+  YoutubeExplode? _yt;
   static const Duration _timeout = Duration(seconds: 20);
+
+  YoutubeExplode get _client {
+    _yt ??= YoutubeExplode();
+    return _yt!;
+  }
 
   Future<List<YouTubeVideo>> search(String query) async {
     try {
-      final results = await _yt.search
+      final results = await _client.search
           .search(query)
           .timeout(_timeout);
       final videos = <YouTubeVideo>[];
@@ -56,7 +61,7 @@ class YouTubeService {
       final sanitized = title.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
       final filePath = p.join(dir.path, '${sanitized}_$videoId$ext');
 
-      final manifest = await _yt.videos.streams
+      final manifest = await _client.videos.streams
           .getManifest(videoId)
           .timeout(_timeout);
       final audioStreams = manifest.audioOnly;
@@ -66,7 +71,7 @@ class YouTubeService {
             b.bitrate.bitsPerSecond.compareTo(a.bitrate.bitsPerSecond));
       final bestAudio = sorted.first;
 
-      final stream = _yt.videos.streams.get(bestAudio);
+      final stream = _client.videos.streams.get(bestAudio);
       final file = File(filePath);
       final sink = file.openWrite();
       await sink.addStream(stream.timeout(_timeout));
@@ -79,7 +84,7 @@ class YouTubeService {
 
   Future<String?> getAudioUrl(String videoId) async {
     try {
-      final manifest = await _yt.videos.streams
+      final manifest = await _client.videos.streams
           .getManifest(videoId)
           .timeout(_timeout);
       final audioStreams = manifest.audioOnly;
@@ -112,6 +117,6 @@ class YouTubeService {
   }
 
   void dispose() {
-    _yt.close();
+    _yt?.close();
   }
 }
