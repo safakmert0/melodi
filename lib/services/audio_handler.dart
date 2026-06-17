@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
 import '../models/playlist_model.dart';
 import 'database_service.dart';
@@ -292,13 +294,23 @@ class AudioPlayerHandler extends BaseAudioHandler
         }
       }
 
+      Uri? artUri;
+      if (song.albumArt != null) {
+        try {
+          final dir = await getTemporaryDirectory();
+          final artFile = File('${dir.path}/nowplaying_art.jpg');
+          await artFile.writeAsBytes(song.albumArt!);
+          artUri = Uri.file(artFile.path);
+        } catch (_) {}
+      }
+
       final mediaItem = MediaItem(
         id: song.id,
         album: song.album,
         title: song.title,
         artist: song.artist,
         duration: song.duration,
-        artUri: null,
+        artUri: artUri,
       );
 
       this.mediaItem.add(mediaItem);

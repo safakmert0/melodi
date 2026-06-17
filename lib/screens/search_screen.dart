@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
@@ -22,22 +23,29 @@ class _SearchScreenState extends State<SearchScreen> {
   final FocusNode _searchFocus = FocusNode();
   bool _showClear = false;
   bool _youtubeMode = false;
+  Timer? _debounce;
 
   @override
   void dispose() {
     _searchController.dispose();
     _searchFocus.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
   void _performSearch(String query, bool youtubeMode) {
-    final searchProvider = context.read<SearchProvider>();
-    final youtubeProvider = context.read<YouTubeProvider>();
-    if (youtubeMode) {
-      youtubeProvider.search(query);
-    } else {
-      searchProvider.search(query);
-    }
+    _debounce?.cancel();
+    final q = query.trim();
+    if (q.isEmpty) return;
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      final searchProvider = context.read<SearchProvider>();
+      final youtubeProvider = context.read<YouTubeProvider>();
+      if (youtubeMode) {
+        youtubeProvider.search(q);
+      } else {
+        searchProvider.search(q);
+      }
+    });
   }
 
   @override

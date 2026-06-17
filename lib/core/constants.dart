@@ -6,7 +6,7 @@ export 'localization.dart' show AppLocale;
 
 class AppConstants {
   static const String appName = 'Melodi';
-  static const String appVersion = '1.6.0';
+  static const String appVersion = '1.7.7';
   static const String buildNumber = '1';
 
   static const List<String> supportedAudioExtensions = [
@@ -38,7 +38,13 @@ class AppTheme {
   static bool isLightMode = false;
 
   // Dark theme colors
-  static const Color primaryColor = Color(0xFF1DB954);
+  static Color _accentColorValue = const Color(0xFF1DB954);
+  static Color get primaryColor => _accentColorValue;
+  static Color get accentColor => _accentColorValue;
+  static Color get gradientStart => _accentColorValue;
+  static Color get gradientEnd => _accentColorValue;
+  static set accentColor(Color c) => _accentColorValue = c;
+
   static const Color darkBackground = Color(0xFF121212);
   static const Color darkSurface = Color(0xFF1E1E1E);
   static const Color darkCard = Color(0xFF282828);
@@ -64,11 +70,8 @@ class AppTheme {
   static Color get cardHover => isLightMode ? lightCardHover : darkCardHover;
   static Color get divider => isLightMode ? lightDivider : darkDivider;
 
-  static const Color accentColor = Color(0xFF1DB954);
   static const Color errorColor = Color(0xFFE74C3C);
   static const Color favoriteColor = Color(0xFFE91E63);
-  static const Color gradientStart = Color(0xFF1DB954);
-  static const Color gradientEnd = Color(0xFF169C46);
   static const Color appleMusicRed = Color(0xFFFA233B);
   static const Color spotifyBlack = Color(0xFF191414);
 

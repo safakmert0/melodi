@@ -163,6 +163,8 @@ class AppLocale {
       'bitrate_label': 'Bitrate',
       'duration_label': 'Duration',
       'file_label': 'File',
+      'accent_color': 'Accent Color',
+      'tap_to_change': 'Tap to change',
     },
     'tr': {
       'home': 'Ana Sayfa',
@@ -304,6 +306,8 @@ class AppLocale {
       'bitrate_label': 'Bitrate',
       'duration_label': 'Süre',
       'file_label': 'Dosya',
+      'accent_color': 'Vurgu Rengi',
+      'tap_to_change': 'Değiştirmek için dokunun',
     },
     'de': {
       'home': 'Startseite',
@@ -445,6 +449,8 @@ class AppLocale {
       'bitrate_label': 'Bitrate',
       'duration_label': 'Dauer',
       'file_label': 'Datei',
+      'accent_color': 'Akzentfarbe',
+      'tap_to_change': 'Zum Ändern tippen',
     },
   };
 

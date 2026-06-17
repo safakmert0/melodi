@@ -31,15 +31,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadPlaybackSettings() async {
     final db = DatabaseService.instance;
-    final speed = await db.getSetting('default_playback_speed');
-    final volume = await db.getSetting('default_volume_boost');
     final crossfade = await db.getSetting('crossfade_seconds');
     final shuffle = await db.getSetting('auto_shuffle');
     final gapless = await db.getSetting('gapless_playback');
     if (mounted) {
       setState(() {
-        _defaultPlaybackSpeed = double.tryParse(speed ?? '') ?? 1.0;
-        _defaultVolumeBoost = double.tryParse(volume ?? '') ?? 1.0;
         _crossfadeSeconds = double.tryParse(crossfade ?? '') ?? 0;
         _autoShuffle = shuffle == 'true';
         _gaplessPlayback = gapless != 'false';
@@ -55,8 +51,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
   double _crossfadeSeconds = 0;
-  double _defaultPlaybackSpeed = 1.0;
-  double _defaultVolumeBoost = 1.0;
   bool _autoShuffle = false;
   bool _gaplessPlayback = true;
   String _watchedFolderPath = '';
@@ -98,17 +92,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           : themeProvider.isLight
                               ? AppLocale.tr('light')
                               : AppLocale.tr('system');
-                      return _SettingsTile(
-                        icon: Icons.dark_mode_rounded,
-                        iconColor: Colors.amber,
-                        title: AppLocale.tr('theme'),
-                        subtitle: themeLabel,
-                        trailing: Icon(Icons.chevron_right,
-                            color: AppTheme.textTertiary),
-                        onTap: () => _showThemePicker(context, themeProvider),
+                      return Column(
+                        children: [
+                          _SettingsTile(
+                            icon: Icons.dark_mode_rounded,
+                            iconColor: Colors.amber,
+                            title: AppLocale.tr('theme'),
+                            subtitle: themeLabel,
+                            trailing: Icon(Icons.chevron_right,
+                                color: AppTheme.textTertiary),
+                            onTap: () => _showThemePicker(context, themeProvider),
+                          ),
+                          const SizedBox(height: 8),
+                          _SettingsTile(
+                            icon: Icons.palette_rounded,
+                            iconColor: Colors.pink,
+                            title: AppLocale.tr('accent_color'),
+                            subtitle: AppLocale.tr('tap_to_change'),
+                            trailing: Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: themeProvider.accentColor,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppTheme.textTertiary,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            onTap: () => _showAccentColorPicker(context, themeProvider),
+                          ),
+                        ],
                       );
                     },
                   ),
+                  const SizedBox(height: 16),
                   Divider(color: AppTheme.divider, height: 1),
                   // Language section
                   _SectionTitle(AppLocale.tr('language')),
@@ -216,34 +235,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: AppLocale.tr('clear_library'),
                     subtitle: AppLocale.tr('remove_cached_data'),
                     onTap: () => _confirmClearLibrary(context),
-                  ),
-                  Divider(color: AppTheme.divider, height: 1),
-                  // Audio section
-                  _SectionTitle(AppLocale.tr('audio')),
-                  _SettingsTile(
-                    icon: Icons.equalizer_rounded,
-                    iconColor: Colors.teal,
-                    title: AppLocale.tr('equalizer'),
-                    subtitle: AppLocale.tr('adjust_sound_frequencies'),
-                    onTap: () => _showEqualizerComingSoon(context),
-                  ),
-                  _SettingsTile(
-                    icon: Icons.speed_rounded,
-                    iconColor: Colors.cyan,
-                    title: AppLocale.tr('default_playback_speed'),
-                    subtitle: '${_defaultPlaybackSpeed.toStringAsFixed(2)}x',
-                    trailing: Icon(Icons.chevron_right,
-                        color: AppTheme.textTertiary),
-                    onTap: () => _showSpeedPicker(context),
-                  ),
-                  _SettingsTile(
-                    icon: Icons.volume_up_rounded,
-                    iconColor: Colors.blue,
-                    title: AppLocale.tr('volume_boost'),
-                    subtitle: '${(_defaultVolumeBoost * 100).round()}%',
-                    trailing: Icon(Icons.chevron_right,
-                        color: AppTheme.textTertiary),
-                    onTap: () => _showVolumeBoostSlider(context),
                   ),
                   Divider(color: AppTheme.divider, height: 1),
                   // Playback section
@@ -402,6 +393,96 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  static const List<Color> _accentColors = [
+    Color(0xFF1DB954), // Spotify green
+    Color(0xFF1ED760), // Bright green
+    Color(0xFFFA233B), // Apple Music red
+    Color(0xFFFF2D55), // iOS red
+    Color(0xFF007AFF), // iOS blue
+    Color(0xFF5856D6), // iOS purple
+    Color(0xFFAF52DE), // iOS magenta
+    Color(0xFFFF9500), // iOS orange
+    Color(0xFFFFCC02), // iOS yellow
+    Color(0xFF34C759), // iOS green
+    Color(0xFF00C7BE), // iOS teal
+    Color(0xFFFFFFFF), // White
+    Color(0xFFE91E63), // Pink
+    Color(0xFF9C27B0), // Deep purple
+    Color(0xFF2196F3), // Blue
+    Color(0xFF00BCD4), // Cyan
+    Color(0xFF4CAF50), // Material green
+    Color(0xFFFF5722), // Deep orange
+    Color(0xFF795548), // Brown
+    Color(0xFF607D8B), // Blue grey
+  ];
+
+  void _showAccentColorPicker(BuildContext context, ThemeProvider themeProvider) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.divider,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(AppLocale.tr('accent_color'),
+                style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: _accentColors.map((color) {
+                  final isSelected = themeProvider.accentColor.value == color.value;
+                  return GestureDetector(
+                    onTap: () {
+                      themeProvider.setAccentColor(color);
+                      Navigator.pop(ctx);
+                    },
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected ? Colors.white : Colors.transparent,
+                          width: 3,
+                        ),
+                        boxShadow: isSelected
+                            ? [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 8)]
+                            : null,
+                      ),
+                      child: isSelected
+                          ? const Icon(Icons.check, color: Colors.black, size: 20)
+                          : null,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showLanguagePicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -454,136 +535,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  void _showSpeedPicker(BuildContext context) {
-    final speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppTheme.divider,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Text(AppLocale.tr('default_playback_speed'),
-                style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-              ...speeds.map((speed) {
-              return ListTile(
-                title: Text('${speed}x',
-                    style: TextStyle(color: AppTheme.textPrimary)),
-                trailing: _defaultPlaybackSpeed == speed
-                    ? const Icon(Icons.check, color: AppTheme.primaryColor)
-                    : null,
-                onTap: () {
-                  setState(() => _defaultPlaybackSpeed = speed);
-                  final playerProv = context.read<PlayerProvider>();
-                  playerProv.setPlaybackSpeed(speed);
-                  DatabaseService.instance.setSetting('default_playback_speed', speed.toString());
-                  Navigator.pop(ctx);
-                },
-              );
-            }),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showVolumeBoostSlider(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        double localVolume = _defaultVolumeBoost;
-        return StatefulBuilder(
-          builder: (ctx, setSheetState) => SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppTheme.divider,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  Text(AppLocale.tr('volume_boost'),
-                      style: TextStyle(
-                          color: AppTheme.textPrimary,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Text('${(localVolume * 100).round()}%',
-                      style: const TextStyle(
-                          color: AppTheme.primaryColor, fontSize: 32, fontWeight: FontWeight.bold)),
-                  Slider(
-                    value: localVolume,
-                    min: 0.5,
-                    max: 2.0,
-                    divisions: 30,
-                    activeColor: AppTheme.primaryColor,
-                    inactiveColor: AppTheme.divider,
-                    onChanged: (v) {
-                      setSheetState(() => localVolume = v);
-                    },
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('50%',
-                          style: TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
-                      Text('200%',
-                          style: TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () {
-                        setState(() => _defaultVolumeBoost = localVolume);
-                        context.read<PlayerProvider>().setVolume(localVolume);
-                        DatabaseService.instance.setSetting('default_volume_boost', localVolume.toString());
-                        Navigator.pop(ctx);
-                      },
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
-                        foregroundColor: Colors.black,
-                      ),
-                      child: Text(AppLocale.tr('apply')),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -664,28 +615,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         );
       },
-    );
-  }
-
-  void _showEqualizerComingSoon(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: Text(AppLocale.tr('equalizer'),
-            style: TextStyle(color: AppTheme.textPrimary)),
-        content: Text(
-          AppLocale.tr('equalizer_coming_soon'),
-          style: TextStyle(color: AppTheme.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppLocale.tr('cancel'),
-                style: TextStyle(color: AppTheme.textSecondary)),
-          ),
-        ],
-      ),
     );
   }
 
