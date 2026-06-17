@@ -233,7 +233,7 @@ class _SearchScreenState extends State<SearchScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const CircularProgressIndicator(
+                CircularProgressIndicator(
                   color: AppTheme.primaryColor,
                   strokeWidth: 2,
                 ),

@@ -149,7 +149,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: AppLocale.tr('rescan_library'),
                     subtitle: AppLocale.tr('scan_device_for_music'),
                     trailing: library.isScanning
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
