@@ -362,7 +362,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ListTile(
               leading: Icon(Icons.dark_mode_rounded, color: themeProvider.isDark ? AppTheme.primaryColor : AppTheme.textTertiary),
               title: Text(AppLocale.tr('dark'), style: TextStyle(color: AppTheme.textPrimary)),
-              trailing: themeProvider.isDark ? const Icon(Icons.check, color: AppTheme.primaryColor) : null,
+              trailing: themeProvider.isDark ? Icon(Icons.check, color: AppTheme.primaryColor) : null,
               onTap: () {
                 themeProvider.setThemeMode(ThemeMode.dark);
                 Navigator.pop(ctx);
@@ -371,7 +371,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ListTile(
               leading: Icon(Icons.light_mode_rounded, color: themeProvider.isLight ? AppTheme.primaryColor : AppTheme.textTertiary),
               title: Text(AppLocale.tr('light'), style: TextStyle(color: AppTheme.textPrimary)),
-              trailing: themeProvider.isLight ? const Icon(Icons.check, color: AppTheme.primaryColor) : null,
+              trailing: themeProvider.isLight ? Icon(Icons.check, color: AppTheme.primaryColor) : null,
               onTap: () {
                 themeProvider.setThemeMode(ThemeMode.light);
                 Navigator.pop(ctx);
@@ -380,7 +380,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ListTile(
               leading: Icon(Icons.settings_brightness_rounded, color: themeProvider.isSystem ? AppTheme.primaryColor : AppTheme.textTertiary),
               title: Text(AppLocale.tr('system'), style: TextStyle(color: AppTheme.textPrimary)),
-              trailing: themeProvider.isSystem ? const Icon(Icons.check, color: AppTheme.primaryColor) : null,
+              trailing: themeProvider.isSystem ? Icon(Icons.check, color: AppTheme.primaryColor) : null,
               onTap: () {
                 themeProvider.setThemeMode(ThemeMode.system);
                 Navigator.pop(ctx);
@@ -518,7 +518,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: Text(entry.$1,
                     style: TextStyle(color: AppTheme.textPrimary)),
                 trailing: _selectedLanguage == entry.$1
-                    ? const Icon(Icons.check, color: AppTheme.primaryColor)
+                    ? Icon(Icons.check, color: AppTheme.primaryColor)
                     : null,
                 onTap: () {
                   setState(() {
@@ -570,7 +570,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   Text('${localCrossfade.toInt()} ${AppLocale.tr('seconds')}',
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: AppTheme.primaryColor, fontSize: 32, fontWeight: FontWeight.bold)),
                   Slider(
                     value: localCrossfade,

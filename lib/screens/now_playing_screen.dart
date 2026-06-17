@@ -280,7 +280,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         Container(
                           width: 72,
                           height: 72,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: AppTheme.primaryColor,
                           ),

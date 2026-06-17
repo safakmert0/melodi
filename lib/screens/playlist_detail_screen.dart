@@ -81,7 +81,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(
+          ? Center(
               child: CircularProgressIndicator(color: AppTheme.primaryColor))
           : _songs.isEmpty
               ? Center(
@@ -124,7 +124,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                 ],
                               ),
                             ),
-                            child: const Icon(Icons.playlist_play_rounded,
+                            child: Icon(Icons.playlist_play_rounded,
                                 size: 48, color: AppTheme.primaryColor),
                           ),
                           const SizedBox(width: 16),

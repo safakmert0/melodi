@@ -230,7 +230,7 @@ class AddToPlaylistSheet extends StatelessWidget {
                 )),
           const SizedBox(height: 8),
           ListTile(
-            leading: const Icon(Icons.add_circle_outline,
+            leading: Icon(Icons.add_circle_outline,
                 color: AppTheme.primaryColor),
             title: Text(AppLocale.tr('create_new_playlist'),
                 style: TextStyle(color: AppTheme.primaryColor)),
@@ -292,7 +292,7 @@ class AddToPlaylistSheet extends StatelessWidget {
               }
             },
             child: Text(AppLocale.tr('create'),
-                style: const TextStyle(color: AppTheme.primaryColor)),
+                style: TextStyle(color: AppTheme.primaryColor)),
           ),
         ],
       ),
