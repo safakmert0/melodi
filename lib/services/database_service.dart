@@ -136,8 +136,15 @@ class DatabaseService {
 
   Future<int> insertSong(SongModel song) async {
     final db = await database;
-    return await db.insert('songs', song.toMap(),
+    final id = await db.insert('songs', song.toMap(),
         conflictAlgorithm: ConflictAlgorithm.replace);
+    if (song.albumArt != null) {
+      await db.insert('album_art_cache', {
+        'songId': song.id,
+        'artwork': song.albumArt,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    return id;
   }
 
   Future<void> insertSongs(List<SongModel> songs) async {
@@ -148,6 +155,7 @@ class DatabaseService {
           conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit(noResult: true);
+    await cacheAlbumArts(songs);
   }
 
   Future<List<SongModel>> getAllSongs() async {
@@ -236,6 +244,34 @@ class DatabaseService {
         where: 'songId = ?', whereArgs: [songId]);
     if (maps.isEmpty) return null;
     return maps.first['artwork'] as Uint8List?;
+  }
+
+  Future<Map<String, Uint8List>> getAllCachedAlbumArts() async {
+    final db = await database;
+    final maps = await db.query('album_art_cache');
+    final result = <String, Uint8List>{};
+    for (final map in maps) {
+      final songId = map['songId'] as String?;
+      final artwork = map['artwork'] as Uint8List?;
+      if (songId != null && songId.isNotEmpty && artwork != null) {
+        result[songId] = artwork;
+      }
+    }
+    return result;
+  }
+
+  Future<void> cacheAlbumArts(List<SongModel> songs) async {
+    final db = await database;
+    final batch = db.batch();
+    for (final song in songs) {
+      if (song.albumArt != null) {
+        batch.insert('album_art_cache', {
+          'songId': song.id,
+          'artwork': song.albumArt,
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    }
+    await batch.commit(noResult: true);
   }
 
   Future<int> insertPlaylist(PlaylistModel playlist) async {

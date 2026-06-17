@@ -358,11 +358,13 @@ class _RecentlyAddedSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final display = recent.take(5).toList();
-    return Column(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
           child: Text(
             AppLocale.tr('recently_played'),
             style: TextStyle(
@@ -373,7 +375,7 @@ class _RecentlyAddedSection extends StatelessWidget {
           ),
         ),
         SizedBox(
-          height: 56,
+          height: 58,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -422,6 +424,7 @@ class _RecentlyAddedSection extends StatelessWidget {
           ),
         ),
       ],
+      ),
     );
   }
 }

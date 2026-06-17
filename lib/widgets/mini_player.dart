@@ -56,6 +56,7 @@ class MiniPlayer extends StatelessWidget {
                       CompactSeekBar(
                         position: player.position,
                         duration: player.duration,
+                        activeColor: AppTheme.primaryColor,
                         onChanged: (value) {
                           final pos = Duration(
                             milliseconds:
@@ -117,7 +118,7 @@ class MiniPlayer extends StatelessWidget {
                                         ? Icons.pause_circle_filled_rounded
                                         : Icons.play_circle_fill_rounded,
                                   ),
-                                  color: AppTheme.textPrimary,
+                                  color: AppTheme.primaryColor,
                                   iconSize: 32,
                                   onPressed: player.playPause,
                                 ),

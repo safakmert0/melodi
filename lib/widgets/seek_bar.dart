@@ -7,6 +7,7 @@ class MelodiSeekBar extends StatelessWidget {
   final Duration duration;
   final Duration bufferedPosition;
   final ValueChanged<Duration>? onSeek;
+  final Color activeColor;
 
   const MelodiSeekBar({
     super.key,
@@ -14,6 +15,7 @@ class MelodiSeekBar extends StatelessWidget {
     required this.duration,
     required this.bufferedPosition,
     this.onSeek,
+    this.activeColor = const Color(0xFF1DB954),
   });
 
   @override
@@ -25,7 +27,7 @@ class MelodiSeekBar extends StatelessWidget {
           progress: position,
           total: duration,
           buffered: bufferedPosition,
-          progressBarColor: const Color(0xFF1DB954),
+          progressBarColor: activeColor,
           thumbColor: Colors.white,
           thumbRadius: 6,
           baseBarColor: const Color(0xFF404040),
@@ -47,12 +49,14 @@ class CompactSeekBar extends StatelessWidget {
   final Duration position;
   final Duration duration;
   final ValueChanged<double>? onChanged;
+  final Color activeColor;
 
   const CompactSeekBar({
     super.key,
     required this.position,
     required this.duration,
     this.onChanged,
+    this.activeColor = const Color(0xFF1DB954),
   });
 
   @override
@@ -66,7 +70,7 @@ class CompactSeekBar extends StatelessWidget {
         trackHeight: 3,
         thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 0),
         overlayShape: const RoundSliderOverlayShape(overlayRadius: 0),
-        activeTrackColor: const Color(0xFF1DB954),
+        activeTrackColor: activeColor,
         inactiveTrackColor: const Color(0xFF404040),
       ),
       child: Slider(

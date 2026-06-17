@@ -70,6 +70,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: BottomNavigationBar(
           currentIndex: _currentPage,
           onTap: (index) => setState(() => _currentPage = index),
+          selectedItemColor: AppTheme.primaryColor,
+          unselectedItemColor: AppTheme.textTertiary,
           items: [
             BottomNavigationBarItem(
               icon: const Icon(Icons.home_rounded),
@@ -144,6 +146,9 @@ class _HomeTab extends StatelessWidget {
                 ],
               ),
               SliverToBoxAdapter(
+                child: _buildHeroGradient(context, library),
+              ),
+              SliverToBoxAdapter(
                 child: library.isLoading
                     ? Center(
                         child: Padding(
@@ -162,6 +167,62 @@ class _HomeTab extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildHeroGradient(BuildContext context, LibraryProvider library) {
+    if (library.songs.isEmpty) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      height: 140,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.primaryColor.withValues(alpha: 0.6),
+            AppTheme.primaryColor.withValues(alpha: 0.15),
+            AppTheme.card,
+          ],
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -20,
+            bottom: -20,
+            child: Icon(Icons.music_note_rounded,
+                size: 120, color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  '${library.songCount} ${AppLocale.tr('songs')}',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  AppLocale.tr('your_music_awaits'),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -309,7 +370,7 @@ class _HomeTab extends StatelessWidget {
           ),
         ],
         // Playlists
-        if (playlistProvider.playlists.isNotEmpty) ...[
+        ...[
           _SectionHeader(
             title: AppLocale.tr('playlists'),
             onSeeAll: () => onNavigateToLibrary?.call(0),
@@ -319,9 +380,14 @@ class _HomeTab extends StatelessWidget {
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.only(left: 16),
-              itemCount: playlistProvider.playlists.length,
+              itemCount: playlistProvider.playlists.length + 1,
               itemBuilder: (context, index) {
-                final playlist = playlistProvider.playlists[index];
+                if (index == 0) {
+                  return _CreatePlaylistCard(
+                    onCreate: () => _showCreatePlaylistDialog(context),
+                  );
+                }
+                final playlist = playlistProvider.playlists[index - 1];
                 return PlaylistCard(
                   playlist: playlist,
                   onTap: () => _navigateToPlaylist(context, playlist),
@@ -332,6 +398,52 @@ class _HomeTab extends StatelessWidget {
         ],
         const SizedBox(height: 24),
       ],
+    );
+  }
+
+  void _showCreatePlaylistDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: Text(AppLocale.tr('new_playlist'),
+            style: TextStyle(color: AppTheme.textPrimary)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: TextStyle(color: AppTheme.textPrimary),
+          decoration: InputDecoration(
+            hintText: AppLocale.tr('playlist_name'),
+            hintStyle: TextStyle(color: AppTheme.textTertiary),
+            filled: true,
+            fillColor: AppTheme.card,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(AppLocale.tr('cancel'),
+                style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (controller.text.trim().isNotEmpty) {
+                await context
+                    .read<PlaylistProvider>()
+                    .createPlaylist(controller.text.trim());
+                Navigator.pop(ctx);
+              }
+            },
+            child: Text(AppLocale.tr('create'),
+                style: TextStyle(color: AppTheme.primaryColor)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -536,6 +648,42 @@ class _RecentSongCard extends StatelessWidget {
               style: TextStyle(
                 color: AppTheme.textPrimary,
                 fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CreatePlaylistCard extends StatelessWidget {
+  final VoidCallback onCreate;
+  const _CreatePlaylistCard({required this.onCreate});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onCreate,
+      child: Container(
+        width: 160,
+        margin: const EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          color: AppTheme.card,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.divider, width: 1),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_circle_outline_rounded, size: 48, color: AppTheme.textSecondary),
+            const SizedBox(height: 12),
+            Text(
+              AppLocale.tr('create_playlist'),
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
             ),

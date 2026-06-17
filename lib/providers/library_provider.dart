@@ -109,9 +109,34 @@ class LibraryProvider extends ChangeNotifier {
       }
 
       _songs = _applySort(await _db.getAllSongs());
+      final artCache = await _db.getAllCachedAlbumArts();
+      for (int i = 0; i < _songs.length; i++) {
+        final art = artCache[_songs[i].id];
+        if (art != null) {
+          _songs[i] = _songs[i].copyWith(albumArt: art);
+        }
+      }
       _favorites = await _db.getFavoriteSongs();
+      for (int i = 0; i < _favorites.length; i++) {
+        final art = artCache[_favorites[i].id];
+        if (art != null) {
+          _favorites[i] = _favorites[i].copyWith(albumArt: art);
+        }
+      }
       _recent = await _db.getRecentSongs();
+      for (int i = 0; i < _recent.length; i++) {
+        final art = artCache[_recent[i].id];
+        if (art != null) {
+          _recent[i] = _recent[i].copyWith(albumArt: art);
+        }
+      }
       _mostPlayed = await _db.getMostPlayedSongs();
+      for (int i = 0; i < _mostPlayed.length; i++) {
+        final art = artCache[_mostPlayed[i].id];
+        if (art != null) {
+          _mostPlayed[i] = _mostPlayed[i].copyWith(albumArt: art);
+        }
+      }
       _buildAlbums();
       _buildArtists();
       _buildGenres();
@@ -149,7 +174,10 @@ class LibraryProvider extends ChangeNotifier {
       if (newSongs.isNotEmpty) {
         _songs.addAll(newSongs);
       }
-      _songs = _applySort(_songs);
+      _songs = _applySort(await _db.getAllSongs());
+      _favorites = await _db.getFavoriteSongs();
+      _recent = await _db.getRecentSongs();
+      _mostPlayed = await _db.getMostPlayedSongs();
       _buildAlbums();
       _buildArtists();
       _buildGenres();
@@ -245,14 +273,39 @@ class LibraryProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final songs = await _scanner.scanAllSources();
-      _songs = _applySort(songs);
+      await _scanner.scanAllSources();
+      _songs = _applySort(await _db.getAllSongs());
+      final artCache = await _db.getAllCachedAlbumArts();
+      for (int i = 0; i < _songs.length; i++) {
+        final art = artCache[_songs[i].id];
+        if (art != null) {
+          _songs[i] = _songs[i].copyWith(albumArt: art);
+        }
+      }
       _buildAlbums();
       _buildArtists();
       _buildGenres();
       _favorites = await _db.getFavoriteSongs();
+      for (int i = 0; i < _favorites.length; i++) {
+        final art = artCache[_favorites[i].id];
+        if (art != null) {
+          _favorites[i] = _favorites[i].copyWith(albumArt: art);
+        }
+      }
       _recent = await _db.getRecentSongs();
+      for (int i = 0; i < _recent.length; i++) {
+        final art = artCache[_recent[i].id];
+        if (art != null) {
+          _recent[i] = _recent[i].copyWith(albumArt: art);
+        }
+      }
       _mostPlayed = await _db.getMostPlayedSongs();
+      for (int i = 0; i < _mostPlayed.length; i++) {
+        final art = artCache[_mostPlayed[i].id];
+        if (art != null) {
+          _mostPlayed[i] = _mostPlayed[i].copyWith(albumArt: art);
+        }
+      }
       _scanProgress = 1.0;
     } catch (e) {
       _error = 'Scan failed: $e';

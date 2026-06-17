@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+
 
 class YouTubeVideo {
   final String id;
@@ -11,6 +13,7 @@ class YouTubeVideo {
   final String author;
   final Duration duration;
   final String? thumbnailUrl;
+  final Uint8List? thumbnailBytes;
   final String? audioUrl;
 
   YouTubeVideo({
@@ -19,6 +22,7 @@ class YouTubeVideo {
     required this.author,
     required this.duration,
     this.thumbnailUrl,
+    this.thumbnailBytes,
     this.audioUrl,
   });
 }
@@ -26,7 +30,7 @@ class YouTubeVideo {
 class YouTubeService {
   YoutubeExplode? _yt;
   static const Duration _timeout = Duration(seconds: 30);
-  static const Duration _downloadTimeout = Duration(seconds: 60);
+  static const Duration _downloadTimeout = Duration(seconds: 120);
   static const String _userAgent =
       'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) '
       'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
@@ -50,12 +54,29 @@ class YouTubeService {
       final videos = <YouTubeVideo>[];
       for (final video in results) {
         if (video.duration != null && video.duration!.inSeconds > 0) {
+          Uint8List? thumbBytes;
+          try {
+            final thumbUrl = video.thumbnails.standardResUrl;
+            final tClient = HttpClient()
+              ..connectionTimeout = const Duration(seconds: 5);
+            final tRequest = await tClient.getUrl(Uri.parse(thumbUrl));
+            final tResponse = await tRequest.close();
+            if (tResponse.statusCode == 200) {
+              thumbBytes = await tResponse.fold<BytesBuilder>(
+                BytesBuilder(),
+                (b, chunk) => b..add(chunk),
+              ).then((b) => b.takeBytes());
+            }
+            tClient.close();
+          } catch (_) {}
+
           videos.add(YouTubeVideo(
             id: video.id.value,
             title: video.title,
             author: video.author,
             duration: video.duration!,
             thumbnailUrl: video.thumbnails.standardResUrl,
+            thumbnailBytes: thumbBytes,
           ));
         }
         if (videos.length >= 20) break;
@@ -99,22 +120,26 @@ class YouTubeService {
     return await _tryGetManifest(videoId);
   }
 
-  Future<String?> _downloadTo(String videoId, String title, Directory dir,
+  Future<String?> _downloadAudio(String videoId, String title, Directory dir,
       {String ext = '.m4a'}) async {
     try {
       final sanitized = title.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
-      final filePath = p.join(dir.path, '${sanitized}_$videoId$ext');
+      String safeTitle = sanitized.isEmpty ? videoId : sanitized;
+      final filePath = p.join(dir.path, '${safeTitle}_$videoId$ext');
       final file = File(filePath);
       if (await file.exists()) return filePath;
 
       final url = await _tryGetManifest(videoId);
       if (url == null) return null;
 
+      debugPrint('YouTube: downloading audio from $url');
+
       final httpClient = HttpClient()
         ..userAgent = _userAgent
         ..connectionTimeout = _downloadTimeout;
       try {
         final request = await httpClient.getUrl(Uri.parse(url));
+        request.headers.set('User-Agent', _userAgent);
         final response = await request.close();
         if (response.statusCode != 200) {
           debugPrint('YouTube download HTTP ${response.statusCode}');
@@ -123,6 +148,13 @@ class YouTubeService {
         final sink = file.openWrite();
         await response.pipe(sink);
         await sink.close();
+        final len = await file.length();
+        debugPrint('YouTube: downloaded ${len} bytes');
+        if (len < 1000) {
+          await file.delete();
+          debugPrint('YouTube: file too small, deleted');
+          return null;
+        }
       } finally {
         httpClient.close();
       }
@@ -135,10 +167,8 @@ class YouTubeService {
 
   Future<String?> playAudio(String videoId, String title) async {
     try {
-      final url = await getAudioUrl(videoId);
-      if (url != null) return url;
       final dir = await getTemporaryDirectory();
-      return await _downloadTo(videoId, title, dir);
+      return await _downloadAudio(videoId, title, dir);
     } catch (e) {
       debugPrint('YouTube playAudio error: $e');
       return null;
@@ -148,7 +178,7 @@ class YouTubeService {
   Future<String?> downloadAudio(String videoId, String title) async {
     try {
       final dir = await getApplicationDocumentsDirectory();
-      return await _downloadTo(videoId, title, dir);
+      return await _downloadAudio(videoId, title, dir);
     } catch (e) {
       debugPrint('YouTube downloadAudio error: $e');
       return null;

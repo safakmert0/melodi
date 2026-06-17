@@ -484,7 +484,9 @@ class _YouTubeResultTile extends StatelessWidget {
           width: 48,
           height: 48,
           color: AppTheme.card,
-          child: Icon(Icons.play_circle_outline, color: AppTheme.textTertiary),
+          child: video.thumbnailBytes != null
+              ? Image.memory(video.thumbnailBytes!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.play_circle_outline, color: AppTheme.textTertiary))
+              : Icon(Icons.play_circle_outline, color: AppTheme.textTertiary),
         ),
       ),
       title: Text(

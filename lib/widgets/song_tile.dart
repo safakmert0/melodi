@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
@@ -129,7 +132,7 @@ class SongTile extends StatelessWidget {
                           .read<LibraryProvider>()
                           .toggleFavorite(song),
                 ),
-              PopupMenuButton<String>(
+                  PopupMenuButton<String>(
                 icon: Icon(Icons.more_horiz,
                     color: AppTheme.textSecondary, size: 20),
                 onSelected: (value) {
@@ -152,6 +155,9 @@ class SongTile extends StatelessWidget {
                       (onAddToPlaylist ??
                           () => _showAddToPlaylistSheet(context))
                           .call();
+                      break;
+                    case 'share':
+                      _shareSong(context, song);
                       break;
                     case 'album':
                       onViewAlbum?.call();
@@ -188,6 +194,14 @@ class SongTile extends StatelessWidget {
                   ),
                   const PopupMenuDivider(),
                   PopupMenuItem(
+                    value: 'share',
+                    child: ListTile(
+                      leading: const Icon(Icons.share_outlined),
+                      title: Text(AppLocale.tr('share')),
+                      dense: true,
+                    ),
+                  ),
+                  PopupMenuItem(
                     value: 'album',
                     child: ListTile(
                       leading: const Icon(Icons.album),
@@ -221,5 +235,33 @@ class SongTile extends StatelessWidget {
         playlists: playlists,
       ),
     );
+  }
+
+  Future<void> _shareSong(BuildContext context, SongModel song) async {
+    final file = File(song.filePath);
+    if (await file.exists()) {
+      try {
+        final dir = await getTemporaryDirectory();
+        final shareDir = Directory('${dir.path}/share');
+        if (!await shareDir.exists()) await shareDir.create();
+        final ext = song.filePath.split('.').last;
+        final shareFile = File('${shareDir.path}/${song.title}.$ext');
+        await file.copy(shareFile.path);
+        await Share.shareXFiles(
+          [XFile(shareFile.path)],
+          subject: '${song.title} - ${song.artist}',
+        );
+      } catch (e) {
+        debugPrint('Share error: $e');
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocale.tr('share')),
+              backgroundColor: AppTheme.errorColor,
+            ),
+          );
+        }
+      }
+    }
   }
 }
