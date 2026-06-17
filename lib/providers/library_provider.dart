@@ -311,6 +311,15 @@ class LibraryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateSong(SongModel song) async {
+    final index = _songs.indexWhere((s) => s.id == song.id);
+    if (index != -1) {
+      _songs[index] = song;
+      await _db.insertSong(song);
+    }
+    notifyListeners();
+  }
+
   List<SongModel> getSongsForAlbum(AlbumModel album) {
     return _songs.where((s) => s.album == album.name).toList();
   }

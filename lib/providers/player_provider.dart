@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/song_model.dart';
 import '../services/audio_handler.dart';
 import '../services/database_service.dart';
+import '../services/carplay_service.dart';
 
 class PlayerProvider extends ChangeNotifier {
   final AudioPlayerHandler _handler;
@@ -25,6 +26,12 @@ class PlayerProvider extends ChangeNotifier {
   AudioPlayerHandler get handler => _handler;
 
   SongModel? get currentSong => _handler.currentSong;
+
+  void updateCurrentSong(SongModel song) {
+    _handler.updateSongInQueue(song);
+    notifyListeners();
+  }
+
   List<SongModel> get queue => _handler.songQueue;
   bool get isPlaying => _handler.isPlaying;
   bool get isShuffled => _handler.isShuffled;
@@ -73,6 +80,7 @@ class PlayerProvider extends ChangeNotifier {
 
   Future<void> playSong(SongModel song) async {
     await _handler.playSong(song);
+    CarPlayService.updateNowPlaying(song);
     notifyListeners();
   }
 

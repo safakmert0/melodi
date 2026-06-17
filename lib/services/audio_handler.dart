@@ -123,6 +123,13 @@ class AudioPlayerHandler extends BaseAudioHandler
     await setQueue(songs, initialIndex: index);
   }
 
+  void updateSongInQueue(SongModel song) {
+    final origIdx = _originalQueue.indexWhere((s) => s.id == song.id);
+    if (origIdx != -1) _originalQueue[origIdx] = song;
+    final idx = _queue.indexWhere((s) => s.id == song.id);
+    if (idx != -1) _queue[idx] = song;
+  }
+
   Future<void> addToQueue(SongModel song) async {
     _originalQueue.add(song);
     _queue.add(song);

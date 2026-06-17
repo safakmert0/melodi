@@ -10,6 +10,8 @@ import '../providers/library_provider.dart';
 import '../models/song_model.dart';
 import '../providers/playlist_provider.dart';
 import '../services/audio_handler.dart';
+import '../services/lyrics_service.dart';
+import '../services/artwork_service.dart';
 import '../widgets/seek_bar.dart';
 import '../widgets/image_with_fallback.dart';
 import '../widgets/queue_sheet.dart';
@@ -25,12 +27,50 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   final List<double> _speedOptions = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
   bool _showVolumeSlider = false;
   bool _showLyrics = true;
+  String? _lastSongId;
+
+  void _autoFetch(SongModel song) {
+    if (song.id == _lastSongId) return;
+    _lastSongId = song.id;
+    if (song.lyrics == null || song.lyrics!.isEmpty) {
+      Future.microtask(() => _fetchLyrics(song));
+    }
+    if (song.albumArt == null) {
+      Future.microtask(() => _fetchArtwork(song));
+    }
+  }
+
+  Future<void> _fetchLyrics(SongModel song) async {
+    final result = await LyricsService.fetchLyrics(
+      artist: song.artist,
+      track: song.title,
+    );
+    if (result != null && mounted) {
+      final updated = song.copyWith(lyrics: result);
+      context.read<PlayerProvider>().updateCurrentSong(updated);
+      context.read<LibraryProvider>().updateSong(updated);
+    }
+  }
+
+  Future<void> _fetchArtwork(SongModel song) async {
+    if (song.album.isEmpty) return;
+    final result = await ArtworkService.fetchArtwork(
+      artist: song.artist,
+      album: song.album,
+    );
+    if (result != null && mounted) {
+      final updated = song.copyWith(albumArt: result);
+      context.read<PlayerProvider>().updateCurrentSong(updated);
+      context.read<LibraryProvider>().updateSong(updated);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Consumer2<PlayerProvider, LocaleNotifier>(
       builder: (context, player, locale, _) {
         final song = player.currentSong;
+        if (song != null) _autoFetch(song);
         if (song == null) {
           return Scaffold(
             backgroundColor: AppTheme.background,
