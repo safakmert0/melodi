@@ -39,11 +39,11 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   void _applyCustomColors() {
-    AppTheme._customBackground = _customBackground;
-    AppTheme._customSurface = _customSurface;
-    AppTheme._customCard = _customCard;
-    AppTheme._customTextPrimary = _customTextPrimary;
-    AppTheme._customTextSecondary = _customTextSecondary;
+    AppTheme.customBackground = _customBackground;
+    AppTheme.customSurface = _customSurface;
+    AppTheme.customCard = _customCard;
+    AppTheme.customTextPrimary = _customTextPrimary;
+    AppTheme.customTextSecondary = _customTextSecondary;
   }
 
   Future<void> loadSettings() async {
@@ -102,35 +102,35 @@ class ThemeProvider extends ChangeNotifier {
 
   Future<void> setCustomBackground(Color? color) async {
     _customBackground = color;
-    AppTheme._customBackground = color;
+    AppTheme.customBackground = color;
     await _saveColor('custom_bg', color);
     notifyListeners();
   }
 
   Future<void> setCustomSurface(Color? color) async {
     _customSurface = color;
-    AppTheme._customSurface = color;
+    AppTheme.customSurface = color;
     await _saveColor('custom_surface', color);
     notifyListeners();
   }
 
   Future<void> setCustomCard(Color? color) async {
     _customCard = color;
-    AppTheme._customCard = color;
+    AppTheme.customCard = color;
     await _saveColor('custom_card', color);
     notifyListeners();
   }
 
   Future<void> setCustomTextPrimary(Color? color) async {
     _customTextPrimary = color;
-    AppTheme._customTextPrimary = color;
+    AppTheme.customTextPrimary = color;
     await _saveColor('custom_text_primary', color);
     notifyListeners();
   }
 
   Future<void> setCustomTextSecondary(Color? color) async {
     _customTextSecondary = color;
-    AppTheme._customTextSecondary = color;
+    AppTheme.customTextSecondary = color;
     await _saveColor('custom_text_secondary', color);
     notifyListeners();
   }
@@ -141,11 +141,11 @@ class ThemeProvider extends ChangeNotifier {
     _customCard = null;
     _customTextPrimary = null;
     _customTextSecondary = null;
-    AppTheme._customBackground = null;
-    AppTheme._customSurface = null;
-    AppTheme._customCard = null;
-    AppTheme._customTextPrimary = null;
-    AppTheme._customTextSecondary = null;
+    AppTheme.customBackground = null;
+    AppTheme.customSurface = null;
+    AppTheme.customCard = null;
+    AppTheme.customTextPrimary = null;
+    AppTheme.customTextSecondary = null;
     final db = DatabaseService.instance;
     for (final key in ['custom_bg', 'custom_surface', 'custom_card', 'custom_text_primary', 'custom_text_secondary']) {
       await db.setSetting(key, '');

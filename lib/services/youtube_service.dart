@@ -33,7 +33,6 @@ class YouTubeService {
 
   static final List<YoutubeApiClient> _clients = [
     YoutubeApiClient.ios,
-    YoutubeApiClient.web,
     YoutubeApiClient.android,
     YoutubeApiClient.safari,
   ];

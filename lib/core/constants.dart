@@ -78,6 +78,13 @@ class AppTheme {
   static Color get textPrimary => _customTextPrimary ?? (isLightMode ? const Color(0xFF1A1A1A) : const Color(0xFFFFFFFF));
   static Color get textSecondary => _customTextSecondary ?? (isLightMode ? const Color(0xFF666666) : const Color(0xFFB3B3B3));
 
+  // Public setters for custom overrides (set null to use default)
+  static set customBackground(Color? c) => _customBackground = c;
+  static set customSurface(Color? c) => _customSurface = c;
+  static set customCard(Color? c) => _customCard = c;
+  static set customTextPrimary(Color? c) => _customTextPrimary = c;
+  static set customTextSecondary(Color? c) => _customTextSecondary = c;
+
   static const Color errorColor = Color(0xFFE74C3C);
   static const Color favoriteColor = Color(0xFFE91E63);
   static const Color appleMusicRed = Color(0xFFFA233B);

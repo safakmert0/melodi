@@ -446,28 +446,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  static const List<Color> _accentColors = [
-    Color(0xFF1DB954), // Spotify green
-    Color(0xFF1ED760), // Bright green
-    Color(0xFFFA233B), // Apple Music red
-    Color(0xFFFF2D55), // iOS red
-    Color(0xFF007AFF), // iOS blue
-    Color(0xFF5856D6), // iOS purple
-    Color(0xFFAF52DE), // iOS magenta
-    Color(0xFFFF9500), // iOS orange
-    Color(0xFFFFCC02), // iOS yellow
-    Color(0xFF34C759), // iOS green
-    Color(0xFF00C7BE), // iOS teal
-    Color(0xFFFFFFFF), // White
-    Color(0xFFE91E63), // Pink
-    Color(0xFF9C27B0), // Deep purple
-    Color(0xFF2196F3), // Blue
-    Color(0xFF00BCD4), // Cyan
-    Color(0xFF4CAF50), // Material green
-    Color(0xFFFF5722), // Deep orange
-    Color(0xFF795548), // Brown
-    Color(0xFF607D8B), // Blue grey
-  ];
+  // (moved to top level)
 
   void _showAccentColorPicker(BuildContext context, ThemeProvider themeProvider) {
     showModalBottomSheet(
@@ -823,6 +802,29 @@ class _SectionTitle extends StatelessWidget {
     );
   }
 }
+
+const List<Color> _accentColors = [
+  Color(0xFF1DB954),
+  Color(0xFF1ED760),
+  Color(0xFFFA233B),
+  Color(0xFFFF2D55),
+  Color(0xFF007AFF),
+  Color(0xFF5856D6),
+  Color(0xFFAF52DE),
+  Color(0xFFFF9500),
+  Color(0xFFFFCC02),
+  Color(0xFF34C759),
+  Color(0xFF00C7BE),
+  Color(0xFFFFFFFF),
+  Color(0xFFE91E63),
+  Color(0xFF9C27B0),
+  Color(0xFF2196F3),
+  Color(0xFF00BCD4),
+  Color(0xFF4CAF50),
+  Color(0xFFFF5722),
+  Color(0xFF795548),
+  Color(0xFF607D8B),
+];
 
 class _CustomColorTile extends StatelessWidget {
   final String label;
