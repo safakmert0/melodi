@@ -63,7 +63,7 @@ class SongTile extends StatelessWidget {
                         color: Colors.black45,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.equalizer_rounded,
                         color: AppTheme.primaryColor,
                         size: 20,

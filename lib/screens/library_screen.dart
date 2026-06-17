@@ -75,7 +75,7 @@ class _LibraryScreenState extends State<LibraryScreen>
             ),
           ],
           body: library.isLoading
-              ? const Center(
+              ? Center(
                   child: CircularProgressIndicator(color: AppTheme.primaryColor))
               : library.songs.isEmpty
                   ? _buildEmptyLibrary(context)

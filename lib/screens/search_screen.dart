@@ -149,7 +149,7 @@ class _SearchScreenState extends State<SearchScreen> {
           return _buildBrowseSection(searchProvider);
         }
         if (searchProvider.isSearching) {
-          return const Center(
+          return Center(
             child: CircularProgressIndicator(
               color: AppTheme.primaryColor,
               strokeWidth: 2,
@@ -221,7 +221,7 @@ class _SearchScreenState extends State<SearchScreen> {
           );
         }
         if (ytProvider.isSearching) {
-          return const Center(
+          return Center(
             child: CircularProgressIndicator(
               color: AppTheme.primaryColor,
               strokeWidth: 2,

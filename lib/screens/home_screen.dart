@@ -124,8 +124,8 @@ class _HomeTab extends StatelessWidget {
                 ),
                 actions: [
                   if (library.isScanning)
-                    const Padding(
-                      padding: EdgeInsets.only(right: 16),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 16),
                       child: SizedBox(
                         width: 20,
                         height: 20,
@@ -145,9 +145,9 @@ class _HomeTab extends StatelessWidget {
               ),
               SliverToBoxAdapter(
                 child: library.isLoading
-                    ? const Center(
+                    ? Center(
                         child: Padding(
-                          padding: EdgeInsets.only(top: 100),
+                          padding: const EdgeInsets.only(top: 100),
                           child: CircularProgressIndicator(
                             color: AppTheme.primaryColor,
                             strokeWidth: 2,
@@ -371,7 +371,7 @@ class _HomeTab extends StatelessWidget {
                   color: AppTheme.primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.library_music_rounded,
+                child: Icon(Icons.library_music_rounded,
                     color: AppTheme.primaryColor),
               ),
               title: Text(AppLocale.tr('scan_media_library'),
