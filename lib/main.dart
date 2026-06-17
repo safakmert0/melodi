@@ -43,20 +43,25 @@ Future<void> main() async {
     AppLocale.currentLocale = 'tr';
   }
 
-  // Initialize audio handler with service
-  final audioHandler = await AudioService.init(
-    builder: () => AudioPlayerHandler(),
-    config: AudioServiceConfig(
-      androidNotificationChannelId: 'com.melodi.channel',
-      androidNotificationChannelName: 'Melodi Playback',
-      androidNotificationOngoing: true,
-      androidStopForegroundOnPause: true,
-      androidShowNotificationBadge: true,
-      notificationColor: const Color(0xFF1DB954),
-      fastForwardInterval: const Duration(seconds: 10),
-      rewindInterval: const Duration(seconds: 10),
-    ),
-  );
+  // Initialize audio handler with service (with timeout)
+  late final AudioPlayerHandler audioHandler;
+  try {
+    audioHandler = await AudioService.init(
+      builder: () => AudioPlayerHandler(),
+      config: AudioServiceConfig(
+        androidNotificationChannelId: 'com.melodi.channel',
+        androidNotificationChannelName: 'Melodi Playback',
+        androidNotificationOngoing: true,
+        androidStopForegroundOnPause: true,
+        androidShowNotificationBadge: true,
+        notificationColor: const Color(0xFF1DB954),
+        fastForwardInterval: const Duration(seconds: 10),
+        rewindInterval: const Duration(seconds: 10),
+      ),
+    ).timeout(const Duration(seconds: 8));
+  } catch (_) {
+    audioHandler = AudioPlayerHandler();
+  }
 
   runApp(MelodiApp(audioHandler: audioHandler));
 }

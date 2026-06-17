@@ -144,9 +144,19 @@ class _HomeTab extends StatelessWidget {
                 ],
               ),
               SliverToBoxAdapter(
-                child: library.songs.isEmpty && !library.isLoading
-                    ? _buildEmptyState(context)
-                    : _buildContent(context, library, playlistProvider),
+                child: library.isLoading
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.only(top: 100),
+                          child: CircularProgressIndicator(
+                            color: AppTheme.primaryColor,
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      )
+                    : library.songs.isEmpty
+                        ? _buildEmptyState(context)
+                        : _buildContent(context, library, playlistProvider),
               ),
             ],
           ),
