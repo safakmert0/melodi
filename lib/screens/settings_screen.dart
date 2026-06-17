@@ -83,298 +83,346 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  String formatBytes(int bytes) {
+                    if (bytes < 1024) return '$bytes B';
+                    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+                    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+                    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+                  }
+
                   // Theme section
-                  _SectionTitle(AppLocale.tr('appearance')),
-                  Consumer<ThemeProvider>(
-                    builder: (context, themeProvider, _) {
-                      final themeLabel = themeProvider.isDark
-                          ? AppLocale.tr('dark')
-                          : themeProvider.isLight
-                              ? AppLocale.tr('light')
-                              : AppLocale.tr('system');
-                      return Column(
-                        children: [
-                          _SettingsTile(
-                            icon: Icons.dark_mode_rounded,
-                            iconColor: Colors.amber,
-                            title: AppLocale.tr('theme'),
-                            subtitle: themeLabel,
-                            trailing: Icon(Icons.chevron_right,
-                                color: AppTheme.textTertiary),
-                            onTap: () => _showThemePicker(context, themeProvider),
-                          ),
-                          const SizedBox(height: 8),
-                          _SettingsTile(
-                            icon: Icons.palette_rounded,
-                            iconColor: Colors.pink,
-                            title: AppLocale.tr('accent_color'),
-                            subtitle: AppLocale.tr('tap_to_change'),
-                            trailing: Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: themeProvider.accentColor,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: AppTheme.textTertiary,
-                                  width: 2,
+                  _CollapsibleSection(
+                    title: AppLocale.tr('appearance'),
+                    icon: Icons.palette_outlined,
+                    iconColor: Colors.amber,
+                    children: [
+                      Consumer<ThemeProvider>(
+                        builder: (context, themeProvider, _) {
+                          final themeLabel = themeProvider.isDark
+                              ? AppLocale.tr('dark')
+                              : themeProvider.isLight
+                                  ? AppLocale.tr('light')
+                                  : AppLocale.tr('system');
+                          return Column(
+                            children: [
+                              _SettingsTile(
+                                icon: Icons.dark_mode_rounded,
+                                iconColor: Colors.amber,
+                                title: AppLocale.tr('theme'),
+                                subtitle: themeLabel,
+                                trailing: Icon(Icons.chevron_right,
+                                    color: AppTheme.textTertiary),
+                                onTap: () => _showThemePicker(context, themeProvider),
+                              ),
+                              const SizedBox(height: 8),
+                              _SettingsTile(
+                                icon: Icons.palette_rounded,
+                                iconColor: Colors.pink,
+                                title: AppLocale.tr('accent_color'),
+                                subtitle: AppLocale.tr('tap_to_change'),
+                                trailing: Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: themeProvider.accentColor,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppTheme.textTertiary,
+                                      width: 2,
+                                    ),
+                                  ),
                                 ),
+                                onTap: () => _showAccentColorPicker(context, themeProvider),
                               ),
-                            ),
-                            onTap: () => _showAccentColorPicker(context, themeProvider),
-                          ),
-                          const SizedBox(height: 8),
-                          _CustomColorTile(
-                            label: AppLocale.tr('background'),
-                            icon: Icons.wallpaper_rounded,
-                            currentColor: themeProvider.customBackground,
-                            defaultColor: AppTheme.isLightMode ? AppTheme.lightBackground : AppTheme.darkBackground,
-                            onChanged: (c) => themeProvider.setCustomBackground(c),
-                          ),
-                          const SizedBox(height: 8),
-                          _CustomColorTile(
-                            label: AppLocale.tr('surface'),
-                            icon: Icons.square_rounded,
-                            currentColor: themeProvider.customSurface,
-                            defaultColor: AppTheme.isLightMode ? AppTheme.lightSurface : AppTheme.darkSurface,
-                            onChanged: (c) => themeProvider.setCustomSurface(c),
-                          ),
-                          const SizedBox(height: 8),
-                          _CustomColorTile(
-                            label: AppLocale.tr('card'),
-                            icon: Icons.crop_square_rounded,
-                            currentColor: themeProvider.customCard,
-                            defaultColor: AppTheme.isLightMode ? AppTheme.lightCard : AppTheme.darkCard,
-                            onChanged: (c) => themeProvider.setCustomCard(c),
-                          ),
-                          const SizedBox(height: 8),
-                          _CustomColorTile(
-                            label: AppLocale.tr('text_primary'),
-                            icon: Icons.text_fields_rounded,
-                            currentColor: themeProvider.customTextPrimary,
-                            defaultColor: AppTheme.isLightMode ? const Color(0xFF1A1A1A) : Colors.white,
-                            onChanged: (c) => themeProvider.setCustomTextPrimary(c),
-                          ),
-                          const SizedBox(height: 8),
-                          _CustomColorTile(
-                            label: AppLocale.tr('text_secondary'),
-                            icon: Icons.text_fields_rounded,
-                            currentColor: themeProvider.customTextSecondary,
-                            defaultColor: AppTheme.isLightMode ? const Color(0xFF666666) : const Color(0xFFB3B3B3),
-                            onChanged: (c) => themeProvider.setCustomTextSecondary(c),
-                          ),
-                          if (themeProvider.customBackground != null ||
-                              themeProvider.customSurface != null ||
-                              themeProvider.customCard != null ||
-                              themeProvider.customTextPrimary != null ||
-                              themeProvider.customTextSecondary != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: TextButton.icon(
-                                onPressed: () => themeProvider.resetCustomColors(),
-                                icon: const Icon(Icons.restore_rounded, size: 18),
-                                label: Text(AppLocale.tr('reset_colors')),
+                              const SizedBox(height: 8),
+                              _CustomColorTile(
+                                label: AppLocale.tr('background'),
+                                icon: Icons.wallpaper_rounded,
+                                currentColor: themeProvider.customBackground,
+                                defaultColor: AppTheme.isLightMode ? AppTheme.lightBackground : AppTheme.darkBackground,
+                                onChanged: (c) => themeProvider.setCustomBackground(c),
                               ),
-                            ),
-                        ],
-                      );
-                    },
+                              const SizedBox(height: 8),
+                              _CustomColorTile(
+                                label: AppLocale.tr('surface'),
+                                icon: Icons.square_rounded,
+                                currentColor: themeProvider.customSurface,
+                                defaultColor: AppTheme.isLightMode ? AppTheme.lightSurface : AppTheme.darkSurface,
+                                onChanged: (c) => themeProvider.setCustomSurface(c),
+                              ),
+                              const SizedBox(height: 8),
+                              _CustomColorTile(
+                                label: AppLocale.tr('card'),
+                                icon: Icons.crop_square_rounded,
+                                currentColor: themeProvider.customCard,
+                                defaultColor: AppTheme.isLightMode ? AppTheme.lightCard : AppTheme.darkCard,
+                                onChanged: (c) => themeProvider.setCustomCard(c),
+                              ),
+                              const SizedBox(height: 8),
+                              _CustomColorTile(
+                                label: AppLocale.tr('text_primary'),
+                                icon: Icons.text_fields_rounded,
+                                currentColor: themeProvider.customTextPrimary,
+                                defaultColor: AppTheme.isLightMode ? const Color(0xFF1A1A1A) : Colors.white,
+                                onChanged: (c) => themeProvider.setCustomTextPrimary(c),
+                              ),
+                              const SizedBox(height: 8),
+                              _CustomColorTile(
+                                label: AppLocale.tr('text_secondary'),
+                                icon: Icons.text_fields_rounded,
+                                currentColor: themeProvider.customTextSecondary,
+                                defaultColor: AppTheme.isLightMode ? const Color(0xFF666666) : const Color(0xFFB3B3B3),
+                                onChanged: (c) => themeProvider.setCustomTextSecondary(c),
+                              ),
+                              if (themeProvider.customBackground != null ||
+                                  themeProvider.customSurface != null ||
+                                  themeProvider.customCard != null ||
+                                  themeProvider.customTextPrimary != null ||
+                                  themeProvider.customTextSecondary != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: TextButton.icon(
+                                    onPressed: () => themeProvider.resetCustomColors(),
+                                    icon: const Icon(Icons.restore_rounded, size: 18),
+                                    label: Text(AppLocale.tr('reset_colors')),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
                   Divider(color: AppTheme.divider, height: 1),
                   // Language section
-                  _SectionTitle(AppLocale.tr('language')),
-                  _SettingsTile(
+                  _CollapsibleSection(
+                    title: AppLocale.tr('language'),
                     icon: Icons.language_rounded,
                     iconColor: Colors.teal,
-                    title: AppLocale.tr('app_language'),
-                    subtitle: _selectedLanguage,
-                    trailing: Icon(Icons.chevron_right,
-                        color: AppTheme.textTertiary),
-                    onTap: () => _showLanguagePicker(context),
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.language_rounded,
+                        iconColor: Colors.teal,
+                        title: AppLocale.tr('app_language'),
+                        subtitle: _selectedLanguage,
+                        trailing: Icon(Icons.chevron_right,
+                            color: AppTheme.textTertiary),
+                        onTap: () => _showLanguagePicker(context),
+                      ),
+                    ],
                   ),
                   Divider(color: AppTheme.divider, height: 1),
                   // Library section
-                  _SectionTitle(AppLocale.tr('music_library')),
-                  _SettingsTile(
-                    icon: Icons.refresh_rounded,
+                  _CollapsibleSection(
+                    title: AppLocale.tr('music_library'),
+                    icon: Icons.library_music_outlined,
                     iconColor: AppTheme.primaryColor,
-                    title: AppLocale.tr('rescan_library'),
-                    subtitle: AppLocale.tr('scan_device_for_music'),
-                    trailing: library.isScanning
-                        ? SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppTheme.primaryColor,
-                            ),
-                          )
-                        : null,
-                    onTap: () => context.read<LibraryProvider>().scanMusic(),
-                  ),
-                  _SettingsTile(
-                    icon: Icons.folder_open_rounded,
-                    iconColor: Colors.orange,
-                    title: AppLocale.tr('import_from_files'),
-                    subtitle: AppLocale.tr('browse_and_import'),
-                    onTap: () =>
-                        context.read<LibraryProvider>().importFromFiles(),
-                  ),
-                  _SettingsTile(
-                    icon: Icons.folder_special_rounded,
-                    iconColor: Colors.purple,
-                    title: AppLocale.tr('import_from_folder_title'),
-                    subtitle: AppLocale.tr('scan_folder_for_music'),
-                    onTap: () =>
-                        context.read<LibraryProvider>().importFromDirectory(),
-                  ),
-                  _SettingsTile(
-                    icon: Icons.folder_rounded,
-                    iconColor: Colors.deepPurple,
-                    title: AppLocale.tr('watched_folder'),
-                    subtitle: _watchedFolderPath.isNotEmpty
-                        ? '${AppLocale.tr('watching')}: $_watchedFolderPath'
-                        : AppLocale.tr('auto_scan_folder'),
-                    trailing: _watchedFolderPath.isNotEmpty
-                        ? IconButton(
-                            icon: Icon(Icons.close, color: AppTheme.textTertiary, size: 18),
-                            onPressed: () async {
-                              await context.read<LibraryProvider>().clearWatchedFolder();
-                              setState(() => _watchedFolderPath = '');
-                            },
-                          )
-                        : null,
-                    onTap: () => _pickWatchedFolder(context),
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.refresh_rounded,
+                        iconColor: AppTheme.primaryColor,
+                        title: AppLocale.tr('rescan_library'),
+                        subtitle: AppLocale.tr('scan_device_for_music'),
+                        trailing: library.isScanning
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppTheme.primaryColor,
+                                ),
+                              )
+                            : null,
+                        onTap: () => context.read<LibraryProvider>().scanMusic(),
+                      ),
+                      _SettingsTile(
+                        icon: Icons.folder_open_rounded,
+                        iconColor: Colors.orange,
+                        title: AppLocale.tr('import_from_files'),
+                        subtitle: AppLocale.tr('browse_and_import'),
+                        onTap: () =>
+                            context.read<LibraryProvider>().importFromFiles(),
+                      ),
+                      _SettingsTile(
+                        icon: Icons.folder_special_rounded,
+                        iconColor: Colors.purple,
+                        title: AppLocale.tr('import_from_folder_title'),
+                        subtitle: AppLocale.tr('scan_folder_for_music'),
+                        onTap: () =>
+                            context.read<LibraryProvider>().importFromDirectory(),
+                      ),
+                      _SettingsTile(
+                        icon: Icons.folder_rounded,
+                        iconColor: Colors.deepPurple,
+                        title: AppLocale.tr('watched_folder'),
+                        subtitle: _watchedFolderPath.isNotEmpty
+                            ? '${AppLocale.tr('watching')}: $_watchedFolderPath'
+                            : AppLocale.tr('auto_scan_folder'),
+                        trailing: _watchedFolderPath.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(Icons.close, color: AppTheme.textTertiary, size: 18),
+                                onPressed: () async {
+                                  await context.read<LibraryProvider>().clearWatchedFolder();
+                                  setState(() => _watchedFolderPath = '');
+                                },
+                              )
+                            : null,
+                        onTap: () => _pickWatchedFolder(context),
+                      ),
+                    ],
                   ),
                   Divider(color: AppTheme.divider, height: 1),
                   // Storage section
-                  _SectionTitle(AppLocale.tr('storage')),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: [
-                        Icon(Icons.storage_rounded,
-                            color: AppTheme.textSecondary, size: 20),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                AppLocale.tr('local_songs'),
-                                style: TextStyle(
-                                  color: AppTheme.textPrimary,
-                                  fontSize: 15,
-                                ),
+                  _CollapsibleSection(
+                    title: AppLocale.tr('storage'),
+                    icon: Icons.storage_rounded,
+                    iconColor: Colors.blueGrey,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: [
+                            Icon(Icons.storage_rounded,
+                                color: AppTheme.textSecondary, size: 20),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    AppLocale.tr('local_songs'),
+                                    style: TextStyle(
+                                      color: AppTheme.textPrimary,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${library.songCount} ${AppLocale.tr('songs_in_library')} · ${formatBytes(library.totalSongSizeBytes)}',
+                                    style: TextStyle(
+                                      color: AppTheme.textSecondary,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              Text(
-                                '${library.songCount} ${AppLocale.tr('songs_in_library')}',
-                                style: TextStyle(
-                                  color: AppTheme.textSecondary,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.delete_sweep_rounded,
-                    iconColor: AppTheme.errorColor,
-                    title: AppLocale.tr('clear_library'),
-                    subtitle: AppLocale.tr('remove_cached_data'),
-                    onTap: () => _confirmClearLibrary(context),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.delete_sweep_rounded,
+                        iconColor: AppTheme.errorColor,
+                        title: AppLocale.tr('clear_library'),
+                        subtitle: AppLocale.tr('remove_cached_data'),
+                        onTap: () => _confirmClearLibrary(context),
+                      ),
+                    ],
                   ),
                   Divider(color: AppTheme.divider, height: 1),
                   // Playback section
-                  _SectionTitle(AppLocale.tr('playback')),
-                  _SettingsTile(
-                    icon: Icons.shuffle_rounded,
+                  _CollapsibleSection(
+                    title: AppLocale.tr('playback'),
+                    icon: Icons.play_circle_outline,
                     iconColor: Colors.amber,
-                    title: AppLocale.tr('auto_shuffle'),
-                    subtitle: AppLocale.tr('automatically_shuffle'),
-                    trailing: Switch(
-                      value: _autoShuffle,
-                      onChanged: (v) {
-                        setState(() => _autoShuffle = v);
-                        player.setAutoShuffle(v);
-                        DatabaseService.instance.setSetting('auto_shuffle', v.toString());
-                      },
-                      activeColor: AppTheme.primaryColor,
-                    ),
-                    onTap: () {
-                      final v = !_autoShuffle;
-                      setState(() => _autoShuffle = v);
-                      player.setAutoShuffle(v);
-                      DatabaseService.instance.setSetting('auto_shuffle', v.toString());
-                    },
-                  ),
-                  _SettingsTile(
-                    icon: Icons.waves_rounded,
-                    iconColor: Colors.pink,
-                    title: AppLocale.tr('gapless_playback'),
-                    subtitle: AppLocale.tr('seamless_transition'),
-                    trailing: Switch(
-                      value: _gaplessPlayback,
-                      onChanged: (v) {
-                        setState(() => _gaplessPlayback = v);
-                        player.setGaplessPlayback(v);
-                        DatabaseService.instance.setSetting('gapless_playback', v.toString());
-                      },
-                      activeColor: AppTheme.primaryColor,
-                    ),
-                    onTap: () {
-                      final v = !_gaplessPlayback;
-                      setState(() => _gaplessPlayback = v);
-                      player.setGaplessPlayback(v);
-                      DatabaseService.instance.setSetting('gapless_playback', v.toString());
-                    },
-                  ),
-                  _SettingsTile(
-                    icon: Icons.swap_horiz_rounded,
-                    iconColor: Colors.indigo,
-                    title: AppLocale.tr('crossfade'),
-                    subtitle: '${_crossfadeSeconds.toInt()}${AppLocale.tr('seconds_crossfade')}',
-                    trailing: Icon(Icons.chevron_right,
-                        color: AppTheme.textTertiary),
-                    onTap: () => _showCrossfadeSlider(context, player),
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.shuffle_rounded,
+                        iconColor: Colors.amber,
+                        title: AppLocale.tr('auto_shuffle'),
+                        subtitle: AppLocale.tr('automatically_shuffle'),
+                        trailing: Switch(
+                          value: _autoShuffle,
+                          onChanged: (v) {
+                            setState(() => _autoShuffle = v);
+                            player.setAutoShuffle(v);
+                            DatabaseService.instance.setSetting('auto_shuffle', v.toString());
+                          },
+                          activeColor: AppTheme.primaryColor,
+                        ),
+                        onTap: () {
+                          final v = !_autoShuffle;
+                          setState(() => _autoShuffle = v);
+                          player.setAutoShuffle(v);
+                          DatabaseService.instance.setSetting('auto_shuffle', v.toString());
+                        },
+                      ),
+                      _SettingsTile(
+                        icon: Icons.waves_rounded,
+                        iconColor: Colors.pink,
+                        title: AppLocale.tr('gapless_playback'),
+                        subtitle: AppLocale.tr('seamless_transition'),
+                        trailing: Switch(
+                          value: _gaplessPlayback,
+                          onChanged: (v) {
+                            setState(() => _gaplessPlayback = v);
+                            player.setGaplessPlayback(v);
+                            DatabaseService.instance.setSetting('gapless_playback', v.toString());
+                          },
+                          activeColor: AppTheme.primaryColor,
+                        ),
+                        onTap: () {
+                          final v = !_gaplessPlayback;
+                          setState(() => _gaplessPlayback = v);
+                          player.setGaplessPlayback(v);
+                          DatabaseService.instance.setSetting('gapless_playback', v.toString());
+                        },
+                      ),
+                      _SettingsTile(
+                        icon: Icons.swap_horiz_rounded,
+                        iconColor: Colors.indigo,
+                        title: AppLocale.tr('crossfade'),
+                        subtitle: '${_crossfadeSeconds.toInt()}${AppLocale.tr('seconds_crossfade')}',
+                        trailing: Icon(Icons.chevron_right,
+                            color: AppTheme.textTertiary),
+                        onTap: () => _showCrossfadeSlider(context, player),
+                      ),
+                    ],
                   ),
                   Divider(color: AppTheme.divider, height: 1),
                   // Developer section
-                  _SectionTitle(AppLocale.tr('developer')),
-                  _SettingsTile(
+                  _CollapsibleSection(
+                    title: AppLocale.tr('developer'),
                     icon: Icons.code_rounded,
                     iconColor: Colors.grey,
-                    title: 'GitHub',
-                    subtitle: 'safakmert0',
-                    onTap: () => _openUrl('https://github.com/safakmert0'),
-                  ),
-                  _SettingsTile(
-                    icon: Icons.send_rounded,
-                    iconColor: Colors.lightBlue,
-                    title: 'Telegram',
-                    subtitle: '@safakmert',
-                    onTap: () => _openUrl('https://t.me/safakmert'),
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.code_rounded,
+                        iconColor: Colors.grey,
+                        title: 'GitHub',
+                        subtitle: 'safakmert0',
+                        onTap: () => _openUrl('https://github.com/safakmert0'),
+                      ),
+                      _SettingsTile(
+                        icon: Icons.send_rounded,
+                        iconColor: Colors.lightBlue,
+                        title: 'Telegram',
+                        subtitle: '@safakmert',
+                        onTap: () => _openUrl('https://t.me/safakmert'),
+                      ),
+                    ],
                   ),
                   Divider(color: AppTheme.divider, height: 1),
                   // About section
-                  _SectionTitle(AppLocale.tr('about')),
-                  _SettingsTile(
+                  _CollapsibleSection(
+                    title: AppLocale.tr('about'),
                     icon: Icons.info_outline_rounded,
                     iconColor: AppTheme.textSecondary,
-                    title: 'Melodi',
-                    subtitle: '${AppLocale.tr('version')} ${AppConstants.appVersion}',
-                  ),
-                  _SettingsTile(
-                    icon: Icons.favorite_rounded,
-                    iconColor: AppTheme.favoriteColor,
-                    title: AppLocale.tr('credits'),
-                    subtitle: AppLocale.tr('open_source_licenses'),
-                    onTap: () => _showCredits(context),
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.info_outline_rounded,
+                        iconColor: AppTheme.textSecondary,
+                        title: 'Melodi',
+                        subtitle: '${AppLocale.tr('version')} ${AppConstants.appVersion}',
+                      ),
+                      _SettingsTile(
+                        icon: Icons.favorite_rounded,
+                        iconColor: AppTheme.favoriteColor,
+                        title: AppLocale.tr('credits'),
+                        subtitle: AppLocale.tr('open_source_licenses'),
+                        onTap: () => _showCredits(context),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 32),
                 ],
@@ -799,6 +847,65 @@ class _SectionTitle extends StatelessWidget {
           letterSpacing: 1.5,
         ),
       ),
+    );
+  }
+}
+
+class _CollapsibleSection extends StatefulWidget {
+  final String title;
+  final IconData icon;
+  final Color iconColor;
+  final List<Widget> children;
+
+  const _CollapsibleSection({
+    required this.title,
+    required this.icon,
+    required this.iconColor,
+    required this.children,
+  });
+
+  @override
+  State<_CollapsibleSection> createState() => _CollapsibleSectionState();
+}
+
+class _CollapsibleSectionState extends State<_CollapsibleSection> {
+  bool _isExpanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () => setState(() => _isExpanded = !_isExpanded),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+            child: Row(
+              children: [
+                Icon(widget.icon, size: 16, color: widget.iconColor),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    widget.title.toUpperCase(),
+                    style: TextStyle(
+                      color: AppTheme.textTertiary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+                Icon(
+                  _isExpanded ? Icons.expand_less : Icons.expand_more,
+                  size: 18,
+                  color: AppTheme.textTertiary,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_isExpanded) ...widget.children,
+      ],
     );
   }
 }

@@ -359,12 +359,12 @@ class _RecentlyAddedSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final display = recent.take(5).toList();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
           child: Text(
             AppLocale.tr('recently_played'),
             style: TextStyle(
@@ -606,8 +606,13 @@ class _ArtistsTab extends StatelessWidget {
             return ListTile(
               leading: CircleAvatar(
                 backgroundColor: AppTheme.card,
-                child: Icon(Icons.person_rounded,
-                    color: AppTheme.textTertiary.withValues(alpha: 0.7)),
+                backgroundImage: artist.image != null
+                    ? MemoryImage(artist.image!)
+                    : null,
+                child: artist.image == null
+                    ? Icon(Icons.person_rounded,
+                        color: AppTheme.textTertiary.withValues(alpha: 0.7))
+                    : null,
               ),
               title: Text(artist.name,
                   style: TextStyle(color: AppTheme.textPrimary)),
@@ -667,6 +672,35 @@ class _ArtistDetailScreen extends StatelessWidget {
 }
 
 class _GenresTab extends StatelessWidget {
+  String _genreEmoji(String name) {
+    final n = name.toLowerCase();
+    if (n.contains('rock')) return '🎸';
+    if (n.contains('pop')) return '🎤';
+    if (n.contains('jazz')) return '🎷';
+    if (n.contains('classical') || n.contains('klasik')) return '🎻';
+    if (n.contains('hip hop') || n.contains('rap')) return '🎧';
+    if (n.contains('rb') || n.contains('rhythm') || n.contains('blues')) return '🎵';
+    if (n.contains('country')) return '🤠';
+    if (n.contains('edm') || n.contains('electronic') || n.contains('dance') || n.contains('elektronik')) return '🎹';
+    if (n.contains('metal')) return '🤘';
+    if (n.contains('folk') || n.contains('halk')) return '🪕';
+    if (n.contains('reggae')) return '🏝️';
+    if (n.contains('latin') || n.contains('salsa')) return '💃';
+    if (n.contains('punk')) return '⚡';
+    if (n.contains('indie')) return '🎸';
+    if (n.contains('soul')) return '🎙️';
+    if (n.contains('funk')) return '🕺';
+    if (n.contains('ambient')) return '🌌';
+    if (n.contains('soundtrack') || n.contains('film') || n.contains('score')) return '🎬';
+    if (n.contains('blues')) return '🎸';
+    if (n.contains('reggaeton')) return '🎶';
+    if (n.contains('gospel') || n.contains('religious') || n.contains('ilahi')) return '⛪';
+    if (n.contains('children') || n.contains('çocuk')) return '🧒';
+    if (n.contains('comedy') || n.contains('komedi')) return '😂';
+    if (n.contains('spoken word') || n.contains('audiobook') || n.contains('sesli')) return '📖';
+    return '🎵';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<LibraryProvider>(
@@ -690,8 +724,7 @@ class _GenresTab extends StatelessWidget {
                   color: AppTheme.card,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.category_rounded,
-                    color: AppTheme.textSecondary),
+                child: Text(_genreEmoji(genre.name), style: TextStyle(fontSize: 22)),
               ),
               title: Text(genre.name,
                   style: TextStyle(color: AppTheme.textPrimary)),

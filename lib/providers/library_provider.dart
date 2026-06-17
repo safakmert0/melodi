@@ -96,6 +96,14 @@ class LibraryProvider extends ChangeNotifier {
   double get scanProgress => _scanProgress;
   int get songCount => _songs.length;
 
+  int get totalSongSizeBytes {
+    int total = 0;
+    for (final song in _songs) {
+      total += song.fileSize;
+    }
+    return total;
+  }
+
   Future<void> loadAll() async {
     _isLoading = true;
     _error = null;
@@ -236,9 +244,14 @@ class LibraryProvider extends ChangeNotifier {
     _artists = artistMap.entries.map((entry) {
       final songs = entry.value;
       final albumNames = songs.map((s) => s.album).toSet();
+      final firstSongWithArt = songs.cast<SongModel?>().firstWhere(
+        (s) => s!.albumArt != null,
+        orElse: () => null,
+      );
       return ArtistModel(
         id: entry.key,
         name: entry.key,
+        image: firstSongWithArt?.albumArt,
         albumCount: albumNames.length,
         songCount: songs.length,
         albumIds: [],

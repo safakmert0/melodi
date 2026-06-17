@@ -69,6 +69,22 @@ class PlaylistProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> addSongsToPlaylist(String playlistId, List<String> songIds) async {
+    final index = _playlists.indexWhere((p) => p.id == playlistId);
+    if (index == -1) return;
+
+    final playlist = _playlists[index];
+    final newSongIds = [...playlist.songIds];
+    for (final id in songIds) {
+      if (!newSongIds.contains(id)) {
+        newSongIds.add(id);
+      }
+    }
+    await _db.updatePlaylistSongs(playlistId, newSongIds);
+    _playlists[index] = playlist.copyWith(songIds: newSongIds);
+    notifyListeners();
+  }
+
   Future<void> removeSongFromPlaylist(String playlistId, String songId) async {
     final index = _playlists.indexWhere((p) => p.id == playlistId);
     if (index == -1) return;

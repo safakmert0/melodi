@@ -59,6 +59,9 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 color: AppTheme.textSecondary),
             onSelected: (value) async {
               switch (value) {
+                case 'add':
+                  _showAddSongsSheet(context);
+                  break;
                 case 'rename':
                   _showRenameDialog(context);
                   break;
@@ -69,12 +72,35 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
             },
             itemBuilder: (context) => [
               PopupMenuItem(
+                value: 'add',
+                child: Row(
+                  children: [
+                    Icon(Icons.playlist_add, size: 20, color: AppTheme.textSecondary),
+                    const SizedBox(width: 8),
+                    Text(AppLocale.tr('add_songs')),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
                 value: 'rename',
-                child: Text(AppLocale.tr('rename_playlist')),
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_outlined, size: 20, color: AppTheme.textSecondary),
+                    const SizedBox(width: 8),
+                    Text(AppLocale.tr('rename_playlist')),
+                  ],
+                ),
               ),
               PopupMenuItem(
                 value: 'delete',
-                child: Text(AppLocale.tr('delete_playlist')),
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline, size: 20, color: AppTheme.errorColor),
+                    const SizedBox(width: 8),
+                    Text(AppLocale.tr('delete_playlist'),
+                        style: TextStyle(color: AppTheme.errorColor)),
+                  ],
+                ),
               ),
             ],
           ),
@@ -115,17 +141,27 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                             height: 120,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12),
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  AppTheme.card,
-                                  AppTheme.cardHover,
-                                ],
-                              ),
+                              gradient: _songs.isNotEmpty && _songs.first.albumArt != null
+                                  ? null
+                                  : LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        AppTheme.card,
+                                        AppTheme.cardHover,
+                                      ],
+                                    ),
                             ),
-                            child: Icon(Icons.playlist_play_rounded,
-                                size: 48, color: AppTheme.primaryColor),
+                            child: _songs.isNotEmpty && _songs.first.albumArt != null
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.memory(
+                                      _songs.first.albumArt!,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  )
+                                : Icon(Icons.playlist_play_rounded,
+                                    size: 48, color: AppTheme.primaryColor),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -337,6 +373,119 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showAddSongsSheet(BuildContext context) {
+    final library = context.read<LibraryProvider>();
+    final playlistProvider = context.read<PlaylistProvider>();
+    final existingIds = widget.playlist.songIds.toSet();
+    final available = library.songs.where((s) => !existingIds.contains(s.id)).toList();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        final selected = <String>{};
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return SizedBox(
+              height: MediaQuery.of(ctx).size.height * 0.75,
+              child: Column(
+                children: [
+                  Container(
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(
+                      color: AppTheme.divider,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        Text(AppLocale.tr('add_songs'),
+                            style: TextStyle(
+                                color: AppTheme.textPrimary,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold)),
+                        const Spacer(),
+                        if (selected.isNotEmpty)
+                          TextButton(
+                            onPressed: () {
+                              final songIds = selected.toList();
+                              playlistProvider.addSongsToPlaylist(
+                                  widget.playlist.id, songIds);
+                              setState(() => _songs.addAll(
+                                  available.where((s) => selected.contains(s.id))));
+                              Navigator.pop(ctx);
+                            },
+                            child: Text(
+                              '${AppLocale.tr('add')} (${selected.length})',
+                              style: TextStyle(color: AppTheme.primaryColor),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Divider(color: AppTheme.divider, height: 1),
+                  Expanded(
+                    child: available.isEmpty
+                        ? Center(
+                            child: Text(AppLocale.tr('all_songs_added'),
+                                style: TextStyle(color: AppTheme.textSecondary)))
+                        : ListView.builder(
+                            itemCount: available.length,
+                            itemBuilder: (context, index) {
+                              final song = available[index];
+                              final isSelected = selected.contains(song.id);
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  radius: 20,
+                                  backgroundImage: song.albumArt != null
+                                      ? MemoryImage(song.albumArt!)
+                                      : null,
+                                  child: song.albumArt == null
+                                      ? Icon(Icons.music_note_rounded,
+                                          color: AppTheme.textTertiary, size: 20)
+                                      : null,
+                                ),
+                                title: Text(song.title,
+                                    style: TextStyle(color: AppTheme.textPrimary)),
+                                subtitle: Text(song.artist,
+                                    style: TextStyle(color: AppTheme.textSecondary)),
+                                trailing: Icon(
+                                  isSelected
+                                      ? Icons.check_circle
+                                      : Icons.circle_outlined,
+                                  color: isSelected
+                                      ? AppTheme.primaryColor
+                                      : AppTheme.textTertiary,
+                                ),
+                                onTap: () {
+                                  setSheetState(() {
+                                    if (isSelected) {
+                                      selected.remove(song.id);
+                                    } else {
+                                      selected.add(song.id);
+                                    }
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

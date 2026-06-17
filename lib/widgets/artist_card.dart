@@ -28,11 +28,16 @@ class ArtistCard extends StatelessWidget {
               child: CircleAvatar(
                 radius: 58,
                 backgroundColor: AppTheme.cardHover,
-                child: Icon(
-                  Icons.person_rounded,
-                  size: 48,
-                  color: AppTheme.textTertiary.withValues(alpha: 0.5),
-                ),
+                backgroundImage: artist.image != null
+                    ? MemoryImage(artist.image!)
+                    : null,
+                child: artist.image == null
+                    ? Icon(
+                        Icons.person_rounded,
+                        size: 48,
+                        color: AppTheme.textTertiary.withValues(alpha: 0.5),
+                      )
+                    : null,
               ),
             ),
             const SizedBox(height: 8),

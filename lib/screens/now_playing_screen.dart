@@ -149,7 +149,13 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 
         final hasArt = song.albumArt != null && song.albumArt!.isNotEmpty;
 
-        return Scaffold(
+        return GestureDetector(
+          onVerticalDragEnd: (details) {
+            if (details.primaryVelocity != null && details.primaryVelocity! > 500) {
+              Navigator.pop(context);
+            }
+          },
+          child: Scaffold(
           extendBodyBehindAppBar: true,
           backgroundColor: AppTheme.background,
           appBar: AppBar(
@@ -215,40 +221,6 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                 child: Column(
                   children: [
                     const SizedBox(height: 8),
-                    // Album Art - centered with glow
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 48),
-                        child: Center(
-                          child: AspectRatio(
-                            aspectRatio: 1,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(24),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: _dynamicColor.withValues(alpha: 0.4),
-                                    blurRadius: 60,
-                                    offset: const Offset(0, 20),
-                                  ),
-                                ],
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(24),
-                                child: hasArt
-                                    ? Image.memory(
-                                        song.albumArt!,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => _buildArtFallback(),
-                                      )
-                                    : _buildArtFallback(),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
                     // Song Title + Artist + Favorite
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -297,14 +269,43 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    // Lyrics
+                    // Lyrics (between title and album art)
                     if (song.lyrics != null &&
                         song.lyrics!.isNotEmpty &&
                         _showLyrics)
-                      _buildLyricsView(song.lyrics!, player)
-                    else
-                      const SizedBox(height: 16),
+                      Expanded(
+                        child: _buildLyricsView(song.lyrics!, player),
+                      ),
+                    // Album Art
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 64),
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: _dynamicColor.withValues(alpha: 0.4),
+                                blurRadius: 40,
+                                offset: const Offset(0, 12),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: hasArt
+                                ? Image.memory(
+                                    song.albumArt!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => _buildArtFallback(),
+                                  )
+                                : _buildArtFallback(),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     // Seek Bar
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -314,30 +315,6 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         bufferedPosition: player.handler.bufferedPosition,
                         onSeek: player.seek,
                         activeColor: _dynamicColor,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    // Time labels
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            player.position.toFormattedString(),
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 11,
-                            ),
-                          ),
-                          Text(
-                            player.duration.toFormattedString(),
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -393,20 +370,37 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    // Repeat mode indicator
-                    if (player.repeatMode != LoopStyle.off)
-                      Center(
-                        child: Text(
-                          player.repeatMode == LoopStyle.all
-                              ? AppLocale.tr('repeat_all')
-                              : AppLocale.tr('repeat_one'),
-                          style: TextStyle(
-                            color: _dynamicColor,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+                    // Mode indicators
+                    Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (player.isShuffled)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: Text(
+                                AppLocale.tr('shuffled'),
+                                style: TextStyle(
+                                  color: _dynamicColor,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          if (player.repeatMode != LoopStyle.off)
+                            Text(
+                              player.repeatMode == LoopStyle.all
+                                  ? AppLocale.tr('repeat_all')
+                                  : AppLocale.tr('repeat_one'),
+                              style: TextStyle(
+                                color: _dynamicColor,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                        ],
                       ),
+                    ),
                     const SizedBox(height: 8),
                     // Bottom row
                     Padding(
@@ -471,7 +465,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               ),
             ],
           ),
-        );
+        ),
+      );
       },
     );
   }
@@ -705,17 +700,13 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             ...durations.map((minutes) {
-              final label = '$minutes ${AppLocale.tr('seconds')}';
+              final label = minutes >= 60
+                  ? '${minutes ~/ 60} ${AppLocale.tr('hr')} ${minutes % 60} ${AppLocale.tr('min')}'
+                  : '$minutes ${AppLocale.tr('min')}';
               return ListTile(
                 leading: Icon(Icons.timer_outlined, color: AppTheme.textSecondary),
                 title: Text(label,
                     style: TextStyle(color: AppTheme.textPrimary)),
-                subtitle: Text(
-                  minutes >= 60
-                      ? '${minutes ~/ 60} ${AppLocale.tr('hr')} ${minutes % 60} ${AppLocale.tr('min')}'
-                      : '$minutes ${AppLocale.tr('min')}',
-                  style: TextStyle(color: AppTheme.textTertiary, fontSize: 12),
-                ),
                 onTap: () {
                   final timerDuration = Duration(minutes: minutes);
                   player.handler.setSleepTimer(timerDuration);

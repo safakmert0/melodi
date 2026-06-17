@@ -191,7 +191,12 @@ class DatabaseService {
     final db = await database;
     final maps = await db.query('songs', where: 'id = ?', whereArgs: [id]);
     if (maps.isEmpty) return null;
-    return SongModel.fromMap(maps.first);
+    final song = SongModel.fromMap(maps.first);
+    final art = await getCachedAlbumArt(id);
+    if (art != null) {
+      return song.copyWith(albumArt: art);
+    }
+    return song;
   }
 
   Future<SongModel?> getSongByPath(String path) async {

@@ -142,11 +142,17 @@ class MelodiApp extends StatelessWidget {
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
+          final pageTransitions = PageTransitionsTheme(
+            builders: {
+              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+            },
+          );
           return MaterialApp(
             title: 'Melodi',
             debugShowCheckedModeBanner: false,
-            theme: themeProvider.lightTheme,
-            darkTheme: themeProvider.darkTheme,
+            theme: themeProvider.lightTheme.copyWith(pageTransitionsTheme: pageTransitions),
+            darkTheme: themeProvider.darkTheme.copyWith(pageTransitionsTheme: pageTransitions),
             themeMode: themeProvider.themeMode,
             home: const HomeScreen(),
             localizationsDelegates: const [

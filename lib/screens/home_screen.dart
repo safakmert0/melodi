@@ -391,6 +391,9 @@ class _HomeTab extends StatelessWidget {
                 return PlaylistCard(
                   playlist: playlist,
                   onTap: () => _navigateToPlaylist(context, playlist),
+                  onEdit: () => _showRenamePlaylistDialog(context, playlist),
+                  onDelete: () => _confirmDeletePlaylist(context, playlist),
+                  onAddSongs: () => _navigateToPlaylist(context, playlist),
                 );
               },
             ),
@@ -562,6 +565,79 @@ class _HomeTab extends StatelessWidget {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => PlaylistDetailScreen(playlist: playlist),
+      ),
+    );
+  }
+
+  void _showRenamePlaylistDialog(BuildContext context, PlaylistModel playlist) {
+    final controller = TextEditingController(text: playlist.name);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: Text(AppLocale.tr('rename_playlist'),
+            style: TextStyle(color: AppTheme.textPrimary)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: TextStyle(color: AppTheme.textPrimary),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: AppTheme.card,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(AppLocale.tr('cancel'),
+                style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () {
+              final newName = controller.text.trim();
+              if (newName.isNotEmpty) {
+                context.read<PlaylistProvider>().renamePlaylist(playlist.id, newName);
+              }
+              Navigator.pop(ctx);
+            },
+            child: Text(AppLocale.tr('rename'),
+                style: TextStyle(color: AppTheme.primaryColor)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeletePlaylist(BuildContext context, PlaylistModel playlist) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: Text(AppLocale.tr('delete_playlist'),
+            style: TextStyle(color: AppTheme.textPrimary)),
+        content: Text(
+          '${AppLocale.tr('delete_playlist_warning')} "${playlist.name}"?',
+          style: TextStyle(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(AppLocale.tr('cancel'),
+                style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () {
+              context.read<PlaylistProvider>().deletePlaylist(playlist.id);
+              Navigator.pop(ctx);
+            },
+            child: Text(AppLocale.tr('delete'),
+                style: TextStyle(color: AppTheme.errorColor)),
+          ),
+        ],
       ),
     );
   }
