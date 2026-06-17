@@ -136,8 +136,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                 song.title,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: AppTheme.textPrimary,
+                                style: TextStyle(
+              color: AppTheme.textPrimary,
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -147,8 +147,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                 song.artist,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: AppTheme.textSecondary,
+                                style: TextStyle(
+              color: AppTheme.textSecondary,
                                   fontSize: 15,
                                 ),
                               ),
@@ -201,15 +201,15 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                       children: [
                         Text(
                           player.position.toFormattedString(),
-                          style: const TextStyle(
-                            color: AppTheme.textTertiary,
+                          style: TextStyle(
+              color: AppTheme.textTertiary,
                             fontSize: 11,
                           ),
                         ),
                         Text(
                           player.duration.toFormattedString(),
-                          style: const TextStyle(
-                            color: AppTheme.textTertiary,
+                          style: TextStyle(
+              color: AppTheme.textTertiary,
                             fontSize: 11,
                           ),
                         ),
@@ -234,8 +234,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                           onPressed: player.toggleShuffle,
                         ),
                         IconButton(
-                          icon: const Icon(Icons.skip_previous_rounded,
-                              color: AppTheme.textPrimary, size: 32),
+                          icon: Icon(Icons.skip_previous_rounded, color: AppTheme.textPrimary, size: 32),
                           onPressed: player.skipToPrevious,
                         ),
                         Container(
@@ -257,8 +256,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.skip_next_rounded,
-                              color: AppTheme.textPrimary, size: 32),
+                          icon: Icon(Icons.skip_next_rounded, color: AppTheme.textPrimary, size: 32),
                           onPressed: player.skipToNext,
                         ),
                         IconButton(
@@ -282,8 +280,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         player.repeatMode == LoopStyle.all
                             ? AppLocale.tr('repeat_all')
                             : AppLocale.tr('repeat_one'),
-                        style: const TextStyle(
-                          color: AppTheme.primaryColor,
+                        style: TextStyle(
+              color: AppTheme.primaryColor,
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
                         ),
@@ -317,8 +315,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               },
                             ),
                             IconButton(
-                              icon: const Icon(Icons.queue_music_rounded,
-                                  color: AppTheme.textSecondary, size: 22),
+                              icon: Icon(Icons.queue_music_rounded, color: AppTheme.textSecondary, size: 22),
                               onPressed: () => _showQueue(context),
                             ),
                           ],
@@ -337,8 +334,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Row(
                         children: [
-                          const Icon(Icons.volume_down_rounded,
-                              color: AppTheme.textTertiary, size: 16),
+                          Icon(Icons.volume_down_rounded, color: AppTheme.textTertiary, size: 16),
                           Expanded(
                             child: Slider(
                               value: player.volumeBoost.clamp(0.5, 2.0),
@@ -349,8 +345,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               inactiveColor: AppTheme.divider,
                             ),
                           ),
-                          const Icon(Icons.volume_up_rounded,
-                              color: AppTheme.textTertiary, size: 16),
+                          Icon(Icons.volume_up_rounded, color: AppTheme.textTertiary, size: 16),
                         ],
                       ),
                     ),
@@ -435,8 +430,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppTheme.textPrimary,
+                style: TextStyle(
+              color: AppTheme.textPrimary,
                   fontSize: 17,
                   fontWeight: FontWeight.w600,
                 ),
@@ -450,8 +445,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppTheme.textTertiary,
+              style: TextStyle(
+              color: AppTheme.textTertiary,
                 fontSize: 14,
               ),
             ),
@@ -550,7 +545,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.check_circle, color: AppTheme.primaryColor, size: 48),
+                Icon(Icons.check_circle, color: AppTheme.primaryColor, size: 48),
                 const SizedBox(height: 16),
                 Text(AppLocale.tr('share'),
                     style: TextStyle(
@@ -585,12 +580,6 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       ),
     );
   }
-}
-
-class _LyricsLine {
-  final Duration timestamp;
-  final String text;
-  const _LyricsLine({required this.timestamp, required this.text});
 }
 
   void _showSleepTimer(BuildContext context, PlayerProvider player) {
@@ -641,7 +630,7 @@ class _LyricsLine {
               );
             }),
             ListTile(
-              leading: const Icon(Icons.close, color: AppTheme.errorColor),
+              leading: Icon(Icons.close, color: AppTheme.errorColor),
               title: Text(AppLocale.tr('off'),
                   style: TextStyle(color: AppTheme.errorColor)),
               onTap: () {
@@ -741,6 +730,12 @@ class _LyricsLine {
       builder: (context) => const QueueSheet(),
     );
   }
+}
+
+class _LyricsLine {
+  final Duration timestamp;
+  final String text;
+  const _LyricsLine({required this.timestamp, required this.text});
 }
 
 class _SpeedButton extends StatelessWidget {
