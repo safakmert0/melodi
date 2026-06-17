@@ -401,41 +401,86 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     );
   }
 
-  String _stripLrcTimestamp(String line) {
-    return line.replaceAll(RegExp(r'^\[\d{2}:\d{2}(\.\d{2,3})?\]\s*'), '');
+  List<_LyricsLine> _parseLrc(String lyrics) {
+    final lrcRegex = RegExp(r'^\[(\d{2}):(\d{2})\.(\d{2,3})\]\s*(.*)');
+    final lines = lyrics.split('\n');
+    final result = <_LyricsLine>[];
+    for (final line in lines) {
+      final match = lrcRegex.firstMatch(line.trim());
+      if (match != null) {
+        final minutes = int.parse(match.group(1)!);
+        final seconds = int.parse(match.group(2)!);
+        final millis = int.parse(match.group(3)!.padRight(3, '0'));
+        final text = match.group(4)!.trim();
+        result.add(_LyricsLine(
+          timestamp: Duration(
+              milliseconds: minutes * 60000 + seconds * 1000 + millis),
+          text: text,
+        ));
+      }
+    }
+    return result;
   }
 
   Widget _buildLyricsView(String lyrics, PlayerProvider player) {
+    final parsed = _parseLrc(lyrics);
+    final hasTimestamps = parsed.isNotEmpty;
     final lines = lyrics.split('\n');
     final positionMs = player.position.inMilliseconds;
-    final totalMs = player.duration.inMilliseconds;
-    final progress = totalMs > 0 ? positionMs / totalMs : 0.0;
-    final currentLineIndex = (progress * lines.length).clamp(0, lines.length - 1).toInt();
 
-    return SizedBox(
-      height: 80,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              currentLineIndex < lines.length
-                  ? _stripLrcTimestamp(lines[currentLineIndex])
-                  : '',
-              maxLines: 1,
+    String currentText = '';
+    String nextText = '';
+    if (hasTimestamps) {
+      int currentIndex = -1;
+      for (int i = 0; i < parsed.length; i++) {
+        if (parsed[i].timestamp.inMilliseconds <= positionMs) {
+          currentIndex = i;
+        } else {
+          break;
+        }
+      }
+      if (currentIndex >= 0) {
+        currentText = parsed[currentIndex].text;
+        if (currentIndex + 1 < parsed.length) {
+          nextText = parsed[currentIndex + 1].text;
+        }
+      }
+    } else {
+      final totalMs = player.duration.inMilliseconds;
+      final progress = totalMs > 0 ? positionMs / totalMs : 0.0;
+      final currentLineIndex =
+          (progress * lines.length).clamp(0, lines.length - 1).toInt();
+      currentText = lines[currentLineIndex].trim();
+      if (currentLineIndex + 1 < lines.length) {
+        nextText = lines[currentLineIndex + 1].trim();
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AnimatedOpacity(
+            opacity: currentText.isNotEmpty ? 1.0 : 0.3,
+            duration: const Duration(milliseconds: 300),
+            child: Text(
+              currentText.isNotEmpty ? currentText : '♪',
+              textAlign: TextAlign.center,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: AppTheme.textPrimary,
-                fontSize: 18,
+                fontSize: 17,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 4),
+          ),
+          if (nextText.isNotEmpty) ...[
+            const SizedBox(height: 6),
             Text(
-              currentLineIndex + 1 < lines.length
-                  ? _stripLrcTimestamp(lines[currentLineIndex + 1])
-                  : '',
+              nextText,
+              textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -444,7 +489,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               ),
             ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -570,10 +615,16 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               ],
             ),
           ),
-        ),
-      );
-    }
+      ),
+    );
   }
+}
+
+class _LyricsLine {
+  final Duration timestamp;
+  final String text;
+  const _LyricsLine({required this.timestamp, required this.text});
+}
 
   void _showSleepTimer(BuildContext context, PlayerProvider player) {
     final durations = [

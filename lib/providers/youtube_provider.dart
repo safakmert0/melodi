@@ -44,6 +44,20 @@ class YouTubeProvider extends ChangeNotifier {
     return await _service.getAudioUrl(videoId);
   }
 
+  Future<String?> playAudio(String videoId, String title) async {
+    _isDownloading = true;
+    _downloadProgress = '${AppLocale.tr('loading_song')} $title';
+    notifyListeners();
+
+    final path = await _service.playAudio(videoId, title);
+
+    _isDownloading = false;
+    _downloadProgress = path != null ? AppLocale.tr('loading_song') : AppLocale.tr('download_failed');
+    notifyListeners();
+
+    return path;
+  }
+
   Future<String?> downloadAudio(String videoId, String title) async {
     _isDownloading = true;
     _downloadProgress = '${AppLocale.tr('downloading')} $title';

@@ -266,27 +266,36 @@ class _SearchScreenState extends State<SearchScreen> {
             return _YouTubeResultTile(
               video: video,
               onTap: () async {
-                final url = await ytProvider.getAudioUrl(video.id);
-                if (url != null && context.mounted) {
+                final path = await ytProvider.playAudio(video.id, video.title);
+                if (path != null && context.mounted) {
                   final song = SongModel(
                     id: 'yt_${video.id}',
                     title: video.title,
                     artist: video.author,
                     album: 'YouTube',
                     duration: video.duration,
-                    filePath: url,
+                    filePath: path,
                     fileSize: 0,
                   );
                   context.read<PlayerProvider>().playSong(song);
+                } else if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(AppLocale.tr('download_failed')),
+                      backgroundColor: AppTheme.errorColor,
+                    ),
+                  );
                 }
               },
               onDownload: () async {
                 final path = await ytProvider.downloadAudio(video.id, video.title);
-                if (path != null && context.mounted) {
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('${AppLocale.tr('download_complete')}: ${video.title}'),
-                      backgroundColor: AppTheme.primaryColor,
+                      content: Text(path != null
+                          ? '${AppLocale.tr('download_complete')}: ${video.title}'
+                          : AppLocale.tr('download_failed')),
+                      backgroundColor: path != null ? AppTheme.primaryColor : AppTheme.errorColor,
                     ),
                   );
                 }

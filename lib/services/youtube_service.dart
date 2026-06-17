@@ -61,9 +61,73 @@ class YouTubeService {
     }
   }
 
+  Future<String?> _downloadTo(String videoId, String title, Directory dir,
+      {String ext = '.mp4'}) async {
+    final sanitized = title.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
+    final filePath = p.join(dir.path, '${sanitized}_$videoId$ext');
+
+    final manifest = await _yt.videos.streams
+        .getManifest(videoId, requireWatchPage: false);
+    final audioStreams = manifest.audioOnly;
+    if (audioStreams.isEmpty) return null;
+    final sorted = List<AudioOnlyStreamInfo>.from(audioStreams)
+      ..sort((a, b) => b.bitrate.bitsPerSecond.compareTo(a.bitrate.bitsPerSecond));
+    final bestAudio = sorted.first;
+
+    final stream = _yt.videos.streams.get(bestAudio);
+    final file = File(filePath);
+    final sink = file.openWrite();
+    await sink.addStream(stream);
+    await sink.close();
+    return filePath;
+  }
+
+  Future<String?> getAudioUrl(String videoId) async {
+    try {
+      final manifest = await _yt.videos.streams
+          .getManifest(videoId, requireWatchPage: false);
+      final audioStreams = manifest.audioOnly;
+      if (audioStreams.isEmpty) return null;
+      final sorted = List<AudioOnlyStreamInfo>.from(audioStreams)
+        ..sort((a, b) => b.bitrate.bitsPerSecond.compareTo(a.bitrate.bitsPerSecond));
+      return sorted.first.url.toString();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<String?> playAudio(String videoId, String title) async {
+    try {
+      // Try streaming via URL first
+      final url = await getAudioUrl(videoId);
+      if (url != null) return url;
+
+      // Fallback: download to temp file
+      final dir = await getTemporaryDirectory();
+      return await _downloadTo(videoId, title, dir);
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<String?> downloadAudio(String videoId, String title) async {
     try {
-      final manifest = await _yt.videos.streams.getManifest(videoId);
+      final dir = await getApplicationDocumentsDirectory();
+      return await _downloadTo(videoId, title, dir);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<String?> downloadAudio(String videoId, String title) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final sanitized = title.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
+      final ext = '.mp4';
+      final filePath = p.join(dir.path, '$sanitized$ext');
+
+      final manifest = await _yt.videos.streams.getManifest(videoId,
+          requireWatchPage: false);
       final audioStreams = manifest.audioOnly;
       if (audioStreams.isEmpty) return null;
       final sorted = List<AudioOnlyStreamInfo>.from(audioStreams)
@@ -71,11 +135,7 @@ class YouTubeService {
       final bestAudio = sorted.isNotEmpty ? sorted.first : null;
       if (bestAudio == null) return null;
 
-      final dir = await getApplicationDocumentsDirectory();
-      final sanitized = title.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
-      final filePath = p.join(dir.path, '${sanitized}.mp4');
-
-      final stream = await _yt.videos.streams.get(bestAudio);
+      final stream = _yt.videos.streams.get(bestAudio);
       final file = File(filePath);
       final sink = file.openWrite();
       await sink.addStream(stream);
