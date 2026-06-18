@@ -1876,6 +1876,44 @@ class _EqualizerPageState extends State<_EqualizerPage> {
     'voice': [-4.0, -2.0, 6.0, -2.0, -4.0],
   };
 
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final db = DatabaseService.instance;
+    final enabled = await db.getSetting('eq_enabled');
+    final gains = await db.getSetting('eq_gains');
+    final preset = await db.getSetting('eq_preset');
+    if (mounted) {
+      setState(() {
+        _enabled = enabled == 'true';
+        _activePreset = preset ?? 'flat';
+        if (gains != null) {
+          final parts = gains.split(',');
+          for (int i = 0; i < 5 && i < parts.length; i++) {
+            _gains[i] = double.tryParse(parts[i]) ?? 0;
+          }
+        }
+      });
+    }
+  }
+
+  Future<void> _saveAndApply() async {
+    final db = DatabaseService.instance;
+    await db.setSetting('eq_enabled', _enabled.toString());
+    await db.setSetting('eq_gains', _gains.map((g) => g.toStringAsFixed(1)).join(','));
+    await db.setSetting('eq_preset', _activePreset);
+
+    final handler = context.read<PlayerProvider>().handler;
+    await handler.setEqualizerEnabled(_enabled);
+    if (_enabled) {
+      await handler.setEqualizerBands(_gains);
+    }
+  }
+
   void _applyPreset(String id) {
     setState(() {
       _activePreset = id;
@@ -1885,6 +1923,7 @@ class _EqualizerPageState extends State<_EqualizerPage> {
       }
       _bassBoost = id == 'bass_boost' ? 8.0 : 0.0;
     });
+    _saveAndApply();
   }
 
   @override
@@ -1908,7 +1947,10 @@ class _EqualizerPageState extends State<_EqualizerPage> {
               const Spacer(),
               Switch(
                 value: _enabled,
-                onChanged: (v) => setState(() => _enabled = v),
+                onChanged: (v) {
+                  setState(() => _enabled = v);
+                  _saveAndApply();
+                },
                 activeColor: AppTheme.primaryColor,
               ),
             ],
@@ -1955,6 +1997,7 @@ class _EqualizerPageState extends State<_EqualizerPage> {
                               _gains[i] = (v * 24) - 12;
                               _activePreset = 'custom';
                             });
+                            _saveAndApply();
                           } : null,
                           activeColor: AppTheme.primaryColor,
                           inactiveColor: AppTheme.textTertiary,
@@ -2003,16 +2046,22 @@ class _EqualizerPageState extends State<_EqualizerPage> {
 
           // Bass Boost
           if (_enabled) ...[
-            _buildSlider('Bass Boost', _bassBoost, 0, 15, (v) => setState(() {
-              _bassBoost = v;
-              if (_activePreset != 'bass_boost') _activePreset = 'custom';
-            })),
+            _buildSlider('Bass Boost', _bassBoost, 0, 15, (v) {
+              setState(() {
+                _bassBoost = v;
+                if (_activePreset != 'bass_boost') _activePreset = 'custom';
+              });
+              _saveAndApply();
+            }),
             const SizedBox(height: 16),
           ],
 
           // Pre-amp
           if (_enabled) ...[
-            _buildSlider('Pre-amp', _preamp, -12, 12, (v) => setState(() => _preamp = v)),
+            _buildSlider('Pre-amp', _preamp, -12, 12, (v) {
+              setState(() => _preamp = v);
+              _saveAndApply();
+            }),
           ],
         ],
       ),

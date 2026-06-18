@@ -494,6 +494,28 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
   }
 
+  Future<void> setEqualizerEnabled(bool enabled) async {
+    try {
+      await _player.setEqualizerEnabled(enabled);
+    } catch (e) {
+      debugPrint('Equalizer enable not supported: $e');
+    }
+  }
+
+  Future<void> setEqualizerBand(int index, double gainDb) async {
+    try {
+      await _player.setEqualizerBandLevel(index, gainDb / 12.0);
+    } catch (e) {
+      debugPrint('Equalizer band not supported: $e');
+    }
+  }
+
+  Future<void> setEqualizerBands(List<double> gainsDb) async {
+    for (int i = 0; i < gainsDb.length; i++) {
+      await setEqualizerBand(i, gainsDb[i]);
+    }
+  }
+
   void dispose() {
     _player.dispose();
   }

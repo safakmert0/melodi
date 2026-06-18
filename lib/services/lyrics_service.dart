@@ -93,12 +93,50 @@ class LyricsService {
 
   static final List<int> _durationLadder = [0, -1, 1, -2, 2, -3, 3, -4, 4, -5, 5];
 
+  static String _sidecarPath(String audioPath) {
+    final dot = audioPath.lastIndexOf('.');
+    final base = dot >= 0 ? audioPath.substring(0, dot) : audioPath;
+    return '$base.lrc';
+  }
+
+  static Future<LyricsResult?> _readSidecar(String audioPath) async {
+    try {
+      final file = File(_sidecarPath(audioPath));
+      if (!await file.exists()) return null;
+      final content = await file.readAsString();
+      if (content.trim().isEmpty) return null;
+      if (RegExp(r'\[\d+:\d+\.\d+\]').hasMatch(content)) {
+        return LyricsResult(syncedLrc: content, source: 'sidecar');
+      }
+      return LyricsResult(plainText: content, source: 'sidecar');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> _writeSidecar(String audioPath, LyricsResult result) async {
+    try {
+      final content = result.syncedLrc ?? result.plainText;
+      if (content == null || content.isEmpty) return;
+      final file = File(_sidecarPath(audioPath));
+      await file.writeAsString(content);
+    } catch (e) {
+      debugPrint('Failed to write sidecar: $e');
+    }
+  }
+
   static Future<LyricsResult?> fetchLyrics({
     required String artist,
     required String track,
     String? album,
     int? durationMs,
+    String? filePath,
   }) async {
+    if (filePath != null) {
+      final sidecar = await _readSidecar(filePath);
+      if (sidecar != null) return sidecar;
+    }
+
     final songId = '${artist}_${track}_${album ?? ''}';
 
     final cached = await _getCachedLyrics(songId);
@@ -108,6 +146,9 @@ class LyricsService {
 
     if (result != null) {
       await _cacheLyrics(songId, result);
+      if (filePath != null) {
+        await _writeSidecar(filePath, result);
+      }
     }
 
     return result;

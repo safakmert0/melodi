@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import '../services/database_service.dart';
 import '../services/spotify_service.dart';
+import '../services/string_similarity.dart';
+import '../models/song_model.dart';
 
 class SpotifyProvider extends ChangeNotifier {
   final SpotifyService _service = SpotifyService();
@@ -12,6 +14,7 @@ class SpotifyProvider extends ChangeNotifier {
   bool _isImportingPlaylists = false;
   bool _isImportingLikedSongs = false;
   String? _error;
+  final Map<String, String> _matchedTrackIds = {};
 
   SpotifyService get service => _service;
   bool get isConnected => _service.isConnected;
@@ -22,6 +25,7 @@ class SpotifyProvider extends ChangeNotifier {
   bool get isImportingPlaylists => _isImportingPlaylists;
   bool get isImportingLikedSongs => _isImportingLikedSongs;
   String? get error => _error;
+  Map<String, String> get matchedTrackIds => Map.unmodifiable(_matchedTrackIds);
 
   Future<void> init() async {
     final db = DatabaseService.instance;
@@ -37,6 +41,7 @@ class SpotifyProvider extends ChangeNotifier {
         await db.setSetting('spotify_sp_dc', '');
       }
     }
+    await _loadMatches();
   }
 
   Future<bool> connectWithCookie(String spDc) async {
@@ -70,6 +75,26 @@ class SpotifyProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> _saveMatches() async {
+    final db = DatabaseService.instance;
+    await db.setSetting('spotify_matches', _matchedTrackIds.entries
+        .map((e) => '${e.key}=${e.value}')
+        .join(','));
+  }
+
+  Future<void> _loadMatches() async {
+    final db = DatabaseService.instance;
+    final raw = await db.getSetting('spotify_matches');
+    if (raw != null && raw.isNotEmpty) {
+      for (final entry in raw.split(',')) {
+        final parts = entry.split('=');
+        if (parts.length == 2) {
+          _matchedTrackIds[parts[0]] = parts[1];
+        }
+      }
+    }
+  }
+
   Future<void> disconnect() async {
     _spDc = null;
     _username = null;
@@ -79,8 +104,34 @@ class SpotifyProvider extends ChangeNotifier {
 
     final db = DatabaseService.instance;
     await db.setSetting('spotify_sp_dc', '');
+    await db.setSetting('spotify_matches', '');
 
     notifyListeners();
+  }
+
+  Map<String, String> matchTracks(List<SpotifyTrackItem> spotifyTracks, List<SongModel> localSongs) {
+    final matches = <String, String>{};
+    for (final st in spotifyTracks) {
+      double bestScore = 0.5;
+      String? bestMatch;
+      for (final ls in localSongs) {
+        final score = TrackMatcher.scoreWithDuration(
+          st.name, st.artists.join(' '), st.durationMs,
+          ls.title, ls.artist, ls.duration.inMilliseconds,
+        );
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = ls.id;
+        }
+      }
+      if (bestMatch != null) {
+        matches[st.id] = bestMatch;
+      }
+    }
+    _matchedTrackIds.addAll(matches);
+    _saveMatches();
+    notifyListeners();
+    return matches;
   }
 
   Future<List<SpotifyPlaylistItem>> importPlaylists() async {

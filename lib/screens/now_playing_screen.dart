@@ -143,6 +143,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       track: song.title,
       album: song.album,
       durationMs: song.duration.inMilliseconds,
+      filePath: song.filePath,
     );
     if (result != null && mounted) {
       _lyricsResult = result;
