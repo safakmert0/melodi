@@ -41,7 +41,7 @@ class _SpotifyWebViewLoginState extends State<SpotifyWebViewLogin> {
   Future<void> _checkCookies() async {
     if (_found) return;
     try {
-      final cookies = await WebViewCookieManager().getCookies(domain: 'spotify.com');
+      final cookies = await WebViewCookieManager().getCookies(domain: Uri.parse('https://open.spotify.com'));
       for (final c in cookies) {
         if (c.name == 'sp_dc' && c.value.isNotEmpty && c.value.length > 10) {
           _found = true;
