@@ -293,7 +293,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                     // Album Art - centered with glow (fixed size)
                     Padding(
                       padding: EdgeInsets.symmetric(
-                        horizontal: MediaQuery.of(context).size.width > 400 ? 64 : 48,
+                        horizontal: MediaQuery.of(context).size.width > 400 ? 56 : 40,
                       ),
                       child: AspectRatio(
                         aspectRatio: 1,
@@ -321,12 +321,29 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         ),
                       ),
                     ),
-                    // Lyrics (between album art and song name)
-                    if (_showLyrics)
-                      Expanded(
-                        child: _buildLyricsView(player),
-                      ),
-                    const SizedBox(height: 8),
+                    // Lyrics preview (2 lines, always visible when available)
+                    if (_lyricsLines.isNotEmpty || _lyricsResult?.plainText != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                        child: GestureDetector(
+                          onTap: _showLyrics
+                              ? null
+                              : () {
+                                  if (song.lyrics != null && song.lyrics!.isNotEmpty) {
+                                    setState(() => _showLyrics = true);
+                                  }
+                                },
+                          child: _buildLyricsPreview(),
+                        ),
+                      )
+                    else
+                      const SizedBox(height: 8),
+                    // Lyrics full view (always takes space when toggled)
+                    Expanded(
+                      child: _showLyrics
+                          ? _buildLyricsView(player)
+                          : const SizedBox.shrink(),
+                    ),
                     // Song Title + Artist + Favorite
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -540,6 +557,39 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     );
   }
 
+  Widget _buildLyricsPreview() {
+    final previewLines = <String>[];
+    if (_lyricsLines.isNotEmpty) {
+      final start = _currentLineIndex > 0 ? _currentLineIndex - 1 : 0;
+      for (int i = start; i < _lyricsLines.length && previewLines.length < 2; i++) {
+        previewLines.add(_lyricsLines[i].text);
+      }
+    } else if (_lyricsResult?.plainText != null) {
+      final lines = _lyricsResult!.plainText!.split('\n').where((l) => l.trim().isNotEmpty).toList();
+      for (int i = 0; i < lines.length && previewLines.length < 2; i++) {
+        previewLines.add(lines[i].trim());
+      }
+    }
+    if (previewLines.isEmpty) return const SizedBox.shrink();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: previewLines.map((line) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Text(
+          line,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+      )).toList(),
+    );
+  }
+
   Widget _buildLyricsView(PlayerProvider player) {
     final state = _lyricsViewState();
 
@@ -616,7 +666,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
             duration: const Duration(milliseconds: 200),
             style: TextStyle(
               color: isCurrent
-                  ? _dynamicColor
+                  ? Colors.white
                   : isPast
                       ? Colors.white54
                       : Colors.white24,
@@ -793,10 +843,12 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               final label = minutes >= 60
                   ? '${minutes ~/ 60} ${AppLocale.tr('hr')} ${minutes % 60} ${AppLocale.tr('min')}'
                   : '$minutes ${AppLocale.tr('min')}';
+              final isSelected = minutes == player.sleepTimerMinutes;
               return ListTile(
-                leading: Icon(Icons.timer_outlined, color: AppTheme.textSecondary),
+                leading: Icon(Icons.timer_outlined, color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary),
                 title: Text(label,
-                    style: TextStyle(color: AppTheme.textPrimary)),
+                    style: TextStyle(color: isSelected ? AppTheme.primaryColor : AppTheme.textPrimary)),
+                trailing: isSelected ? Icon(Icons.check, color: AppTheme.primaryColor, size: 20) : null,
                 onTap: () {
                   final timerDuration = Duration(minutes: minutes);
                   player.handler.setSleepTimer(timerDuration);

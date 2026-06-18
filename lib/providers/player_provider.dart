@@ -88,6 +88,7 @@ class PlayerProvider extends ChangeNotifier {
   double get playbackSpeed => _handler.playbackSpeed;
   double get volumeBoost => _handler.volume;
   bool get hasActivePlayback => _handler.currentSong != null || _handler.isPlaying;
+  int? get sleepTimerMinutes => _handler.sleepTimerMinutes;
 
   set playbackSpeed(double speed) {
     _handler.setPlaybackSpeed(speed);

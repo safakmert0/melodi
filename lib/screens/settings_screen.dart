@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import 'dart:math';
+import 'package:intl/intl.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
 import '../providers/library_provider.dart';
@@ -2085,9 +2086,10 @@ class _SyncSettingsPageState extends State<_SyncSettingsPage> {
   bool _wifiOnly = true;
   Set<int> _selectedDays = {1, 2, 3, 4, 5, 6, 7};
 
-  static const _dayLabels = {
-    1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun',
-  };
+  String _dayLabel(int day) {
+    final df = DateFormat('E', AppLocale.currentLocale);
+    return df.format(DateTime(2024, 1, day + 1));
+  }
 
   @override
   void initState() {
@@ -2126,10 +2128,37 @@ class _SyncSettingsPageState extends State<_SyncSettingsPage> {
             subtitle: AppLocale.tr('sync_schedule'),
             trailing: Switch(
               value: _syncEnabled,
-              onChanged: (v) => setState(() => _syncEnabled = v),
+              onChanged: (v) {
+                setState(() => _syncEnabled = v);
+                final provider = context.read<SyncProvider>();
+                if (v) {
+                  provider.scheduleSync(
+                    hour: _syncTime.hour,
+                    minute: _syncTime.minute,
+                    wifiOnly: _wifiOnly,
+                    days: _selectedDays.toList(),
+                  );
+                } else {
+                  provider.cancelSync();
+                }
+              },
               activeColor: AppTheme.primaryColor,
             ),
-            onTap: () => setState(() => _syncEnabled = !_syncEnabled),
+            onTap: () {
+              final v = !_syncEnabled;
+              setState(() => _syncEnabled = v);
+              final provider = context.read<SyncProvider>();
+              if (v) {
+                provider.scheduleSync(
+                  hour: _syncTime.hour,
+                  minute: _syncTime.minute,
+                  wifiOnly: _wifiOnly,
+                  days: _selectedDays.toList(),
+                );
+              } else {
+                provider.cancelSync();
+              }
+            },
           ),
           if (_syncEnabled) ...[
             const SizedBox(height: 8),
@@ -2155,6 +2184,12 @@ class _SyncSettingsPageState extends State<_SyncSettingsPage> {
                 );
                 if (picked != null) {
                   setState(() => _syncTime = picked);
+                  context.read<SyncProvider>().scheduleSync(
+                    hour: picked.hour,
+                    minute: picked.minute,
+                    wifiOnly: _wifiOnly,
+                    days: _selectedDays.toList(),
+                  );
                 }
               },
             ),
@@ -2166,10 +2201,27 @@ class _SyncSettingsPageState extends State<_SyncSettingsPage> {
               subtitle: AppLocale.tr('sync_schedule'),
               trailing: Switch(
                 value: _wifiOnly,
-                onChanged: (v) => setState(() => _wifiOnly = v),
+                onChanged: (v) {
+                  setState(() => _wifiOnly = v);
+                  context.read<SyncProvider>().scheduleSync(
+                    hour: _syncTime.hour,
+                    minute: _syncTime.minute,
+                    wifiOnly: v,
+                    days: _selectedDays.toList(),
+                  );
+                },
                 activeColor: AppTheme.primaryColor,
               ),
-              onTap: () => setState(() => _wifiOnly = !_wifiOnly),
+              onTap: () {
+                final v = !_wifiOnly;
+                setState(() => _wifiOnly = v);
+                context.read<SyncProvider>().scheduleSync(
+                  hour: _syncTime.hour,
+                  minute: _syncTime.minute,
+                  wifiOnly: v,
+                  days: _selectedDays.toList(),
+                );
+              },
             ),
             const SizedBox(height: 16),
             _SectionTitle(AppLocale.tr('sync_schedule')),
@@ -2182,7 +2234,7 @@ class _SyncSettingsPageState extends State<_SyncSettingsPage> {
                 children: [1, 2, 3, 4, 5, 6, 7].map((day) {
                   final selected = _selectedDays.contains(day);
                   return FilterChip(
-                    label: Text(_dayLabels[day]!),
+                    label: Text(_dayLabel(day)),
                     selected: selected,
                     onSelected: (v) {
                       setState(() {
@@ -2192,6 +2244,12 @@ class _SyncSettingsPageState extends State<_SyncSettingsPage> {
                           _selectedDays.remove(day);
                         }
                       });
+                      context.read<SyncProvider>().scheduleSync(
+                        hour: _syncTime.hour,
+                        minute: _syncTime.minute,
+                        wifiOnly: _wifiOnly,
+                        days: _selectedDays.toList(),
+                      );
                     },
                     selectedColor: AppTheme.primaryColor.withValues(alpha: 0.3),
                     checkmarkColor: AppTheme.primaryColor,
@@ -2202,42 +2260,6 @@ class _SyncSettingsPageState extends State<_SyncSettingsPage> {
                     ),
                   );
                 }).toList(),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _syncEnabled
-                      ? () {
-                          final provider = context.read<SyncProvider>();
-                          provider.scheduleSync(
-                            hour: _syncTime.hour,
-                            minute: _syncTime.minute,
-                            wifiOnly: _wifiOnly,
-                            days: _selectedDays.toList(),
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(AppLocale.tr('auto_sync')),
-                              backgroundColor: AppTheme.primaryColor,
-                            ),
-                          );
-                        }
-                      : null,
-                  icon: const Icon(Icons.save_rounded),
-                  label: Text(AppLocale.tr('apply')),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
               ),
             ),
           ],

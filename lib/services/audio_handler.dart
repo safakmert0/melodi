@@ -24,9 +24,15 @@ class AudioPlayerHandler extends BaseAudioHandler
   bool _gaplessPlaybackEnabled = false;
   Duration _crossfadeDuration = Duration.zero;
   Timer? _sleepTimer;
+  DateTime? _sleepTimerEnd;
 
   AudioPlayerHandler() {
     _initPlayer();
+  }
+
+  int? get sleepTimerMinutes {
+    if (_sleepTimerEnd == null) return null;
+    return _sleepTimerEnd!.difference(DateTime.now()).inMinutes.clamp(0, 9999);
   }
 
   void _initPlayer() {
@@ -469,10 +475,13 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   Future<void> setSleepTimer(Duration duration) async {
     _sleepTimer?.cancel();
+    _sleepTimerEnd = null;
     if (duration == Duration.zero) return;
+    _sleepTimerEnd = DateTime.now().add(duration);
     _sleepTimer = Timer(duration, () {
       _player.pause();
       _sleepTimer = null;
+      _sleepTimerEnd = null;
     });
   }
 
