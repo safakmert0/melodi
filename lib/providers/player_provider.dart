@@ -1,20 +1,66 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../models/song_model.dart';
 import '../services/audio_handler.dart';
 import '../services/database_service.dart';
 import '../services/carplay_service.dart';
 
+typedef ScrobbleCallback = void Function(SongModel song, int timestamp);
+
 class PlayerProvider extends ChangeNotifier {
   final AudioPlayerHandler _handler;
   final DatabaseService _db = DatabaseService.instance;
   Timer? _periodicTimer;
+  Timer? _scrobbleTimer;
+  DateTime? _playStartTime;
+  ScrobbleCallback? onScrobble;
+  VoidCallback? onNowPlaying;
+
+  bool _streamingEnabled = true;
+  bool _autoSkipOffline = false;
+
+  bool get streamingEnabled => _streamingEnabled;
 
   PlayerProvider(this._handler) {
     _setupListeners();
     _periodicTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (hasListeners) notifyListeners();
     });
+  }
+
+  void setStreamingEnabled(bool enabled) {
+    _streamingEnabled = enabled;
+    if (!enabled) {
+      _filterQueueToDownloaded();
+    }
+    notifyListeners();
+  }
+
+  void _filterQueueToDownloaded() {
+    if (_handler.songQueue.isEmpty) return;
+    final filtered = _handler.songQueue.where((s) => _isDownloaded(s)).toList();
+    if (filtered.length < _handler.songQueue.length) {
+      _handler.songQueue
+        ..clear()
+        ..addAll(filtered);
+    }
+  }
+
+  bool _isDownloaded(SongModel song) {
+    try {
+      return File(song.filePath).existsSync();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> checkAndSkipOffline() async {
+    if (_streamingEnabled) return;
+    final song = _handler.currentSong;
+    if (song != null && !_isDownloaded(song)) {
+      await skipToNext();
+    }
   }
 
   StreamSubscription? _positionSub;
@@ -80,7 +126,10 @@ class PlayerProvider extends ChangeNotifier {
 
   Future<void> playSong(SongModel song) async {
     await _handler.playSong(song);
+    _playStartTime = DateTime.now();
+    _startScrobbleTimer(song);
     CarPlayService.updateNowPlaying(song);
+    onNowPlaying?.call();
     notifyListeners();
   }
 
@@ -210,9 +259,24 @@ class PlayerProvider extends ChangeNotifier {
     }
   }
 
+  void _startScrobbleTimer(SongModel song) {
+    _scrobbleTimer?.cancel();
+    final duration = _handler.duration;
+    if (duration.inSeconds < 30) return;
+    final scrobbleAt = duration.inMilliseconds ~/ 2;
+    if (scrobbleAt <= 0) return;
+    _scrobbleTimer = Timer(Duration(milliseconds: scrobbleAt), () {
+      if (_handler.currentSong?.id == song.id && _handler.isPlaying) {
+        final timestamp = _playStartTime?.millisecondsSinceEpoch ~/ 1000 ?? DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        onScrobble?.call(song, timestamp);
+      }
+    });
+  }
+
   @override
   void dispose() {
     _periodicTimer?.cancel();
+    _scrobbleTimer?.cancel();
     _positionSub?.cancel();
     _stateSub?.cancel();
     _durationSub?.cancel();

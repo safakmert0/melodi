@@ -54,10 +54,12 @@ dependencies:
   palette_generator: ^0.3.3
 
   # Utilities
+  crypto: ^3.0.6
   uuid: ^4.4.2
   intl: ^0.20.2
   collection: ^1.18.0
   connectivity_plus: ^6.0.5
+  http: ^1.2.1
 
 dev_dependencies:
   flutter_test:

@@ -15,6 +15,13 @@ import 'providers/playlist_provider.dart';
 import 'providers/search_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/youtube_provider.dart';
+import 'providers/lastfm_provider.dart';
+import 'services/lastfm_service.dart';
+import 'services/ytmusic_service.dart';
+import 'providers/ytmusic_provider.dart';
+import 'providers/spotify_provider.dart';
+import 'providers/sync_provider.dart';
+import 'providers/settings_provider.dart';
 import 'screens/home_screen.dart';
 
 Future<void> main() async {
@@ -140,41 +147,93 @@ class MelodiApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => ThemeProvider()..loadSettings(),
         ),
+        ChangeNotifierProvider(
+          create: (_) {
+            final service = LastFmService(
+              apiKey: 'YOUR_LASTFM_API_KEY',
+              apiSecret: 'YOUR_LASTFM_API_SECRET',
+            );
+            final provider = LastFmProvider(service);
+            provider.loadSession();
+            return provider;
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (_) {
+            final service = YTMusicService();
+            final provider = YTMusicProvider(service);
+            provider.loadSession();
+            return provider;
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (_) => SpotifyProvider()..init(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => SettingsProvider()..load(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => SyncProvider()..init(),
+        ),
       ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, _) {
-          final pageTransitions = PageTransitionsTheme(
-            builders: {
-              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-              TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-            },
-          );
-          return MaterialApp(
-            title: 'Melodi',
-            debugShowCheckedModeBanner: false,
-            theme: themeProvider.lightTheme.copyWith(pageTransitionsTheme: pageTransitions),
-            darkTheme: themeProvider.darkTheme.copyWith(pageTransitionsTheme: pageTransitions),
-            themeMode: themeProvider.themeMode,
-            home: const HomeScreen(),
-            localizationsDelegates: const [
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: const [
-              Locale('en'),
-              Locale('tr'),
-              Locale('de'),
-            ],
-            localeResolutionCallback: (locale, supportedLocales) {
-              if (locale != null) {
-                for (final supported in supportedLocales) {
-                  if (supported.languageCode == locale.languageCode) {
-                    return supported;
+      child: Builder(
+        builder: (context) {
+          final player = context.read<PlayerProvider>();
+          final lastfm = context.read<LastFmProvider>();
+          player.onNowPlaying = () {
+            final song = player.currentSong;
+            if (song != null) {
+              lastfm.updateNowPlaying(
+                artist: song.artist,
+                track: song.title,
+                album: song.album,
+              );
+            }
+          };
+          player.onScrobble = (song, timestamp) {
+            lastfm.scrobble(
+              artist: song.artist,
+              track: song.title,
+              timestamp: timestamp,
+              album: song.album,
+            );
+          };
+          return Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) {
+              final pageTransitions = PageTransitionsTheme(
+                builders: {
+                  TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+                  TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+                },
+              );
+              return MaterialApp(
+                title: 'Melodi',
+                debugShowCheckedModeBanner: false,
+                theme: themeProvider.lightTheme.copyWith(pageTransitionsTheme: pageTransitions),
+                darkTheme: themeProvider.darkTheme.copyWith(pageTransitionsTheme: pageTransitions),
+                themeMode: themeProvider.themeMode,
+                home: const HomeScreen(),
+                localizationsDelegates: const [
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                ],
+                supportedLocales: const [
+                  Locale('en'),
+                  Locale('tr'),
+                  Locale('de'),
+                ],
+                localeResolutionCallback: (locale, supportedLocales) {
+                  if (locale != null) {
+                    for (final supported in supportedLocales) {
+                      if (supported.languageCode == locale.languageCode) {
+                        return supported;
+                      }
+                    }
                   }
-                }
-              }
-              return const Locale('en');
+                  return const Locale('en');
+                },
+              );
             },
           );
         },

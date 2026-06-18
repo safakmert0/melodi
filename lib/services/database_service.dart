@@ -27,7 +27,7 @@ class DatabaseService {
     final path = p.join(dir.path, 'melodi.db');
       return await openDatabase(
         path,
-        version: 3,
+        version: 4,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
       );
@@ -50,6 +50,18 @@ class DatabaseService {
         CREATE TABLE IF NOT EXISTS settings (
           key TEXT PRIMARY KEY,
           value TEXT
+        )
+      ''');
+    }
+    if (oldVersion < 4) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS lyrics_cache (
+          songId TEXT PRIMARY KEY,
+          plainText TEXT,
+          syncedLrc TEXT,
+          instrumental INTEGER DEFAULT 0,
+          source TEXT,
+          fetchedAt TEXT NOT NULL
         )
       ''');
     }
@@ -120,6 +132,17 @@ class DatabaseService {
       CREATE TABLE settings (
         key TEXT PRIMARY KEY,
         value TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS lyrics_cache (
+        songId TEXT PRIMARY KEY,
+        plainText TEXT,
+        syncedLrc TEXT,
+        instrumental INTEGER DEFAULT 0,
+        source TEXT,
+        fetchedAt TEXT NOT NULL
       )
     ''');
 
@@ -309,6 +332,19 @@ class DatabaseService {
     await db.delete('songs');
     await db.delete('playlists');
     await db.delete('album_art_cache');
+  }
+
+  Future<Map<String, dynamic>?> getCachedLyrics(String songId) async {
+    final db = await database;
+    final maps = await db.query('lyrics_cache', where: 'songId = ?', whereArgs: [songId]);
+    if (maps.isEmpty) return null;
+    return maps.first;
+  }
+
+  Future<void> cacheLyrics(String songId, Map<String, dynamic> data) async {
+    final db = await database;
+    data['fetchedAt'] = DateTime.now().toIso8601String();
+    await db.insert('lyrics_cache', data, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<List<SongModel>> searchSongs(String query) async {

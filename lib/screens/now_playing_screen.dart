@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -35,6 +36,12 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   String? _lastSongId;
   Color _dynamicColor = AppTheme.primaryColor;
 
+  LyricsResult? _lyricsResult;
+  List<LrcLine> _lyricsLines = [];
+  int _currentLineIndex = -1;
+  final ScrollController _lyricsScrollController = ScrollController();
+  Timer? _lyricsTimer;
+
   @override
   void initState() {
     super.initState();
@@ -42,15 +49,54 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
     ));
+    _startLyricsTimer();
   }
 
   @override
   void dispose() {
+    _lyricsTimer?.cancel();
+    _lyricsScrollController.dispose();
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
     ));
     super.dispose();
+  }
+
+  void _startLyricsTimer() {
+    _lyricsTimer = Timer.periodic(const Duration(milliseconds: 250), (_) {
+      if (!mounted) return;
+      final player = context.read<PlayerProvider>();
+      if (_lyricsLines.isNotEmpty) {
+        _updateCurrentLine(player.position.inMilliseconds);
+      }
+    });
+  }
+
+  void _updateCurrentLine(int positionMs) {
+    int idx = -1;
+    for (int i = 0; i < _lyricsLines.length; i++) {
+      if (_lyricsLines[i].timestampMs <= positionMs) {
+        idx = i;
+      } else {
+        break;
+      }
+    }
+    if (idx != _currentLineIndex) {
+      _currentLineIndex = idx;
+      if (mounted) setState(() {});
+      _scrollToCurrentLine();
+    }
+  }
+
+  void _scrollToCurrentLine() {
+    if (_currentLineIndex < 0 || !_lyricsScrollController.hasClients) return;
+    final offset = (_currentLineIndex * 56.0) - (MediaQuery.of(context).size.height * 0.15);
+    _lyricsScrollController.animateTo(
+      offset.clamp(0.0, _lyricsScrollController.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
   }
 
   Future<void> _extractColor(Uint8List? bytes) async {
@@ -70,9 +116,21 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   void _autoFetch(SongModel song) {
     if (song.id == _lastSongId) return;
     _lastSongId = song.id;
+    _lyricsResult = null;
+    _lyricsLines = [];
+    _currentLineIndex = -1;
     _extractColor(song.albumArt);
     if (song.lyrics == null || song.lyrics!.isEmpty) {
       Future.microtask(() => _fetchLyrics(song));
+    } else {
+      final text = song.lyrics!;
+      final parsed = LrcParser.parse(text);
+      if (parsed.isNotEmpty) {
+        _lyricsLines = parsed;
+        _lyricsResult = LyricsResult(syncedLrc: text);
+      } else {
+        _lyricsResult = LyricsResult(plainText: text);
+      }
     }
     if (song.albumArt == null) {
       Future.microtask(() => _fetchArtwork(song));
@@ -83,11 +141,22 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     final result = await LyricsService.fetchLyrics(
       artist: song.artist,
       track: song.title,
+      album: song.album,
+      durationMs: song.duration.inMilliseconds,
     );
     if (result != null && mounted) {
-      final updated = song.copyWith(lyrics: result);
+      _lyricsResult = result;
+      if (result.syncedLrc != null) {
+        _lyricsLines = LrcParser.parse(result.syncedLrc!);
+      } else {
+        _lyricsLines = [];
+      }
+      _currentLineIndex = -1;
+      final lyricsText = result.syncedLrc ?? result.plainText;
+      final updated = song.copyWith(lyrics: lyricsText);
       context.read<PlayerProvider>().updateCurrentSong(updated);
       context.read<LibraryProvider>().updateSong(updated);
+      setState(() {});
     }
   }
 
@@ -149,7 +218,13 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 
         final hasArt = song.albumArt != null && song.albumArt!.isNotEmpty;
 
-        return Scaffold(
+        return GestureDetector(
+          onVerticalDragEnd: (details) {
+            if (details.primaryVelocity != null && details.primaryVelocity! > 500) {
+              Navigator.pop(context);
+            }
+          },
+          child: Scaffold(
           extendBodyBehindAppBar: true,
           backgroundColor: AppTheme.background,
           appBar: AppBar(
@@ -215,40 +290,43 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                 child: Column(
                   children: [
                     const SizedBox(height: 8),
-                    // Album Art - centered with glow
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 48),
-                        child: Center(
-                          child: AspectRatio(
-                            aspectRatio: 1,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(24),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: _dynamicColor.withValues(alpha: 0.4),
-                                    blurRadius: 60,
-                                    offset: const Offset(0, 20),
-                                  ),
-                                ],
+                    // Album Art - centered with glow (fixed size)
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: MediaQuery.of(context).size.width > 400 ? 64 : 48,
+                      ),
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: _dynamicColor.withValues(alpha: 0.3),
+                                blurRadius: 40,
+                                offset: const Offset(0, 12),
                               ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(24),
-                                child: hasArt
-                                    ? Image.memory(
-                                        song.albumArt!,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => _buildArtFallback(),
-                                      )
-                                    : _buildArtFallback(),
-                              ),
-                            ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: hasArt
+                                ? Image.memory(
+                                    song.albumArt!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => _buildArtFallback(),
+                                  )
+                                : _buildArtFallback(),
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    // Lyrics (between album art and song name)
+                    if (_showLyrics)
+                      Expanded(
+                        child: _buildLyricsView(player),
+                      ),
+                    const SizedBox(height: 8),
                     // Song Title + Artist + Favorite
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -297,14 +375,6 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    // Lyrics
-                    if (song.lyrics != null &&
-                        song.lyrics!.isNotEmpty &&
-                        _showLyrics)
-                      _buildLyricsView(song.lyrics!, player)
-                    else
-                      const SizedBox(height: 16),
                     // Seek Bar
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -464,105 +534,127 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               ),
             ],
           ),
+        ),
+      );
+      },
+    );
+  }
+
+  Widget _buildLyricsView(PlayerProvider player) {
+    final state = _lyricsViewState();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: state,
+    );
+  }
+
+  Widget _lyricsViewState() {
+    if (_lyricsResult == null && _lyricsLines.isEmpty) {
+      return Center(
+        child: Text(
+          '♪',
+          style: TextStyle(
+            color: Colors.white38,
+            fontSize: 36,
+          ),
+        ),
+      );
+    }
+
+    if (_lyricsResult?.instrumental == true) {
+      return Center(
+        child: Text(
+          AppLocale.tr('instrumental'),
+          style: TextStyle(
+            color: Colors.white54,
+            fontSize: 16,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      );
+    }
+
+    if (_lyricsLines.isNotEmpty) {
+      return _buildSyncedLyrics();
+    }
+
+    if (_lyricsResult?.plainText != null) {
+      return _buildPlainLyrics(_lyricsResult!.plainText!);
+    }
+
+    return Center(
+      child: Text(
+        AppLocale.tr('no_lyrics'),
+        style: TextStyle(
+          color: Colors.white38,
+          fontSize: 16,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSyncedLyrics() {
+    return ListView.builder(
+      controller: _lyricsScrollController,
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).size.height * 0.15,
+        bottom: MediaQuery.of(context).size.height * 0.15,
+      ),
+      itemCount: _lyricsLines.length,
+      itemBuilder: (context, index) {
+        final line = _lyricsLines[index];
+        final isCurrent = index == _currentLineIndex;
+        final isPast = index < _currentLineIndex;
+
+        return GestureDetector(
+          onTap: () {
+            final player = context.read<PlayerProvider>();
+            player.seek(Duration(milliseconds: line.timestampMs));
+          },
+          child: AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 200),
+            style: TextStyle(
+              color: isCurrent
+                  ? _dynamicColor
+                  : isPast
+                      ? Colors.white54
+                      : Colors.white24,
+              fontSize: isCurrent ? 18 : 14,
+              fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              child: Text(
+                line.text,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
         );
       },
     );
   }
 
-  List<_LyricsLine> _parseLrc(String lyrics) {
-    final lrcRegex = RegExp(r'^\[(\d{2}):(\d{2})\.(\d{2,3})\]\s*(.*)');
-    final lines = lyrics.split('\n');
-    final result = <_LyricsLine>[];
-    for (final line in lines) {
-      final match = lrcRegex.firstMatch(line.trim());
-      if (match != null) {
-        final minutes = int.parse(match.group(1)!);
-        final seconds = int.parse(match.group(2)!);
-        final millis = int.parse(match.group(3)!.padRight(3, '0'));
-        final text = match.group(4)!.trim();
-        result.add(_LyricsLine(
-          timestamp: Duration(
-              milliseconds: minutes * 60000 + seconds * 1000 + millis),
-          text: text,
-        ));
-      }
-    }
-    return result;
-  }
-
-  Widget _buildLyricsView(String lyrics, PlayerProvider player) {
-    final parsed = _parseLrc(lyrics);
-    final hasTimestamps = parsed.isNotEmpty;
-    final lines = lyrics.split('\n');
-    final positionMs = player.position.inMilliseconds;
-
-    String currentText = '';
-    String nextText = '';
-    if (hasTimestamps) {
-      int currentIndex = -1;
-      for (int i = 0; i < parsed.length; i++) {
-        if (parsed[i].timestamp.inMilliseconds <= positionMs) {
-          currentIndex = i;
-        } else {
-          break;
-        }
-      }
-      if (currentIndex >= 0) {
-        currentText = parsed[currentIndex].text;
-        if (currentIndex + 1 < parsed.length) {
-          nextText = parsed[currentIndex + 1].text;
-        }
-      }
-    } else {
-      final totalMs = player.duration.inMilliseconds;
-      final progress = totalMs > 0 ? positionMs / totalMs : 0.0;
-      final currentLineIndex =
-          (progress * lines.length).clamp(0, lines.length - 1).toInt();
-      currentText = lines[currentLineIndex].trim();
-      if (currentLineIndex + 1 < lines.length) {
-        nextText = lines[currentLineIndex + 1].trim();
-      }
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 4),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeInOut,
-            child: AnimatedOpacity(
-              opacity: currentText.isNotEmpty ? 1.0 : 0.3,
-              duration: const Duration(milliseconds: 300),
-              child: Text(
-                currentText.isNotEmpty ? currentText : '♪',
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+  Widget _buildPlainLyrics(String text) {
+    final lines = text.split('\n');
+    return ListView.builder(
+      itemCount: lines.length,
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 16),
+          child: Text(
+            lines[index].trim(),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white54,
+              fontSize: 14,
             ),
           ),
-          if (nextText.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              nextText,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.white38,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -827,12 +919,6 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       builder: (context) => const QueueSheet(),
     );
   }
-}
-
-class _LyricsLine {
-  final Duration timestamp;
-  final String text;
-  const _LyricsLine({required this.timestamp, required this.text});
 }
 
 class _SpeedButton extends StatelessWidget {
