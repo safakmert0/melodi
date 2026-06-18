@@ -3,7 +3,7 @@ class StringSimilarity {
     if (s1 == s2) return 1.0;
     if (s1.isEmpty || s2.isEmpty) return 0.0;
 
-    final matchWindow = (s1.length > s2.length ? s1.length : s2.length) ~/ 2 - 1;
+    var matchWindow = (s1.length > s2.length ? s1.length : s2.length) ~/ 2 - 1;
     if (matchWindow < 1) matchWindow = 1;
 
     final s1Matches = List.filled(s1.length, false);

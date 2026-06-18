@@ -16,11 +16,6 @@ class _SpotifyWebViewLoginState extends State<SpotifyWebViewLogin> {
   Timer? _pollTimer;
   bool _found = false;
 
-  static const _checkUrls = [
-    'https://open.spotify.com',
-    'https://accounts.spotify.com',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -45,19 +40,17 @@ class _SpotifyWebViewLoginState extends State<SpotifyWebViewLogin> {
 
   Future<void> _checkCookies() async {
     if (_found) return;
-    for (final checkUrl in _checkUrls) {
-      try {
-        final cookies = await WebViewCookieManager().getCookies(checkUrl);
-        for (final c in cookies) {
-          if (c.name == 'sp_dc' && c.value.isNotEmpty && c.value.length > 10) {
-            _found = true;
-            _pollTimer?.cancel();
-            widget.onCookieObtained(c.value);
-            return;
-          }
+    try {
+      final cookies = await WebViewCookieManager().getCookies();
+      for (final c in cookies) {
+        if (c.name == 'sp_dc' && c.value.isNotEmpty && c.value.length > 10) {
+          _found = true;
+          _pollTimer?.cancel();
+          widget.onCookieObtained(c.value);
+          return;
         }
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
   }
 
   @override

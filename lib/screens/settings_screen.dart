@@ -1906,12 +1906,6 @@ class _EqualizerPageState extends State<_EqualizerPage> {
     await db.setSetting('eq_enabled', _enabled.toString());
     await db.setSetting('eq_gains', _gains.map((g) => g.toStringAsFixed(1)).join(','));
     await db.setSetting('eq_preset', _activePreset);
-
-    final handler = context.read<PlayerProvider>().handler;
-    await handler.setEqualizerEnabled(_enabled);
-    if (_enabled) {
-      await handler.setEqualizerBands(_gains);
-    }
   }
 
   void _applyPreset(String id) {

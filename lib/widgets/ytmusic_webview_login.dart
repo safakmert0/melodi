@@ -47,7 +47,7 @@ class _YTMusicWebViewLoginState extends State<YTMusicWebViewLogin> {
   Future<void> _checkCookies() async {
     if (_found) return;
     try {
-      final cookies = await WebViewCookieManager().getCookies('https://music.youtube.com');
+      final cookies = await WebViewCookieManager().getCookies();
       bool hasSapisid = false;
       for (final c in cookies) {
         if (_sapisidNames.contains(c.name) && c.value.isNotEmpty && c.value.length > 5) {
