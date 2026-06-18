@@ -149,13 +149,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 
         final hasArt = song.albumArt != null && song.albumArt!.isNotEmpty;
 
-        return GestureDetector(
-          onVerticalDragEnd: (details) {
-            if (details.primaryVelocity != null && details.primaryVelocity! > 500) {
-              Navigator.pop(context);
-            }
-          },
-          child: Scaffold(
+        return Scaffold(
           extendBodyBehindAppBar: true,
           backgroundColor: AppTheme.background,
           appBar: AppBar(
@@ -221,6 +215,40 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                 child: Column(
                   children: [
                     const SizedBox(height: 8),
+                    // Album Art - centered with glow
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 48),
+                        child: Center(
+                          child: AspectRatio(
+                            aspectRatio: 1,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: _dynamicColor.withValues(alpha: 0.4),
+                                    blurRadius: 60,
+                                    offset: const Offset(0, 20),
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(24),
+                                child: hasArt
+                                    ? Image.memory(
+                                        song.albumArt!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => _buildArtFallback(),
+                                      )
+                                    : _buildArtFallback(),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     // Song Title + Artist + Favorite
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -269,43 +297,14 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         ],
                       ),
                     ),
-                    // Lyrics (between title and album art)
+                    const SizedBox(height: 8),
+                    // Lyrics
                     if (song.lyrics != null &&
                         song.lyrics!.isNotEmpty &&
                         _showLyrics)
-                      Expanded(
-                        child: _buildLyricsView(song.lyrics!, player),
-                      ),
-                    // Album Art
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 64),
-                      child: AspectRatio(
-                        aspectRatio: 1,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: _dynamicColor.withValues(alpha: 0.4),
-                                blurRadius: 40,
-                                offset: const Offset(0, 12),
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
-                            child: hasArt
-                                ? Image.memory(
-                                    song.albumArt!,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => _buildArtFallback(),
-                                  )
-                                : _buildArtFallback(),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                      _buildLyricsView(song.lyrics!, player)
+                    else
+                      const SizedBox(height: 16),
                     // Seek Bar
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -465,8 +464,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               ),
             ],
           ),
-        ),
-      );
+        );
       },
     );
   }
