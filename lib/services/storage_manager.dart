@@ -5,6 +5,7 @@ import 'database_service.dart';
 class StorageManager {
   static final StorageManager _instance = StorageManager._();
   factory StorageManager() => _instance;
+  static StorageManager get instance => _instance;
   StorageManager._();
 
   final DatabaseService _db = DatabaseService.instance;

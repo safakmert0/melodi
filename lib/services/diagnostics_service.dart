@@ -25,8 +25,7 @@ class DiagnosticsService {
     final os = Platform.operatingSystem;
     final osVersion = Platform.operatingSystemVersion;
 
-    final database = await db.database;
-    final dbVersion = database.version;
+    final dbVersion = (await db.rawQuery('PRAGMA user_version')).first['user_version'] as int? ?? 0;
 
     final dir = await getApplicationDocumentsDirectory();
     final dbFile = File(p.join(dir.path, 'melodi.db'));

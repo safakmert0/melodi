@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 
@@ -9,7 +10,7 @@ class EncryptionService {
   static List<int> _deriveKey(String password, List<int> salt, int iterations) {
     var key = utf8.encode(password);
     for (int i = 0; i < iterations; i++) {
-      key = sha256.convert(key + salt).bytes;
+      key = Uint8List.fromList(sha256.convert(key + salt).bytes);
     }
     return key;
   }

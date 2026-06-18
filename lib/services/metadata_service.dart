@@ -139,7 +139,7 @@ class MetadataService {
 
   static Future<int> backfillAlbumArt({
     SpotifyService? spotifyService,
-    YTMusicService? ytMusicService,
+    YTMusicService? ytmusicService,
   }) async {
     final tracks = await _db.getTracksMissingArt();
     int updated = 0;
@@ -159,8 +159,8 @@ class MetadataService {
         }
       }
 
-      if (imageUrl == null && ytMusicService != null) {
-        final results = await ytMusicService.search('$artist $title');
+      if (imageUrl == null && ytmusicService != null) {
+        final results = await ytmusicService.search('$artist $title');
         if (results.isNotEmpty) {
           imageUrl = results.first.thumbnailUrl;
         }
@@ -176,7 +176,7 @@ class MetadataService {
   }
 
   static Future<int> backfillLyrics({
-    YTMusicService? ytMusicService,
+    YTMusicService? ytmusicService,
   }) async {
     final db = await _db.database;
     final tracks = await db.rawQuery('''
@@ -191,11 +191,11 @@ class MetadataService {
       final title = track['title'] as String? ?? '';
       final artist = track['artist'] as String? ?? '';
 
-      if (ytMusicService != null) {
-        final results = await ytMusicService.search('$artist $title');
+      if (ytmusicService != null) {
+        final results = await ytmusicService.search('$artist $title');
         if (results.isNotEmpty) {
           final videoId = results.first.videoId;
-          final playerData = await ytMusicService.client.player(videoId);
+          final playerData = await ytmusicService.client.player(videoId);
           if (playerData != null) {
             final captions = playerData['captions'] as Map<String, dynamic>?;
             final playerCaptionsTracklistRenderer = captions?['playerCaptionsTracklistRenderer'] as Map<String, dynamic>?;
@@ -376,11 +376,11 @@ class MetadataService {
 
   static Future<int> backfillAll({
     SpotifyService? spotifyService,
-    YTMusicService? ytMusicService,
+    YTMusicService? ytmusicService,
   }) async {
     int total = 0;
-    total += await backfillAlbumArt(spotifyService: spotifyService, ytMusicService: ytMusicService);
-    total += await backfillLyrics(ytMusicService: ytMusicService);
+    total += await backfillAlbumArt(spotifyService: spotifyService, ytmusicService: ytmusicService);
+    total += await backfillLyrics(ytmusicService: ytmusicService);
     total += await backfillTrackMetadata(spotifyService: spotifyService);
     return total;
   }

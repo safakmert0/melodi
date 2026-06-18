@@ -6,9 +6,9 @@ import '../services/ytmusic_service.dart';
 
 class MetadataProvider extends ChangeNotifier {
   final SpotifyService? spotifyService;
-  final YTMusicService? ytMusicService;
+  final YTMusicService? ytmusicService;
 
-  MetadataProvider({this.spotifyService, this.ytMusicService});
+  MetadataProvider({this.spotifyService, this.ytmusicService});
 
   bool _isBackfilling = false;
   int _backfillProgress = 0;
@@ -33,7 +33,7 @@ class MetadataProvider extends ChangeNotifier {
     try {
       final count = await MetadataService.backfillAlbumArt(
         spotifyService: spotifyService,
-        ytMusicService: ytMusicService,
+        ytmusicService: ytmusicService,
       );
       _lastBackfilledAt = DateTime.now();
       _backfillProgress = count;
@@ -58,7 +58,7 @@ class MetadataProvider extends ChangeNotifier {
 
     try {
       final count = await MetadataService.backfillLyrics(
-        ytMusicService: ytMusicService,
+        ytmusicService: ytmusicService,
       );
       _lastBackfilledAt = DateTime.now();
       _backfillProgress = count;
@@ -84,7 +84,7 @@ class MetadataProvider extends ChangeNotifier {
     try {
       final count = await MetadataService.backfillAll(
         spotifyService: spotifyService,
-        ytMusicService: ytMusicService,
+        ytmusicService: ytmusicService,
       );
       _lastBackfilledAt = DateTime.now();
       _backfillProgress = count;

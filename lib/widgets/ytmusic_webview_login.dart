@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 class YTMusicWebViewLogin extends StatefulWidget {
-  final void Function(String cookie) onCookieObtained;
+  final void Function(String cookieString) onCookieObtained;
 
   const YTMusicWebViewLogin({super.key, required this.onCookieObtained});
 
@@ -15,12 +15,6 @@ class _YTMusicWebViewLoginState extends State<YTMusicWebViewLogin> {
   late WebViewController _controller;
   Timer? _pollTimer;
   bool _found = false;
-
-  static const _sapisidNames = [
-    '__Secure-3PSAPISID',
-    '__Secure-1PSAPISID',
-    'SAPISID',
-  ];
 
   @override
   void initState() {
@@ -47,19 +41,13 @@ class _YTMusicWebViewLoginState extends State<YTMusicWebViewLogin> {
   Future<void> _checkCookies() async {
     if (_found) return;
     try {
-      final cookies = await WebViewCookieManager().getCookies(domain: Uri.parse('https://music.youtube.com'));
-      bool hasSapisid = false;
-      for (final c in cookies) {
-        if (_sapisidNames.contains(c.name) && c.value.isNotEmpty && c.value.length > 5) {
-          hasSapisid = true;
-          break;
-        }
-      }
-      if (hasSapisid) {
+      final cookieString = await _controller.runJavaScriptReturningResult(
+        'document.cookie',
+      );
+      if (cookieString is String && cookieString.contains('SAPISID')) {
         _found = true;
         _pollTimer?.cancel();
-        final cookieStr = cookies.map((c) => '${c.name}=${c.value}').join('; ');
-        widget.onCookieObtained(cookieStr);
+        widget.onCookieObtained(cookieString);
       }
     } catch (_) {}
   }

@@ -737,6 +737,16 @@ class DatabaseService {
     return db.rawInsert(sql, args);
   }
 
+  Future<int> rawDelete(String sql, [List<dynamic>? args]) async {
+    final db = await database;
+    return db.rawDelete(sql, args);
+  }
+
+  Future<int> rawUpdate(String sql, [List<dynamic>? args]) async {
+    final db = await database;
+    return db.rawUpdate(sql, args);
+  }
+
   Future<Map<String, List<SongModel>>> getSongsGroupedByArtist() async {
     final songs = await getAllSongs();
     return groupBy(songs, (SongModel s) => s.artist);

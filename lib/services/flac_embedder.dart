@@ -30,6 +30,18 @@ class FlacMetadataBlock {
   }
 }
 
+Uint8List _u32le(int value) {
+  final bd = ByteData(4);
+  bd.setUint32(0, value, Endian.little);
+  return bd.buffer.asUint8List();
+}
+
+Uint8List _u32be(int value) {
+  final bd = ByteData(4);
+  bd.setUint32(0, value, Endian.big);
+  return bd.buffer.asUint8List();
+}
+
 class FlacVorbisComment {
   final String vendorString;
   final Map<String, String> tags;
@@ -43,16 +55,16 @@ class FlacVorbisComment {
     final bytes = BytesBuilder();
 
     final vendorBytes = utf8.encode(vendorString);
-    bytes.add(ByteData(4)..setUint32(0, vendorBytes.length, Endian.little));
+    bytes.add(_u32le(vendorBytes.length));
     bytes.add(vendorBytes);
 
     final tagEntries = tags.entries.toList();
-    bytes.add(ByteData(4)..setUint32(0, tagEntries.length, Endian.little));
+    bytes.add(_u32le(tagEntries.length));
 
     for (final entry in tagEntries) {
       final tagStr = '${entry.key}=${entry.value}';
       final tagBytes = utf8.encode(tagStr);
-      bytes.add(ByteData(4)..setUint32(0, tagBytes.length, Endian.little));
+      bytes.add(_u32le(tagBytes.length));
       bytes.add(tagBytes);
     }
 
@@ -114,21 +126,21 @@ class FlacPicture {
   Uint8List encode() {
     final bytes = BytesBuilder();
 
-    bytes.add(ByteData(4)..setUint32(0, pictureType, Endian.big));
+    bytes.add(_u32be(pictureType));
 
     final mimeBytes = utf8.encode(mimeType);
-    bytes.add(ByteData(4)..setUint32(0, mimeBytes.length, Endian.big));
+    bytes.add(_u32be(mimeBytes.length));
     bytes.add(mimeBytes);
 
     final descBytes = utf8.encode(description);
-    bytes.add(ByteData(4)..setUint32(0, descBytes.length, Endian.big));
+    bytes.add(_u32be(descBytes.length));
     bytes.add(descBytes);
 
-    bytes.add(ByteData(4)..setUint32(0, width, Endian.big));
-    bytes.add(ByteData(4)..setUint32(0, height, Endian.big));
-    bytes.add(ByteData(4)..setUint32(0, colorDepth, Endian.big));
-    bytes.add(ByteData(4)..setUint32(0, colorsUsed, Endian.big));
-    bytes.add(ByteData(4)..setUint32(0, pictureData.length, Endian.big));
+    bytes.add(_u32be(width));
+    bytes.add(_u32be(height));
+    bytes.add(_u32be(colorDepth));
+    bytes.add(_u32be(colorsUsed));
+    bytes.add(_u32be(pictureData.length));
     bytes.add(pictureData);
 
     return bytes.toBytes();

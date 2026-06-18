@@ -71,13 +71,6 @@ class _PlaylistSyncSettingsState extends State<PlaylistSyncSettings> {
       await _db.setPlaylistSyncEnabled(widget.playlistId, _syncEnabled);
       await _db.setAutoSync(widget.playlistId, _autoSync);
       await _db.setSyncDirection(widget.playlistId, _syncDirection);
-      await _db.insert('playlist_sync_state', {
-        'playlistId': widget.playlistId,
-        'syncEnabled': _syncEnabled ? 1 : 0,
-        'autoSync': _autoSync ? 1 : 0,
-        'syncDirection': _syncDirection,
-        'lastSyncedAt': now,
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
       setState(() {
         _lastSyncedAt = now;
         _isSyncing = false;

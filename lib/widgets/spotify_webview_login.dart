@@ -41,13 +41,19 @@ class _SpotifyWebViewLoginState extends State<SpotifyWebViewLogin> {
   Future<void> _checkCookies() async {
     if (_found) return;
     try {
-      final cookies = await WebViewCookieManager().getCookies(domain: Uri.parse('https://open.spotify.com'));
-      for (final c in cookies) {
-        if (c.name == 'sp_dc' && c.value.isNotEmpty && c.value.length > 10) {
-          _found = true;
-          _pollTimer?.cancel();
-          widget.onCookieObtained(c.value);
-          return;
+      final cookieString = await _controller.runJavaScriptReturningResult(
+        'document.cookie',
+      );
+      if (cookieString is String && cookieString.contains('sp_dc')) {
+        final cookies = cookieString.split(';');
+        for (final c in cookies) {
+          final parts = c.trim().split('=');
+          if (parts.length == 2 && parts[0].trim() == 'sp_dc' && parts[1].trim().length > 10) {
+            _found = true;
+            _pollTimer?.cancel();
+            widget.onCookieObtained(parts[1].trim());
+            return;
+          }
         }
       }
     } catch (_) {}

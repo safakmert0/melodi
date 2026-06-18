@@ -153,6 +153,7 @@ class _LyricsBackfillBannerState extends State<_LyricsBackfillBanner> {
 }
 
 class _WaitingForLosslessBanner extends StatefulWidget {
+  const _WaitingForLosslessBanner();
   @override
   State<_WaitingForLosslessBanner> createState() => _WaitingForLosslessBannerState();
 }
@@ -218,6 +219,7 @@ class _FailedDownloadsBanner extends StatelessWidget {
 }
 
 class _LibraryHealthBanner extends StatefulWidget {
+  const _LibraryHealthBanner();
   @override
   State<_LibraryHealthBanner> createState() => _LibraryHealthBannerState();
 }
