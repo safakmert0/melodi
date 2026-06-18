@@ -227,6 +227,8 @@ class AppLocale {
       'synced_lyrics': 'Synced Lyrics',
       'no_lyrics': 'No lyrics available',
       'instrumental': 'Instrumental',
+      'login_with_browser': 'Login with Browser',
+      'cookie_paste': 'or paste cookie manually',
     },
     'tr': {
       'home': 'Ana Sayfa',
@@ -432,6 +434,8 @@ class AppLocale {
       'synced_lyrics': 'Senkronize Şarkı Sözleri',
       'no_lyrics': 'Şarkı sözü yok',
       'instrumental': 'Enstrümantal',
+      'login_with_browser': 'Tarayıcı ile Giriş Yap',
+      'cookie_paste': 'veya çerezi elle yapıştır',
     },
     'de': {
       'home': 'Startseite',
@@ -637,6 +641,8 @@ class AppLocale {
       'synced_lyrics': 'Synchronisierte Liedtexte',
       'no_lyrics': 'Keine Liedtexte verfügbar',
       'instrumental': 'Instrumental',
+      'login_with_browser': 'Mit Browser anmelden',
+      'cookie_paste': 'oder Cookie manuell einfügen',
     },
   };
 

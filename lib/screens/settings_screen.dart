@@ -17,6 +17,8 @@ import '../providers/spotify_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/sync_provider.dart';
 import '../services/database_service.dart';
+import '../widgets/spotify_webview_login.dart';
+import '../widgets/ytmusic_webview_login.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -1456,6 +1458,63 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                 AppLocale.tr('connect_ytmusic_description'),
                 style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
               ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => YTMusicWebViewLogin(
+                          onCookieObtained: (cookie) async {
+                            Navigator.of(context).pop();
+                            final success = await ytmusic.connectWithCookie(cookie);
+                            if (context.mounted) {
+                              if (success) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(AppLocale.tr('connected_as')),
+                                    backgroundColor: AppTheme.primaryColor,
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(ytmusic.error ?? AppLocale.tr('auth_failed_try_again')),
+                                    backgroundColor: AppTheme.errorColor,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.language_rounded),
+                  label: Text(AppLocale.tr('login_with_browser')),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(child: Divider(color: AppTheme.divider)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(AppLocale.tr('cookie_paste'),
+                        style: TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
+                  ),
+                  Expanded(child: Divider(color: AppTheme.divider)),
+                ],
+              ),
               const SizedBox(height: 16),
               Text(
                 AppLocale.tr('ytmusic_cookie_instructions'),
@@ -1485,10 +1544,10 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () => _submitCookie(ytmusic),
-                  icon: const Icon(Icons.login_rounded),
+                  icon: const Icon(Icons.content_paste_rounded),
                   label: Text(AppLocale.tr('connect_youtube_music')),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
+                    backgroundColor: Colors.red.withValues(alpha: 0.7),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
@@ -1661,6 +1720,63 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                 AppLocale.tr('connect_spotify_description'),
                 style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
               ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => SpotifyWebViewLogin(
+                          onCookieObtained: (spDc) async {
+                            Navigator.of(context).pop();
+                            final success = await spotify.connectWithCookie(spDc);
+                            if (context.mounted) {
+                              if (success) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(AppLocale.tr('connected_as')),
+                                    backgroundColor: AppTheme.primaryColor,
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(spotify.error ?? AppLocale.tr('auth_failed_try_again')),
+                                    backgroundColor: AppTheme.errorColor,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.language_rounded),
+                  label: Text(AppLocale.tr('login_with_browser')),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(child: Divider(color: AppTheme.divider)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(AppLocale.tr('cookie_paste'),
+                        style: TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
+                  ),
+                  Expanded(child: Divider(color: AppTheme.divider)),
+                ],
+              ),
               const SizedBox(height: 16),
               Text(
                 AppLocale.tr('spotify_cookie_instructions'),
@@ -1690,10 +1806,10 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () => _submitCookie(spotify),
-                  icon: const Icon(Icons.login_rounded),
+                  icon: const Icon(Icons.content_paste_rounded),
                   label: Text(AppLocale.tr('spotify')),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor: Colors.green.withValues(alpha: 0.7),
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
