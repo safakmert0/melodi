@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../services/database_service.dart';
 import '../services/spotify_service.dart';
-import '../services/string_similarity.dart';
+import '../services/track_matcher.dart';
 import '../models/song_model.dart';
 
 class SpotifyProvider extends ChangeNotifier {
@@ -132,6 +132,14 @@ class SpotifyProvider extends ChangeNotifier {
     _saveMatches();
     notifyListeners();
     return matches;
+  }
+
+  Future<bool> likeTrack(String trackId) async {
+    return _service.likeSpotifyTrack(trackId);
+  }
+
+  Future<bool> unlikeTrack(String trackId) async {
+    return _service.unlikeSpotifyTrack(trackId);
   }
 
   Future<List<SpotifyPlaylistItem>> importPlaylists() async {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
+import '../services/database_service.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
 import '../widgets/mini_player.dart';
@@ -14,10 +15,19 @@ import '../models/album_model.dart';
 import '../models/artist_model.dart';
 import '../models/playlist_model.dart';
 import '../providers/playlist_provider.dart';
+import '../providers/mix_provider.dart';
+import '../providers/connection_provider.dart';
+import '../providers/download_provider.dart';
+import '../widgets/auth_banner.dart';
+import '../widgets/home_banners.dart';
 import 'library_screen.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
 import 'playlist_detail_screen.dart';
+import 'mixes_screen.dart';
+import 'album_discovery_screen.dart';
+import 'downloads_screen.dart';
+import 'library_health_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -50,6 +60,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: Column(
         children: [
+          Consumer<ConnectionProvider>(
+            builder: (context, conn, _) => AuthBanner(
+              connection: conn,
+              onTap: () => setState(() => _currentPage = 3),
+            ),
+          ),
+          const HomeBanners(),
           Expanded(
             child: IndexedStack(
               index: _currentPage,
@@ -399,6 +416,164 @@ class _HomeTab extends StatelessWidget {
             ),
           ),
         ],
+        // Discover
+        ...[
+          _SectionHeader(
+            title: AppLocale.tr('album_discovery'),
+            onSeeAll: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                  builder: (_) => const AlbumDiscoveryScreen()),
+            ),
+          ),
+          SizedBox(
+            height: 150,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(left: 16),
+              itemCount: 1,
+              itemBuilder: (context, index) {
+                return _DiscoverCard(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const AlbumDiscoveryScreen()),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+        // Mixes
+        ...[
+          _SectionHeader(
+            title: AppLocale.tr('mixes'),
+            onSeeAll: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const MixesScreen()),
+            ),
+          ),
+          SizedBox(
+            height: 150,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(left: 16),
+              itemCount: 3,
+              itemBuilder: (context, index) {
+                final mixItems = [
+                  (
+                    Icons.wb_sunny_rounded,
+                    AppLocale.tr('daily_mix'),
+                    AppLocale.tr('daily_mix'),
+                    const Color(0xFFF39C12),
+                  ),
+                  (
+                    Icons.radar_rounded,
+                    AppLocale.tr('release_radar'),
+                    AppLocale.tr('release_radar'),
+                    const Color(0xFFE74C3C),
+                  ),
+                  (
+                    Icons.explore_rounded,
+                    AppLocale.tr('discover_weekly'),
+                    AppLocale.tr('discover_weekly'),
+                    const Color(0xFF8E44AD),
+                  ),
+                ];
+                final item = mixItems[index];
+                return _MixCard(
+                  icon: item.$1,
+                  title: item.$2,
+                  subtitle: item.$3,
+                  gradientColor: item.$4,
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const MixesScreen()),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+        // Library Health
+        _LibraryHealthCard(),
+        const SizedBox(height: 8),
+        // Downloads
+        Consumer<DownloadProvider>(
+          builder: (context, dp, _) {
+            if (dp.totalCount == 0) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const DownloadsScreen()),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppTheme.primaryColor.withValues(alpha: 0.6),
+                        AppTheme.primaryColor.withValues(alpha: 0.15),
+                        AppTheme.card,
+                      ],
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.download_rounded, color: Colors.white, size: 28),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              AppLocale.tr('downloads'),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${dp.completedCount} ${AppLocale.tr('completed')}',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.7),
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (dp.activeCount > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryColor,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${dp.activeCount}',
+                            style: TextStyle(color: Colors.black, fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      const SizedBox(width: 8),
+                      Icon(Icons.arrow_forward_ios_rounded,
+                          size: 16, color: Colors.white.withValues(alpha: 0.5)),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
         const SizedBox(height: 24),
       ],
     );
@@ -764,6 +939,249 @@ class _CreatePlaylistCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MixCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color gradientColor;
+  final VoidCallback onTap;
+
+  const _MixCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.gradientColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 160,
+        margin: const EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              gradientColor.withValues(alpha: 0.7),
+              gradientColor.withValues(alpha: 0.2),
+              AppTheme.card,
+            ],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Icon(icon, size: 32, color: Colors.white),
+              const Spacer(),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DiscoverCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _DiscoverCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 300,
+        margin: const EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppTheme.primaryColor.withValues(alpha: 0.6),
+              AppTheme.primaryColor.withValues(alpha: 0.15),
+              AppTheme.card,
+            ],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.white.withValues(alpha: 0.15),
+                ),
+                child: Icon(Icons.explore_rounded,
+                    size: 32, color: Colors.white),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      AppLocale.tr('album_discovery'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      AppLocale.tr('new_releases'),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.7),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios_rounded,
+                  size: 16, color: Colors.white.withValues(alpha: 0.5)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LibraryHealthCard extends StatefulWidget {
+  @override
+  State<_LibraryHealthCard> createState() => _LibraryHealthCardState();
+}
+
+class _LibraryHealthCardState extends State<_LibraryHealthCard> {
+  int _issueCount = 0;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final db = DatabaseService.instance;
+    final missingArt = await db.getTracksMissingArt();
+    final missingMeta = await db.getTracksMissingMetadata();
+    _issueCount = missingArt.length + missingMeta.length;
+    _loaded = true;
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+      child: GestureDetector(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const LibraryHealthScreen()),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                _issueCount > 0
+                    ? Colors.orange.withValues(alpha: 0.6)
+                    : AppTheme.primaryColor.withValues(alpha: 0.6),
+                _issueCount > 0
+                    ? Colors.orange.withValues(alpha: 0.15)
+                    : AppTheme.primaryColor.withValues(alpha: 0.15),
+                AppTheme.card,
+              ],
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  _issueCount > 0 ? Icons.favorite_border_rounded : Icons.favorite_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLocale.tr('library_health'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _issueCount > 0
+                          ? '$_issueCount ${AppLocale.tr('issues_found')}'
+                          : AppLocale.tr('no_issues'),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.7),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios_rounded,
+                  size: 16, color: Colors.white.withValues(alpha: 0.5)),
+            ],
+          ),
         ),
       ),
     );

@@ -14,10 +14,29 @@ import '../providers/theme_provider.dart';
 import '../providers/lastfm_provider.dart';
 import '../providers/ytmusic_provider.dart';
 import '../providers/spotify_provider.dart';
+import '../providers/like_mirror_provider.dart';
+import '../providers/scrobble_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/metadata_provider.dart';
 import '../providers/sync_provider.dart';
+import '../providers/download_provider.dart';
 import '../services/database_service.dart';
+import '../services/library_health_service.dart';
+import '../services/playback_service.dart';
+import '../services/file_organizer.dart';
+import 'audio_quality_screen.dart';
+import '../widgets/sleep_timer_sheet.dart';
+import '../widgets/equalizer_sheet.dart';
+import '../widgets/crossfade_slider.dart';
 import '../widgets/spotify_webview_login.dart';
+import '../services/spotify_cookie_auth.dart';
+import '../services/youtube_cookie_auth.dart';
+import 'diagnostics_screen.dart';
+import 'failed_downloads_screen.dart';
+import 'downloads_screen.dart';
+import 'blocked_tracks_screen.dart';
+import 'library_health_screen.dart';
+import 'storage_screen.dart';
 import '../widgets/ytmusic_webview_login.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -144,6 +163,63 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 24),
                   Divider(color: AppTheme.divider, height: 1),
+                  _SectionTitle(AppLocale.tr('playback')),
+                  _PlaybackTile(
+                    icon: Icons.dark_mode_rounded,
+                    iconColor: Colors.indigo,
+                    title: AppLocale.tr('sleep_timer'),
+                    subtitleBuilder: () {
+                      final svc = PlaybackService.instance;
+                      if (svc.isSleepTimerActive) {
+                        final rem = svc.getRemainingTime();
+                        final m = rem.inMinutes;
+                        final s = rem.inSeconds.remainder(60);
+                        return '${AppLocale.tr('timer_active')} (${m}:${s.toString().padLeft(2, '0')})';
+                      }
+                      return null;
+                    },
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: AppTheme.surface,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                        ),
+                        builder: (_) => const SleepTimerSheet(),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _PlaybackTile(
+                    icon: Icons.swap_horiz_rounded,
+                    iconColor: Colors.indigo,
+                    title: AppLocale.tr('crossfade'),
+                    subtitleBuilder: () {
+                      final crossfade = _crossfadeSeconds.toInt();
+                      if (crossfade > 0) return '$crossfade ${AppLocale.tr('seconds')}';
+                      return AppLocale.tr('off');
+                    },
+                    onTap: () {
+                      final player = context.read<PlayerProvider>();
+                      _showCrossfadeSlider(context, player);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _PlaybackTile(
+                    icon: Icons.tune_rounded,
+                    iconColor: Colors.purple,
+                    title: AppLocale.tr('equalizer'),
+                    subtitleBuilder: () => AppLocale.tr('adjust_sound_frequencies'),
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: Colors.transparent,
+                        builder: (_) => const EqualizerSheet(),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  Divider(color: AppTheme.divider, height: 1),
                   _SectionTitle(AppLocale.tr('music_library')),
                   _SettingsTile(
                     icon: Icons.refresh_rounded,
@@ -193,6 +269,85 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         : null,
                     onTap: () => _pickWatchedFolder(context),
                   ),
+                  const SizedBox(height: 8),
+                  _LibraryHealthSettingsTile(),
+                  const SizedBox(height: 24),
+                  Divider(color: AppTheme.divider, height: 1),
+                  _SectionTitle(AppLocale.tr('metadata_backfill')),
+                  Consumer<MetadataProvider>(
+                    builder: (context, md, _) => Column(
+                      children: [
+                        _SettingsTile(
+                          icon: Icons.image_rounded,
+                          iconColor: Colors.indigo,
+                          title: AppLocale.tr('backfill_art'),
+                          subtitle: md.isBackfilling
+                              ? '${AppLocale.tr('backfill_progress')}: ${md.backfillProgress}/${md.backfillTotal}'
+                              : md.lastBackfilledAt != null
+                                  ? '${AppLocale.tr('last_backfilled')}: ${_formatDateTime(md.lastBackfilledAt!)}'
+                                  : null,
+                          trailing: md.isBackfilling
+                              ? SizedBox(
+                                  width: 20, height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor),
+                                )
+                              : null,
+                          onTap: md.isBackfilling ? null : () => md.startBackfillAlbumArt(),
+                        ),
+                        const SizedBox(height: 8),
+                        _SettingsTile(
+                          icon: Icons.article_rounded,
+                          iconColor: Colors.pink,
+                          title: AppLocale.tr('backfill_lyrics'),
+                          subtitle: md.isBackfilling
+                              ? '${AppLocale.tr('backfill_progress')}: ${md.backfillProgress}/${md.backfillTotal}'
+                              : md.lastBackfilledAt != null
+                                  ? '${AppLocale.tr('last_backfilled')}: ${_formatDateTime(md.lastBackfilledAt!)}'
+                                  : null,
+                          trailing: md.isBackfilling
+                              ? SizedBox(
+                                  width: 20, height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor),
+                                )
+                              : null,
+                          onTap: md.isBackfilling ? null : () => md.startBackfillLyrics(),
+                        ),
+                        const SizedBox(height: 8),
+                        _SettingsTile(
+                          icon: Icons.high_quality_rounded,
+                          iconColor: Colors.amber,
+                          title: AppLocale.tr('high_res_art'),
+                          subtitle: AppLocale.tr('backfill_art'),
+                          onTap: md.isBackfilling ? null : () => md.startBackfillAlbumArt(),
+                        ),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: md.isBackfilling ? null : () => md.startBackfillAll(),
+                              icon: md.isBackfilling
+                                  ? SizedBox(
+                                      width: 16, height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor),
+                                    )
+                                  : Icon(Icons.refresh_rounded, size: 18),
+                              label: Text(AppLocale.tr('backfill_all')),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppTheme.primaryColor,
+                                side: BorderSide(color: AppTheme.primaryColor),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   Divider(color: AppTheme.divider, height: 1),
                   _SectionTitle(AppLocale.tr('storage')),
@@ -226,6 +381,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: AppLocale.tr('remove_cached_data'),
                     onTap: () => _confirmClearLibrary(context),
                   ),
+                  const SizedBox(height: 8),
+                  _SettingsTile(
+                    icon: Icons.block_rounded,
+                    iconColor: Colors.red,
+                    title: AppLocale.tr('blocklist'),
+                    subtitle: AppLocale.tr('blocked_count'),
+                    trailing: FutureBuilder<int>(
+                      future: DatabaseService.instance.rawQuery('SELECT COUNT(*) as count FROM blocked_tracks').then((r) => (r.first['count'] as int?) ?? 0),
+                      builder: (_, snap) {
+                        final count = snap.data ?? 0;
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.errorColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            count > 0 ? '$count' : '0',
+                            style: TextStyle(color: AppTheme.errorColor, fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        );
+                      },
+                    ),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const BlockedTracksScreen()),
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   Divider(color: AppTheme.divider, height: 1),
                   _SectionTitle(AppLocale.tr('accounts')),
@@ -236,7 +418,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         return _SettingsTile(
                           icon: Icons.radio_rounded,
                           iconColor: Colors.red,
-                          title: 'Last.fm',
+                          title: AppLocale.tr('lastfm'),
                           subtitle: '${AppLocale.tr('connected_as')} ${lastfm.username}',
                           trailing: TextButton(
                             onPressed: () => lastfm.disconnect(),
@@ -251,8 +433,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       return _SettingsTile(
                         icon: Icons.radio_rounded,
                         iconColor: Colors.red,
-                        title: 'Last.fm',
-                        subtitle: AppLocale.tr('connect_for_scrobbling'),
+                        title: AppLocale.tr('lastfm'),
+                        subtitle: AppLocale.tr('lastfm_connect'),
                         trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const _LastFmSettingsPage()),
@@ -322,6 +504,101 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       );
                     },
                   ),
+                  const SizedBox(height: 8),
+                  _SettingsTile(
+                    icon: Icons.cookie_rounded,
+                    iconColor: Colors.green,
+                    title: AppLocale.tr('spotify_cookie_login'),
+                    subtitle: AppLocale.tr('cookie_auth_desc'),
+                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                    onTap: () => _showSpotifyCookieDialog(context),
+                  ),
+                  const SizedBox(height: 8),
+                  _SettingsTile(
+                    icon: Icons.cookie_rounded,
+                    iconColor: Colors.red,
+                    title: AppLocale.tr('yt_cookie_login'),
+                    subtitle: AppLocale.tr('cookie_auth_desc'),
+                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                    onTap: () => _showYouTubeCookieDialog(context),
+                  ),
+                  const SizedBox(height: 8),
+                  _SettingsTile(
+                    icon: Icons.schedule_rounded,
+                    iconColor: Colors.teal,
+                    title: AppLocale.tr('scheduled_sync'),
+                    subtitle: FutureBuilder<Map<String, dynamic>>(
+                      future: context.read<SyncProvider>().service.loadPreferences(),
+                      builder: (_, snap) {
+                        if (!snap.hasData) return const SizedBox.shrink();
+                        final data = snap.data!;
+                        final enabled = data['enabled'] as bool;
+                        if (!enabled) return Text(AppLocale.tr('off'));
+                        final hour = data['hour'] as int;
+                        final minute = data['minute'] as int;
+                        final time = '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+                        return Text('${AppLocale.tr('sync_enabled')} · $time');
+                      },
+                    ),
+                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const _SyncSettingsPage()),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Consumer2<SpotifyProvider, YTMusicProvider>(
+                    builder: (context, spotify, ytmusic, _) {
+                      if (!spotify.isConnected || !ytmusic.isConnected) {
+                        return const SizedBox.shrink();
+                      }
+                      return _SettingsTile(
+                        icon: Icons.sync_alt_rounded,
+                        iconColor: Colors.blue,
+                        title: AppLocale.tr('like_mirroring'),
+                        subtitle: AppLocale.tr('mirror_likes_description'),
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const _LikeMirrorSettingsPage()),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  Consumer2<SpotifyProvider, YTMusicProvider>(
+                    builder: (context, spotify, ytmusic, _) {
+                      if (!spotify.isConnected || !ytmusic.isConnected) {
+                        return const SizedBox.shrink();
+                      }
+                      return _SettingsTile(
+                        icon: Icons.sync_alt_rounded,
+                        iconColor: Colors.teal,
+                        title: AppLocale.tr('default_sync'),
+                        subtitle: AppLocale.tr('sync_settings'),
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const _DefaultSyncSettingsPage()),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  Consumer2<SpotifyProvider, YTMusicProvider>(
+                    builder: (context, spotify, ytmusic, _) {
+                      if (!spotify.isConnected || !ytmusic.isConnected) {
+                        return const SizedBox.shrink();
+                      }
+                      return _SettingsTile(
+                        icon: Icons.history_rounded,
+                        iconColor: Colors.orange,
+                        title: AppLocale.tr('yt_history_scrobbling'),
+                        subtitle: AppLocale.tr('scrobbling'),
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const _ScrobbleSettingsPage()),
+                        ),
+                      );
+                    },
+                  ),
                   const SizedBox(height: 24),
                   Divider(color: AppTheme.divider, height: 1),
                   _SectionTitle(AppLocale.tr('audio')),
@@ -365,6 +642,116 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 24),
                   Divider(color: AppTheme.divider, height: 1),
+                  _SectionTitle(AppLocale.tr('lossless')),
+                  _LosslessDownloadsSection(),
+                  const SizedBox(height: 24),
+                  Divider(color: AppTheme.divider, height: 1),
+                  _SectionTitle(AppLocale.tr('downloads')),
+                  Consumer<DownloadProvider>(
+                    builder: (context, dp, _) => _SettingsTile(
+                      icon: Icons.download_rounded,
+                      iconColor: Colors.green,
+                      title: AppLocale.tr('downloads'),
+                      subtitle: dp.isDownloading
+                          ? '${dp.activeCount} active · ${dp.completedCount} completed'
+                          : '${dp.completedCount} ${AppLocale.tr('completed')}',
+                      trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const DownloadsScreen()),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Consumer<DownloadProvider>(
+                    builder: (context, dp, _) {
+                      if (dp.failedCount == 0) return const SizedBox.shrink();
+                      return _SettingsTile(
+                        icon: Icons.error_outline_rounded,
+                        iconColor: AppTheme.errorColor,
+                        title: AppLocale.tr('failed'),
+                        subtitle: '${dp.failedCount} ${AppLocale.tr('failed')}',
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.errorColor,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '${dp.failedCount}',
+                            style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const FailedDownloadsScreen()),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _SettingsTile(
+                    icon: Icons.folder_rounded,
+                    iconColor: Colors.orange,
+                    title: AppLocale.tr('download_location'),
+                    subtitle: 'Documents/downloads',
+                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                    onTap: () async {
+                      final db = DatabaseService.instance;
+                      final dir = await db.getSetting('download_path');
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(dir ?? 'Documents/downloads'),
+                            backgroundColor: AppTheme.primaryColor,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _SettingsTile(
+                    icon: Icons.tune_rounded,
+                    iconColor: Colors.pink,
+                    title: AppLocale.tr('audio_quality'),
+                    subtitle: AppLocale.tr('streaming_quality'),
+                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AudioQualityScreen()),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _SettingsTile(
+                    icon: Icons.folder_rounded,
+                    iconColor: Colors.amber,
+                    title: AppLocale.tr('file_organization'),
+                    subtitle: FutureBuilder<bool>(
+                      future: FileOrganizer().isOrganized(),
+                      builder: (_, snap) {
+                        final organized = snap.data ?? false;
+                        return Text(
+                          organized ? AppLocale.tr('organized_by_artist') : AppLocale.tr('flat_structure'),
+                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                        );
+                      },
+                    ),
+                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                    onTap: () => _showFileOrganizationDialog(context),
+                  ),
+                  const SizedBox(height: 8),
+                  _SettingsTile(
+                    icon: Icons.storage_rounded,
+                    iconColor: Colors.cyan,
+                    title: AppLocale.tr('storage'),
+                    subtitle: Text(
+                      '${_formatBytes(context.read<LibraryProvider>().totalSongSizeBytes)} · ${AppLocale.tr('library_size')}',
+                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    ),
+                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const StorageScreen()),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Divider(color: AppTheme.divider, height: 1),
                   _SectionTitle(AppLocale.tr('developer')),
                   _SettingsTile(
                     icon: Icons.code_rounded,
@@ -397,6 +784,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: AppLocale.tr('credits'),
                     subtitle: AppLocale.tr('open_source_licenses'),
                     onTap: () => _showCredits(context),
+                  ),
+                  const SizedBox(height: 8),
+                  _SettingsTile(
+                    icon: Icons.bug_report_rounded,
+                    iconColor: Colors.orange,
+                    title: AppLocale.tr('diagnostics'),
+                    subtitle: AppLocale.tr('crash_reports'),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const DiagnosticsScreen()),
+                    ),
                   ),
                   const SizedBox(height: 32),
                 ],
@@ -672,6 +1069,106 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _showFileOrganizationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: Text(AppLocale.tr('file_organization'),
+            style: TextStyle(color: AppTheme.textPrimary)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(AppLocale.tr('file_organization'),
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  await FileOrganizer().organizeDownloads();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(AppLocale.tr('organize_now')),
+                        backgroundColor: AppTheme.primaryColor,
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.folder_rounded, size: 18),
+                label: Text(AppLocale.tr('organize_now')),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  await FileOrganizer().flattenStructure();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(AppLocale.tr('flat_structure')),
+                        backgroundColor: AppTheme.primaryColor,
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.unfold_less_rounded, size: 18),
+                label: Text(AppLocale.tr('flat_structure')),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.textPrimary,
+                  side: BorderSide(color: AppTheme.divider),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  await FileOrganizer().organizeDownloads(dryRun: true);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(AppLocale.tr('preview')),
+                      backgroundColor: AppTheme.primaryColor,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.preview_rounded, size: 18),
+                label: Text(AppLocale.tr('preview')),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.textPrimary,
+                  side: BorderSide(color: AppTheme.divider),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showCredits(BuildContext context) {
     showLicensePage(
       context: context,
@@ -772,6 +1269,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  String _formatDateTime(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inMinutes < 1) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${dt.month}/${dt.day}';
+  }
+
   void _confirmClearLibrary(BuildContext context) {
     showDialog(
       context: context,
@@ -799,6 +1306,203 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showSpotifyCookieDialog(BuildContext context) {
+    final spDcController = TextEditingController();
+    final spKeyController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: Text(AppLocale.tr('spotify_cookie_login'),
+            style: TextStyle(color: AppTheme.textPrimary)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(AppLocale.tr('cookie_auth_desc'),
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: spDcController,
+                decoration: InputDecoration(
+                  labelText: AppLocale.tr('sp_dc_label'),
+                  labelStyle: TextStyle(color: AppTheme.textSecondary),
+                  filled: true,
+                  fillColor: AppTheme.card,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                style: TextStyle(color: AppTheme.textPrimary),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: spKeyController,
+                decoration: InputDecoration(
+                  labelText: AppLocale.tr('sp_key_label'),
+                  labelStyle: TextStyle(color: AppTheme.textSecondary),
+                  filled: true,
+                  fillColor: AppTheme.card,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                style: TextStyle(color: AppTheme.textPrimary),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(AppLocale.tr('cancel'),
+                style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () async {
+              final spDc = spDcController.text.trim();
+              final spKey = spKeyController.text.trim();
+              if (spDc.isEmpty) return;
+              final auth = SpotifyCookieAuth();
+              final success = await auth.loginWithCookies(spDc, spKey);
+              if (success) {
+                await auth.storeCookiesEncrypted(spDc, spKey);
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(AppLocale.tr('connected_as')),
+                      backgroundColor: AppTheme.primaryColor,
+                    ),
+                  );
+                }
+              } else {
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(AppLocale.tr('auth_failed_try_again')),
+                      backgroundColor: AppTheme.errorColor,
+                    ),
+                  );
+                }
+              }
+            },
+            child: Text(AppLocale.tr('connect_spotify'),
+                style: TextStyle(color: AppTheme.primaryColor)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showYouTubeCookieDialog(BuildContext context) {
+    final cookieController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: Text(AppLocale.tr('yt_cookie_login'),
+            style: TextStyle(color: AppTheme.textPrimary)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(AppLocale.tr('cookie_auth_desc'),
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: cookieController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                labelText: AppLocale.tr('yt_cookie_label'),
+                labelStyle: TextStyle(color: AppTheme.textSecondary),
+                filled: true,
+                fillColor: AppTheme.card,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              style: TextStyle(color: AppTheme.textPrimary),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(AppLocale.tr('cancel'),
+                style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () async {
+              final cookie = cookieController.text.trim();
+              if (cookie.isEmpty) return;
+              final auth = YouTubeCookieAuth();
+              auth.loginWithCookies(cookie);
+              await auth.storeCookiesEncrypted(cookie);
+              if (ctx.mounted) {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(AppLocale.tr('connected_as')),
+                    backgroundColor: AppTheme.primaryColor,
+                  ),
+                );
+              }
+            },
+            child: Text(AppLocale.tr('connect_youtube_music'),
+                style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlaybackTile extends StatefulWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String? Function() subtitleBuilder;
+  final VoidCallback onTap;
+
+  const _PlaybackTile({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitleBuilder,
+    required this.onTap,
+  });
+
+  @override
+  State<_PlaybackTile> createState() => _PlaybackTileState();
+}
+
+class _PlaybackTileState extends State<_PlaybackTile> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.title == AppLocale.tr('sleep_timer')) {
+      PlaybackService.instance.sleepTimerStream.listen((_) {
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitle = widget.subtitleBuilder();
+    return _SettingsTile(
+      icon: widget.icon,
+      iconColor: widget.iconColor,
+      title: widget.title,
+      subtitle: subtitle,
+      trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+      onTap: widget.onTap,
     );
   }
 }
@@ -1203,12 +1907,104 @@ class _LastFmSettingsPage extends StatefulWidget {
 }
 
 class _LastFmSettingsPageState extends State<_LastFmSettingsPage> {
+  final _apiKeyController = TextEditingController();
+  final _apiSecretController = TextEditingController();
+
+  @override
+  void dispose() {
+    _apiKeyController.dispose();
+    _apiSecretController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _showConnectDialog(BuildContext context, LastFmProvider lastfm) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: Text(AppLocale.tr('connect_lastfm'),
+            style: TextStyle(color: AppTheme.textPrimary)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _apiKeyController,
+              decoration: InputDecoration(
+                labelText: AppLocale.tr('lastfm_api_key'),
+                labelStyle: TextStyle(color: AppTheme.textSecondary),
+                filled: true,
+                fillColor: AppTheme.card,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              style: TextStyle(color: AppTheme.textPrimary),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _apiSecretController,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: AppLocale.tr('lastfm_api_secret'),
+                labelStyle: TextStyle(color: AppTheme.textSecondary),
+                filled: true,
+                fillColor: AppTheme.card,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              style: TextStyle(color: AppTheme.textPrimary),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(AppLocale.tr('cancel'),
+                style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(AppLocale.tr('connect_lastfm'),
+                style: TextStyle(color: AppTheme.primaryColor)),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && context.mounted) {
+      final apiKey = _apiKeyController.text.trim();
+      final apiSecret = _apiSecretController.text.trim();
+      if (apiKey.isEmpty || apiSecret.isEmpty) return;
+      final success = await lastfm.connect(apiKey, apiSecret);
+      if (context.mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${AppLocale.tr('connected_as')} ${lastfm.username}'),
+              backgroundColor: AppTheme.primaryColor,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(lastfm.error ?? AppLocale.tr('auth_failed_try_again')),
+              backgroundColor: AppTheme.errorColor,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('Last.fm'),
+        title: Text(AppLocale.tr('lastfm')),
         backgroundColor: AppTheme.surface,
         foregroundColor: AppTheme.textPrimary,
         elevation: 0,
@@ -1223,7 +2019,9 @@ class _LastFmSettingsPageState extends State<_LastFmSettingsPage> {
                   icon: Icons.person_rounded,
                   iconColor: Colors.red,
                   title: '${AppLocale.tr('connected_as')} ${lastfm.username}',
-                  subtitle: AppLocale.tr('scrobbling_enabled'),
+                  subtitle: lastfm.sessionKey != null
+                      ? 'Session: ${lastfm.sessionKey!.substring(0, 8)}...'
+                      : null,
                   trailing: TextButton(
                     onPressed: () async {
                       await lastfm.disconnect();
@@ -1232,6 +2030,18 @@ class _LastFmSettingsPageState extends State<_LastFmSettingsPage> {
                     child: Text(AppLocale.tr('disconnect'),
                         style: TextStyle(color: AppTheme.errorColor)),
                   ),
+                ),
+                const SizedBox(height: 8),
+                _SettingsTile(
+                  icon: Icons.radio_rounded,
+                  iconColor: Colors.red,
+                  title: AppLocale.tr('lastfm_scrobbling'),
+                  trailing: Switch(
+                    value: lastfm.scrobbleEnabled,
+                    onChanged: (v) => lastfm.setScrobbleEnabled(v),
+                    activeColor: AppTheme.primaryColor,
+                  ),
+                  onTap: () => lastfm.setScrobbleEnabled(!lastfm.scrobbleEnabled),
                 ),
               ],
             );
@@ -1250,12 +2060,7 @@ class _LastFmSettingsPageState extends State<_LastFmSettingsPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () async {
-                      await lastfm.startAuth();
-                      if (context.mounted && lastfm.error == null) {
-                        _openAuthUrl(context, lastfm);
-                      }
-                    },
+                    onPressed: () => _showConnectDialog(context, lastfm),
                     icon: const Icon(Icons.login_rounded),
                     label: Text(AppLocale.tr('connect_lastfm')),
                     style: ElevatedButton.styleFrom(
@@ -1278,49 +2083,6 @@ class _LastFmSettingsPageState extends State<_LastFmSettingsPage> {
         },
       ),
     );
-  }
-
-  void _openAuthUrl(BuildContext context, LastFmProvider lastfm) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: Text(AppLocale.tr('authorize_lastfm'),
-            style: TextStyle(color: AppTheme.textPrimary)),
-        content: Text(
-          AppLocale.tr('lastfm_auth_instructions'),
-          style: TextStyle(color: AppTheme.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(AppLocale.tr('cancel'),
-                style: TextStyle(color: AppTheme.textSecondary)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _pollForSession(context, lastfm);
-            },
-            child: Text(AppLocale.tr('i_authorized'),
-                style: TextStyle(color: AppTheme.primaryColor)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _pollForSession(BuildContext context, LastFmProvider lastfm) async {
-    if (!context.mounted) return;
-    final success = await lastfm.completeAuth();
-    if (context.mounted && !success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocale.tr('auth_failed_try_again')),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
-    }
   }
 }
 
@@ -2428,6 +3190,414 @@ class _SyncSettingsPageState extends State<_SyncSettingsPage> {
   }
 }
 
+class _DefaultSyncSettingsPage extends StatefulWidget {
+  const _DefaultSyncSettingsPage();
+
+  @override
+  State<_DefaultSyncSettingsPage> createState() => _DefaultSyncSettingsPageState();
+}
+
+class _DefaultSyncSettingsPageState extends State<_DefaultSyncSettingsPage> {
+  bool _autoSync = false;
+  String _direction = 'bidirectional';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDefaults();
+  }
+
+  Future<void> _loadDefaults() async {
+    final db = DatabaseService.instance;
+    final autoSync = await db.getSetting('default_auto_sync');
+    final direction = await db.getSetting('default_sync_direction');
+    if (mounted) {
+      setState(() {
+        _autoSync = autoSync == 'true';
+        _direction = direction ?? 'bidirectional';
+      });
+    }
+  }
+
+  Future<void> _save() async {
+    final db = DatabaseService.instance;
+    await db.setSetting('default_auto_sync', _autoSync.toString());
+    await db.setSetting('default_sync_direction', _direction);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocale.tr('save')),
+          backgroundColor: AppTheme.primaryColor,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        title: Text(AppLocale.tr('default_sync')),
+        backgroundColor: AppTheme.surface,
+        foregroundColor: AppTheme.textPrimary,
+        elevation: 0,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(
+            AppLocale.tr('sync_settings'),
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+          ),
+          const SizedBox(height: 24),
+          _SettingsTile(
+            icon: Icons.autorenew_rounded,
+            iconColor: Colors.teal,
+            title: AppLocale.tr('auto_sync'),
+            subtitle: AppLocale.tr('sync_schedule'),
+            trailing: Switch(
+              value: _autoSync,
+              onChanged: (v) => setState(() => _autoSync = v),
+              activeColor: AppTheme.primaryColor,
+            ),
+            onTap: () => setState(() => _autoSync = !_autoSync),
+          ),
+          const SizedBox(height: 16),
+          _SectionTitle(AppLocale.tr('sync_direction')),
+          const SizedBox(height: 8),
+          _buildDirectionOption('bidirectional', AppLocale.tr('bidirectional')),
+          _buildDirectionOption('spotify_to_yt', AppLocale.tr('spotify_to_yt')),
+          _buildDirectionOption('yt_to_spotify', AppLocale.tr('yt_to_spotify')),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _save,
+              icon: const Icon(Icons.save_rounded, size: 20),
+              label: Text(AppLocale.tr('save')),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDirectionOption(String value, String label) {
+    final selected = _direction == value;
+    return ListTile(
+      leading: Icon(
+        selected ? Icons.radio_button_checked : Icons.radio_button_off,
+        color: selected ? AppTheme.primaryColor : AppTheme.textTertiary,
+        size: 20,
+      ),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: selected ? AppTheme.primaryColor : AppTheme.textPrimary,
+          fontSize: 15,
+        ),
+      ),
+      onTap: () => setState(() => _direction = value),
+    );
+  }
+}
+
+class _LikeMirrorSettingsPage extends StatelessWidget {
+  const _LikeMirrorSettingsPage();
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<LikeMirrorProvider>();
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        title: Text(AppLocale.tr('like_mirroring')),
+        backgroundColor: AppTheme.surface,
+        foregroundColor: AppTheme.textPrimary,
+        elevation: 0,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(
+            AppLocale.tr('mirror_likes_description'),
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+          ),
+          const SizedBox(height: 24),
+          _SettingsTile(
+            icon: Icons.sync_alt_rounded,
+            iconColor: Colors.blue,
+            title: AppLocale.tr('mirror_likes'),
+            trailing: Switch(
+              value: provider.enabled,
+              onChanged: (v) => provider.setEnabled(v),
+              activeColor: AppTheme.primaryColor,
+            ),
+            onTap: () => provider.setEnabled(!provider.enabled),
+          ),
+          const SizedBox(height: 16),
+          if (provider.enabled)
+            _SettingsTile(
+              icon: Icons.check_circle_rounded,
+              iconColor: Colors.green,
+              title: AppLocale.tr('mirroring_enabled'),
+              subtitle: provider.isMirroring
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppTheme.primaryColor,
+                      ),
+                    )
+                  : null,
+            ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: provider.isMirroring ? null : () => provider.mirrorNow(),
+              icon: provider.isMirroring
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                    )
+                  : const Icon(Icons.sync_rounded),
+              label: Text(AppLocale.tr('mirror_now')),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          if (provider.lastMirroredAt != null) ...[
+            _InfoRow(
+              label: AppLocale.tr('last_mirrored'),
+              value: _formatDateTime(provider.lastMirroredAt!),
+            ),
+            const SizedBox(height: 8),
+          ],
+          _InfoRow(
+            label: AppLocale.tr('mirrored_count'),
+            value: '${provider.mirroredCount}',
+          ),
+          if (provider.error != null) ...[
+            const SizedBox(height: 16),
+            Text(provider.error!, style: TextStyle(color: AppTheme.errorColor, fontSize: 13)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _formatDateTime(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
+}
+
+class _ScrobbleSettingsPage extends StatelessWidget {
+  const _ScrobbleSettingsPage();
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<ScrobbleProvider>();
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        title: Text(AppLocale.tr('yt_history_scrobbling')),
+        backgroundColor: AppTheme.surface,
+        foregroundColor: AppTheme.textPrimary,
+        elevation: 0,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(
+            AppLocale.tr('yt_history_scrobbling'),
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+          ),
+          const SizedBox(height: 24),
+          _SettingsTile(
+            icon: Icons.history_rounded,
+            iconColor: Colors.orange,
+            title: AppLocale.tr('scrobbling_enabled'),
+            trailing: Switch(
+              value: provider.enabled,
+              onChanged: (v) {
+                if (v) {
+                  provider.enable();
+                } else {
+                  provider.disable();
+                }
+              },
+              activeColor: AppTheme.primaryColor,
+            ),
+            onTap: () {
+              if (provider.enabled) {
+                provider.disable();
+              } else {
+                provider.enable();
+              }
+            },
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: provider.isScrobbling ? null : () => provider.scrobbleNow(),
+              icon: provider.isScrobbling
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                    )
+                  : const Icon(Icons.sync_rounded),
+              label: Text(AppLocale.tr('scrobble_now')),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          if (provider.lastScrobbledAt != null) ...[
+            _InfoRow(
+              label: AppLocale.tr('last_scrobbled'),
+              value: _formatDateTime(provider.lastScrobbledAt!),
+            ),
+            const SizedBox(height: 8),
+          ],
+          _InfoRow(
+            label: AppLocale.tr('scrobbled_count'),
+            value: '${provider.scrobbleCount}',
+          ),
+          if (provider.recentHistory.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _SectionTitle(AppLocale.tr('recent_scrobbles')),
+            const SizedBox(height: 8),
+            ...provider.recentHistory.take(10).map((item) {
+              return _ScrobbleHistoryTile(item: item);
+            }),
+          ],
+          if (provider.error != null) ...[
+            const SizedBox(height: 16),
+            Text(provider.error!, style: TextStyle(color: AppTheme.errorColor, fontSize: 13)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _formatDateTime(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
+}
+
+class _ScrobbleHistoryTile extends StatelessWidget {
+  final ScrobbleItem item;
+
+  const _ScrobbleHistoryTile({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.music_note_rounded, color: Colors.orange, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title.isNotEmpty ? item.title : item.videoId,
+                  style: TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (item.artists.isNotEmpty)
+                  Text(
+                    item.artists,
+                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+          if (item.spotifyTrackId != null)
+            Icon(Icons.check_circle, color: AppTheme.primaryColor, size: 16),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _InfoRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+          ),
+          Text(
+            value,
+            style: TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 const List<Color> _accentColors = [
   Color(0xFF1DB954),
   Color(0xFF1ED760),
@@ -2595,6 +3765,185 @@ class _CustomColorTile extends StatelessWidget {
   }
 }
 
+class _LosslessDownloadsSection extends StatefulWidget {
+  @override
+  State<_LosslessDownloadsSection> createState() =>
+      _LosslessDownloadsSectionState();
+}
+
+class _LosslessDownloadsSectionState extends State<_LosslessDownloadsSection> {
+  bool _losslessQuality = true;
+  String _coverResolution = 'high';
+  bool _embedMetadata = true;
+  bool _loudnessNorm = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final db = DatabaseService.instance;
+    final lossless = await db.getSetting('lossless_quality');
+    final cover = await db.getSetting('cover_resolution');
+    final embed = await db.getSetting('embed_metadata');
+    final loudness = await db.getSetting('loudness_norm');
+    if (mounted) {
+      setState(() {
+        _losslessQuality = lossless != 'false';
+        _coverResolution = cover ?? 'high';
+        _embedMetadata = embed != 'false';
+        _loudnessNorm = loudness == 'true';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _SettingsTile(
+          icon: Icons.high_quality_rounded,
+          iconColor: Colors.amber,
+          title: AppLocale.tr('lossless_quality'),
+          subtitle: AppLocale.tr('lossless'),
+          trailing: Switch(
+            value: _losslessQuality,
+            onChanged: (v) {
+              setState(() => _losslessQuality = v);
+              DatabaseService.instance
+                  .setSetting('lossless_quality', v.toString());
+            },
+            activeColor: AppTheme.primaryColor,
+          ),
+          onTap: () {
+            final v = !_losslessQuality;
+            setState(() => _losslessQuality = v);
+            DatabaseService.instance
+                .setSetting('lossless_quality', v.toString());
+          },
+        ),
+        const SizedBox(height: 8),
+        _SettingsTile(
+          icon: Icons.image_rounded,
+          iconColor: Colors.indigo,
+          title: AppLocale.tr('cover_resolution'),
+          subtitle: _coverResolution == 'high'
+              ? AppLocale.tr('high')
+              : _coverResolution == 'medium'
+                  ? AppLocale.tr('medium')
+                  : AppLocale.tr('low'),
+          trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+          onTap: () => _showResolutionPicker(context),
+        ),
+        const SizedBox(height: 8),
+        _SettingsTile(
+          icon: Icons.description_rounded,
+          iconColor: Colors.teal,
+          title: AppLocale.tr('embed_metadata'),
+          subtitle: AppLocale.tr('metadata_backfill'),
+          trailing: Switch(
+            value: _embedMetadata,
+            onChanged: (v) {
+              setState(() => _embedMetadata = v);
+              DatabaseService.instance
+                  .setSetting('embed_metadata', v.toString());
+            },
+            activeColor: AppTheme.primaryColor,
+          ),
+          onTap: () {
+            final v = !_embedMetadata;
+            setState(() => _embedMetadata = v);
+            DatabaseService.instance
+                .setSetting('embed_metadata', v.toString());
+          },
+        ),
+        const SizedBox(height: 8),
+        _SettingsTile(
+          icon: Icons.volume_up_rounded,
+          iconColor: Colors.orange,
+          title: AppLocale.tr('loudness_norm'),
+          subtitle: AppLocale.tr('audio'),
+          trailing: Switch(
+            value: _loudnessNorm,
+            onChanged: (v) {
+              setState(() => _loudnessNorm = v);
+              DatabaseService.instance
+                  .setSetting('loudness_norm', v.toString());
+            },
+            activeColor: AppTheme.primaryColor,
+          ),
+          onTap: () {
+            final v = !_loudnessNorm;
+            setState(() => _loudnessNorm = v);
+            DatabaseService.instance
+                .setSetting('loudness_norm', v.toString());
+          },
+        ),
+      ],
+    );
+  }
+
+  void _showResolutionPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.divider,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(AppLocale.tr('cover_resolution'),
+                style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            ...[
+              (AppLocale.tr('high'), 'high'),
+              (AppLocale.tr('medium'), 'medium'),
+              (AppLocale.tr('low'), 'low'),
+            ].map((entry) {
+              final selected = _coverResolution == entry.$2;
+              return ListTile(
+                leading: Icon(
+                  selected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  color: selected
+                      ? AppTheme.primaryColor
+                      : AppTheme.textTertiary,
+                ),
+                title: Text(entry.$1,
+                    style: TextStyle(color: AppTheme.textPrimary)),
+                onTap: () {
+                  setState(() => _coverResolution = entry.$2);
+                  DatabaseService.instance
+                      .setSetting('cover_resolution', entry.$2);
+                  Navigator.pop(ctx);
+                },
+              );
+            }),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
@@ -2638,6 +3987,56 @@ class _SettingsTile extends StatelessWidget {
       subtitle: subtitleWidget,
       trailing: trailing,
       onTap: onTap,
+    );
+  }
+}
+
+class _LibraryHealthSettingsTile extends StatefulWidget {
+  @override
+  State<_LibraryHealthSettingsTile> createState() => _LibraryHealthSettingsTileState();
+}
+
+class _LibraryHealthSettingsTileState extends State<_LibraryHealthSettingsTile> {
+  double? _cachedScore;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final svc = LibraryHealthService();
+    await svc.scanLibrary();
+    if (mounted) {
+      setState(() {
+        _cachedScore = svc.getHealthScore();
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _SettingsTile(
+      icon: Icons.favorite_rounded,
+      iconColor: Colors.pink,
+      title: AppLocale.tr('library_health'),
+      subtitle: _loading
+          ? AppLocale.tr('scan_library')
+          : _cachedScore != null
+              ? '${AppLocale.tr('health_score')}: ${_cachedScore!.round()}%'
+              : AppLocale.tr('scan_library'),
+      trailing: _loading
+          ? SizedBox(
+              width: 20, height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor),
+            )
+          : Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const LibraryHealthScreen()),
+      ),
     );
   }
 }

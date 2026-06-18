@@ -12,6 +12,12 @@ import '../providers/playlist_provider.dart';
 import '../models/album_model.dart';
 import '../widgets/song_tile.dart';
 import '../widgets/image_with_fallback.dart';
+import '../widgets/wrong_match_button.dart';
+import '../providers/spotify_provider.dart';
+import '../providers/ytmusic_provider.dart';
+import '../services/track_matcher.dart';
+import '../services/ytmusic_service.dart';
+import '../widgets/playlist_sync_settings.dart';
 
 class PlaylistDetailScreen extends StatefulWidget {
   final PlaylistModel playlist;
@@ -25,11 +31,95 @@ class PlaylistDetailScreen extends StatefulWidget {
 class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   late List<SongModel> _songs;
   bool _isLoading = true;
+  bool _syncEnabled = false;
+  Map<String, double> _confidenceMap = {};
+  bool _isRematching = false;
+  double _rematchProgress = 0.0;
 
   @override
   void initState() {
     super.initState();
     _loadSongs();
+    _loadSyncState();
+    _loadConfidence();
+  }
+
+  Future<void> _loadSyncState() async {
+    final state = await DatabaseService.instance.getPlaylistSyncState(widget.playlist.id);
+    if (mounted) {
+      setState(() {
+        _syncEnabled = state != null ? (state['syncEnabled'] as int?) == 1 : false;
+      });
+    }
+  }
+
+  Future<void> _loadConfidence() async {
+    final confidences =
+        await DatabaseService.instance.getAllCachedConfidences();
+    final spotify = context.read<SpotifyProvider>();
+    final map = <String, double>{};
+    for (final entry in spotify.matchedTrackIds.entries) {
+      final confidence = confidences[entry.key];
+      if (confidence != null) {
+        map[entry.value] = confidence;
+      }
+    }
+    if (mounted) {
+      setState(() => _confidenceMap = map);
+    }
+  }
+
+  Future<void> _rematchAll() async {
+    final spotify = context.read<SpotifyProvider>();
+    final ytService = context.read<YTMusicProvider>().service;
+    if (!spotify.isConnected) return;
+
+    final trackIds = spotify.matchedTrackIds.entries.toList();
+    if (trackIds.isEmpty) return;
+
+    setState(() {
+      _isRematching = true;
+      _rematchProgress = 0.0;
+    });
+
+    final matcher = TrackMatcher(ytService.search);
+    for (var i = 0; i < trackIds.length; i++) {
+      final entry = trackIds[i];
+      final song = _songs.where((s) => s.id == entry.value).firstOrNull;
+      if (song == null) continue;
+
+      final result = await matcher.matchSpotifyTrackToYT(
+        song.title,
+        song.artist,
+        durationMs: song.duration.inMilliseconds,
+      );
+
+      if (result != null) {
+        await DatabaseService.instance.cacheMatch(
+          entry.key,
+          result.ytVideoId,
+          result.confidence,
+        );
+        if (mounted) {
+          setState(() {
+            _confidenceMap[entry.value] = result.confidence;
+          });
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _rematchProgress = (i + 1) / trackIds.length;
+        });
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _isRematching = false;
+        _rematchProgress = 1.0;
+      });
+    }
   }
 
   Future<void> _loadSongs() async {
@@ -54,6 +144,35 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       appBar: AppBar(
         title: Text(playlist.name),
         actions: [
+          if (!_isRematching)
+            IconButton(
+              icon: const Icon(Icons.compare_arrows_rounded, size: 22),
+              tooltip: AppLocale.tr('rematch_all'),
+              color: AppTheme.textSecondary,
+              onPressed: _rematchAll,
+            ),
+          IconButton(
+            icon: Icon(
+              _syncEnabled ? Icons.sync : Icons.sync_disabled_rounded,
+              color: _syncEnabled
+                  ? AppTheme.primaryColor
+                  : AppTheme.textTertiary,
+              size: 22,
+            ),
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: AppTheme.surface,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                builder: (_) => PlaylistSyncSettings(
+                  playlistId: widget.playlist.id,
+                  playlistName: widget.playlist.name,
+                ),
+              ).then((_) => _loadSyncState());
+            },
+          ),
           PopupMenuButton<String>(
             icon: Icon(Icons.more_horiz_rounded,
                 color: AppTheme.textSecondary),
@@ -211,6 +330,58 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                       ),
                     ),
                     Divider(color: AppTheme.divider, height: 1),
+                    if (_isRematching)
+                      Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppTheme.primaryColor,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  AppLocale.tr('match_progress'),
+                                  style: TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  '${(_rematchProgress * 100).toInt()}%',
+                                  style: TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 16),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: _rematchProgress,
+                                backgroundColor: AppTheme.card,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    AppTheme.primaryColor),
+                                minHeight: 4,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                        ],
+                      ),
                     // Songs list
                     Expanded(
                       child: ReorderableListView.builder(
@@ -257,6 +428,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                               showArtwork: true,
                               onViewAlbum: () => _navigateToAlbum(context, song),
                               onViewArtist: () => _navigateToArtist(context, song),
+                              wrongMatchButton: _buildWrongMatch(context, song),
+                              confidence: _confidenceMap[song.id],
                             ),
                           );
                         },
@@ -373,6 +546,20 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget? _buildWrongMatch(BuildContext context, SongModel song) {
+    final spotify = context.read<SpotifyProvider>();
+    final entries = spotify.matchedTrackIds.entries
+        .where((e) => e.value == song.id)
+        .toList();
+    if (entries.isEmpty) return null;
+    return WrongMatchButton(
+      spotifyTrackId: entries.first.key,
+      title: song.title,
+      artist: song.artist,
+      onResolved: () {},
     );
   }
 

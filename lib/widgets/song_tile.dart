@@ -11,6 +11,8 @@ import '../core/extensions/duration_ext.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/playlist_provider.dart';
+import '../providers/download_provider.dart';
+import '../services/download_manager.dart';
 import 'image_with_fallback.dart';
 import 'queue_sheet.dart';
 
@@ -28,6 +30,8 @@ class SongTile extends StatelessWidget {
   final bool showArtwork;
   final bool showFavorite;
   final double artworkSize;
+  final Widget? wrongMatchButton;
+  final double? confidence;
 
   const SongTile({
     super.key,
@@ -44,6 +48,8 @@ class SongTile extends StatelessWidget {
     this.showArtwork = true,
     this.showFavorite = true,
     this.artworkSize = 48,
+    this.wrongMatchButton,
+    this.confidence,
   });
 
   @override
@@ -88,6 +94,22 @@ class SongTile extends StatelessWidget {
       ),
       subtitle: Row(
         children: [
+          if (confidence != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: confidence! >= 0.9
+                      ? const Color(0xFF4CAF50)
+                      : confidence! >= 0.7
+                          ? const Color(0xFFFFC107)
+                          : const Color(0xFFF44336),
+                ),
+              ),
+            ),
           Flexible(
             child: Text(
               song.artist,
@@ -118,6 +140,8 @@ class SongTile extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (wrongMatchButton != null) wrongMatchButton!,
+              _DownloadIndicator(song: song),
               if (showFavorite)
                 IconButton(
                   icon: Icon(
@@ -263,5 +287,70 @@ class SongTile extends StatelessWidget {
         }
       }
     }
+  }
+}
+
+class _DownloadIndicator extends StatelessWidget {
+  final SongModel song;
+  const _DownloadIndicator({required this.song});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<DownloadProvider>(
+      builder: (context, provider, _) {
+        final status = provider.getStatusForSong(song.title, song.artist);
+        if (status == null) return const SizedBox.shrink();
+        final progress = provider.getProgressForSong(song.title, song.artist);
+
+        switch (status) {
+          case DownloadState.pending:
+          case DownloadState.downloading:
+            if (progress != null && progress > 0) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        value: progress,
+                        strokeWidth: 2,
+                        color: AppTheme.primaryColor,
+                      ),
+                      Text(
+                        '${(progress * 100).toInt()}',
+                        style: TextStyle(fontSize: 7, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+            );
+          case DownloadState.completed:
+            return Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Icon(Icons.check_circle, color: AppTheme.primaryColor, size: 18),
+            );
+          case DownloadState.failed:
+            return Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Icon(Icons.error, color: AppTheme.errorColor, size: 18),
+            );
+        }
+      },
+    );
   }
 }

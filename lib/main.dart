@@ -9,6 +9,8 @@ import 'core/constants.dart';
 import 'core/localization.dart';
 import 'services/audio_handler.dart';
 import 'services/database_service.dart';
+import 'services/diagnostics_service.dart';
+import 'services/crash_reporter.dart';
 import 'providers/player_provider.dart';
 import 'providers/library_provider.dart';
 import 'providers/playlist_provider.dart';
@@ -16,12 +18,19 @@ import 'providers/search_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/youtube_provider.dart';
 import 'providers/lastfm_provider.dart';
-import 'services/lastfm_service.dart';
 import 'services/ytmusic_service.dart';
 import 'providers/ytmusic_provider.dart';
 import 'providers/spotify_provider.dart';
+import 'providers/mix_provider.dart';
 import 'providers/sync_provider.dart';
 import 'providers/settings_provider.dart';
+import 'providers/metadata_provider.dart';
+import 'providers/scrobble_provider.dart';
+import 'providers/connection_provider.dart';
+import 'providers/download_provider.dart';
+import 'providers/like_mirror_provider.dart';
+import 'services/scrobble_service.dart';
+import 'services/like_mirror_service.dart';
 import 'screens/home_screen.dart';
 
 Future<void> main() async {
@@ -39,6 +48,9 @@ Future<void> main() async {
       systemNavigationBarColor: const Color(0xFF121212),
       systemNavigationBarIconBrightness: Brightness.light,
     ));
+
+    CrashReporter.init();
+    DiagnosticsService.instance;
 
     final db = DatabaseService.instance;
     await db.database;
@@ -149,11 +161,7 @@ class MelodiApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) {
-            final service = LastFmService(
-              apiKey: 'YOUR_LASTFM_API_KEY',
-              apiSecret: 'YOUR_LASTFM_API_SECRET',
-            );
-            final provider = LastFmProvider(service);
+            final provider = LastFmProvider();
             provider.loadSession();
             return provider;
           },
@@ -170,10 +178,67 @@ class MelodiApp extends StatelessWidget {
           create: (_) => SpotifyProvider()..init(),
         ),
         ChangeNotifierProvider(
+          create: (ctx) {
+            final spotify = ctx.read<SpotifyProvider>();
+            return MixProvider(spotifyService: spotify.service)..init();
+          },
+        ),
+        ChangeNotifierProvider(
           create: (_) => SettingsProvider()..load(),
         ),
         ChangeNotifierProvider(
           create: (_) => SyncProvider()..init(),
+        ),
+        ChangeNotifierProvider(
+          create: (ctx) {
+            final ytmusic = ctx.read<YTMusicProvider>();
+            final spotify = ctx.read<SpotifyProvider>();
+            final service = ScrobbleService(
+              ytmusic: ytmusic.service,
+              spotify: spotify.service,
+            );
+            final provider = ScrobbleProvider(service: service);
+            provider.init();
+            return provider;
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (ctx) {
+            final spotify = ctx.read<SpotifyProvider>();
+            final ytmusic = ctx.read<YTMusicProvider>();
+            final provider = ConnectionProvider(
+              spotifyService: spotify.service,
+              ytmusicService: ytmusic.service,
+            );
+            provider.init();
+            return provider;
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (ctx) {
+            final spotify = ctx.read<SpotifyProvider>();
+            final ytmusic = ctx.read<YTMusicProvider>();
+            return MetadataProvider(
+              spotifyService: spotify.service,
+              ytmusicService: ytmusic.service,
+            );
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (ctx) {
+            final spotify = ctx.read<SpotifyProvider>();
+            final ytmusic = ctx.read<YTMusicProvider>();
+            final service = LikeMirrorService(
+              spotifyService: spotify.service,
+              ytMusicService: ytmusic.service,
+            );
+            final provider = LikeMirrorProvider(service);
+            provider.init();
+            return provider;
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (_) => DownloadProvider(),
         ),
       ],
       child: Builder(

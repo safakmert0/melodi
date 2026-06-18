@@ -27,12 +27,25 @@ class LastFmTrackInfo {
   });
 }
 
+class LastFmTopTrack {
+  final String name;
+  final String artist;
+  final int playcount;
+  final String? imageUrl;
+
+  const LastFmTopTrack({
+    required this.name,
+    required this.artist,
+    required this.playcount,
+    this.imageUrl,
+  });
+}
+
 class LastFmService {
   static const _apiUrl = 'https://ws.audioscrobbler.com/2.0/';
 
-  final String apiKey;
-  final String apiSecret;
-
+  String apiKey;
+  String apiSecret;
   LastFmSession? _session;
 
   LastFmService({required this.apiKey, required this.apiSecret});
@@ -42,6 +55,11 @@ class LastFmService {
 
   void setSession(LastFmSession? session) {
     _session = session;
+  }
+
+  void setCredentials(String key, String secret) {
+    apiKey = key;
+    apiSecret = secret;
   }
 
   String _sign(Map<String, String> params) {
@@ -145,6 +163,21 @@ class LastFmService {
     );
   }
 
+  Future<LastFmSession> getSessionKey(String apiKey, String apiSecret) async {
+    final tempKey = this.apiKey;
+    final tempSecret = this.apiSecret;
+    this.apiKey = apiKey;
+    this.apiSecret = apiSecret;
+    try {
+      final token = await getAuthToken();
+      final session = await getSession(token);
+      return session;
+    } finally {
+      this.apiKey = tempKey;
+      this.apiSecret = tempSecret;
+    }
+  }
+
   Future<void> scrobble({
     required String artist,
     required String track,
@@ -152,15 +185,21 @@ class LastFmService {
     String? album,
   }) async {
     if (_session == null) throw LastFmException('Not connected', 0);
+    await scrobbleTrack(artist, track, album: album, timestamp: timestamp);
+  }
+
+  Future<void> scrobbleTrack(String artist, String track, {String? album, int? timestamp, int? duration}) async {
+    if (_session == null) throw LastFmException('Not connected', 0);
     final params = {
       'method': 'track.scrobble',
       'api_key': apiKey,
       'sk': _session!.sessionKey,
       'artist': artist,
       'track': track,
-      'timestamp': timestamp.toString(),
     };
+    if (timestamp != null) params['timestamp'] = timestamp.toString();
     if (album != null && album.isNotEmpty) params['album'] = album;
+    if (duration != null && duration > 0) params['duration'] = duration.toString();
     await _signedPost(params);
   }
 
@@ -168,6 +207,7 @@ class LastFmService {
     required String artist,
     required String track,
     String? album,
+    int? duration,
   }) async {
     if (_session == null) return;
     final params = {
@@ -178,7 +218,62 @@ class LastFmService {
       'track': track,
     };
     if (album != null && album.isNotEmpty) params['album'] = album;
+    if (duration != null && duration > 0) params['duration'] = duration.toString();
     await _signedPost(params);
+  }
+
+  Future<LastFmTrackInfo> getTrackInfo(String artist, String track) async {
+    final params = {
+      'method': 'track.getInfo',
+      'api_key': apiKey,
+      'artist': artist,
+      'track': track,
+    };
+    if (_session != null) params['sk'] = _session!.sessionKey;
+    final response = await _unsignedGet(params);
+    final info = response['track'] as Map<String, dynamic>?;
+    if (info == null) throw LastFmException('Track not found', 0);
+    return LastFmTrackInfo(
+      mbid: info['mbid'] as String?,
+      durationMs: info['duration'] != null ? int.tryParse(info['duration'].toString()) : null,
+      listeners: int.tryParse(info['listeners']?.toString() ?? '0') ?? 0,
+      playcount: int.tryParse(info['playcount']?.toString() ?? '0') ?? 0,
+      bestImageUrl: _extractImageUrl(info['album'] as Map<String, dynamic>?),
+    );
+  }
+
+  Future<List<LastFmTopTrack>> getTopTracks(String period) async {
+    if (_session == null) throw LastFmException('Not connected', 0);
+    final params = {
+      'method': 'user.getTopTracks',
+      'api_key': apiKey,
+      'sk': _session!.sessionKey,
+      'user': _session!.username,
+      'period': period,
+      'limit': '50',
+    };
+    final response = await _unsignedGet(params);
+    final tracks = response['toptracks']?['track'] as List<dynamic>? ?? [];
+    return tracks.map((t) {
+      final track = t as Map<String, dynamic>;
+      final artistData = track['artist'] as Map<String, dynamic>?;
+      return LastFmTopTrack(
+        name: track['name'] as String? ?? '',
+        artist: artistData?['name'] as String? ?? '',
+        playcount: int.tryParse(track['playcount']?.toString() ?? '0') ?? 0,
+        imageUrl: _extractImageUrl(track),
+      );
+    }).toList();
+  }
+
+  String? _extractImageUrl(Map<String, dynamic>? data) {
+    if (data == null) return null;
+    final images = data['image'] as List<dynamic>?;
+    if (images == null || images.isEmpty) return null;
+    final largest = images.last as Map<String, dynamic>?;
+    final url = largest?['#text'] as String?;
+    if (url != null && url.isNotEmpty) return url;
+    return null;
   }
 }
 

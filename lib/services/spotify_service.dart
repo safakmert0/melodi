@@ -860,6 +860,128 @@ class SpotifyService {
     }
   }
 
+  Future<bool> likeSpotifyTrack(String trackId) async {
+    if (_accessToken == null) return false;
+    try {
+      final url = '${SpotifyAuthConfig.webApiBase}/me/tracks?ids=$trackId';
+      var response = await http.put(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $_accessToken',
+          'Accept': 'application/json',
+        },
+      );
+      if (response.statusCode == 401) {
+        final refreshed = await refreshAccessToken();
+        if (refreshed != null) {
+          response = await http.put(
+            Uri.parse(url),
+            headers: {
+              'Authorization': 'Bearer ${refreshed.accessToken}',
+              'Accept': 'application/json',
+            },
+          );
+        }
+      }
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('likeSpotifyTrack failed: $e');
+      return false;
+    }
+  }
+
+  Future<bool> unlikeSpotifyTrack(String trackId) async {
+    if (_accessToken == null) return false;
+    try {
+      final url = '${SpotifyAuthConfig.webApiBase}/me/tracks?ids=$trackId';
+      var response = await http.delete(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $_accessToken',
+          'Accept': 'application/json',
+        },
+      );
+      if (response.statusCode == 401) {
+        final refreshed = await refreshAccessToken();
+        if (refreshed != null) {
+          response = await http.delete(
+            Uri.parse(url),
+            headers: {
+              'Authorization': 'Bearer ${refreshed.accessToken}',
+              'Accept': 'application/json',
+            },
+          );
+        }
+      }
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('unlikeSpotifyTrack failed: $e');
+      return false;
+    }
+  }
+
+  Future<bool> followArtist(String artistId) async {
+    if (_accessToken == null) return false;
+    try {
+      final url = '${SpotifyAuthConfig.webApiBase}/me/following?type=artist&ids=$artistId';
+      var response = await http.put(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $_accessToken',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      );
+      if (response.statusCode == 401) {
+        final refreshed = await refreshAccessToken();
+        if (refreshed != null) {
+          response = await http.put(
+            Uri.parse(url),
+            headers: {
+              'Authorization': 'Bearer ${refreshed.accessToken}',
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+          );
+        }
+      }
+      return response.statusCode == 204;
+    } catch (e) {
+      debugPrint('followArtist failed: $e');
+      return false;
+    }
+  }
+
+  Future<bool> unfollowArtist(String artistId) async {
+    if (_accessToken == null) return false;
+    try {
+      final url = '${SpotifyAuthConfig.webApiBase}/me/following?type=artist&ids=$artistId';
+      var response = await http.delete(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $_accessToken',
+          'Accept': 'application/json',
+        },
+      );
+      if (response.statusCode == 401) {
+        final refreshed = await refreshAccessToken();
+        if (refreshed != null) {
+          response = await http.delete(
+            Uri.parse(url),
+            headers: {
+              'Authorization': 'Bearer ${refreshed.accessToken}',
+              'Accept': 'application/json',
+            },
+          );
+        }
+      }
+      return response.statusCode == 204;
+    } catch (e) {
+      debugPrint('unfollowArtist failed: $e');
+      return false;
+    }
+  }
+
   Future<List<SpotifyTrackItem>> searchTracks(String query,
       {int limit = 8, String market = 'US'}) async {
     if (_accessToken == null) return [];
@@ -935,5 +1057,10 @@ class SpotifyService {
       debugPrint('searchTracks failed: $e');
       return [];
     }
+  }
+
+  Future<List<SpotifyTrackItem>> syncPlaylist(String playlistId, {String? direction}) async {
+    debugPrint('SpotifyService.syncPlaylist: $playlistId direction=$direction');
+    return getPlaylistTracks(playlistId);
   }
 }

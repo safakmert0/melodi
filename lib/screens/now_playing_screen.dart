@@ -18,9 +18,13 @@ import '../providers/playlist_provider.dart';
 import '../services/audio_handler.dart';
 import '../services/lyrics_service.dart';
 import '../services/artwork_service.dart';
+import '../services/playback_service.dart';
 import '../widgets/seek_bar.dart';
 import '../widgets/image_with_fallback.dart';
 import '../widgets/queue_sheet.dart';
+import '../widgets/lyrics_sheet.dart';
+import '../widgets/sleep_timer_sheet.dart';
+import '../widgets/crossfade_slider.dart';
 
 class NowPlayingScreen extends StatefulWidget {
   const NowPlayingScreen({super.key});
@@ -500,6 +504,17 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                           Row(
                             children: [
                               IconButton(
+                                icon: Icon(Icons.article_rounded, color: Colors.white54, size: 22),
+                                onPressed: () {
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (_) => const LyricsSheet(),
+                                  );
+                                },
+                              ),
+                              IconButton(
                                 icon: Icon(
                                   Icons.closed_caption_rounded,
                                   color: _showLyrics ? _dynamicColor : Colors.white54,
@@ -514,6 +529,19 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               IconButton(
                                 icon: Icon(Icons.queue_music_rounded, color: Colors.white54, size: 22),
                                 onPressed: () => _showQueue(context),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.dark_mode_rounded, color: Colors.white54, size: 22),
+                                onPressed: () {
+                                  showModalBottomSheet(
+                                    context: context,
+                                    backgroundColor: AppTheme.surface,
+                                    shape: const RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                    ),
+                                    builder: (_) => const SleepTimerSheet(),
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -943,6 +971,41 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               onTap: () {
                 Navigator.pop(context);
                 _showSleepTimer(context, player);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.swap_horiz_rounded, color: AppTheme.textSecondary),
+              title: Text(AppLocale.tr('crossfade'),
+                  style: TextStyle(color: AppTheme.textPrimary)),
+              onTap: () {
+                Navigator.pop(context);
+                showModalBottomSheet(
+                  context: context,
+                  backgroundColor: AppTheme.surface,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  builder: (_) => SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: AppTheme.divider,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const CrossfadeSlider(),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
               },
             ),
             const SizedBox(height: 16),

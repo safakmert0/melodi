@@ -10,6 +10,11 @@ import '../providers/youtube_provider.dart';
 import '../models/song_model.dart';
 import '../services/youtube_service.dart';
 import '../widgets/song_tile.dart';
+import '../widgets/wrong_match_button.dart';
+import '../services/album_discovery_service.dart';
+import '../providers/spotify_provider.dart';
+import 'album_detail_screen.dart';
+import 'artist_profile_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -24,6 +29,9 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _showClear = false;
   bool _youtubeMode = false;
   Timer? _debounce;
+  List<DiscoveredAlbum> _albumResults = [];
+  List<DiscoveredArtist> _artistResults = [];
+  bool _isSearchingRemote = false;
 
   @override
   void dispose() {
@@ -36,7 +44,13 @@ class _SearchScreenState extends State<SearchScreen> {
   void _performSearch(String query, bool youtubeMode) {
     _debounce?.cancel();
     final q = query.trim();
-    if (q.isEmpty) return;
+    if (q.isEmpty) {
+      setState(() {
+        _albumResults = [];
+        _artistResults = [];
+      });
+      return;
+    }
     _debounce = Timer(const Duration(milliseconds: 400), () {
       final searchProvider = context.read<SearchProvider>();
       final youtubeProvider = context.read<YouTubeProvider>();
@@ -44,8 +58,23 @@ class _SearchScreenState extends State<SearchScreen> {
         youtubeProvider.search(q);
       } else {
         searchProvider.search(q);
+        _searchRemote(q);
       }
     });
+  }
+
+  Future<void> _searchRemote(String query) async {
+    setState(() => _isSearchingRemote = true);
+    final service = AlbumDiscoveryService();
+    final albums = await service.searchAlbums(query, limit: 5);
+    final artists = await service.searchArtists(query, limit: 5);
+    if (mounted) {
+      setState(() {
+        _albumResults = albums;
+        _artistResults = artists;
+        _isSearchingRemote = false;
+      });
+    }
   }
 
   @override
@@ -176,23 +205,134 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           );
         }
-        return ListView.builder(
+        return CustomScrollView(
           physics: const BouncingScrollPhysics(),
-          itemCount: searchProvider.results.length,
-          itemBuilder: (context, index) {
-            final song = searchProvider.results[index];
-            return SongTile(
-              song: song,
-              onTap: () {
-                context
-                    .read<PlayerProvider>()
-                    .playFromQueue(searchProvider.results, index);
-                searchProvider.addRecentSearch(searchProvider.query);
-              },
-              onFavorite: () =>
-                  context.read<LibraryProvider>().toggleFavorite(song),
-            );
-          },
+          slivers: [
+            if (_albumResults.isNotEmpty) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: Text(
+                    AppLocale.tr('albums'),
+                    style: TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 180,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.only(left: 16),
+                    itemCount: _albumResults.length,
+                    itemBuilder: (context, index) {
+                      final album = _albumResults[index];
+                      return _SearchAlbumCard(
+                        album: album,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                AlbumDetailScreen(album: album),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+            if (_artistResults.isNotEmpty) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Text(
+                    AppLocale.tr('artists'),
+                    style: TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 140,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.only(left: 16),
+                    itemCount: _artistResults.length,
+                    itemBuilder: (context, index) {
+                      final artist = _artistResults[index];
+                      return _SearchArtistCard(
+                        artist: artist,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ArtistProfileScreen(
+                              artistId: artist.id,
+                              artistName: artist.name,
+                              imageUrl: artist.imageUrl,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  AppLocale.tr('songs'),
+                  style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final song = searchProvider.results[index];
+                  final spotify = context.read<SpotifyProvider>();
+                  final spotifyEntry = spotify.matchedTrackIds.entries
+                      .where((e) => e.value == song.id)
+                      .toList();
+                  final spotifyTrackId = spotifyEntry.isNotEmpty
+                      ? spotifyEntry.first.key
+                      : null;
+                  return SongTile(
+                    song: song,
+                    onTap: () {
+                      context
+                          .read<PlayerProvider>()
+                          .playFromQueue(searchProvider.results, index);
+                      searchProvider.addRecentSearch(searchProvider.query);
+                    },
+                    onFavorite: () =>
+                        context.read<LibraryProvider>().toggleFavorite(song),
+                    wrongMatchButton: spotifyTrackId != null
+                        ? WrongMatchButton(
+                            spotifyTrackId: spotifyTrackId,
+                            title: song.title,
+                            artist: song.artist,
+                            onResolved: () {},
+                          )
+                        : null,
+                  );
+                },
+                childCount: searchProvider.results.length,
+              ),
+            ),
+          ],
         );
       },
     );
@@ -525,6 +665,121 @@ class _YouTubeResultTile extends StatelessWidget {
         icon: Icon(Icons.download_rounded, size: 20),
         color: AppTheme.textSecondary,
         onPressed: onDownload,
+      ),
+    );
+  }
+}
+
+class _SearchAlbumCard extends StatelessWidget {
+  final DiscoveredAlbum album;
+  final VoidCallback onTap;
+
+  const _SearchAlbumCard({
+    required this.album,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 140,
+        margin: const EdgeInsets.only(right: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                width: 140,
+                height: 140,
+                color: AppTheme.card,
+                child: album.imageUrl != null
+                    ? Image.network(album.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(
+                            Icons.album_rounded,
+                            size: 40,
+                            color: AppTheme.textTertiary))
+                    : Icon(Icons.album_rounded,
+                        size: 40, color: AppTheme.textTertiary),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              album.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            Text(
+              album.artist,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchArtistCard extends StatelessWidget {
+  final DiscoveredArtist artist;
+  final VoidCallback onTap;
+
+  const _SearchArtistCard({
+    required this.artist,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 100,
+        margin: const EdgeInsets.only(right: 12),
+        child: Column(
+          children: [
+            CircleAvatar(
+              radius: 40,
+              backgroundColor: AppTheme.card,
+              child: CircleAvatar(
+                radius: 38,
+                backgroundColor: AppTheme.cardHover,
+                backgroundImage: artist.imageUrl != null
+                    ? NetworkImage(artist.imageUrl!)
+                    : null,
+                child: artist.imageUrl == null
+                    ? Icon(Icons.person_rounded,
+                        size: 32, color: AppTheme.textTertiary)
+                    : null,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              artist.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

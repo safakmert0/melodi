@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'track_matcher.dart';
 
 class YTMusicTrack {
   final String videoId;
@@ -237,6 +238,20 @@ class InnerTubeClient {
       url: 'search',
       body: body,
     );
+  }
+
+  Future<bool> likeVideo(String videoId, {bool like = true}) async {
+    final endpoint = like ? 'like/like' : 'like/removelike';
+    final result = await _executeRequest(
+      url: endpoint,
+      body: {
+        'context': _buildContext(),
+        'target': {'videoId': videoId},
+      },
+      authenticated: true,
+      useMusicBase: false,
+    );
+    return result != null;
   }
 
   Future<Map<String, dynamic>?> player(String videoId) async {
@@ -697,6 +712,16 @@ class YTMusicService {
     return _collectTracksWithPagination(response);
   }
 
+  Future<bool> rateTrack(String videoId, String rating) async {
+    if (!client.isAuthenticated) return false;
+    if (rating == 'LIKE') {
+      return client.likeVideo(videoId, like: true);
+    } else if (rating == 'INDIFFERENT') {
+      return client.likeVideo(videoId, like: false);
+    }
+    return false;
+  }
+
   Future<List<YTMusicTrack>> search(String query) async {
     final response = await client.search(query);
     if (response == null) return [];
@@ -739,6 +764,26 @@ class YTMusicService {
     }
 
     return tracks;
+  }
+
+  Future<List<YTMusicTrack>> syncPlaylist(String playlistId, {String? direction}) async {
+    debugPrint('YTMusicService.syncPlaylist: $playlistId direction=$direction');
+    return getPlaylistTracks(playlistId);
+  }
+
+  Future<MatchResult?> searchAndMatch(
+    String title,
+    String artist, {
+    String? album,
+    int? durationMs,
+  }) async {
+    final matcher = TrackMatcher(search);
+    return matcher.matchSpotifyTrackToYT(
+      title,
+      artist,
+      album: album,
+      durationMs: durationMs,
+    );
   }
 }
 

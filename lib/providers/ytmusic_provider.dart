@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../services/database_service.dart';
+import '../services/track_matcher.dart';
 import '../services/ytmusic_service.dart';
 
 class YTMusicProvider extends ChangeNotifier {
@@ -82,6 +83,25 @@ class YTMusicProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('YTMusic getPlaylistTracks error: $e');
       return [];
+    }
+  }
+
+  Future<MatchResult?> matchTrackWithConfidence(
+    String title,
+    String artist, {
+    String? album,
+    int? durationMs,
+  }) async {
+    try {
+      return await _service.searchAndMatch(
+        title,
+        artist,
+        album: album,
+        durationMs: durationMs,
+      );
+    } catch (e) {
+      debugPrint('matchTrackWithConfidence error: $e');
+      return null;
     }
   }
 }
