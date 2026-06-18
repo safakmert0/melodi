@@ -55,6 +55,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _gaplessPlayback = true;
   String _watchedFolderPath = '';
 
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  }
+
   Future<void> _loadWatchedFolder() async {
     final path = await context.read<LibraryProvider>().getWatchedFolder();
     if (mounted) setState(() => _watchedFolderPath = path ?? '');
@@ -83,13 +90,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  String formatBytes(int bytes) {
-                    if (bytes < 1024) return '$bytes B';
-                    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-                    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-                    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
-                  }
-
                   // Theme section
                   _CollapsibleSection(
                     title: AppLocale.tr('appearance'),
@@ -297,7 +297,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     ),
                                   ),
                                   Text(
-                                    '${library.songCount} ${AppLocale.tr('songs_in_library')} · ${formatBytes(library.totalSongSizeBytes)}',
+                                    '${library.songCount} ${AppLocale.tr('songs_in_library')} · ${_formatBytes(library.totalSongSizeBytes)}',
                                     style: TextStyle(
                                       color: AppTheme.textSecondary,
                                       fontSize: 13,
