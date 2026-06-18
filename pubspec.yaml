@@ -1,7 +1,7 @@
 name: melodi
 description: A premium local music player for iOS inspired by Spotify and Apple Music.
 publish_to: 'none'
-version: 1.9.1
+version: 2.1.0
 
 environment:
   sdk: ^3.2.0

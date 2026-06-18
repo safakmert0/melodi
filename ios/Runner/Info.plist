@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>melodi</string>
+	<string>Melodi</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -24,11 +24,6 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>audio</string>
-		<string>fetch</string>
-	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -39,17 +34,33 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>UIViewControllerBasedStatusBarAppearance</key>
-	<false/>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
-	<key>NSAppleMusicUsageDescription</key>
-	<string>Melodi needs access to your music library to play your locally stored songs.</string>
-	<key>NSDocumentsFolderUsageDescription</key>
-	<string>Melodi needs access to Documents to import your music files.</string>
-	<key>NSDownloadsFolderUsageDescription</key>
-	<string>Melodi needs access to Downloads to import your music files.</string>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>fetch</string>
+		<string>processing</string>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.melodi.refresh</string>
+		<string>com.melodi.processing</string>
+	</array>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Melodi does not record audio, but some audio features may request microphone access.</string>
+	<string>Melodi uses microphone for audio playback</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Melodi needs access to save album art</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Melodi needs local network access for device discovery</string>
 </dict>
 </plist>
