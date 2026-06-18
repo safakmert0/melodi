@@ -24,6 +24,7 @@ import '../services/database_service.dart';
 import '../services/library_health_service.dart';
 import '../services/playback_service.dart';
 import '../services/file_organizer.dart';
+import '../services/stream_cache.dart';
 import 'audio_quality_screen.dart';
 import '../widgets/sleep_timer_sheet.dart';
 import '../widgets/equalizer_sheet.dart';
@@ -750,6 +751,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       MaterialPageRoute(builder: (_) => const StorageScreen()),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  _SettingsTile(
+                    icon: Icons.cached_rounded,
+                    iconColor: Colors.cyan,
+                    title: AppLocale.tr('stream_cache'),
+                    subtitle: FutureBuilder<int>(
+                      future: StreamCache().getCacheSize(),
+                      builder: (_, snap) {
+                        final size = snap.data ?? 0;
+                        return Text(
+                          '${_formatBytes(size)}',
+                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                        );
+                      },
+                    ),
+                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                    onTap: () => _showStreamCacheDialog(context),
+                  ),
                   const SizedBox(height: 24),
                   Divider(color: AppTheme.divider, height: 1),
                   _SectionTitle(AppLocale.tr('developer')),
@@ -802,6 +821,78 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         );
       },
+    );
+  }
+
+  void _showStreamCacheDialog(BuildContext context) {
+    final streamCache = StreamCache();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: Text(AppLocale.tr('stream_cache'),
+            style: TextStyle(color: AppTheme.textPrimary)),
+        content: FutureBuilder<int>(
+          future: streamCache.getCacheSize(),
+          builder: (_, snap) {
+            final size = snap.data ?? 0;
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 100,
+                      child: Text(AppLocale.tr('cache_size'),
+                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                    ),
+                    Expanded(
+                      child: Text(_formatBytes(size),
+                          style: TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      await streamCache.clearCache();
+                      if (ctx.mounted) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(AppLocale.tr('cache_cleared')),
+                            backgroundColor: AppTheme.primaryColor,
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                    label: Text(AppLocale.tr('clear_cache')),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.errorColor,
+                      side: BorderSide(color: AppTheme.errorColor),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(AppLocale.tr('cancel'),
+                style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+        ],
+      ),
     );
   }
 

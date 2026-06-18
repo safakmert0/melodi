@@ -36,7 +36,7 @@ class DatabaseService {
     final path = p.join(dir.path, 'melodi.db');
       return await openDatabase(
         path,
-        version: 16,
+        version: 17,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
       );
@@ -221,6 +221,18 @@ class DatabaseService {
           filename TEXT,
           organizedTo TEXT,
           organizedAt TEXT
+        )
+      ''');
+    }
+    if (oldVersion < 17) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS stream_cache (
+          trackId TEXT PRIMARY KEY,
+          url TEXT,
+          localPath TEXT,
+          cachedAt TEXT,
+          lastAccessedAt TEXT,
+          size INTEGER
         )
       ''');
     }
@@ -422,6 +434,17 @@ class DatabaseService {
         filename TEXT,
         organizedTo TEXT,
         organizedAt TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS stream_cache (
+        trackId TEXT PRIMARY KEY,
+        url TEXT,
+        localPath TEXT,
+        cachedAt TEXT,
+        lastAccessedAt TEXT,
+        size INTEGER
       )
     ''');
 
@@ -1052,5 +1075,60 @@ class DatabaseService {
       default:
         return '';
     }
+  }
+
+  Future<void> insertCacheEntry({
+    required String trackId,
+    required String url,
+    required String localPath,
+    required int size,
+    required String cachedAt,
+    required String lastAccessedAt,
+  }) async {
+    final db = await database;
+    await db.insert('stream_cache', {
+      'trackId': trackId,
+      'url': url,
+      'localPath': localPath,
+      'cachedAt': cachedAt,
+      'lastAccessedAt': lastAccessedAt,
+      'size': size,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<Map<String, dynamic>?> getCacheEntry(String trackId) async {
+    final db = await database;
+    final maps = await db.query('stream_cache',
+        where: 'trackId = ?', whereArgs: [trackId]);
+    if (maps.isEmpty) return null;
+    return maps.first;
+  }
+
+  Future<void> updateLastAccessed(String trackId) async {
+    final db = await database;
+    await db.update('stream_cache', {
+      'lastAccessedAt': DateTime.now().toIso8601String(),
+    }, where: 'trackId = ?', whereArgs: [trackId]);
+  }
+
+  Future<void> removeCacheEntry(String trackId) async {
+    final db = await database;
+    await db.delete('stream_cache',
+        where: 'trackId = ?', whereArgs: [trackId]);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllCacheEntries({
+    String? orderBy,
+    int? limit,
+  }) async {
+    final db = await database;
+    return db.query('stream_cache', orderBy: orderBy, limit: limit);
+  }
+
+  Future<int> getTotalCacheSize() async {
+    final db = await database;
+    final result = await db.rawQuery(
+        'SELECT COALESCE(SUM(size), 0) as total FROM stream_cache');
+    return (result.first['total'] as int?) ?? 0;
   }
 }

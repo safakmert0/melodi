@@ -31,6 +31,8 @@ import 'providers/download_provider.dart';
 import 'providers/like_mirror_provider.dart';
 import 'services/scrobble_service.dart';
 import 'services/like_mirror_service.dart';
+import 'services/queue_manager.dart';
+import 'services/resume_playback.dart';
 import 'screens/home_screen.dart';
 
 Future<void> main() async {
@@ -239,6 +241,20 @@ class MelodiApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => DownloadProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) {
+            final qm = QueueManager();
+            qm.restoreQueue();
+            return qm;
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (_) {
+            final rp = ResumePlayback();
+            rp.restorePlaybackState();
+            return rp;
+          },
         ),
       ],
       child: Builder(

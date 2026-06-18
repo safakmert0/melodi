@@ -417,6 +417,10 @@ class AppLocale {
         'x_tracks_need_lyrics': '{count} tracks need lyrics',
         'x_tracks_waiting_lossless': '{count} tracks waiting for lossless',
         'x_downloads_failed': '{count} downloads failed',
+        'stream_cache': 'Stream Cache',
+        'cache_size': 'Cache Size',
+        'resume_playback': 'Resume Playback',
+        'cache_cleared': 'Cache Cleared',
       },
       'tr': {
       'home': 'Ana Sayfa',
@@ -812,6 +816,10 @@ class AppLocale {
         'x_tracks_need_lyrics': '{count} parça şarkı sözü bekliyor',
         'x_tracks_waiting_lossless': '{count} parça kayıpsız bekliyor',
         'x_downloads_failed': '{count} indirme başarısız',
+        'stream_cache': 'Akış Önbelleği',
+        'cache_size': 'Önbellek Boyutu',
+        'resume_playback': 'Kaldığından Devam',
+        'cache_cleared': 'Önbellek Temizlendi',
       },
       'de': {
       'home': 'Startseite',
@@ -1207,6 +1215,10 @@ class AppLocale {
         'x_tracks_need_lyrics': '{count} Titel benötigen Liedtexte',
         'x_tracks_waiting_lossless': '{count} Titel warten auf verlustfrei',
         'x_downloads_failed': '{count} Downloads fehlgeschlagen',
+        'stream_cache': 'Stream-Cache',
+        'cache_size': 'Cache-Größe',
+        'resume_playback': 'Wiedergabe fortsetzen',
+        'cache_cleared': 'Cache geleert',
       },
    };
 
