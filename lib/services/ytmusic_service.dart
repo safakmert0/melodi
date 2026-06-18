@@ -430,8 +430,12 @@ class YTMusicService {
         final sections = _navigatePath(tab, ['content', 'sectionListRenderer', 'contents']);
         if (sections != null) {
           for (final section in (sections as List<dynamic>).map((e) => e as Map<String, dynamic>)) {
-            final shelf = section['musicShelfRenderer'] as Map<String, dynamic>? ?? continue;
-            final items = shelf['contents'] as List<dynamic>? ?? continue;
+            final shelfRaw = section['musicShelfRenderer'];
+            if (shelfRaw == null) continue;
+            final shelf = shelfRaw as Map<String, dynamic>;
+            final contentsRaw = shelf['contents'];
+            if (contentsRaw == null) continue;
+            final items = contentsRaw as List<dynamic>;
             for (final item in items) {
               final renderer = (item as Map<String, dynamic>)
                   ['musicResponsiveListItemRenderer'] as Map<String, dynamic>?;

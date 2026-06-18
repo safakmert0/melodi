@@ -267,7 +267,7 @@ class PlayerProvider extends ChangeNotifier {
     if (scrobbleAt <= 0) return;
     _scrobbleTimer = Timer(Duration(milliseconds: scrobbleAt), () {
       if (_handler.currentSong?.id == song.id && _handler.isPlaying) {
-        final timestamp = _playStartTime?.millisecondsSinceEpoch ~/ 1000 ?? DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        final timestamp = (_playStartTime?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch) ~/ 1000;
         onScrobble?.call(song, timestamp);
       }
     });

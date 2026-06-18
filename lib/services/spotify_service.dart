@@ -229,8 +229,7 @@ class SpotifyService {
     try {
       final client = HttpClient();
       try {
-        final request = await client.getUrl(Uri.parse('https://open.spotify.com/'));
-        request.method = 'HEAD';
+        final request = await client.headUrl(Uri.parse('https://open.spotify.com/'));
         request.headers.set('User-Agent', 'Mozilla/5.0');
         final response = await request.close();
         final dateHeader = response.headers.value('Date');
@@ -607,7 +606,7 @@ class SpotifyService {
       String playlistId, String token) async {
     try {
       final allTracks = <SpotifyTrackItem>[];
-      var url = '${SpotifyAuthConfig.webApiBase}/playlists/$playlistId/tracks'
+      String? url = '${SpotifyAuthConfig.webApiBase}/playlists/$playlistId/tracks'
           '?limit=50&offset=0'
           '&fields=items(track(id,name,uri,duration_ms,explicit,external_ids,'
           'artists(id,name),album(id,name,images))),next';
@@ -896,7 +895,7 @@ class SpotifyService {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
       final items = body['tracks']?['items'] as List<dynamic>? ?? [];
 
-      return items.mapNotNull((element) {
+      return items.map((element) {
         try {
           final trackObj = element as Map<String, dynamic>;
           final id = trackObj['id'] as String?;
@@ -931,7 +930,7 @@ class SpotifyService {
         } catch (_) {
           return null;
         }
-      });
+      }).where((e) => e != null).cast<SpotifyTrackItem>().toList();
     } catch (e) {
       debugPrint('searchTracks failed: $e');
       return [];

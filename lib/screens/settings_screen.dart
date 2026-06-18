@@ -2418,7 +2418,7 @@ class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
   final String title;
-  final String subtitle;
+  final dynamic subtitle;
   final Widget? trailing;
   final VoidCallback? onTap;
 
@@ -2426,13 +2426,22 @@ class _SettingsTile extends StatelessWidget {
     required this.icon,
     required this.iconColor,
     required this.title,
-    required this.subtitle,
+    this.subtitle,
     this.trailing,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    Widget? subtitleWidget;
+    if (subtitle is String) {
+      subtitleWidget = Text(subtitle as String,
+          style: TextStyle(
+              color: AppTheme.textSecondary, fontSize: 12));
+    } else if (subtitle is Widget) {
+      subtitleWidget = subtitle as Widget;
+    }
+
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(6),
@@ -2445,9 +2454,7 @@ class _SettingsTile extends StatelessWidget {
       title: Text(title,
           style: TextStyle(
               color: AppTheme.textPrimary, fontSize: 15)),
-      subtitle: Text(subtitle,
-          style: TextStyle(
-              color: AppTheme.textSecondary, fontSize: 12)),
+      subtitle: subtitleWidget,
       trailing: trailing,
       onTap: onTap,
     );
