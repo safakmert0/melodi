@@ -1,15 +1,20 @@
 name: Build iOS IPA
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to build (e.g., v2.1.1)'
+        required: true
+        default: 'v2.1.1'
 
 jobs:
   build:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version }}
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -35,9 +40,18 @@ jobs:
           cd build/unsigned_ipa
           zip -r ../Melodi-unsigned.ipa Payload/
 
-      - name: Upload IPA
+      - name: Upload IPA as artifact
         uses: actions/upload-artifact@v4
         with:
           name: Melodi-unsigned-ipa
           path: build/Melodi-unsigned.ipa
           compression-level: 0
+
+      - name: Upload IPA to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: build/Melodi-unsigned.ipa
+          asset_name: Melodi-${{ github.event.inputs.version }}.ipa
+          tag: ${{ github.event.inputs.version }}
+          overwrite: true
