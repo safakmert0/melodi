@@ -20,7 +20,9 @@ jobs:
         run: |
           flutter pub get
           flutter create . --platforms=ios
-          sed -i '' 's/12.0/13.0/g' ios/Podfile
+          echo 'platform :ios, "13.0"' > ios/Podfile.tmp
+          cat ios/Podfile >> ios/Podfile.tmp
+          mv ios/Podfile.tmp ios/Podfile
           echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Debug.xcconfig
           echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Release.xcconfig
           cd ios && pod install && cd ..
