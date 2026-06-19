@@ -8,6 +8,9 @@ on:
         required: true
         default: 'v2.1.1'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-latest
@@ -48,10 +51,7 @@ jobs:
           compression-level: 0
 
       - name: Upload IPA to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: build/Melodi-unsigned.ipa
-          asset_name: Melodi-${{ github.event.inputs.version }}.ipa
-          tag: ${{ github.event.inputs.version }}
-          overwrite: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ github.event.inputs.version }} build/Melodi-unsigned.ipa --clobber
