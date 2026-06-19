@@ -61,10 +61,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: Column(
         children: [
-          Consumer<ConnectionProvider>(
-            builder: (context, conn, _) => AuthBanner(
-              connection: conn,
-              onTap: () => setState(() => _currentPage = 3),
+          SafeArea(
+            child: Consumer<ConnectionProvider>(
+              builder: (context, conn, _) => AuthBanner(
+                connection: conn,
+                onTap: () => setState(() => _currentPage = 3),
+              ),
             ),
           ),
           const HomeBanners(),

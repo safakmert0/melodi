@@ -36,7 +36,7 @@ class DatabaseService {
     final path = p.join(dir.path, 'melodi.db');
       return await openDatabase(
         path,
-        version: 17,
+        version: 18,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
       );
@@ -233,6 +233,16 @@ class DatabaseService {
           cachedAt TEXT,
           lastAccessedAt TEXT,
           size INTEGER
+        )
+      ''');
+    }
+    if (oldVersion < 18) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS blocked_tracks (
+          trackId TEXT PRIMARY KEY,
+          title TEXT,
+          artist TEXT,
+          blockedAt TEXT
         )
       ''');
     }
@@ -445,6 +455,15 @@ class DatabaseService {
         cachedAt TEXT,
         lastAccessedAt TEXT,
         size INTEGER
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS blocked_tracks (
+        trackId TEXT PRIMARY KEY,
+        title TEXT,
+        artist TEXT,
+        blockedAt TEXT
       )
     ''');
 
