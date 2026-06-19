@@ -1,5 +1,10 @@
 import 'dart:async';
-import 'package:receive_sharing_intent/receive_sharing_intent.dart';
+
+class SharedMediaFile {
+  final String? path;
+  final String? url;
+  SharedMediaFile({this.path, this.url});
+}
 
 class SharingService {
   static SharingService? _instance;
@@ -9,37 +14,13 @@ class SharingService {
   final StreamController<SharedMediaFile> _onShareController = StreamController<SharedMediaFile>.broadcast();
   Stream<SharedMediaFile> get onShare => _onShareController.stream;
 
-  StreamSubscription<List<SharedMediaFile>>? _textSub;
-  StreamSubscription<List<SharedMediaFile>>? _mediaSub;
+  void init() {}
 
-  void init() {
-    _textSub = ReceiveSharingIntent.instance.getTextStream().listen(
-      (List<SharedMediaFile> files) {
-        if (files.isNotEmpty) _onShareController.add(files.first);
-      },
-      onError: (err) {},
-    );
-
-    _mediaSub = ReceiveSharingIntent.instance.getMediaStream().listen(
-      (List<SharedMediaFile> files) {
-        if (files.isNotEmpty) _onShareController.add(files.first);
-      },
-      onError: (err) {},
-    );
-
-    ReceiveSharingIntent.instance.getInitialText().then(
-      (List<SharedMediaFile>? files) {
-        if (files != null && files.isNotEmpty) {
-          _onShareController.add(files.first);
-          ReceiveSharingIntent.instance.reset();
-        }
-      },
-    );
+  void handleSharedUrl(String url) {
+    _onShareController.add(SharedMediaFile(url: url));
   }
 
   void dispose() {
-    _textSub?.cancel();
-    _mediaSub?.cancel();
     _onShareController.close();
   }
 }

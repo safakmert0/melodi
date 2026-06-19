@@ -69,7 +69,7 @@ class NotificationService {
     );
   }
 
-  Future<void> cancel(int id) async {
+  Future<void> cancel(int? id) async {
     await _plugin.cancel(id);
   }
 
