@@ -34,12 +34,12 @@ class DownloadProvider extends ChangeNotifier {
       _tasks = tasks;
       notifyListeners();
       for (final t in tasks) {
-        if (t.state == DownloadState.completed && !_notifiedCompleted.contains(t.taskId)) {
-          _notifiedCompleted.add(t.taskId);
+        if (t.state == DownloadState.completed && !_notifiedCompleted.contains(t.id)) {
+          _notifiedCompleted.add(t.id);
           NotificationService.instance.showDownloadComplete(t.title);
         }
-        if (t.state == DownloadState.failed && !_notifiedFailed.contains(t.taskId)) {
-          _notifiedFailed.add(t.taskId);
+        if (t.state == DownloadState.failed && !_notifiedFailed.contains(t.id)) {
+          _notifiedFailed.add(t.id);
           NotificationService.instance.showDownloadFailed(t.title);
         }
       }
