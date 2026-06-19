@@ -62,5 +62,13 @@
 	<string>Melodi needs access to save album art</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Melodi needs local network access for device discovery</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>file</string>
+		<string>music</string>
+		<string>itms</string>
+		<string>itmss</string>
+		<string>itms-apps</string>
+	</array>
 </dict>
 </plist>

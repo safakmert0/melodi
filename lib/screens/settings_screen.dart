@@ -37,6 +37,7 @@ import 'diagnostics_screen.dart';
 import 'failed_downloads_screen.dart';
 import 'downloads_screen.dart';
 import 'blocked_tracks_screen.dart';
+import 'shared_urls_screen.dart';
 import 'library_health_screen.dart';
 import 'storage_screen.dart';
 import '../widgets/ytmusic_webview_login.dart';
@@ -408,6 +409,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const BlockedTracksScreen()),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _SettingsTile(
+                    icon: Icons.link_rounded,
+                    iconColor: Colors.blue,
+                    title: 'Shared Links',
+                    subtitle: AppLocale.tr('no_shared_links'),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SharedUrlsScreen()),
                     ),
                   ),
                   const SizedBox(height: 24),
