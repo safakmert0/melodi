@@ -245,6 +245,14 @@ class DatabaseService {
           blockedAt TEXT
         )
       ''');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS shared_urls (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          url TEXT NOT NULL,
+          sharedAt TEXT NOT NULL,
+          processed INTEGER DEFAULT 0
+        )
+      ''');
     }
   }
 
@@ -259,6 +267,26 @@ class DatabaseService {
     final db = await database;
     await db.insert('settings', {'key': key, 'value': value},
         conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> addSharedUrl(String url) async {
+    final db = await database;
+    await db.insert('shared_urls', {
+      'url': url,
+      'sharedAt': DateTime.now().toIso8601String(),
+      'processed': 0,
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getPendingSharedUrls() async {
+    final db = await database;
+    return await db.query('shared_urls',
+        where: 'processed = ?', whereArgs: [0], orderBy: 'sharedAt DESC');
+  }
+
+  Future<void> markSharedUrlProcessed(int id) async {
+    final db = await database;
+    await db.update('shared_urls', {'processed': 1}, where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -464,6 +492,15 @@ class DatabaseService {
         title TEXT,
         artist TEXT,
         blockedAt TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS shared_urls (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        url TEXT NOT NULL,
+        sharedAt TEXT NOT NULL,
+        processed INTEGER DEFAULT 0
       )
     ''');
 

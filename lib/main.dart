@@ -5,12 +5,16 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:audio_service/audio_service.dart';
+import 'package:dynamic_color/dynamic_color.dart';
 import 'core/constants.dart';
 import 'core/localization.dart';
 import 'services/audio_handler.dart';
 import 'services/database_service.dart';
 import 'services/diagnostics_service.dart';
 import 'services/crash_reporter.dart';
+import 'services/notification_service.dart';
+import 'services/sharing_service.dart';
+import 'services/logger_service.dart';
 import 'providers/player_provider.dart';
 import 'providers/library_provider.dart';
 import 'providers/playlist_provider.dart';
@@ -53,9 +57,24 @@ Future<void> main() async {
 
     CrashReporter.init();
     DiagnosticsService.instance;
+    AppLogger.i('Melodi starting...');
 
     final db = DatabaseService.instance;
     await db.database;
+
+    await NotificationService.instance.init();
+    SharingService.instance.init();
+
+    final dbService = DatabaseService.instance;
+    SharingService.instance.onShare.listen((file) {
+      final url = file.path ?? file.url ?? '';
+      if (url.isNotEmpty) {
+        AppLogger.i('Received shared URL: $url');
+        dbService.addSharedUrl(url);
+      }
+    });
+
+    AppLogger.i('Services initialized');
 
     final savedLocale = await db.getSetting('app_locale');
     if (savedLocale != null && savedLocale.isNotEmpty) {
@@ -287,32 +306,48 @@ class MelodiApp extends StatelessWidget {
                   TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
                 },
               );
-              return MaterialApp(
-                title: 'Melodi',
-                debugShowCheckedModeBanner: false,
-                theme: themeProvider.lightTheme.copyWith(pageTransitionsTheme: pageTransitions),
-                darkTheme: themeProvider.darkTheme.copyWith(pageTransitionsTheme: pageTransitions),
-                themeMode: themeProvider.themeMode,
-                home: const HomeScreen(),
-                localizationsDelegates: const [
-                  GlobalMaterialLocalizations.delegate,
-                  GlobalWidgetsLocalizations.delegate,
-                  GlobalCupertinoLocalizations.delegate,
-                ],
-                supportedLocales: const [
-                  Locale('en'),
-                  Locale('tr'),
-                  Locale('de'),
-                ],
-                localeResolutionCallback: (locale, supportedLocales) {
-                  if (locale != null) {
-                    for (final supported in supportedLocales) {
-                      if (supported.languageCode == locale.languageCode) {
-                        return supported;
-                      }
-                    }
+              return DynamicColorBuilder(
+                builder: (lightDynamic, darkDynamic) {
+                  final seedColor = lightDynamic != null && themeProvider.useDynamicColor
+                      ? lightDynamic.primary
+                      : themeProvider.accentColor;
+                  if (themeProvider.useDynamicColor && lightDynamic != null) {
+                    themeProvider.setAccentColor(lightDynamic.primary);
                   }
-                  return const Locale('en');
+                  return MaterialApp(
+                    title: 'Melodi',
+                    debugShowCheckedModeBanner: false,
+                    theme: themeProvider.lightTheme.copyWith(
+                      pageTransitionsTheme: pageTransitions,
+                      colorScheme: lightDynamic ?? themeProvider.lightTheme.colorScheme,
+                    ),
+                    darkTheme: themeProvider.darkTheme.copyWith(
+                      pageTransitionsTheme: pageTransitions,
+                      colorScheme: darkDynamic ?? themeProvider.darkTheme.colorScheme,
+                    ),
+                    themeMode: themeProvider.themeMode,
+                    home: const HomeScreen(),
+                    localizationsDelegates: const [
+                      GlobalMaterialLocalizations.delegate,
+                      GlobalWidgetsLocalizations.delegate,
+                      GlobalCupertinoLocalizations.delegate,
+                    ],
+                    supportedLocales: const [
+                      Locale('en'),
+                      Locale('tr'),
+                      Locale('de'),
+                    ],
+                    localeResolutionCallback: (locale, supportedLocales) {
+                      if (locale != null) {
+                        for (final supported in supportedLocales) {
+                          if (supported.languageCode == locale.languageCode) {
+                            return supported;
+                          }
+                        }
+                      }
+                      return const Locale('en');
+                    },
+                  );
                 },
               );
             },

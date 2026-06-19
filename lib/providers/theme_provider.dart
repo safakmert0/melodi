@@ -10,6 +10,7 @@ class ThemeProvider extends ChangeNotifier {
   Color? _customCard;
   Color? _customTextPrimary;
   Color? _customTextSecondary;
+  bool _useDynamicColor = true;
 
   ThemeMode get themeMode => _themeMode;
   Color get accentColor => _accentColor;
@@ -18,6 +19,7 @@ class ThemeProvider extends ChangeNotifier {
   Color? get customCard => _customCard;
   Color? get customTextPrimary => _customTextPrimary;
   Color? get customTextSecondary => _customTextSecondary;
+  bool get useDynamicColor => _useDynamicColor;
 
   bool get isDark => _themeMode == ThemeMode.dark;
   bool get isLight => _themeMode == ThemeMode.light;
@@ -51,6 +53,10 @@ class ThemeProvider extends ChangeNotifier {
     final mode = await db.getSetting('theme_mode');
     if (mode != null) {
       _themeMode = ThemeMode.values[int.parse(mode)];
+    }
+    final dynamicColorStr = await db.getSetting('use_dynamic_color');
+    if (dynamicColorStr != null) {
+      _useDynamicColor = dynamicColorStr == 'true';
     }
     final colorStr = await db.getSetting('accent_color');
     if (colorStr != null) {
@@ -90,6 +96,12 @@ class ThemeProvider extends ChangeNotifier {
     _themeMode = mode;
     _syncIsLightMode();
     await DatabaseService.instance.setSetting('theme_mode', mode.index.toString());
+    notifyListeners();
+  }
+
+  Future<void> setUseDynamicColor(bool value) async {
+    _useDynamicColor = value;
+    await DatabaseService.instance.setSetting('use_dynamic_color', value.toString());
     notifyListeners();
   }
 

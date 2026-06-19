@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../services/download_manager.dart';
+import '../services/notification_service.dart';
 
 class DownloadProvider extends ChangeNotifier {
   final DownloadManager _manager = DownloadManager();
@@ -8,6 +9,8 @@ class DownloadProvider extends ChangeNotifier {
 
   List<DownloadTask> _tasks = [];
   List<DownloadTask> get tasks => _tasks;
+  List<String> _notifiedCompleted = [];
+  List<String> _notifiedFailed = [];
 
   List<DownloadTask> get activeDownloads =>
       _tasks.where((t) => t.state == DownloadState.downloading || t.state == DownloadState.pending).toList();
@@ -26,8 +29,20 @@ class DownloadProvider extends ChangeNotifier {
 
   DownloadProvider() {
     _subscription = _manager.taskStream.listen((tasks) {
+      final prevCompleted = completedCount;
+      final prevFailed = failedCount;
       _tasks = tasks;
       notifyListeners();
+      for (final t in tasks) {
+        if (t.state == DownloadState.completed && !_notifiedCompleted.contains(t.taskId)) {
+          _notifiedCompleted.add(t.taskId);
+          NotificationService.instance.showDownloadComplete(t.title);
+        }
+        if (t.state == DownloadState.failed && !_notifiedFailed.contains(t.taskId)) {
+          _notifiedFailed.add(t.taskId);
+          NotificationService.instance.showDownloadFailed(t.title);
+        }
+      }
     });
     _tasks = _manager.tasks;
   }
@@ -80,9 +95,15 @@ class DownloadProvider extends ChangeNotifier {
   void cancelAll() => _manager.cancelAll();
   void retryTask(String taskId) => _manager.retryTask(taskId);
   void retryAllFailed() => _manager.retryAllFailed();
-  void clearCompleted() => _manager.clearCompleted();
+  void clearCompleted() {
+    _manager.clearCompleted();
+    _notifiedCompleted.clear();
+  }
 
-  void clearFailed() => _manager.clearFailed();
+  void clearFailed() {
+    _manager.clearFailed();
+    _notifiedFailed.clear();
+  }
 
   String stateText(DownloadTask task) {
     if (task.cancelled) return 'Cancelled';
