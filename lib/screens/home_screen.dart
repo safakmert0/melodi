@@ -20,6 +20,7 @@ import '../providers/connection_provider.dart';
 import '../providers/download_provider.dart';
 import '../widgets/auth_banner.dart';
 import '../widgets/home_banners.dart';
+import '../widgets/equalizer_sheet.dart';
 import 'library_screen.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
@@ -119,6 +120,13 @@ class _HomeTab extends StatelessWidget {
   final void Function([int])? onNavigateToLibrary;
   const _HomeTab({this.onNavigateToLibrary});
 
+  String _timeGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer3<LibraryProvider, PlaylistProvider, LocaleNotifier>(
@@ -160,11 +168,22 @@ class _HomeTab extends StatelessWidget {
                       tooltip: AppLocale.tr('import_music'),
                       onPressed: () => _showImportOptions(context),
                     ),
+                  IconButton(
+                    icon: Icon(Icons.settings_rounded, color: AppTheme.textSecondary),
+                    tooltip: AppLocale.tr('settings'),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    ),
+                  ),
                 ],
               ),
               SliverToBoxAdapter(
                 child: _buildHeroGradient(context, library),
               ),
+              if (library.songs.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: _buildQuickActions(context),
+                ),
               SliverToBoxAdapter(
                 child: library.isLoading
                     ? Center(
@@ -191,7 +210,7 @@ class _HomeTab extends StatelessWidget {
     if (library.songs.isEmpty) return const SizedBox.shrink();
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      height: 140,
+      height: 160,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         gradient: LinearGradient(
@@ -218,15 +237,61 @@ class _HomeTab extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Text(
-                  '${library.songCount} ${AppLocale.tr('songs')}',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _timeGreeting(),
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${library.songCount} ${AppLocale.tr('songs')}, '
+                            '${library.albums.length} ${AppLocale.tr('albums')}',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.7),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => _showImportOptions(context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.refresh_rounded,
+                                size: 14, color: Colors.white),
+                            const SizedBox(width: 4),
+                            Text(
+                              AppLocale.tr('scan_library'),
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Text(
                   AppLocale.tr('your_music_awaits'),
                   style: TextStyle(
@@ -239,6 +304,91 @@ class _HomeTab extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    final actions = [
+      _QuickActionItem(
+        icon: Icons.wb_sunny_rounded,
+        label: AppLocale.tr('mixes'),
+        gradientColors: [const Color(0xFFF39C12), const Color(0xFFE67E22)],
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const MixesScreen()),
+        ),
+      ),
+      _QuickActionItem(
+        icon: Icons.explore_rounded,
+        label: AppLocale.tr('album_discovery'),
+        gradientColors: [const Color(0xFF8E44AD), const Color(0xFF6C3483)],
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const AlbumDiscoveryScreen()),
+        ),
+      ),
+      _QuickActionItem(
+        icon: Icons.download_rounded,
+        label: AppLocale.tr('downloads'),
+        gradientColors: [const Color(0xFF2980B9), const Color(0xFF1A5276)],
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const DownloadsScreen()),
+        ),
+      ),
+      _QuickActionItem(
+        icon: Icons.lyrics_rounded,
+        label: AppLocale.tr('backfill_lyrics'),
+        gradientColors: [const Color(0xFF008080), const Color(0xFF004D4D)],
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const SettingsScreen()),
+        ),
+      ),
+      _QuickActionItem(
+        icon: Icons.image_rounded,
+        label: AppLocale.tr('backfill_art'),
+        gradientColors: [const Color(0xFFE91E63), const Color(0xFFAD1457)],
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const SettingsScreen()),
+        ),
+      ),
+      _QuickActionItem(
+        icon: Icons.favorite_border_rounded,
+        label: AppLocale.tr('library_health'),
+        gradientColors: [const Color(0xFF27AE60), const Color(0xFF1E8449)],
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const LibraryHealthScreen()),
+        ),
+      ),
+      _QuickActionItem(
+        icon: Icons.sync_rounded,
+        label: AppLocale.tr('sync'),
+        gradientColors: [const Color(0xFF3F51B5), const Color(0xFF283593)],
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const SettingsScreen()),
+        ),
+      ),
+      _QuickActionItem(
+        icon: Icons.tune_rounded,
+        label: AppLocale.tr('equalizer'),
+        gradientColors: [const Color(0xFFFF8F00), const Color(0xFFCC7A00)],
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const EqualizerSheet()),
+        ),
+      ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 0.85,
+        ),
+        itemCount: actions.length,
+        itemBuilder: (context, index) => actions[index],
       ),
     );
   }
@@ -290,6 +440,10 @@ class _HomeTab extends StatelessWidget {
       BuildContext context, LibraryProvider library, PlaylistProvider playlistProvider) {
     final recentlyPlayed = library.recent.take(10).toList();
     final favorites = library.favorites.take(10).toList();
+    final recentlyAdded = library.songs
+        .toList()
+      ..sort((a, b) => b.dateAdded.compareTo(a.dateAdded));
+    final recentAdded = recentlyAdded.take(10).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,6 +513,30 @@ class _HomeTab extends StatelessWidget {
                 return AlbumCard(
                   album: album,
                   onTap: () => _navigateToAlbum(context, album),
+                );
+              },
+            ),
+          ),
+        ],
+        // Recently Added
+        if (recentAdded.isNotEmpty) ...[
+          _SectionHeader(
+            title: 'Recently Added',
+            onSeeAll: () => onNavigateToLibrary?.call(0),
+          ),
+          SizedBox(
+            height: 160,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(left: 16),
+              itemCount: recentAdded.length,
+              itemBuilder: (context, index) {
+                final song = recentAdded[index];
+                return _RecentSongCard(
+                  song: song,
+                  onTap: () => context
+                      .read<PlayerProvider>()
+                      .playSong(song),
                 );
               },
             ),
@@ -443,61 +621,84 @@ class _HomeTab extends StatelessWidget {
           ),
         ],
         // Mixes
-        ...[
-          _SectionHeader(
-            title: AppLocale.tr('mixes'),
-            onSeeAll: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const MixesScreen()),
-            ),
-          ),
-          SizedBox(
-            height: 150,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(left: 16),
-              itemCount: 3,
-              itemBuilder: (context, index) {
-                final mixItems = [
-                  (
-                    Icons.wb_sunny_rounded,
-                    AppLocale.tr('daily_mix'),
-                    AppLocale.tr('daily_mix'),
-                    const Color(0xFFF39C12),
-                  ),
-                  (
-                    Icons.radar_rounded,
-                    AppLocale.tr('release_radar'),
-                    AppLocale.tr('release_radar'),
-                    const Color(0xFFE74C3C),
-                  ),
-                  (
-                    Icons.explore_rounded,
-                    AppLocale.tr('discover_weekly'),
-                    AppLocale.tr('discover_weekly'),
-                    const Color(0xFF8E44AD),
-                  ),
-                ];
-                final item = mixItems[index];
-                return _MixCard(
-                  icon: item.$1,
-                  title: item.$2,
-                  subtitle: item.$3,
-                  gradientColor: item.$4,
-                  onTap: () => Navigator.of(context).push(
+        Consumer<MixProvider>(
+          builder: (context, mixProvider, _) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SectionHeader(
+                  title: AppLocale.tr('mixes'),
+                  onSeeAll: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const MixesScreen()),
                   ),
-                );
-              },
-            ),
-          ),
-        ],
+                ),
+                SizedBox(
+                  height: 150,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.only(left: 16),
+                    itemCount: 3,
+                    itemBuilder: (context, index) {
+                      final mixTypes = [
+                        (
+                          Icons.wb_sunny_rounded,
+                          AppLocale.tr('daily_mix'),
+                          mixProvider.dailyMix.isNotEmpty
+                              ? '${mixProvider.dailyMix.length} ${AppLocale.tr('songs')}'
+                              : AppLocale.tr('daily_mix'),
+                          const Color(0xFFF39C12),
+                        ),
+                        (
+                          Icons.radar_rounded,
+                          AppLocale.tr('release_radar'),
+                          mixProvider.releaseRadar.isNotEmpty
+                              ? '${mixProvider.releaseRadar.length} ${AppLocale.tr('songs')}'
+                              : AppLocale.tr('release_radar'),
+                          const Color(0xFFE74C3C),
+                        ),
+                        (
+                          Icons.explore_rounded,
+                          AppLocale.tr('discover_weekly'),
+                          mixProvider.discoverWeekly.isNotEmpty
+                              ? '${mixProvider.discoverWeekly.length} ${AppLocale.tr('songs')}'
+                              : AppLocale.tr('discover_weekly'),
+                          const Color(0xFF8E44AD),
+                        ),
+                      ];
+                      final item = mixTypes[index];
+                      return _MixCard(
+                        icon: item.$1,
+                        title: item.$2,
+                        subtitle: item.$3,
+                        gradientColor: item.$4,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const MixesScreen()),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                if (mixProvider.lastGenerated != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16, top: 4),
+                    child: Text(
+                      '${AppLocale.tr('generated_at')}: ${_formatDate(mixProvider.lastGenerated!)}',
+                      style: TextStyle(
+                        color: AppTheme.textTertiary,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
         // Library Health
         _LibraryHealthCard(),
         const SizedBox(height: 8),
         // Downloads
         Consumer<DownloadProvider>(
           builder: (context, dp, _) {
-            if (dp.totalCount == 0) return const SizedBox.shrink();
             return Padding(
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
               child: GestureDetector(
@@ -512,8 +713,12 @@ class _HomeTab extends StatelessWidget {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        AppTheme.primaryColor.withValues(alpha: 0.6),
-                        AppTheme.primaryColor.withValues(alpha: 0.15),
+                        dp.totalCount > 0
+                            ? AppTheme.primaryColor.withValues(alpha: 0.6)
+                            : Colors.grey.withValues(alpha: 0.4),
+                        dp.totalCount > 0
+                            ? AppTheme.primaryColor.withValues(alpha: 0.15)
+                            : Colors.grey.withValues(alpha: 0.1),
                         AppTheme.card,
                       ],
                     ),
@@ -526,7 +731,13 @@ class _HomeTab extends StatelessWidget {
                           color: Colors.white.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(Icons.download_rounded, color: Colors.white, size: 28),
+                        child: Icon(
+                          dp.totalCount > 0
+                              ? Icons.download_rounded
+                              : Icons.download_outlined,
+                          color: Colors.white,
+                          size: 28,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -542,28 +753,55 @@ class _HomeTab extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              '${dp.completedCount} ${AppLocale.tr('completed')}',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.7),
-                                fontSize: 13,
+                            if (dp.totalCount > 0)
+                              Text(
+                                '${dp.completedCount} ${AppLocale.tr('completed')}, '
+                                '${dp.activeCount} ${AppLocale.tr('active')}, '
+                                '${dp.failedCount} ${AppLocale.tr('failed')}',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                  fontSize: 12,
+                                ),
+                              )
+                            else
+                              Text(
+                                'Start downloading',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                  fontSize: 13,
+                                ),
                               ),
-                            ),
                           ],
                         ),
                       ),
-                      if (dp.activeCount > 0)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryColor,
-                            borderRadius: BorderRadius.circular(12),
+                      if (dp.totalCount > 0) ...[
+                        if (dp.activeCount > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${dp.activeCount}',
+                              style: TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
                           ),
-                          child: Text(
-                            '${dp.activeCount}',
-                            style: TextStyle(color: Colors.black, fontSize: 13, fontWeight: FontWeight.bold),
+                        if (dp.failedCount > 0) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppTheme.errorColor,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${dp.failedCount}',
+                              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
                           ),
-                        ),
+                        ],
+                      ],
                       const SizedBox(width: 8),
                       Icon(Icons.arrow_forward_ios_rounded,
                           size: 16, color: Colors.white.withValues(alpha: 0.5)),
@@ -577,6 +815,10 @@ class _HomeTab extends StatelessWidget {
         const SizedBox(height: 24),
       ],
     );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 
   void _showCreatePlaylistDialog(BuildContext context) {
@@ -813,6 +1055,62 @@ class _HomeTab extends StatelessWidget {
                 style: TextStyle(color: AppTheme.errorColor)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _QuickActionItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final List<Color> gradientColors;
+  final VoidCallback onTap;
+
+  const _QuickActionItem({
+    required this.icon,
+    required this.label,
+    required this.gradientColors,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              gradientColors[0].withValues(alpha: 0.7),
+              gradientColors[1].withValues(alpha: 0.3),
+              AppTheme.card,
+            ],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 24, color: Colors.white),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1147,7 +1445,9 @@ class _LibraryHealthCardState extends State<_LibraryHealthCard> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  _issueCount > 0 ? Icons.favorite_border_rounded : Icons.favorite_rounded,
+                  _issueCount > 0
+                      ? Icons.warning_amber_rounded
+                      : Icons.check_circle_rounded,
                   color: Colors.white,
                   size: 28,
                 ),
@@ -1178,8 +1478,36 @@ class _LibraryHealthCardState extends State<_LibraryHealthCard> {
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios_rounded,
-                  size: 16, color: Colors.white.withValues(alpha: 0.5)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _issueCount > 0
+                      ? Colors.orange
+                      : const Color(0xFF34C759),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _issueCount > 0 ? Icons.warning_amber_rounded : Icons.check_rounded,
+                      size: 14,
+                      color: Colors.black,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _issueCount > 0
+                          ? '${_issueCount}'
+                          : 'OK',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
