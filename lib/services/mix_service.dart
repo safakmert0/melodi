@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'database_service.dart';
@@ -6,6 +7,7 @@ import 'spotify_service.dart';
 
 class MixService {
   final SpotifyService _spotifyService;
+  final Random _random = Random();
 
   MixService({required SpotifyService spotifyService})
       : _spotifyService = spotifyService;
@@ -15,28 +17,34 @@ class MixService {
       final cached = await _getCachedMix('daily_mix');
       if (cached != null) return cached;
 
-      final token = await _spotifyService.getClientCredentialsToken();
-      if (token == null) return [];
-
-      List<String> seedTracks = [];
       if (_spotifyService.isConnected) {
-        final liked = await _spotifyService.getLikedSongs(limit: 50);
-        seedTracks = liked
-            .where((t) => t.id.isNotEmpty)
-            .take(5)
-            .map((t) => t.id)
-            .toList();
+        final token = await _spotifyService.getClientCredentialsToken();
+        if (token != null) {
+          List<String> seedTracks = [];
+          final liked = await _spotifyService.getLikedSongs(limit: 50);
+          seedTracks = liked
+              .where((t) => t.id.isNotEmpty)
+              .take(5)
+              .map((t) => t.id)
+              .toList();
+
+          final result = seedTracks.isNotEmpty
+              ? await _fetchRecommendations(token, seedTracks: seedTracks)
+              : await _fetchRecommendations(token,
+                  seedGenres: 'pop,rock,electronic,indie');
+
+          if (result.isNotEmpty) {
+            await _cacheMix('daily_mix', result);
+          }
+          return result;
+        }
       }
 
-      final result = seedTracks.isNotEmpty
-          ? await _fetchRecommendations(token, seedTracks: seedTracks)
-          : await _fetchRecommendations(token,
-              seedGenres: 'pop,rock,electronic,indie');
-
-      if (result.isNotEmpty) {
-        await _cacheMix('daily_mix', result);
+      final local = await _generateLocalMix('daily', 20);
+      if (local.isNotEmpty) {
+        await _cacheMix('daily_mix', local);
       }
-      return result;
+      return local;
     } catch (e) {
       debugPrint('getDailyMix failed: $e');
       return [];
@@ -48,62 +56,70 @@ class MixService {
       final cached = await _getCachedMix('release_radar');
       if (cached != null) return cached;
 
-      final token = await _spotifyService.getClientCredentialsToken();
-      if (token == null) return [];
+      if (_spotifyService.isConnected) {
+        final token = await _spotifyService.getClientCredentialsToken();
+        if (token != null) {
+          final response = await http.get(
+            Uri.parse(
+                '${SpotifyAuthConfig.webApiBase}/browse/new-releases?limit=20&country=US'),
+            headers: {'Authorization': 'Bearer $token'},
+          );
 
-      final response = await http.get(
-        Uri.parse(
-            '${SpotifyAuthConfig.webApiBase}/browse/new-releases?limit=20&country=US'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
+          if (response.statusCode == 200) {
+            final body = jsonDecode(response.body) as Map<String, dynamic>;
+            final albums = body['albums']?['items'] as List<dynamic>? ?? [];
 
-      if (response.statusCode != 200) return [];
+            final result = <Map<String, dynamic>>[];
+            for (final album in albums) {
+              final a = album as Map<String, dynamic>;
+              final albumId = a['id'] as String?;
+              if (albumId == null) continue;
 
-      final body = jsonDecode(response.body) as Map<String, dynamic>;
-      final albums = body['albums']?['items'] as List<dynamic>? ?? [];
+              final tracksResponse = await http.get(
+                Uri.parse(
+                    '${SpotifyAuthConfig.webApiBase}/albums/$albumId/tracks?limit=1&market=US'),
+                headers: {'Authorization': 'Bearer $token'},
+              );
 
-      final result = <Map<String, dynamic>>[];
-      for (final album in albums) {
-        final a = album as Map<String, dynamic>;
-        final albumId = a['id'] as String?;
-        if (albumId == null) continue;
+              if (tracksResponse.statusCode != 200) continue;
 
-        final tracksResponse = await http.get(
-          Uri.parse(
-              '${SpotifyAuthConfig.webApiBase}/albums/$albumId/tracks?limit=1&market=US'),
-          headers: {'Authorization': 'Bearer $token'},
-        );
+              final tracksBody =
+                  jsonDecode(tracksResponse.body) as Map<String, dynamic>;
+              final trackItems = tracksBody['items'] as List<dynamic>? ?? [];
+              if (trackItems.isEmpty) continue;
 
-        if (tracksResponse.statusCode != 200) continue;
+              final track = trackItems.first as Map<String, dynamic>;
+              final images = a['images'] as List<dynamic>?;
+              result.add({
+                'id': track['id'] as String? ?? '',
+                'title': track['name'] as String? ?? '',
+                'artist': (a['artists'] as List<dynamic>?)
+                        ?.map(
+                            (ar) => (ar as Map<String, dynamic>)['name'] as String?)
+                        .join(', ') ??
+                    '',
+                'album': a['name'] as String? ?? '',
+                'imageUrl': (images != null && images.isNotEmpty)
+                    ? (images.first as Map<String, dynamic>)['url'] as String?
+                    : null,
+                'albumArt': null,
+                'durationMs': track['duration_ms'] as int? ?? 0,
+              });
+            }
 
-        final tracksBody =
-            jsonDecode(tracksResponse.body) as Map<String, dynamic>;
-        final trackItems = tracksBody['items'] as List<dynamic>? ?? [];
-        if (trackItems.isEmpty) continue;
-
-        final track = trackItems.first as Map<String, dynamic>;
-        final images = a['images'] as List<dynamic>?;
-        result.add({
-          'id': track['id'] as String? ?? '',
-          'title': track['name'] as String? ?? '',
-          'artist': (a['artists'] as List<dynamic>?)
-                  ?.map(
-                      (ar) => (ar as Map<String, dynamic>)['name'] as String?)
-                  .join(', ') ??
-              '',
-          'album': a['name'] as String? ?? '',
-          'imageUrl': (images != null && images.isNotEmpty)
-              ? (images.first as Map<String, dynamic>)['url'] as String?
-              : null,
-          'albumArt': null,
-          'durationMs': track['duration_ms'] as int? ?? 0,
-        });
+            if (result.isNotEmpty) {
+              await _cacheMix('release_radar', result);
+            }
+            return result;
+          }
+        }
       }
 
-      if (result.isNotEmpty) {
-        await _cacheMix('release_radar', result);
+      final local = await _generateLocalMix('release', 15);
+      if (local.isNotEmpty) {
+        await _cacheMix('release_radar', local);
       }
-      return result;
+      return local;
     } catch (e) {
       debugPrint('getReleaseRadar failed: $e');
       return [];
@@ -115,24 +131,63 @@ class MixService {
       final cached = await _getCachedMix('discover_weekly');
       if (cached != null) return cached;
 
-      final token = await _spotifyService.getClientCredentialsToken();
-      if (token == null) return [];
-
-      final result = await _fetchRecommendations(token,
-          seedGenres: 'pop,rock,electronic,hip-hop,indie');
-
-      if (result.isNotEmpty) {
-        await _cacheMix('discover_weekly', result);
+      if (_spotifyService.isConnected) {
+        final token = await _spotifyService.getClientCredentialsToken();
+        if (token != null) {
+          final result = await _fetchRecommendations(token,
+              seedGenres: 'pop,rock,electronic,hip-hop,indie');
+          if (result.isNotEmpty) {
+            await _cacheMix('discover_weekly', result);
+          }
+          return result;
+        }
       }
-      return result;
+
+      final local = await _generateLocalMix('discover', 20);
+      if (local.isNotEmpty) {
+        await _cacheMix('discover_weekly', local);
+      }
+      return local;
     } catch (e) {
       debugPrint('getDiscoverWeekly failed: $e');
       return [];
     }
   }
 
+  Future<List<Map<String, dynamic>>> _generateLocalMix(
+      String mixType, int count) async {
+    final db = DatabaseService.instance;
+    final allSongs = await db.getAllSongs();
+    if (allSongs.isEmpty) return [];
+
+    final shuffled = List.of(allSongs)..shuffle(_random);
+    final selected = shuffled.take(min(count, shuffled.length));
+
+    return selected.map((s) => <String, dynamic>{
+      'id': s.id,
+      'title': s.title,
+      'artist': s.artist,
+      'album': s.album,
+      'imageUrl': null,
+      'albumArt': s.albumArt,
+      'durationMs': s.duration.inMilliseconds,
+    }).toList();
+  }
+
   Future<List<Map<String, dynamic>>> getTasteMatch(String userId) async {
-    return [];
+    final db = DatabaseService.instance;
+    final allSongs = await db.getAllSongs();
+    if (allSongs.isEmpty) return [];
+    final shuffled = List.of(allSongs)..shuffle(_random);
+    return shuffled.take(10).map((s) => <String, dynamic>{
+      'id': s.id,
+      'title': s.title,
+      'artist': s.artist,
+      'album': s.album,
+      'imageUrl': null,
+      'albumArt': s.albumArt,
+      'durationMs': s.duration.inMilliseconds,
+    }).toList();
   }
 
   Future<List<Map<String, dynamic>>> _fetchRecommendations(

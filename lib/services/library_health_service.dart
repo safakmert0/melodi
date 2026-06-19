@@ -322,12 +322,14 @@ class LibraryHealthService {
     if (iss.category == 'Album Art' && iss.data.containsKey('trackId')) {
       await MetadataService.backfillAlbumArt();
       _issues.remove(iss);
+      await invalidateCache();
       return true;
     }
 
     if (iss.category == 'Metadata') {
       await MetadataService.backfillTrackMetadata();
       _issues.remove(iss);
+      await invalidateCache();
       return true;
     }
 
@@ -340,6 +342,7 @@ class LibraryHealthService {
         }
       }
       _issues.remove(iss);
+      await invalidateCache();
       return true;
     }
 

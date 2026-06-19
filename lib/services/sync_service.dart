@@ -92,14 +92,20 @@ class SyncService {
         for (final rp in remotePlaylists) {
           final playlistName = 'Spotify — ${rp.name}';
           final existingPlaylists = await _db.getAllPlaylists();
-          final existing = existingPlaylists.cast<PlaylistModel?>().firstWhere((p) => p!.name == playlistName, orElse: () => null);
+          PlaylistModel? existing;
+          for (final p in existingPlaylists) {
+            if (p.name == playlistName) {
+              existing = p;
+              break;
+            }
+          }
 
           final tracks = await _spotify!.getPlaylistTracks(rp.id);
           final localSongs = await _db.getAllSongs();
           final matchedIds = <String>[];
 
           for (final track in tracks) {
-            double bestScore = 0.6;
+            double bestScore = 0.3;
             String? bestId;
             for (final ls in localSongs) {
               final score = TrackMatcher.scoreWithDuration(
@@ -141,14 +147,20 @@ class SyncService {
         for (final rp in remotePlaylists) {
           final playlistName = 'YT Music — ${rp.title}';
           final existingPlaylists = await _db.getAllPlaylists();
-          final existing = existingPlaylists.cast<PlaylistModel?>().firstWhere((p) => p!.name == playlistName, orElse: () => null);
+          PlaylistModel? existing;
+          for (final p in existingPlaylists) {
+            if (p.name == playlistName) {
+              existing = p;
+              break;
+            }
+          }
 
           final tracks = await _ytmusic!.getPlaylistTracks(rp.playlistId);
           final localSongs = await _db.getAllSongs();
           final matchedIds = <String>[];
 
           for (final track in tracks) {
-            double bestScore = 0.6;
+            double bestScore = 0.3;
             String? bestId;
             for (final ls in localSongs) {
               final score = TrackMatcher.scoreWithDuration(
