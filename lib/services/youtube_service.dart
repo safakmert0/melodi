@@ -54,29 +54,12 @@ class YouTubeService {
       final videos = <YouTubeVideo>[];
       for (final video in results) {
         if (video.duration != null && video.duration!.inSeconds > 0) {
-          Uint8List? thumbBytes;
-          try {
-            final thumbUrl = video.thumbnails.standardResUrl;
-            final tClient = HttpClient()
-              ..connectionTimeout = const Duration(seconds: 5);
-            final tRequest = await tClient.getUrl(Uri.parse(thumbUrl));
-            final tResponse = await tRequest.close();
-            if (tResponse.statusCode == 200) {
-              thumbBytes = await tResponse.fold<BytesBuilder>(
-                BytesBuilder(),
-                (b, chunk) => b..add(chunk),
-              ).then((b) => b.takeBytes());
-            }
-            tClient.close();
-          } catch (_) {}
-
           videos.add(YouTubeVideo(
             id: video.id.value,
             title: video.title,
             author: video.author,
             duration: video.duration!,
             thumbnailUrl: video.thumbnails.standardResUrl,
-            thumbnailBytes: thumbBytes,
           ));
         }
         if (videos.length >= 20) break;

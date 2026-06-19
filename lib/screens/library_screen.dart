@@ -359,7 +359,7 @@ class _RecentlyAddedSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final display = recent.take(5).toList();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: EdgeInsets.zero,
       child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

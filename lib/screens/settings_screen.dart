@@ -121,309 +121,331 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _SectionTitle(AppLocale.tr('general')),
-                  _SettingsTile(
-                    icon: Icons.language_rounded,
-                    iconColor: Colors.teal,
-                    title: AppLocale.tr('app_language'),
-                    subtitle: _selectedLanguage,
-                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
-                    onTap: () => _showLanguagePicker(context),
-                  ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.dark_mode_rounded,
-                    iconColor: Colors.amber,
-                    title: AppLocale.tr('theme'),
-                    subtitle: Consumer<ThemeProvider>(
-                      builder: (context, tp, _) => Text(
-                        tp.isDark ? AppLocale.tr('dark') : tp.isLight ? AppLocale.tr('light') : AppLocale.tr('system'),
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                  _CollapsibleSection(
+                    title: AppLocale.tr('general'),
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.language_rounded,
+                        iconColor: Colors.teal,
+                        title: AppLocale.tr('app_language'),
+                        subtitle: _selectedLanguage,
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () => _showLanguagePicker(context),
                       ),
-                    ),
-                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => _AppearanceSettingsPage()),
-                    ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.dark_mode_rounded,
+                        iconColor: Colors.amber,
+                        title: AppLocale.tr('theme'),
+                        subtitle: Consumer<ThemeProvider>(
+                          builder: (context, tp, _) => Text(
+                            tp.isDark ? AppLocale.tr('dark') : tp.isLight ? AppLocale.tr('light') : AppLocale.tr('system'),
+                            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                          ),
+                        ),
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => _AppearanceSettingsPage()),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.play_circle_outline,
+                        iconColor: Colors.amber,
+                        title: AppLocale.tr('playback'),
+                        subtitle: AppLocale.tr('gapless_playback'),
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => _PlaybackSettingsPage(
+                            crossfadeSeconds: _crossfadeSeconds,
+                            autoShuffle: _autoShuffle,
+                            gaplessPlayback: _gaplessPlayback,
+                            onCrossfadeChanged: (v) => setState(() => _crossfadeSeconds = v),
+                            onAutoShuffleChanged: (v) => setState(() => _autoShuffle = v),
+                            onGaplessChanged: (v) => setState(() => _gaplessPlayback = v),
+                          )),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.play_circle_outline,
-                    iconColor: Colors.amber,
+                  const SizedBox(height: 24),
+                  Divider(color: AppTheme.divider, height: 1),
+                  _CollapsibleSection(
                     title: AppLocale.tr('playback'),
-                    subtitle: AppLocale.tr('gapless_playback'),
-                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => _PlaybackSettingsPage(
-                        crossfadeSeconds: _crossfadeSeconds,
-                        autoShuffle: _autoShuffle,
-                        gaplessPlayback: _gaplessPlayback,
-                        onCrossfadeChanged: (v) => setState(() => _crossfadeSeconds = v),
-                        onAutoShuffleChanged: (v) => setState(() => _autoShuffle = v),
-                        onGaplessChanged: (v) => setState(() => _gaplessPlayback = v),
-                      )),
-                    ),
+                    children: [
+                      _PlaybackTile(
+                        icon: Icons.dark_mode_rounded,
+                        iconColor: Colors.indigo,
+                        title: AppLocale.tr('sleep_timer'),
+                        subtitleBuilder: () {
+                          final svc = PlaybackService.instance;
+                          if (svc.isSleepTimerActive) {
+                            final rem = svc.getRemainingTime();
+                            final m = rem.inMinutes;
+                            final s = rem.inSeconds.remainder(60);
+                            return '${AppLocale.tr('timer_active')} (${m}:${s.toString().padLeft(2, '0')})';
+                          }
+                          return null;
+                        },
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            backgroundColor: AppTheme.surface,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                            ),
+                            builder: (_) => const SleepTimerSheet(),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      _PlaybackTile(
+                        icon: Icons.swap_horiz_rounded,
+                        iconColor: Colors.indigo,
+                        title: AppLocale.tr('crossfade'),
+                        subtitleBuilder: () {
+                          final crossfade = _crossfadeSeconds.toInt();
+                          if (crossfade > 0) return '$crossfade ${AppLocale.tr('seconds')}';
+                          return AppLocale.tr('off');
+                        },
+                        onTap: () {
+                          final player = context.read<PlayerProvider>();
+                          _showCrossfadeSlider(context, player);
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      _PlaybackTile(
+                        icon: Icons.tune_rounded,
+                        iconColor: Colors.purple,
+                        title: AppLocale.tr('equalizer'),
+                        subtitleBuilder: () => AppLocale.tr('adjust_sound_frequencies'),
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            backgroundColor: Colors.transparent,
+                            builder: (_) => const EqualizerSheet(),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 24),
                   Divider(color: AppTheme.divider, height: 1),
-                  _SectionTitle(AppLocale.tr('playback')),
-                  _PlaybackTile(
-                    icon: Icons.dark_mode_rounded,
-                    iconColor: Colors.indigo,
-                    title: AppLocale.tr('sleep_timer'),
-                    subtitleBuilder: () {
-                      final svc = PlaybackService.instance;
-                      if (svc.isSleepTimerActive) {
-                        final rem = svc.getRemainingTime();
-                        final m = rem.inMinutes;
-                        final s = rem.inSeconds.remainder(60);
-                        return '${AppLocale.tr('timer_active')} (${m}:${s.toString().padLeft(2, '0')})';
-                      }
-                      return null;
-                    },
-                    onTap: () {
-                      showModalBottomSheet(
-                        context: context,
-                        backgroundColor: AppTheme.surface,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                        ),
-                        builder: (_) => const SleepTimerSheet(),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  _PlaybackTile(
-                    icon: Icons.swap_horiz_rounded,
-                    iconColor: Colors.indigo,
-                    title: AppLocale.tr('crossfade'),
-                    subtitleBuilder: () {
-                      final crossfade = _crossfadeSeconds.toInt();
-                      if (crossfade > 0) return '$crossfade ${AppLocale.tr('seconds')}';
-                      return AppLocale.tr('off');
-                    },
-                    onTap: () {
-                      final player = context.read<PlayerProvider>();
-                      _showCrossfadeSlider(context, player);
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  _PlaybackTile(
-                    icon: Icons.tune_rounded,
-                    iconColor: Colors.purple,
-                    title: AppLocale.tr('equalizer'),
-                    subtitleBuilder: () => AppLocale.tr('adjust_sound_frequencies'),
-                    onTap: () {
-                      showModalBottomSheet(
-                        context: context,
-                        backgroundColor: Colors.transparent,
-                        builder: (_) => const EqualizerSheet(),
-                      );
-                    },
+                  _CollapsibleSection(
+                    title: AppLocale.tr('music_library'),
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.refresh_rounded,
+                        iconColor: AppTheme.primaryColor,
+                        title: AppLocale.tr('rescan_library'),
+                        subtitle: AppLocale.tr('scan_device_for_music'),
+                        trailing: library.isScanning
+                            ? SizedBox(
+                                width: 20, height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor),
+                              )
+                            : null,
+                        onTap: () => library.scanMusic(),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.folder_open_rounded,
+                        iconColor: Colors.orange,
+                        title: AppLocale.tr('import_from_files'),
+                        subtitle: AppLocale.tr('browse_and_import'),
+                        onTap: () => library.importFromFiles(),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.folder_special_rounded,
+                        iconColor: Colors.purple,
+                        title: AppLocale.tr('import_from_folder_title'),
+                        subtitle: AppLocale.tr('scan_folder_for_music'),
+                        onTap: () => library.importFromDirectory(),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.folder_rounded,
+                        iconColor: Colors.deepPurple,
+                        title: AppLocale.tr('watched_folder'),
+                        subtitle: _watchedFolderPath.isNotEmpty
+                            ? '${AppLocale.tr('watching')}: $_watchedFolderPath'
+                            : AppLocale.tr('auto_scan_folder'),
+                        trailing: _watchedFolderPath.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(Icons.close, color: AppTheme.textTertiary, size: 18),
+                                onPressed: () async {
+                                  await library.clearWatchedFolder();
+                                  setState(() => _watchedFolderPath = '');
+                                },
+                              )
+                            : null,
+                        onTap: () => _pickWatchedFolder(context),
+                      ),
+                      const SizedBox(height: 8),
+                      _LibraryHealthSettingsTile(),
+                    ],
                   ),
                   const SizedBox(height: 24),
                   Divider(color: AppTheme.divider, height: 1),
-                  _SectionTitle(AppLocale.tr('music_library')),
-                  _SettingsTile(
-                    icon: Icons.refresh_rounded,
-                    iconColor: AppTheme.primaryColor,
-                    title: AppLocale.tr('rescan_library'),
-                    subtitle: AppLocale.tr('scan_device_for_music'),
-                    trailing: library.isScanning
-                        ? SizedBox(
-                            width: 20, height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor),
-                          )
-                        : null,
-                    onTap: () => library.scanMusic(),
-                  ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.folder_open_rounded,
-                    iconColor: Colors.orange,
-                    title: AppLocale.tr('import_from_files'),
-                    subtitle: AppLocale.tr('browse_and_import'),
-                    onTap: () => library.importFromFiles(),
-                  ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.folder_special_rounded,
-                    iconColor: Colors.purple,
-                    title: AppLocale.tr('import_from_folder_title'),
-                    subtitle: AppLocale.tr('scan_folder_for_music'),
-                    onTap: () => library.importFromDirectory(),
-                  ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.folder_rounded,
-                    iconColor: Colors.deepPurple,
-                    title: AppLocale.tr('watched_folder'),
-                    subtitle: _watchedFolderPath.isNotEmpty
-                        ? '${AppLocale.tr('watching')}: $_watchedFolderPath'
-                        : AppLocale.tr('auto_scan_folder'),
-                    trailing: _watchedFolderPath.isNotEmpty
-                        ? IconButton(
-                            icon: Icon(Icons.close, color: AppTheme.textTertiary, size: 18),
-                            onPressed: () async {
-                              await library.clearWatchedFolder();
-                              setState(() => _watchedFolderPath = '');
-                            },
-                          )
-                        : null,
-                    onTap: () => _pickWatchedFolder(context),
-                  ),
-                  const SizedBox(height: 8),
-                  _LibraryHealthSettingsTile(),
-                  const SizedBox(height: 24),
-                  Divider(color: AppTheme.divider, height: 1),
-                  _SectionTitle(AppLocale.tr('metadata_backfill')),
-                  Consumer<MetadataProvider>(
-                    builder: (context, md, _) => Column(
-                      children: [
-                        _SettingsTile(
-                          icon: Icons.image_rounded,
-                          iconColor: Colors.indigo,
-                          title: AppLocale.tr('backfill_art'),
-                          subtitle: md.isBackfilling
-                              ? '${AppLocale.tr('backfill_progress')}: ${md.backfillProgress}/${md.backfillTotal}'
-                              : md.lastBackfilledAt != null
-                                  ? '${AppLocale.tr('last_backfilled')}: ${_formatDateTime(md.lastBackfilledAt!)}'
-                                  : null,
-                          trailing: md.isBackfilling
-                              ? SizedBox(
-                                  width: 20, height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor),
-                                )
-                              : null,
-                          onTap: md.isBackfilling ? null : () => md.startBackfillAlbumArt(),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.article_rounded,
-                          iconColor: Colors.pink,
-                          title: AppLocale.tr('backfill_lyrics'),
-                          subtitle: md.isBackfilling
-                              ? '${AppLocale.tr('backfill_progress')}: ${md.backfillProgress}/${md.backfillTotal}'
-                              : md.lastBackfilledAt != null
-                                  ? '${AppLocale.tr('last_backfilled')}: ${_formatDateTime(md.lastBackfilledAt!)}'
-                                  : null,
-                          trailing: md.isBackfilling
-                              ? SizedBox(
-                                  width: 20, height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor),
-                                )
-                              : null,
-                          onTap: md.isBackfilling ? null : () => md.startBackfillLyrics(),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.high_quality_rounded,
-                          iconColor: Colors.amber,
-                          title: AppLocale.tr('high_res_art'),
-                          subtitle: AppLocale.tr('backfill_art'),
-                          onTap: md.isBackfilling ? null : () => md.startBackfillAlbumArt(),
-                        ),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              onPressed: md.isBackfilling ? null : () => md.startBackfillAll(),
-                              icon: md.isBackfilling
+                  _CollapsibleSection(
+                    title: AppLocale.tr('metadata_backfill'),
+                    children: [
+                      Consumer<MetadataProvider>(
+                        builder: (context, md, _) => Column(
+                          children: [
+                            _SettingsTile(
+                              icon: Icons.image_rounded,
+                              iconColor: Colors.indigo,
+                              title: AppLocale.tr('backfill_art'),
+                              subtitle: md.isBackfilling
+                                  ? '${AppLocale.tr('backfill_progress')}: ${md.backfillProgress}/${md.backfillTotal}'
+                                  : md.lastBackfilledAt != null
+                                      ? '${AppLocale.tr('last_backfilled')}: ${_formatDateTime(md.lastBackfilledAt!)}'
+                                      : null,
+                              trailing: md.isBackfilling
                                   ? SizedBox(
-                                      width: 16, height: 16,
+                                      width: 20, height: 20,
                                       child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor),
                                     )
-                                  : Icon(Icons.refresh_rounded, size: 18),
-                              label: Text(AppLocale.tr('backfill_all')),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppTheme.primaryColor,
-                                side: BorderSide(color: AppTheme.primaryColor),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  : null,
+                              onTap: md.isBackfilling ? null : () => md.startBackfillAlbumArt(),
+                            ),
+                            const SizedBox(height: 8),
+                            _SettingsTile(
+                              icon: Icons.article_rounded,
+                              iconColor: Colors.pink,
+                              title: AppLocale.tr('backfill_lyrics'),
+                              subtitle: md.isBackfilling
+                                  ? '${AppLocale.tr('backfill_progress')}: ${md.backfillProgress}/${md.backfillTotal}'
+                                  : md.lastBackfilledAt != null
+                                      ? '${AppLocale.tr('last_backfilled')}: ${_formatDateTime(md.lastBackfilledAt!)}'
+                                      : null,
+                              trailing: md.isBackfilling
+                                  ? SizedBox(
+                                      width: 20, height: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor),
+                                    )
+                                  : null,
+                              onTap: md.isBackfilling ? null : () => md.startBackfillLyrics(),
+                            ),
+                            const SizedBox(height: 8),
+                            _SettingsTile(
+                              icon: Icons.high_quality_rounded,
+                              iconColor: Colors.amber,
+                              title: AppLocale.tr('high_res_art'),
+                              subtitle: AppLocale.tr('backfill_art'),
+                              onTap: md.isBackfilling ? null : () => md.startBackfillAlbumArt(),
+                            ),
+                            const SizedBox(height: 8),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  onPressed: md.isBackfilling ? null : () => md.startBackfillAll(),
+                                  icon: md.isBackfilling
+                                      ? SizedBox(
+                                          width: 16, height: 16,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor),
+                                        )
+                                      : Icon(Icons.refresh_rounded, size: 18),
+                                  label: Text(AppLocale.tr('backfill_all')),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppTheme.primaryColor,
+                                    side: BorderSide(color: AppTheme.primaryColor),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 24),
                   Divider(color: AppTheme.divider, height: 1),
-                  _SectionTitle(AppLocale.tr('storage')),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: [
-                        Icon(Icons.storage_rounded, color: AppTheme.textSecondary, size: 20),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(AppLocale.tr('local_songs'),
-                                  style: TextStyle(color: AppTheme.textPrimary, fontSize: 15)),
-                              Text(
-                                '${library.songCount} ${AppLocale.tr('songs_in_library')} · ${_formatBytes(library.totalSongSizeBytes)}',
-                                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                  _CollapsibleSection(
+                    title: AppLocale.tr('storage'),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: [
+                            Icon(Icons.storage_rounded, color: AppTheme.textSecondary, size: 20),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(AppLocale.tr('local_songs'),
+                                      style: TextStyle(color: AppTheme.textPrimary, fontSize: 15)),
+                                  Text(
+                                    '${library.songCount} ${AppLocale.tr('songs_in_library')} · ${_formatBytes(library.totalSongSizeBytes)}',
+                                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.delete_sweep_rounded,
-                    iconColor: AppTheme.errorColor,
-                    title: AppLocale.tr('clear_library'),
-                    subtitle: AppLocale.tr('remove_cached_data'),
-                    onTap: () => _confirmClearLibrary(context),
-                  ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.block_rounded,
-                    iconColor: Colors.red,
-                    title: AppLocale.tr('blocklist'),
-                    subtitle: AppLocale.tr('blocked_count'),
-                    trailing: FutureBuilder<int>(
-                      future: DatabaseService.instance.rawQuery('SELECT COUNT(*) as count FROM blocked_tracks').then((r) => (r.first['count'] as int?) ?? 0),
-                      builder: (_, snap) {
-                        final count = snap.data ?? 0;
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppTheme.errorColor.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            count > 0 ? '$count' : '0',
-                            style: TextStyle(color: AppTheme.errorColor, fontSize: 12, fontWeight: FontWeight.bold),
-                          ),
-                        );
-                      },
-                    ),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const BlockedTracksScreen()),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.link_rounded,
-                    iconColor: Colors.blue,
-                    title: 'Shared Links',
-                    subtitle: AppLocale.tr('no_shared_links'),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const SharedUrlsScreen()),
-                    ),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.delete_sweep_rounded,
+                        iconColor: AppTheme.errorColor,
+                        title: AppLocale.tr('clear_library'),
+                        subtitle: AppLocale.tr('remove_cached_data'),
+                        onTap: () => _confirmClearLibrary(context),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.block_rounded,
+                        iconColor: Colors.red,
+                        title: AppLocale.tr('blocklist'),
+                        subtitle: AppLocale.tr('blocked_count'),
+                        trailing: FutureBuilder<int>(
+                          future: DatabaseService.instance.rawQuery('SELECT COUNT(*) as count FROM blocked_tracks').then((r) => (r.first['count'] as int?) ?? 0),
+                          builder: (_, snap) {
+                            final count = snap.data ?? 0;
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppTheme.errorColor.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                count > 0 ? '$count' : '0',
+                                style: TextStyle(color: AppTheme.errorColor, fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                            );
+                          },
+                        ),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const BlockedTracksScreen()),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.link_rounded,
+                        iconColor: Colors.blue,
+                        title: 'Shared Links',
+                        subtitle: AppLocale.tr('no_shared_links'),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SharedUrlsScreen()),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 24),
                   Divider(color: AppTheme.divider, height: 1),
-                  _SectionTitle(AppLocale.tr('accounts')),
+                  _CollapsibleSection(
+                    title: AppLocale.tr('accounts'),
+                    children: [
                   // Last.fm
                   Consumer<LastFmProvider>(
                     builder: (context, lastfm, _) {
@@ -612,227 +634,253 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       );
                     },
                   ),
-                  const SizedBox(height: 24),
-                  Divider(color: AppTheme.divider, height: 1),
-                  _SectionTitle(AppLocale.tr('audio')),
-                  _SettingsTile(
-                    icon: Icons.tune_rounded,
-                    iconColor: Colors.purple,
-                    title: AppLocale.tr('equalizer'),
-                    subtitle: AppLocale.tr('adjust_sound_frequencies'),
-                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const _EqualizerPage()),
-                    ),
+                    ],
                   ),
                   const SizedBox(height: 24),
                   Divider(color: AppTheme.divider, height: 1),
-                  _SectionTitle(AppLocale.tr('streaming')),
-                  Consumer<SettingsProvider>(
-                    builder: (context, settings, _) => _SettingsTile(
-                      icon: Icons.cloud_rounded,
-                      iconColor: Colors.lightBlue,
-                      title: AppLocale.tr('streaming'),
-                      subtitle: settings.streamingEnabled
-                          ? AppLocale.tr('online_mode')
-                          : AppLocale.tr('offline_mode'),
-                      trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const _StreamingSettingsPage()),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.sync_rounded,
-                    iconColor: Colors.teal,
-                    title: AppLocale.tr('auto_sync'),
-                    subtitle: AppLocale.tr('sync_schedule'),
-                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const _SyncSettingsPage()),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Divider(color: AppTheme.divider, height: 1),
-                  _SectionTitle(AppLocale.tr('lossless')),
-                  _LosslessDownloadsSection(),
-                  const SizedBox(height: 24),
-                  Divider(color: AppTheme.divider, height: 1),
-                  _SectionTitle(AppLocale.tr('downloads')),
-                  Consumer<DownloadProvider>(
-                    builder: (context, dp, _) => _SettingsTile(
-                      icon: Icons.download_rounded,
-                      iconColor: Colors.green,
-                      title: AppLocale.tr('downloads'),
-                      subtitle: dp.isDownloading
-                          ? '${dp.activeCount} active · ${dp.completedCount} completed'
-                          : '${dp.completedCount} ${AppLocale.tr('completed')}',
-                      trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const DownloadsScreen()),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Consumer<DownloadProvider>(
-                    builder: (context, dp, _) {
-                      if (dp.failedCount == 0) return const SizedBox.shrink();
-                      return _SettingsTile(
-                        icon: Icons.error_outline_rounded,
-                        iconColor: AppTheme.errorColor,
-                        title: AppLocale.tr('failed'),
-                        subtitle: '${dp.failedCount} ${AppLocale.tr('failed')}',
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppTheme.errorColor,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            '${dp.failedCount}',
-                            style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                          ),
-                        ),
+                  _CollapsibleSection(
+                    title: AppLocale.tr('audio'),
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.tune_rounded,
+                        iconColor: Colors.purple,
+                        title: AppLocale.tr('equalizer'),
+                        subtitle: AppLocale.tr('adjust_sound_frequencies'),
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
                         onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const FailedDownloadsScreen()),
+                          MaterialPageRoute(builder: (_) => const _EqualizerPage()),
                         ),
-                      );
-                    },
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.folder_rounded,
-                    iconColor: Colors.orange,
-                    title: AppLocale.tr('download_location'),
-                    subtitle: 'Documents/downloads',
-                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
-                    onTap: () async {
-                      final db = DatabaseService.instance;
-                      final dir = await db.getSetting('download_path');
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(dir ?? 'Documents/downloads'),
-                            backgroundColor: AppTheme.primaryColor,
+                  const SizedBox(height: 24),
+                  Divider(color: AppTheme.divider, height: 1),
+                  _CollapsibleSection(
+                    title: AppLocale.tr('streaming'),
+                    children: [
+                      Consumer<SettingsProvider>(
+                        builder: (context, settings, _) => _SettingsTile(
+                          icon: Icons.cloud_rounded,
+                          iconColor: Colors.lightBlue,
+                          title: AppLocale.tr('streaming'),
+                          subtitle: settings.streamingEnabled
+                              ? AppLocale.tr('online_mode')
+                              : AppLocale.tr('offline_mode'),
+                          trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const _StreamingSettingsPage()),
                           ),
-                        );
-                      }
-                    },
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.sync_rounded,
+                        iconColor: Colors.teal,
+                        title: AppLocale.tr('auto_sync'),
+                        subtitle: AppLocale.tr('sync_schedule'),
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const _SyncSettingsPage()),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.tune_rounded,
-                    iconColor: Colors.pink,
-                    title: AppLocale.tr('audio_quality'),
-                    subtitle: AppLocale.tr('streaming_quality'),
-                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const AudioQualityScreen()),
-                    ),
+                  const SizedBox(height: 24),
+                  Divider(color: AppTheme.divider, height: 1),
+                  _CollapsibleSection(
+                    title: AppLocale.tr('lossless'),
+                    children: [
+                      _LosslessDownloadsSection(),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.folder_rounded,
-                    iconColor: Colors.amber,
-                    title: AppLocale.tr('file_organization'),
-                    subtitle: FutureBuilder<bool>(
-                      future: FileOrganizer().isOrganized(),
-                      builder: (_, snap) {
-                        final organized = snap.data ?? false;
-                        return Text(
-                          organized ? AppLocale.tr('organized_by_artist') : AppLocale.tr('flat_structure'),
+                  const SizedBox(height: 24),
+                  Divider(color: AppTheme.divider, height: 1),
+                  _CollapsibleSection(
+                    title: AppLocale.tr('downloads'),
+                    children: [
+                      Consumer<DownloadProvider>(
+                        builder: (context, dp, _) => _SettingsTile(
+                          icon: Icons.download_rounded,
+                          iconColor: Colors.green,
+                          title: AppLocale.tr('downloads'),
+                          subtitle: dp.isDownloading
+                              ? '${dp.activeCount} active · ${dp.completedCount} completed'
+                              : '${dp.completedCount} ${AppLocale.tr('completed')}',
+                          trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const DownloadsScreen()),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Consumer<DownloadProvider>(
+                        builder: (context, dp, _) {
+                          if (dp.failedCount == 0) return const SizedBox.shrink();
+                          return _SettingsTile(
+                            icon: Icons.error_outline_rounded,
+                            iconColor: AppTheme.errorColor,
+                            title: AppLocale.tr('failed'),
+                            subtitle: '${dp.failedCount} ${AppLocale.tr('failed')}',
+                            trailing: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppTheme.errorColor,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${dp.failedCount}',
+                                style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const FailedDownloadsScreen()),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.folder_rounded,
+                        iconColor: Colors.orange,
+                        title: AppLocale.tr('download_location'),
+                        subtitle: 'Documents/downloads',
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () async {
+                          final db = DatabaseService.instance;
+                          final dir = await db.getSetting('download_path');
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(dir ?? 'Documents/downloads'),
+                                backgroundColor: AppTheme.primaryColor,
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.tune_rounded,
+                        iconColor: Colors.pink,
+                        title: AppLocale.tr('audio_quality'),
+                        subtitle: AppLocale.tr('streaming_quality'),
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const AudioQualityScreen()),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.folder_rounded,
+                        iconColor: Colors.amber,
+                        title: AppLocale.tr('file_organization'),
+                        subtitle: FutureBuilder<bool>(
+                          future: FileOrganizer().isOrganized(),
+                          builder: (_, snap) {
+                            final organized = snap.data ?? false;
+                            return Text(
+                              organized ? AppLocale.tr('organized_by_artist') : AppLocale.tr('flat_structure'),
+                              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                            );
+                          },
+                        ),
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () => _showFileOrganizationDialog(context),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.storage_rounded,
+                        iconColor: Colors.cyan,
+                        title: AppLocale.tr('storage'),
+                        subtitle: Text(
+                          '${_formatBytes(context.read<LibraryProvider>().totalSongSizeBytes)} · ${AppLocale.tr('library_size')}',
                           style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-                        );
-                      },
-                    ),
-                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
-                    onTap: () => _showFileOrganizationDialog(context),
-                  ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.storage_rounded,
-                    iconColor: Colors.cyan,
-                    title: AppLocale.tr('storage'),
-                    subtitle: Text(
-                      '${_formatBytes(context.read<LibraryProvider>().totalSongSizeBytes)} · ${AppLocale.tr('library_size')}',
-                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-                    ),
-                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const StorageScreen()),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.cached_rounded,
-                    iconColor: Colors.cyan,
-                    title: AppLocale.tr('stream_cache'),
-                    subtitle: FutureBuilder<int>(
-                      future: StreamCache().getCacheSize(),
-                      builder: (_, snap) {
-                        final size = snap.data ?? 0;
-                        return Text(
-                          '${_formatBytes(size)}',
-                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-                        );
-                      },
-                    ),
-                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
-                    onTap: () => _showStreamCacheDialog(context),
+                        ),
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const StorageScreen()),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.cached_rounded,
+                        iconColor: Colors.cyan,
+                        title: AppLocale.tr('stream_cache'),
+                        subtitle: FutureBuilder<int>(
+                          future: StreamCache().getCacheSize(),
+                          builder: (_, snap) {
+                            final size = snap.data ?? 0;
+                            return Text(
+                              '${_formatBytes(size)}',
+                              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                            );
+                          },
+                        ),
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () => _showStreamCacheDialog(context),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 24),
                   Divider(color: AppTheme.divider, height: 1),
-                  _SectionTitle(AppLocale.tr('developer')),
-                  _SettingsTile(
-                    icon: Icons.code_rounded,
-                    iconColor: Colors.grey,
-                    title: 'GitHub',
-                    subtitle: 'safakmert0',
-                    onTap: () => _openUrl('https://github.com/safakmert0'),
-                  ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.send_rounded,
-                    iconColor: Colors.lightBlue,
-                    title: 'Telegram',
-                    subtitle: '@safakmert',
-                    onTap: () => _openUrl('https://t.me/safakmert'),
+                  _CollapsibleSection(
+                    title: AppLocale.tr('developer'),
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.code_rounded,
+                        iconColor: Colors.grey,
+                        title: 'GitHub',
+                        subtitle: 'safakmert0',
+                        onTap: () => _openUrl('https://github.com/safakmert0'),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.send_rounded,
+                        iconColor: Colors.lightBlue,
+                        title: 'Telegram',
+                        subtitle: '@safakmert',
+                        onTap: () => _openUrl('https://t.me/safakmert'),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 24),
                   Divider(color: AppTheme.divider, height: 1),
-                  _SectionTitle(AppLocale.tr('about')),
-                  _SettingsTile(
-                    icon: Icons.info_outline_rounded,
-                    iconColor: AppTheme.textSecondary,
-                    title: 'Melodi',
-                    subtitle: '${AppLocale.tr('version')} ${AppConstants.appVersion}',
-                  ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.auto_awesome_rounded,
-                    iconColor: AppTheme.primaryColor,
-                    title: AppLocale.tr('acknowledgments'),
-                    subtitle: 'yt-dlp, Media3, ytmusicapi ve diğerleri',
-                    onTap: () => _showAcknowledgments(context),
-                  ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.favorite_rounded,
-                    iconColor: AppTheme.favoriteColor,
-                    title: AppLocale.tr('credits'),
-                    subtitle: AppLocale.tr('open_source_licenses'),
-                    onTap: () => _showCredits(context),
-                  ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.bug_report_rounded,
-                    iconColor: Colors.orange,
-                    title: AppLocale.tr('diagnostics'),
-                    subtitle: AppLocale.tr('crash_reports'),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const DiagnosticsScreen()),
-                    ),
+                  _CollapsibleSection(
+                    title: AppLocale.tr('about'),
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.info_outline_rounded,
+                        iconColor: AppTheme.textSecondary,
+                        title: 'Melodi',
+                        subtitle: '${AppLocale.tr('version')} ${AppConstants.appVersion}',
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.auto_awesome_rounded,
+                        iconColor: AppTheme.primaryColor,
+                        title: AppLocale.tr('acknowledgments'),
+                        subtitle: 'yt-dlp, Media3, ytmusicapi ve diğerleri',
+                        onTap: () => _showAcknowledgments(context),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.favorite_rounded,
+                        iconColor: AppTheme.favoriteColor,
+                        title: AppLocale.tr('credits'),
+                        subtitle: AppLocale.tr('open_source_licenses'),
+                        onTap: () => _showCredits(context),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.bug_report_rounded,
+                        iconColor: Colors.orange,
+                        title: AppLocale.tr('diagnostics'),
+                        subtitle: AppLocale.tr('crash_reports'),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const DiagnosticsScreen()),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 32),
                 ],
@@ -1740,6 +1788,72 @@ class _PlaybackTileState extends State<_PlaybackTile> {
       subtitle: subtitle,
       trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
       onTap: widget.onTap,
+    );
+  }
+}
+
+class _CollapsibleSection extends StatefulWidget {
+  final String title;
+  final List<Widget> children;
+  final bool startExpanded;
+
+  const _CollapsibleSection({
+    required this.title,
+    required this.children,
+    this.startExpanded = true,
+  });
+
+  @override
+  State<_CollapsibleSection> createState() => _CollapsibleSectionState();
+}
+
+class _CollapsibleSectionState extends State<_CollapsibleSection> {
+  late bool _expanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _expanded = widget.startExpanded;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        InkWell(
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.title.toUpperCase(),
+                    style: TextStyle(
+                      color: AppTheme.textTertiary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+                Icon(
+                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  color: AppTheme.textTertiary,
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+        AnimatedCrossFade(
+          firstChild: Column(children: widget.children),
+          secondChild: const SizedBox.shrink(),
+          crossFadeState: _expanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+          duration: const Duration(milliseconds: 250),
+          sizeCurve: Curves.easeInOut,
+        ),
+      ],
     );
   }
 }

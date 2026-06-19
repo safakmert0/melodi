@@ -451,252 +451,305 @@ class _HomeTab extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Recently Played
-        if (recentlyPlayed.isNotEmpty) ...[
-          _SectionHeader(
-            title: AppLocale.tr('recently_played'),
-            onSeeAll: () => onNavigateToLibrary?.call(0),
-          ),
-          SizedBox(
-            height: 160,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(left: 16),
-              itemCount: recentlyPlayed.length,
-              itemBuilder: (context, index) {
-                final song = recentlyPlayed[index];
-                return _RecentSongCard(
-                  song: song,
-                  onTap: () => context
-                      .read<PlayerProvider>()
-                      .playSong(song),
-                );
-              },
-            ),
-          ),
-        ],
-        // Favorites
-        if (favorites.isNotEmpty) ...[
-          _SectionHeader(
-            title: AppLocale.tr('liked_songs'),
-            onSeeAll: () => onNavigateToLibrary?.call(0),
-          ),
-          SizedBox(
-            height: 160,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(left: 16),
-              itemCount: favorites.length,
-              itemBuilder: (context, index) {
-                final song = favorites[index];
-                return _RecentSongCard(
-                  song: song,
-                  onTap: () => context
-                      .read<PlayerProvider>()
-                      .playSong(song),
-                );
-              },
-            ),
-          ),
-        ],
-        // Albums
-        if (library.albums.isNotEmpty) ...[
-          _SectionHeader(
-            title: AppLocale.tr('albums'),
-            onSeeAll: () => onNavigateToLibrary?.call(1),
-          ),
-          SizedBox(
-            height: 220,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(left: 16),
-              itemCount: library.albums.length,
-              itemBuilder: (context, index) {
-                final album = library.albums[index];
-                return AlbumCard(
-                  album: album,
-                  onTap: () => _navigateToAlbum(context, album),
-                );
-              },
-            ),
-          ),
-        ],
-        // Recently Added
-        if (recentAdded.isNotEmpty) ...[
-          _SectionHeader(
-            title: 'Recently Added',
-            onSeeAll: () => onNavigateToLibrary?.call(0),
-          ),
-          SizedBox(
-            height: 160,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(left: 16),
-              itemCount: recentAdded.length,
-              itemBuilder: (context, index) {
-                final song = recentAdded[index];
-                return _RecentSongCard(
-                  song: song,
-                  onTap: () => context
-                      .read<PlayerProvider>()
-                      .playSong(song),
-                );
-              },
-            ),
-          ),
-        ],
-        // Artists
-        if (library.artists.isNotEmpty) ...[
-          _SectionHeader(
-            title: AppLocale.tr('popular_artists'),
-            onSeeAll: () => onNavigateToLibrary?.call(2),
-          ),
-          SizedBox(
-            height: 180,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(left: 16),
-              itemCount: library.artists.length,
-              itemBuilder: (context, index) {
-                final artist = library.artists[index];
-                return ArtistCard(
-                  artist: artist,
-                  onTap: () => _navigateToArtist(context, artist),
-                );
-              },
-            ),
-          ),
-        ],
-        // Playlists
-        ...[
-          _SectionHeader(
-            title: AppLocale.tr('playlists'),
-            onSeeAll: () => onNavigateToLibrary?.call(0),
-          ),
-          SizedBox(
-            height: 220,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(left: 16),
-              itemCount: playlistProvider.playlists.length + 1,
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return _CreatePlaylistCard(
-                    onCreate: () => _showCreatePlaylistDialog(context),
-                  );
-                }
-                final playlist = playlistProvider.playlists[index - 1];
-                return PlaylistCard(
-                  playlist: playlist,
-                  onTap: () => _navigateToPlaylist(context, playlist),
-                  onEdit: () => _showRenamePlaylistDialog(context, playlist),
-                  onDelete: () => _confirmDeletePlaylist(context, playlist),
-                  onAddSongs: () => _navigateToPlaylist(context, playlist),
-                );
-              },
-            ),
-          ),
-        ],
-        // Discover
-        ...[
-          _SectionHeader(
-            title: AppLocale.tr('album_discovery'),
-            onSeeAll: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                  builder: (_) => const AlbumDiscoveryScreen()),
-            ),
-          ),
-          SizedBox(
-            height: 150,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(left: 16),
-              itemCount: 1,
-              itemBuilder: (context, index) {
-                return _DiscoverCard(
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const AlbumDiscoveryScreen()),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-        // Mixes
-        Consumer<MixProvider>(
-          builder: (context, mixProvider, _) {
-            return Column(
+        if (recentlyPlayed.isNotEmpty)
+          _FadeSlideIn(
+            index: 0,
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _SectionHeader(
-                  title: AppLocale.tr('mixes'),
-                  onSeeAll: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const MixesScreen()),
-                  ),
+                  title: AppLocale.tr('recently_played'),
+                  onSeeAll: () => onNavigateToLibrary?.call(0),
                 ),
                 SizedBox(
-                  height: 150,
+                  height: 160,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.only(left: 16),
-                    itemCount: 3,
-                    itemBuilder: (context, index) {
-                      final mixTypes = [
-                        (
-                          Icons.wb_sunny_rounded,
-                          AppLocale.tr('daily_mix'),
-                          mixProvider.dailyMix.isNotEmpty
-                              ? '${mixProvider.dailyMix.length} ${AppLocale.tr('songs')}'
-                              : AppLocale.tr('daily_mix'),
-                          const Color(0xFFF39C12),
-                        ),
-                        (
-                          Icons.radar_rounded,
-                          AppLocale.tr('release_radar'),
-                          mixProvider.releaseRadar.isNotEmpty
-                              ? '${mixProvider.releaseRadar.length} ${AppLocale.tr('songs')}'
-                              : AppLocale.tr('release_radar'),
-                          const Color(0xFFE74C3C),
-                        ),
-                        (
-                          Icons.explore_rounded,
-                          AppLocale.tr('discover_weekly'),
-                          mixProvider.discoverWeekly.isNotEmpty
-                              ? '${mixProvider.discoverWeekly.length} ${AppLocale.tr('songs')}'
-                              : AppLocale.tr('discover_weekly'),
-                          const Color(0xFF8E44AD),
-                        ),
-                      ];
-                      final item = mixTypes[index];
-                      return _MixCard(
-                        icon: item.$1,
-                        title: item.$2,
-                        subtitle: item.$3,
-                        gradientColor: item.$4,
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const MixesScreen()),
-                        ),
+                    itemCount: recentlyPlayed.length,
+                    itemBuilder: (context, i) {
+                      final song = recentlyPlayed[i];
+                      return _RecentSongCard(
+                        song: song,
+                        onTap: () => context
+                            .read<PlayerProvider>()
+                            .playSong(song),
                       );
                     },
                   ),
                 ),
-                if (mixProvider.lastGenerated != null)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16, top: 4),
-                    child: Text(
-                      '${AppLocale.tr('generated_at')}: ${_formatDate(mixProvider.lastGenerated!)}',
-                      style: TextStyle(
-                        color: AppTheme.textTertiary,
-                        fontSize: 11,
+              ],
+            ),
+          ),
+        // Favorites
+        if (favorites.isNotEmpty)
+          _FadeSlideIn(
+            index: 1,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SectionHeader(
+                  title: AppLocale.tr('liked_songs'),
+                  onSeeAll: () => onNavigateToLibrary?.call(0),
+                ),
+                SizedBox(
+                  height: 160,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.only(left: 16),
+                    itemCount: favorites.length,
+                    itemBuilder: (context, i) {
+                      final song = favorites[i];
+                      return _RecentSongCard(
+                        song: song,
+                        onTap: () => context
+                            .read<PlayerProvider>()
+                            .playSong(song),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        // Albums
+        if (library.albums.isNotEmpty)
+          _FadeSlideIn(
+            index: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SectionHeader(
+                  title: AppLocale.tr('albums'),
+                  onSeeAll: () => onNavigateToLibrary?.call(1),
+                ),
+                SizedBox(
+                  height: 220,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.only(left: 16),
+                    itemCount: library.albums.length,
+                    itemBuilder: (context, i) {
+                      final album = library.albums[i];
+                      return AlbumCard(
+                        album: album,
+                        onTap: () => _navigateToAlbum(context, album),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        // Recently Added
+        if (recentAdded.isNotEmpty)
+          _FadeSlideIn(
+            index: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SectionHeader(
+                  title: 'Recently Added',
+                  onSeeAll: () => onNavigateToLibrary?.call(0),
+                ),
+                SizedBox(
+                  height: 160,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.only(left: 16),
+                    itemCount: recentAdded.length,
+                    itemBuilder: (context, i) {
+                      final song = recentAdded[i];
+                      return _RecentSongCard(
+                        song: song,
+                        onTap: () => context
+                            .read<PlayerProvider>()
+                            .playSong(song),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        // Artists
+        if (library.artists.isNotEmpty)
+          _FadeSlideIn(
+            index: 4,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SectionHeader(
+                  title: AppLocale.tr('popular_artists'),
+                  onSeeAll: () => onNavigateToLibrary?.call(2),
+                ),
+                SizedBox(
+                  height: 180,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.only(left: 16),
+                    itemCount: library.artists.length,
+                    itemBuilder: (context, i) {
+                      final artist = library.artists[i];
+                      return ArtistCard(
+                        artist: artist,
+                        onTap: () => _navigateToArtist(context, artist),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        // Playlists
+        _FadeSlideIn(
+          index: 5,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionHeader(
+                title: AppLocale.tr('playlists'),
+                onSeeAll: () => onNavigateToLibrary?.call(0),
+              ),
+              SizedBox(
+                height: 220,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.only(left: 16),
+                  itemCount: playlistProvider.playlists.length + 1,
+                  itemBuilder: (context, i) {
+                    if (i == 0) {
+                      return _CreatePlaylistCard(
+                        onCreate: () => _showCreatePlaylistDialog(context),
+                      );
+                    }
+                    final playlist = playlistProvider.playlists[i - 1];
+                    return PlaylistCard(
+                      playlist: playlist,
+                      onTap: () => _navigateToPlaylist(context, playlist),
+                      onEdit: () => _showRenamePlaylistDialog(context, playlist),
+                      onDelete: () => _confirmDeletePlaylist(context, playlist),
+                      onAddSongs: () => _navigateToPlaylist(context, playlist),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Discover
+        _FadeSlideIn(
+          index: 6,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionHeader(
+                title: AppLocale.tr('album_discovery'),
+                onSeeAll: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (_) => const AlbumDiscoveryScreen()),
+                ),
+              ),
+              SizedBox(
+                height: 150,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.only(left: 16),
+                  itemCount: 1,
+                  itemBuilder: (context, i) {
+                    return _DiscoverCard(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (_) => const AlbumDiscoveryScreen()),
                       ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Mixes
+        _FadeSlideIn(
+          index: 7,
+          child: Consumer<MixProvider>(
+            builder: (context, mixProvider, _) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SectionHeader(
+                    title: AppLocale.tr('mixes'),
+                    onSeeAll: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const MixesScreen()),
                     ),
                   ),
-              ],
-            );
-          },
+                  SizedBox(
+                    height: 150,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.only(left: 16),
+                      itemCount: 3,
+                      itemBuilder: (context, index) {
+                        final mixTypes = [
+                          (
+                            Icons.wb_sunny_rounded,
+                            AppLocale.tr('daily_mix'),
+                            mixProvider.dailyMix.isNotEmpty
+                                ? '${mixProvider.dailyMix.length} ${AppLocale.tr('songs')}'
+                                : AppLocale.tr('daily_mix'),
+                            const Color(0xFFF39C12),
+                          ),
+                          (
+                            Icons.radar_rounded,
+                            AppLocale.tr('release_radar'),
+                            mixProvider.releaseRadar.isNotEmpty
+                                ? '${mixProvider.releaseRadar.length} ${AppLocale.tr('songs')}'
+                                : AppLocale.tr('release_radar'),
+                            const Color(0xFFE74C3C),
+                          ),
+                          (
+                            Icons.explore_rounded,
+                            AppLocale.tr('discover_weekly'),
+                            mixProvider.discoverWeekly.isNotEmpty
+                                ? '${mixProvider.discoverWeekly.length} ${AppLocale.tr('songs')}'
+                                : AppLocale.tr('discover_weekly'),
+                            const Color(0xFF8E44AD),
+                          ),
+                        ];
+                        final item = mixTypes[index];
+                        return _MixCard(
+                          icon: item.$1,
+                          title: item.$2,
+                          subtitle: item.$3,
+                          gradientColor: item.$4,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const MixesScreen()),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  if (mixProvider.lastGenerated != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16, top: 4),
+                      child: Text(
+                        '${AppLocale.tr('generated_at')}: ${_formatDate(mixProvider.lastGenerated!)}',
+                        style: TextStyle(
+                          color: AppTheme.textTertiary,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
         ),
         // Library Health
-        _LibraryHealthCard(),
+        _FadeSlideIn(
+          index: 8,
+          child: _LibraryHealthCard(),
+        ),
         const SizedBox(height: 8),
         // Downloads
         Consumer<DownloadProvider>(
@@ -1218,7 +1271,7 @@ class _CreatePlaylistCard extends StatelessWidget {
     return GestureDetector(
       onTap: onCreate,
       child: Container(
-        width: 160,
+        width: 120,
         margin: const EdgeInsets.only(right: 12),
         decoration: BoxDecoration(
           color: AppTheme.card,
@@ -1228,13 +1281,13 @@ class _CreatePlaylistCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_circle_outline_rounded, size: 48, color: AppTheme.textSecondary),
-            const SizedBox(height: 12),
+            Icon(Icons.add_circle_outline_rounded, size: 32, color: AppTheme.textSecondary),
+            const SizedBox(height: 8),
             Text(
               AppLocale.tr('create_playlist'),
               style: TextStyle(
                 color: AppTheme.textSecondary,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -1593,6 +1646,62 @@ class _ArtistDetailScreen extends StatelessWidget {
               },
             ),
      );
+  }
+}
+
+class _FadeSlideIn extends StatefulWidget {
+  final Widget child;
+  final int index;
+  const _FadeSlideIn({required this.child, required this.index});
+  @override
+  State<_FadeSlideIn> createState() => _FadeSlideInState();
+}
+
+class _FadeSlideInState extends State<_FadeSlideIn>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnim;
+  late Animation<Offset> _slideAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    final delay = widget.index * 100;
+    _fadeAnim = CurvedAnimation(
+      parent: _controller,
+      curve: Interval(delay / 1000, (delay + 500) / 1000,
+          curve: Curves.easeOut),
+    );
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.05),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Interval(delay / 1000, (delay + 500) / 1000,
+          curve: Curves.easeOutCubic),
+    ));
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: SlideTransition(
+        position: _slideAnim,
+        child: widget.child,
+      ),
+    );
   }
 }
 

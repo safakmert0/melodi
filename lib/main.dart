@@ -36,6 +36,7 @@ import 'services/like_mirror_service.dart';
 import 'services/queue_manager.dart';
 import 'services/resume_playback.dart';
 import 'screens/home_screen.dart';
+import 'screens/onboarding_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -135,6 +136,46 @@ Future<void> main() async {
         ),
       ),
     ));
+  }
+}
+
+class _AppEntry extends StatefulWidget {
+  const _AppEntry();
+
+  @override
+  State<_AppEntry> createState() => _AppEntryState();
+}
+
+class _AppEntryState extends State<_AppEntry> {
+  bool _loading = true;
+  bool _showOnboarding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkOnboarding();
+  }
+
+  Future<void> _checkOnboarding() async {
+    final db = DatabaseService.instance;
+    final value = await db.getSetting('onboarding_completed');
+    if (!mounted) return;
+    setState(() {
+      _showOnboarding = value != 'true';
+      _loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    return _showOnboarding ? const OnboardingScreen() : const HomeScreen();
   }
 }
 
@@ -323,7 +364,7 @@ class MelodiApp extends StatelessWidget {
                       colorScheme: darkDynamic ?? themeProvider.darkTheme.colorScheme,
                     ),
                     themeMode: themeProvider.themeMode,
-                    home: const HomeScreen(),
+                    home: const _AppEntry(),
                     localizationsDelegates: const [
                       GlobalMaterialLocalizations.delegate,
                       GlobalWidgetsLocalizations.delegate,
