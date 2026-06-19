@@ -17,7 +17,7 @@ class NotificationService {
       android: androidSettings,
       iOS: iosSettings,
     );
-    await _plugin.initialize(settings);
+    await _plugin.initialize(initializationSettings: settings);
   }
 
   Future<void> show({
@@ -42,7 +42,7 @@ class NotificationService {
       android: androidDetails,
       iOS: iosDetails,
     );
-    await _plugin.show(id, title, body, details, payload: payload);
+    await _plugin.show(id: id, title: title, body: body, notificationDetails: details, payload: payload);
   }
 
   Future<void> showDownloadComplete(String trackName) async {
@@ -69,11 +69,12 @@ class NotificationService {
     );
   }
 
-  Future<void> cancel(int? id) async {
-    await _plugin.cancel(id);
+  Future<void> cancel({required int id}) async {
+    await _plugin.cancel(id: id);
   }
 
   Future<void> cancelAll() async {
     await _plugin.cancelAll();
   }
+}
 }
