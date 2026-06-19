@@ -510,7 +510,9 @@ class _TrackListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final durationStr =
         '${(durationMs ~/ 60000)}:${((durationMs % 60000) ~/ 1000).toString().padLeft(2, '0')}';
-    return InkWell(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
@@ -579,6 +581,7 @@ class _TrackListTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

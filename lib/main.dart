@@ -196,7 +196,16 @@ class MelodiApp extends StatelessWidget {
           create: (_) => SettingsProvider()..load(),
         ),
         ChangeNotifierProvider(
-          create: (_) => SyncProvider()..init(),
+          create: (ctx) {
+            final sync = SyncProvider()..init();
+            final spotify = ctx.read<SpotifyProvider>();
+            final ytmusic = ctx.read<YTMusicProvider>();
+            sync.setServices(
+              spotify: spotify.service,
+              ytmusic: ytmusic.service,
+            );
+            return sync;
+          },
         ),
         ChangeNotifierProvider(
           create: (ctx) {

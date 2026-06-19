@@ -810,6 +810,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 8),
                   _SettingsTile(
+                    icon: Icons.auto_awesome_rounded,
+                    iconColor: AppTheme.primaryColor,
+                    title: AppLocale.tr('acknowledgments'),
+                    subtitle: 'yt-dlp, Media3, ytmusicapi ve diğerleri',
+                    onTap: () => _showAcknowledgments(context),
+                  ),
+                  const SizedBox(height: 8),
+                  _SettingsTile(
                     icon: Icons.favorite_rounded,
                     iconColor: AppTheme.favoriteColor,
                     title: AppLocale.tr('credits'),
@@ -1266,6 +1274,132 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAcknowledgments(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.auto_awesome_rounded, color: AppTheme.primaryColor, size: 24),
+            const SizedBox(width: 12),
+            Text(
+              AppLocale.tr('acknowledgments'),
+              style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Melodi, aşağıdaki açık kaynak projeler sayesinde hayata geçti:',
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                ),
+                const SizedBox(height: 20),
+                _ackItem(
+                  'yt-dlp',
+                  'https://github.com/yt-dlp/yt-dlp',
+                  'YouTube metadata ve ses çekme mimarisinin ilham kaynağı',
+                ),
+                _ackItem(
+                  'Media3 / ExoPlayer',
+                  'https://github.com/androidx/media',
+                  'Ses oynatma altyapısı (just_audio üzerinden)',
+                ),
+                _ackItem(
+                  'ytmusicapi',
+                  'https://github.com/sigma67/ytmusicapi',
+                  'YouTube Music API tersine mühendislik referansı',
+                ),
+                _ackItem(
+                  'youtube_explode_dart',
+                  'https://github.com/hexrcs/youtube_explode_dart',
+                  'YouTube video/metadata çekme kütüphanesi',
+                ),
+                _ackItem(
+                  'LRCLIB',
+                  'https://lrclib.net',
+                  'Senkronize şarkı sözü sağlayıcısı',
+                ),
+                _ackItem(
+                  'just_audio',
+                  'https://github.com/ryanheise/just_audio',
+                  'Platformlar arası ses oynatma',
+                ),
+                _ackItem(
+                  'flutter_secure_storage',
+                  'https://github.com/mogol/flutter_secure_storage',
+                  'Güvenli kimlik bilgisi saklama',
+                ),
+                _ackItem(
+                  'sqflite',
+                  'https://github.com/tekartik/sqflite',
+                  'Yerel veritabanı',
+                ),
+                _ackItem(
+                  'palette_generator',
+                  'https://github.com/flutter/packages',
+                  'Dinamik renk paleti çıkarma',
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Kapat', style: TextStyle(color: AppTheme.primaryColor)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _ackItem(String name, String url, String description) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: InkWell(
+        onTap: () => _openUrl(url),
+        borderRadius: BorderRadius.circular(8),
+        child: Row(
+          children: [
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.code_rounded, color: AppTheme.primaryColor, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    style: TextStyle(color: AppTheme.textTertiary, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.open_in_new_rounded, color: AppTheme.textTertiary, size: 16),
           ],
         ),
       ),
@@ -2211,6 +2345,7 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
     final success = await ytmusic.connectWithCookie(cookie);
     if (context.mounted) {
       if (success) {
+        context.read<SyncProvider>().triggerSync();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocale.tr('connected_as')),
@@ -2336,6 +2471,7 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                             final success = await ytmusic.connectWithCookie(cookie);
                             if (context.mounted) {
                               if (success) {
+                                context.read<SyncProvider>().triggerSync();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(AppLocale.tr('connected_as')),
@@ -2455,6 +2591,7 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
     final success = await spotify.connectWithCookie(cookie);
     if (context.mounted) {
       if (success) {
+        context.read<SyncProvider>().triggerSync();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocale.tr('connected_as')),
@@ -2598,6 +2735,7 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                             final success = await spotify.connectWithCookie(spDc);
                             if (context.mounted) {
                               if (success) {
+                                context.read<SyncProvider>().triggerSync();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(AppLocale.tr('connected_as')),

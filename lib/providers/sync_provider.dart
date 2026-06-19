@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../services/sync_service.dart';
+import '../services/spotify_service.dart';
+import '../services/ytmusic_service.dart';
 
 class SyncProvider extends ChangeNotifier {
   final SyncService _service = SyncService();
@@ -15,8 +17,20 @@ class SyncProvider extends ChangeNotifier {
     };
   }
 
+  void setServices({
+    SpotifyService? spotify,
+    YTMusicService? ytmusic,
+  }) {
+    _service.setServices(spotify: spotify, ytmusic: ytmusic);
+  }
+
   Future<void> init() async {
     await loadPreferences();
+    final spotifyConnected = _service.isSpotifyConnected;
+    final ytConnected = _service.isYTMusicConnected;
+    if ((spotifyConnected || ytConnected) && _service.state != SyncState.syncing) {
+      await triggerSync();
+    }
   }
 
   Future<void> loadPreferences() async {

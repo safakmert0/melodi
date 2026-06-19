@@ -1,8 +1,12 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
+import '../models/playlist_model.dart';
 import '../services/database_service.dart';
+import '../services/spotify_service.dart';
+import '../services/ytmusic_service.dart';
+import '../services/track_matcher.dart';
 
 enum SyncState { idle, syncing, completed, error }
 
@@ -12,10 +16,23 @@ class SyncService {
   SyncState _state = SyncState.idle;
   String? _lastError;
 
+  SpotifyService? _spotify;
+  YTMusicService? _ytmusic;
+
   SyncState get state => _state;
   String? get lastError => _lastError;
+  bool get isSpotifyConnected => _spotify?.isConnected ?? false;
+  bool get isYTMusicConnected => _ytmusic?.isConnected ?? false;
 
   void Function(SyncState state)? onStateChanged;
+
+  void setServices({
+    SpotifyService? spotify,
+    YTMusicService? ytmusic,
+  }) {
+    _spotify = spotify;
+    _ytmusic = ytmusic;
+  }
 
   Future<void> scheduleDailySync({
     required int hour,
@@ -56,6 +73,7 @@ class SyncService {
 
   Future<void> triggerManualSync() async {
     _setState(SyncState.syncing);
+    _lastError = null;
     try {
       final connected = await _checkConnectivity();
       if (!connected) {
@@ -63,19 +81,109 @@ class SyncService {
         _setState(SyncState.error);
         return;
       }
-      final client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
-      try {
-        final uri = Uri.parse('https://api.github.com/repos/safakmert0/melodi/contents/lib');
-        final request = await client.getUrl(uri);
-        request.headers.set('User-Agent', 'Melodi/1.0');
-        final response = await request.close();
-        if (response.statusCode == 200) {
-          final body = await response.transform(utf8.decoder).join();
-          debugPrint('Sync: connectivity OK, body length=${body.length}');
-        }
-      } finally {
-        client.close();
+
+      if (_spotify != null && _spotify!.isExpiringSoon) {
+        await _spotify!.refreshAccessToken();
       }
+
+      if (_spotify != null && _spotify!.isConnected) {
+        final remotePlaylists = await _spotify!.getUserPlaylists();
+
+        for (final rp in remotePlaylists) {
+          final playlistName = 'Spotify — ${rp.name}';
+          final existingPlaylists = await _db.getAllPlaylists();
+          final existing = existingPlaylists.cast<PlaylistModel?>().firstWhere((p) => p!.name == playlistName, orElse: () => null);
+
+          final tracks = await _spotify!.getPlaylistTracks(rp.id);
+          final localSongs = await _db.getAllSongs();
+          final matchedIds = <String>[];
+
+          for (final track in tracks) {
+            double bestScore = 0.6;
+            String? bestId;
+            for (final ls in localSongs) {
+              final score = TrackMatcher.scoreWithDuration(
+                track.name,
+                track.artists.join(' '),
+                track.durationMs,
+                ls.title,
+                ls.artist,
+                ls.duration.inMilliseconds,
+              );
+              if (score > bestScore) {
+                bestScore = score;
+                bestId = ls.id;
+              }
+            }
+            if (bestId != null) matchedIds.add(bestId);
+          }
+
+          if (matchedIds.isNotEmpty) {
+            if (existing != null) {
+              final updated = existing.copyWith(songIds: matchedIds);
+              await _db.insertPlaylist(updated);
+            } else {
+              final newPlaylist = PlaylistModel(
+                id: Uuid().v4(),
+                name: playlistName,
+                description: 'Synced from Spotify',
+                songIds: matchedIds,
+              );
+              await _db.insertPlaylist(newPlaylist);
+            }
+          }
+        }
+      }
+
+      if (_ytmusic != null && _ytmusic!.isConnected) {
+        final remotePlaylists = await _ytmusic!.getLibraryPlaylists();
+
+        for (final rp in remotePlaylists) {
+          final playlistName = 'YT Music — ${rp.title}';
+          final existingPlaylists = await _db.getAllPlaylists();
+          final existing = existingPlaylists.cast<PlaylistModel?>().firstWhere((p) => p!.name == playlistName, orElse: () => null);
+
+          final tracks = await _ytmusic!.getPlaylistTracks(rp.playlistId);
+          final localSongs = await _db.getAllSongs();
+          final matchedIds = <String>[];
+
+          for (final track in tracks) {
+            double bestScore = 0.6;
+            String? bestId;
+            for (final ls in localSongs) {
+              final score = TrackMatcher.scoreWithDuration(
+                track.title,
+                track.artists,
+                track.durationMs ?? 0,
+                ls.title,
+                ls.artist,
+                ls.duration.inMilliseconds,
+              );
+              if (score > bestScore) {
+                bestScore = score;
+                bestId = ls.id;
+              }
+            }
+            if (bestId != null) matchedIds.add(bestId);
+          }
+
+          if (matchedIds.isNotEmpty) {
+            if (existing != null) {
+              final updated = existing.copyWith(songIds: matchedIds);
+              await _db.insertPlaylist(updated);
+            } else {
+              final newPlaylist = PlaylistModel(
+                id: Uuid().v4(),
+                name: playlistName,
+                description: 'Synced from YT Music',
+                songIds: matchedIds,
+              );
+              await _db.insertPlaylist(newPlaylist);
+            }
+          }
+        }
+      }
+
       _setState(SyncState.completed);
     } catch (e) {
       _lastError = e.toString();

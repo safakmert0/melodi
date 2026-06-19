@@ -13,11 +13,13 @@ import '../core/localization.dart';
 import '../core/extensions/duration_ext.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
+import '../providers/download_provider.dart';
 import '../models/song_model.dart';
 import '../providers/playlist_provider.dart';
 import '../services/audio_handler.dart';
 import '../services/lyrics_service.dart';
 import '../services/artwork_service.dart';
+import '../services/download_manager.dart';
 import '../services/playback_service.dart';
 import '../widgets/seek_bar.dart';
 import '../widgets/image_with_fallback.dart';
@@ -503,6 +505,48 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               player: player, speedOptions: _speedOptions, accentColor: _dynamicColor),
                           Row(
                             children: [
+                              Consumer<DownloadProvider>(
+                                builder: (context, dl, _) {
+                                  final song = context.read<PlayerProvider>().currentSong;
+                                  final status = song != null
+                                      ? dl.getStatusForSong(song.title, song.artist)
+                                      : null;
+                                  final isDownloaded = status == DownloadState.completed;
+                                  final isDownloading = status == DownloadState.downloading || status == DownloadState.pending;
+                                  return IconButton(
+                                    icon: Icon(
+                                      isDownloaded
+                                          ? Icons.download_done_rounded
+                                          : isDownloading
+                                              ? Icons.hourglass_top_rounded
+                                              : Icons.download_outlined,
+                                      color: isDownloaded
+                                          ? _dynamicColor
+                                          : Colors.white54,
+                                      size: 22,
+                                    ),
+                                    onPressed: isDownloaded || isDownloading
+                                        ? null
+                                        : () {
+                                            if (song != null) {
+                                              dl.enqueueTrack(
+                                                spotifyTrackId: 'youtube',
+                                                title: song.title,
+                                                artist: song.artist,
+                                                album: song.album,
+                                              );
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text('${song.title} indiriliyor...'),
+                                                  backgroundColor: AppTheme.primaryColor,
+                                                  duration: const Duration(seconds: 2),
+                                                ),
+                                              );
+                                            }
+                                          },
+                                  );
+                                },
+                              ),
                               IconButton(
                                 icon: Icon(Icons.article_rounded, color: Colors.white54, size: 22),
                                 onPressed: () {
@@ -674,46 +718,95 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   }
 
   Widget _buildSyncedLyrics() {
-    return ListView.builder(
-      controller: _lyricsScrollController,
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).size.height * 0.15,
-        bottom: MediaQuery.of(context).size.height * 0.15,
-      ),
-      itemCount: _lyricsLines.length,
-      itemBuilder: (context, index) {
-        final line = _lyricsLines[index];
-        final isCurrent = index == _currentLineIndex;
-        final isPast = index < _currentLineIndex;
+    if (_lyricsLines.isEmpty) {
+      return Center(
+        child: Text(
+          '♪',
+          style: TextStyle(color: Colors.white38, fontSize: 36),
+        ),
+      );
+    }
 
-        return GestureDetector(
-          onTap: () {
-            final player = context.read<PlayerProvider>();
-            player.seek(Duration(milliseconds: line.timestampMs));
-          },
-          child: AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 200),
-            style: TextStyle(
-              color: isCurrent
-                  ? Colors.white
-                  : isPast
-                      ? Colors.white54
-                      : Colors.white24,
-              fontSize: isCurrent ? 18 : 14,
-              fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              child: Text(
-                line.text,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+    final currentLine = _currentLineIndex >= 0 && _currentLineIndex < _lyricsLines.length
+        ? _lyricsLines[_currentLineIndex]
+        : null;
+    final prevLine = _currentLineIndex > 0
+        ? _lyricsLines[_currentLineIndex - 1]
+        : null;
+    final nextLine = _currentLineIndex >= 0 && _currentLineIndex < _lyricsLines.length - 1
+        ? _lyricsLines[_currentLineIndex + 1]
+        : null;
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (prevLine != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 4),
+            child: Text(
+              prevLine.text,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.3),
+                fontSize: 15,
               ),
             ),
           ),
-        );
-      },
+        GestureDetector(
+          onTap: () {
+            if (currentLine != null) {
+              final player = context.read<PlayerProvider>();
+              player.seek(Duration(milliseconds: currentLine.timestampMs));
+            }
+          },
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            transitionBuilder: (child, animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: child,
+              );
+            },
+            child: Padding(
+              key: ValueKey(currentLine?.timestampMs ?? 0),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: Text(
+                currentLine?.text ?? '',
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (nextLine != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 4),
+            child: Text(
+              nextLine.text,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.3),
+                fontSize: 15,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
