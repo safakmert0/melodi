@@ -12,8 +12,6 @@ import 'services/audio_handler.dart';
 import 'services/database_service.dart';
 import 'services/diagnostics_service.dart';
 import 'services/crash_reporter.dart';
-import 'services/notification_service.dart';
-import 'services/sharing_service.dart';
 import 'services/logger_service.dart';
 import 'providers/player_provider.dart';
 import 'providers/library_provider.dart';
@@ -62,17 +60,7 @@ Future<void> main() async {
     final db = DatabaseService.instance;
     await db.database;
 
-    await NotificationService.instance.init();
-    SharingService.instance.init();
-
-    final dbService = DatabaseService.instance;
-    SharingService.instance.onShare.listen((file) {
-      final url = file.path ?? file.url ?? '';
-      if (url.isNotEmpty) {
-        AppLogger.i('Received shared URL: $url');
-        dbService.addSharedUrl(url);
-      }
-    });
+    AppLogger.i('Services initialized');
 
     AppLogger.i('Services initialized');
 
