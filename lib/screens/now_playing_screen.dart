@@ -51,6 +51,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   @override
   void initState() {
     super.initState();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
@@ -62,6 +63,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   void dispose() {
     _lyricsTimer?.cancel();
     _lyricsScrollController.dispose();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
@@ -232,35 +234,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
             }
           },
           child: Scaffold(
-          extendBodyBehindAppBar: true,
-          backgroundColor: AppTheme.background,
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            systemOverlayStyle: SystemUiOverlayStyle.light,
-            leading: IconButton(
-              icon: Icon(Icons.keyboard_arrow_down_rounded, size: 28, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
-            ),
-            title: Text(
-              player.queue.length > 1
-                  ? '${AppLocale.tr('now_playing_queue')} (${player.currentIndex + 1}/${player.queue.length})'
-                  : '',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.5,
-              ),
-            ),
-            centerTitle: true,
-            actions: [
-              IconButton(
-                icon: Icon(Icons.more_horiz_rounded, color: Colors.white70),
-                onPressed: () => _showOptions(context, player),
-              ),
-            ],
-          ),
+          backgroundColor: Colors.transparent,
           body: Stack(
             fit: StackFit.expand,
             children: [
@@ -293,14 +267,51 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                   ),
                 ),
               ),
+              // Top bar
+              Positioned(
+                top: 0, left: 0, right: 0,
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.keyboard_arrow_down_rounded, size: 28, color: Colors.white),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        Expanded(
+                          child: Text(
+                            player.queue.length > 1
+                                ? '${AppLocale.tr('now_playing_queue')} (${player.currentIndex + 1}/${player.queue.length})'
+                                : '',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.more_horiz_rounded, color: Colors.white70),
+                          onPressed: () => _showOptions(context, player),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // Main content
               SafeArea(
                 child: Column(
                   children: [
-                    const SizedBox(height: 4),
-                    // Album Art - compact
+                    const Spacer(flex: 2),
+                    // Album Art
                     Padding(
                       padding: EdgeInsets.symmetric(
-                        horizontal: MediaQuery.of(context).size.width > 400 ? 72 : 56,
+                        horizontal: MediaQuery.of(context).size.width > 400 ? 72 : 48,
                       ),
                       child: AspectRatio(
                         aspectRatio: 1,
@@ -328,9 +339,70 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         ),
                       ),
                     ),
+                    const Spacer(flex: 1),
+                    // Song Title + Artist
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  song.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  song.artist,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Consumer<LibraryProvider>(
+                            builder: (context, lib, _) {
+                              final isFav = lib.favorites.any((s) => s.id == song.id);
+                              return IconButton(
+                                icon: Icon(
+                                  isFav ? Icons.favorite : Icons.favorite_border,
+                                  color: isFav ? _dynamicColor : Colors.white54,
+                                  size: 26,
+                                ),
+                                onPressed: () => lib.toggleFavorite(song),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    // Single-line synced lyrics (karaoke) - always visible
+                    // Single-line synced lyrics (karaoke)
                     _buildSingleLineLyrics(),
+                    const SizedBox(height: 8),
+                    // Seek Bar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: MelodiSeekBar(
+                        position: player.position,
+                        duration: player.duration,
+                        bufferedPosition: player.handler.bufferedPosition,
+                        onSeek: player.seek,
+                        activeColor: _dynamicColor,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     // Main controls (play/pause/prev/next)
                     Padding(
@@ -384,98 +456,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    // Mode indicators
-                    Center(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (player.isShuffled)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 12),
-                              child: Text(
-                                AppLocale.tr('shuffled'),
-                                style: TextStyle(
-                                  color: _dynamicColor,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          if (player.repeatMode != LoopStyle.off)
-                            Text(
-                              player.repeatMode == LoopStyle.all
-                                  ? AppLocale.tr('repeat_all')
-                                  : AppLocale.tr('repeat_one'),
-                              style: TextStyle(
-                                color: _dynamicColor,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    // Song Title + Artist + Favorite
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  song.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  song.artist,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Consumer<LibraryProvider>(
-                            builder: (context, lib, _) {
-                              final isFav = lib.favorites.any((s) => s.id == song.id);
-                              return IconButton(
-                                icon: Icon(
-                                  isFav ? Icons.favorite : Icons.favorite_border,
-                                  color: isFav ? _dynamicColor : Colors.white54,
-                                  size: 26,
-                                ),
-                                onPressed: () => lib.toggleFavorite(song),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Seek Bar
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: MelodiSeekBar(
-                        position: player.position,
-                        duration: player.duration,
-                        bufferedPosition: player.handler.bufferedPosition,
-                        onSeek: player.seek,
-                        activeColor: _dynamicColor,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    // Bottom row
+                    // Mode indicators + bottom row
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Row(
@@ -483,6 +464,34 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         children: [
                           _SpeedButton(
                               player: player, speedOptions: _speedOptions, accentColor: _dynamicColor),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (player.isShuffled)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: Text(
+                                    AppLocale.tr('shuffled'),
+                                    style: TextStyle(
+                                      color: _dynamicColor,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              if (player.repeatMode != LoopStyle.off)
+                                Text(
+                                  player.repeatMode == LoopStyle.all
+                                      ? AppLocale.tr('repeat_all')
+                                      : AppLocale.tr('repeat_one'),
+                                  style: TextStyle(
+                                    color: _dynamicColor,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                            ],
+                          ),
                           Row(
                             children: [
                               Consumer<DownloadProvider>(
