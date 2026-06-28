@@ -27,27 +27,29 @@ jobs:
           flutter pub get
           flutter create . --platforms=ios
           cd ios
-          sed -i '' '1s/^/platform :ios, '\''13.0'\''\n/' Podfile
+          if ! grep -q "platform :ios" Podfile; then
+            sed -i '' '1s/^/platform :ios, '\''13.0'\''\n/' Podfile
+          fi
           pod install
           cd ..
 
-      - name: Disable code signing
-        run: |
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' ios/Runner.xcodeproj/project.pbxproj || true
-          sed -i '' 's/DEVELOPMENT_TEAM = .*//g' ios/Runner.xcodeproj/project.pbxproj || true
-          sed -i '' 's/CODE_SIGN_IDENTITY = .*//g' ios/Runner.xcodeproj/project.pbxproj || true
-          sed -i '' 's/PROVISIONING_PROFILE_SPECIFIER = .*//g' ios/Runner.xcodeproj/project.pbxproj || true
-          echo 'CODE_SIGNING_REQUIRED=NO' >> ios/Flutter/Release.xcconfig
-          echo 'CODE_SIGNING_ALLOWED=NO' >> ios/Flutter/Release.xcconfig
-
       - name: Build unsigned IPA
         run: |
-          flutter build ios --release --no-codesign
+          cd ios
+          xcodebuild -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath ../build/ios/xcbuild \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM=""
+          cd ..
           mkdir -p build/unsigned_ipa/Payload
-          cp -r build/ios/iphoneos/Runner.app build/unsigned_ipa/Payload/
+          cp -r build/ios/xcbuild/Build/Products/Release-iphoneos/Runner.app build/unsigned_ipa/Payload/
           cd build/unsigned_ipa
           zip -r ../Melodi-unsigned.ipa Payload/
-        shell: bash
 
       - name: Extract version
         id: version
