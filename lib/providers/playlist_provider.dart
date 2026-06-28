@@ -129,4 +129,24 @@ class PlaylistProvider extends ChangeNotifier {
         .where((p) => p.name.toLowerCase().contains(lower))
         .toList();
   }
+
+  Future<void> updatePlaylist(
+    String id, {
+    String? name,
+    String? description,
+    List<SongModel>? songs,
+  }) async {
+    final index = _playlists.indexWhere((p) => p.id == id);
+    if (index == -1) return;
+
+    final old = _playlists[index];
+    final updated = old.copyWith(
+      name: name ?? old.name,
+      description: description ?? old.description,
+      songIds: songs?.map((s) => s.id).toList() ?? old.songIds,
+    );
+    await _db.insertPlaylist(updated);
+    _playlists[index] = updated;
+    notifyListeners();
+  }
 }

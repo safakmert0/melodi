@@ -64,11 +64,11 @@ class _AudioQualityScreenState extends State<AudioQualityScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(AppLocale.tr('audio_quality')),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
       body: ListView(
@@ -129,7 +129,7 @@ class _AudioQualityScreenState extends State<AudioQualityScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(AppLocale.tr('keep_downloads'),
-                          style: TextStyle(color: AppTheme.textPrimary, fontSize: 15)),
+                          style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15)),
                     ],
                   ),
                 ),
@@ -139,7 +139,7 @@ class _AudioQualityScreenState extends State<AudioQualityScreen> {
                     setState(() => _keepDownloads = v);
                     _service.setStorageManagement(keepDownloads: v);
                   },
-                  activeColor: AppTheme.primaryColor,
+                  activeColor: MelodiTheme.primaryGreen,
                 ),
               ],
             ),
@@ -154,14 +154,14 @@ class _AudioQualityScreenState extends State<AudioQualityScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(AppLocale.tr('auto_delete'),
-                          style: TextStyle(color: AppTheme.textPrimary, fontSize: 15)),
+                          style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15)),
                     ],
                   ),
                 ),
                 DropdownButton<int?>(
                   value: _autoDeleteDays,
-                  dropdownColor: AppTheme.surface,
-                  style: TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                  dropdownColor: MelodiTheme.containerLow,
+                  style: TextStyle(color: MelodiTheme.onSurface, fontSize: 14),
                   underline: const SizedBox.shrink(),
                   items: _autoDeleteOptions.map((days) {
                     return DropdownMenuItem<int?>(
@@ -170,7 +170,7 @@ class _AudioQualityScreenState extends State<AudioQualityScreen> {
                         days == null
                             ? AppLocale.tr('never')
                             : '${days} ${AppLocale.tr('days')}',
-                        style: TextStyle(color: AppTheme.textPrimary),
+                        style: TextStyle(color: MelodiTheme.onSurface),
                       ),
                     );
                   }).toList(),
@@ -200,7 +200,7 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title.toUpperCase(),
         style: TextStyle(
-          color: AppTheme.textTertiary,
+          color: MelodiTheme.textMuted,
           fontSize: 12,
           fontWeight: FontWeight.w600,
           letterSpacing: 1.5,
@@ -238,10 +238,10 @@ class _QualitySelector extends StatelessWidget {
                 label: Text(labelFn(option)),
                 selected: selected,
                 onSelected: (_) => onChanged(option),
-                selectedColor: AppTheme.primaryColor,
-                backgroundColor: AppTheme.surface,
+                selectedColor: MelodiTheme.primaryGreen,
+                backgroundColor: MelodiTheme.containerLow,
                 labelStyle: TextStyle(
-                  color: selected ? Colors.black : AppTheme.textPrimary,
+                  color: selected ? Colors.black : MelodiTheme.onSurface,
                   fontSize: 13,
                 ),
               ),

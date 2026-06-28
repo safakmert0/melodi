@@ -23,7 +23,7 @@ class WrongMatchButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      icon: Icon(Icons.flag_outlined, size: 18, color: AppTheme.textTertiary),
+      icon: Icon(Icons.flag_outlined, size: 18, color: MelodiTheme.textMuted),
       tooltip: AppLocale.tr('wrong_match'),
       onPressed: () => _showAlternatives(context),
       padding: EdgeInsets.zero,
@@ -43,7 +43,7 @@ class WrongMatchButton extends StatelessWidget {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: MelodiTheme.containerLow,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -57,7 +57,7 @@ class WrongMatchButton extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppTheme.divider,
+                  color: MelodiTheme.outlineVariant,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -66,7 +66,7 @@ class WrongMatchButton extends StatelessWidget {
                 child: Text(
                   AppLocale.tr('find_alternative'),
                   style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: MelodiTheme.onSurface,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -77,23 +77,23 @@ class WrongMatchButton extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
                   '$title - $artist',
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                  style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
                   textAlign: TextAlign.center,
                 ),
               ),
               const SizedBox(height: 12),
-              Divider(color: AppTheme.divider, height: 1),
+              Divider(color: MelodiTheme.outlineVariant, height: 1),
               if (alternatives.isEmpty)
                 Padding(
                   padding: const EdgeInsets.all(32),
                   child: Column(
                     children: [
                       Icon(Icons.search_off_rounded,
-                          size: 48, color: AppTheme.textTertiary),
+                          size: 48, color: MelodiTheme.textMuted),
                       const SizedBox(height: 12),
                       Text(
                         AppLocale.tr('no_alternatives'),
-                        style: TextStyle(color: AppTheme.textSecondary),
+                        style: TextStyle(color: MelodiTheme.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -114,15 +114,15 @@ class WrongMatchButton extends StatelessWidget {
                           child: Container(
                             width: 48,
                             height: 48,
-                            color: AppTheme.card,
+                            color: MelodiTheme.containerLow,
                             child: alt.thumbnailUrl != null
                                 ? Image.network(alt.thumbnailUrl!,
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) => Icon(
                                         Icons.music_note_rounded,
-                                        color: AppTheme.textTertiary))
+                                        color: MelodiTheme.textMuted))
                                 : Icon(Icons.music_note_rounded,
-                                    color: AppTheme.textTertiary),
+                                    color: MelodiTheme.textMuted),
                           ),
                         ),
                         title: Text(
@@ -130,7 +130,7 @@ class WrongMatchButton extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: AppTheme.textPrimary,
+                            color: MelodiTheme.onSurface,
                             fontSize: 14,
                           ),
                         ),
@@ -139,7 +139,7 @@ class WrongMatchButton extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: AppTheme.textSecondary,
+                            color: MelodiTheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),
@@ -153,7 +153,7 @@ class WrongMatchButton extends StatelessWidget {
                               SnackBar(
                                 content: Text(
                                     '${AppLocale.tr('wrong_match')} → ${alt.title}'),
-                                backgroundColor: AppTheme.primaryColor,
+                                backgroundColor: MelodiTheme.primaryGreen,
                               ),
                             );
                           }

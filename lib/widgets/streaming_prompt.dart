@@ -15,28 +15,28 @@ class StreamingPrompt extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: AppTheme.surface,
+      backgroundColor: MelodiTheme.containerLow,
       title: Text(
         AppLocale.tr('streaming_prompt_title'),
-        style: TextStyle(color: AppTheme.textPrimary),
+        style: TextStyle(color: MelodiTheme.onSurface),
       ),
       content: Text(
         AppLocale.tr('streaming_prompt_body'),
-        style: TextStyle(color: AppTheme.textSecondary),
+        style: TextStyle(color: MelodiTheme.onSurfaceVariant),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
           child: Text(
             AppLocale.tr('download'),
-            style: TextStyle(color: AppTheme.textSecondary),
+            style: TextStyle(color: MelodiTheme.onSurfaceVariant),
           ),
         ),
         TextButton(
           onPressed: () => Navigator.pop(context, true),
           child: Text(
             AppLocale.tr('stream'),
-            style: TextStyle(color: AppTheme.primaryColor),
+            style: TextStyle(color: MelodiTheme.primaryGreen),
           ),
         ),
       ],

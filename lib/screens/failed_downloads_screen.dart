@@ -11,11 +11,11 @@ class FailedDownloadsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(AppLocale.tr('failed')),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
       body: Consumer<DownloadProvider>(
@@ -27,12 +27,12 @@ class FailedDownloadsScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.check_circle_outline_rounded,
-                      size: 80, color: AppTheme.primaryColor),
+                      size: 80, color: MelodiTheme.primaryGreen),
                   const SizedBox(height: 24),
                   Text(
                     AppLocale.tr('no_failed_downloads'),
                     style: TextStyle(
-                      color: AppTheme.textPrimary,
+                      color: MelodiTheme.onSurface,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
@@ -55,21 +55,21 @@ class FailedDownloadsScreen extends StatelessWidget {
                     children: [
                       Text(
                         '${failed.length} ${AppLocale.tr('failed')}',
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                        style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
                       ),
                       const Spacer(),
                       TextButton.icon(
                         onPressed: () => provider.retryAllFailed(),
-                        icon: Icon(Icons.refresh_rounded, size: 18, color: AppTheme.primaryColor),
+                        icon: Icon(Icons.refresh_rounded, size: 18, color: MelodiTheme.primaryGreen),
                         label: Text(AppLocale.tr('retry_all'),
-                            style: TextStyle(color: AppTheme.primaryColor, fontSize: 13)),
+                            style: TextStyle(color: MelodiTheme.primaryGreen, fontSize: 13)),
                       ),
                       const SizedBox(width: 8),
                       TextButton.icon(
                         onPressed: () => provider.clearFailed(),
-                        icon: Icon(Icons.delete_sweep_rounded, size: 18, color: AppTheme.errorColor),
+                        icon: Icon(Icons.delete_sweep_rounded, size: 18, color: MelodiTheme.errorRed),
                         label: Text(AppLocale.tr('clear_all'),
-                            style: TextStyle(color: AppTheme.errorColor, fontSize: 13)),
+                            style: TextStyle(color: MelodiTheme.errorRed, fontSize: 13)),
                       ),
                     ],
                   ),
@@ -108,7 +108,7 @@ class _FailedDownloadTileState extends State<_FailedDownloadTile> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: AppTheme.card,
+        color: MelodiTheme.containerLow,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -118,16 +118,16 @@ class _FailedDownloadTileState extends State<_FailedDownloadTile> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: AppTheme.errorColor.withValues(alpha: 0.1),
+                color: MelodiTheme.errorRed.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.error_rounded, color: AppTheme.errorColor, size: 22),
+              child: Icon(Icons.error_rounded, color: MelodiTheme.errorRed, size: 22),
             ),
             title: Text(
               widget.task.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
+              style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15),
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -136,7 +136,7 @@ class _FailedDownloadTileState extends State<_FailedDownloadTile> {
                   widget.task.artist,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                  style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
                 ),
                 const SizedBox(height: 4),
                 GestureDetector(
@@ -148,12 +148,12 @@ class _FailedDownloadTileState extends State<_FailedDownloadTile> {
                           _expanded ? (widget.task.error ?? '') : (widget.task.error ?? ''),
                           maxLines: _expanded ? 10 : 1,
                           overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
-                          style: TextStyle(color: AppTheme.errorColor, fontSize: 12),
+                          style: TextStyle(color: MelodiTheme.errorRed, fontSize: 12),
                         ),
                       ),
                       Icon(
                         _expanded ? Icons.expand_less : Icons.expand_more,
-                        color: AppTheme.textTertiary,
+                        color: MelodiTheme.textMuted,
                         size: 16,
                       ),
                     ],
@@ -165,12 +165,12 @@ class _FailedDownloadTileState extends State<_FailedDownloadTile> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
-                  icon: Icon(Icons.refresh_rounded, color: AppTheme.primaryColor, size: 20),
+                  icon: Icon(Icons.refresh_rounded, color: MelodiTheme.primaryGreen, size: 20),
                   onPressed: () => provider.retryTask(widget.task.id),
                   tooltip: AppLocale.tr('retry'),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close, color: AppTheme.textTertiary, size: 20),
+                  icon: Icon(Icons.close, color: MelodiTheme.textMuted, size: 20),
                   onPressed: () => provider.cancelTask(widget.task.id),
                   tooltip: AppLocale.tr('clear'),
                 ),

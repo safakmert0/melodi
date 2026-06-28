@@ -40,7 +40,7 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('$fixed ${AppLocale.tr('issues_found')} ${AppLocale.tr('fix_all')}'),
-          backgroundColor: AppTheme.primaryColor,
+          backgroundColor: MelodiTheme.primaryGreen,
         ),
       );
       setState(() {});
@@ -53,7 +53,7 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(success ? 'Issue fixed' : 'Could not fix issue'),
-          backgroundColor: success ? AppTheme.primaryColor : AppTheme.errorColor,
+          backgroundColor: success ? MelodiTheme.primaryGreen : MelodiTheme.errorRed,
         ),
       );
       setState(() {});
@@ -85,11 +85,11 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(AppLocale.tr('library_health')),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
         actions: [
           if (_scanning)
@@ -97,7 +97,7 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
               padding: const EdgeInsets.only(right: 16),
               child: SizedBox(
                 width: 20, height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor),
+                child: CircularProgressIndicator(strokeWidth: 2, color: MelodiTheme.primaryGreen),
               ),
             )
           else
@@ -109,7 +109,7 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
         ],
       ),
       body: _loading
-          ? Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))
+          ? Center(child: CircularProgressIndicator(color: MelodiTheme.primaryGreen))
           : _buildContent(),
     );
   }
@@ -129,7 +129,7 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
             const SizedBox(height: 16),
             Text(
               AppLocale.tr('no_issues'),
-              style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(color: MelodiTheme.onSurface, fontSize: 20, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -152,7 +152,7 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
               icon: const Icon(Icons.build_rounded, size: 18),
               label: Text('${AppLocale.tr('fix_all')} ($fixableCount)'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
+                backgroundColor: MelodiTheme.primaryGreen,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -181,7 +181,7 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
               child: CircularProgressIndicator(
                 value: score / 100,
                 strokeWidth: 12,
-                backgroundColor: AppTheme.card,
+                backgroundColor: MelodiTheme.containerLow,
                 valueColor: AlwaysStoppedAnimation<Color>(_healthColor(score)),
               ),
             ),
@@ -191,14 +191,14 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
                 Text(
                   '${score.round()}',
                   style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: MelodiTheme.onSurface,
                     fontSize: 42,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   AppLocale.tr('health_score'),
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                  style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
                 ),
               ],
             ),
@@ -212,29 +212,29 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: MelodiTheme.containerLow,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ExpansionTile(
         initiallyExpanded: true,
         title: Row(
           children: [
-            Icon(_categoryIcon(category), size: 20, color: AppTheme.textPrimary),
+            Icon(_categoryIcon(category), size: 20, color: MelodiTheme.onSurface),
             const SizedBox(width: 10),
             Text(
               _categoryTitle(category),
-              style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
+              style: TextStyle(color: MelodiTheme.onSurface, fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                color: MelodiTheme.primaryGreen.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 '${issues.length}',
-                style: TextStyle(color: AppTheme.primaryColor, fontSize: 12, fontWeight: FontWeight.bold),
+                style: TextStyle(color: MelodiTheme.primaryGreen, fontSize: 12, fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -264,7 +264,7 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
             Expanded(
               child: Text(
                 description,
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
               ),
             ),
           ],
@@ -281,7 +281,7 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
           Expanded(
             child: Text(
               description,
-              style: TextStyle(color: AppTheme.textPrimary, fontSize: 13),
+              style: TextStyle(color: MelodiTheme.onSurface, fontSize: 13),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -291,7 +291,7 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
               onPressed: () => _fixIssue(issueId),
               child: Text(
                 AppLocale.tr('fix_all'),
-                style: TextStyle(color: AppTheme.primaryColor, fontSize: 12),
+                style: TextStyle(color: MelodiTheme.primaryGreen, fontSize: 12),
               ),
             ),
         ],

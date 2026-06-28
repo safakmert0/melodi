@@ -79,7 +79,7 @@ class _PlaylistSyncSettingsState extends State<PlaylistSyncSettings> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${widget.playlistName} ${AppLocale.tr('sync_now')}'),
-            backgroundColor: AppTheme.primaryColor,
+            backgroundColor: MelodiTheme.primaryGreen,
           ),
         );
       }
@@ -89,7 +89,7 @@ class _PlaylistSyncSettingsState extends State<PlaylistSyncSettings> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Sync failed: $e'),
-            backgroundColor: AppTheme.errorColor,
+            backgroundColor: MelodiTheme.errorRed,
           ),
         );
       }
@@ -122,7 +122,7 @@ class _PlaylistSyncSettingsState extends State<PlaylistSyncSettings> {
                   Container(
                     width: 40, height: 4,
                     decoration: BoxDecoration(
-                      color: AppTheme.divider,
+                      color: MelodiTheme.outlineVariant,
                       borderRadius: BorderRadius.circular(2),
                     ),
                     margin: const EdgeInsets.only(bottom: 16),
@@ -130,7 +130,7 @@ class _PlaylistSyncSettingsState extends State<PlaylistSyncSettings> {
                   Text(
                     AppLocale.tr('sync_settings'),
                     style: TextStyle(
-                      color: AppTheme.textPrimary,
+                      color: MelodiTheme.onSurface,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
@@ -138,7 +138,7 @@ class _PlaylistSyncSettingsState extends State<PlaylistSyncSettings> {
                   const SizedBox(height: 4),
                   Text(
                     widget.playlistName,
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                    style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
                   ),
                   const SizedBox(height: 24),
                   _buildToggle(
@@ -159,7 +159,7 @@ class _PlaylistSyncSettingsState extends State<PlaylistSyncSettings> {
                     Text(
                       AppLocale.tr('sync_direction'),
                       style: TextStyle(
-                        color: AppTheme.textTertiary,
+                        color: MelodiTheme.textMuted,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 1.5,
@@ -187,7 +187,7 @@ class _PlaylistSyncSettingsState extends State<PlaylistSyncSettings> {
                             : const Icon(Icons.sync_rounded, size: 20),
                         label: Text(AppLocale.tr('sync_now')),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
+                          backgroundColor: MelodiTheme.primaryGreen,
                           foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -203,8 +203,8 @@ class _PlaylistSyncSettingsState extends State<PlaylistSyncSettings> {
                     child: OutlinedButton(
                       onPressed: _save,
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.primaryColor,
-                        side: BorderSide(color: AppTheme.primaryColor),
+                        foregroundColor: MelodiTheme.primaryGreen,
+                        side: BorderSide(color: MelodiTheme.primaryGreen),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -230,22 +230,22 @@ class _PlaylistSyncSettingsState extends State<PlaylistSyncSettings> {
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withValues(alpha: 0.1),
+            color: MelodiTheme.primaryGreen.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: AppTheme.primaryColor, size: 20),
+          child: Icon(icon, color: MelodiTheme.primaryGreen, size: 20),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
             title,
-            style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
+            style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15),
           ),
         ),
         Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: AppTheme.primaryColor,
+          activeColor: MelodiTheme.primaryGreen,
         ),
       ],
     );
@@ -258,13 +258,13 @@ class _PlaylistSyncSettingsState extends State<PlaylistSyncSettings> {
       contentPadding: EdgeInsets.zero,
       leading: Icon(
         selected ? Icons.radio_button_checked : Icons.radio_button_off,
-        color: selected ? AppTheme.primaryColor : AppTheme.textTertiary,
+        color: selected ? MelodiTheme.primaryGreen : MelodiTheme.textMuted,
         size: 20,
       ),
       title: Text(
         label,
         style: TextStyle(
-          color: selected ? AppTheme.primaryColor : AppTheme.textPrimary,
+          color: selected ? MelodiTheme.primaryGreen : MelodiTheme.onSurface,
           fontSize: 14,
         ),
       ),
@@ -286,12 +286,12 @@ class _InfoRow extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+          style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
         ),
         Text(
           value,
           style: TextStyle(
-            color: AppTheme.textPrimary,
+            color: MelodiTheme.onSurface,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),

@@ -46,7 +46,7 @@ class _CrossfadeSliderState extends State<CrossfadeSlider> {
         Text(
           '${AppLocale.tr('crossfade')}: ${_crossfade.toInt()}s',
           style: TextStyle(
-            color: AppTheme.textPrimary,
+            color: MelodiTheme.onSurface,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -57,8 +57,8 @@ class _CrossfadeSliderState extends State<CrossfadeSlider> {
           min: 0,
           max: 12,
           divisions: 12,
-          activeColor: AppTheme.primaryColor,
-          inactiveColor: AppTheme.divider,
+          activeColor: MelodiTheme.primaryGreen,
+          inactiveColor: MelodiTheme.outlineVariant,
           onChanged: (v) {
             setState(() => _crossfade = v);
             _service.setCrossfadeDuration(Duration(seconds: v.toInt()));
@@ -69,8 +69,8 @@ class _CrossfadeSliderState extends State<CrossfadeSlider> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('0s', style: TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
-              Text('12s', style: TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
+              Text('0s', style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
+              Text('12s', style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
             ],
           ),
         ),
@@ -80,7 +80,7 @@ class _CrossfadeSliderState extends State<CrossfadeSlider> {
               ? AppLocale.tr('off')
               : '${_crossfade.toInt()} ${AppLocale.tr('seconds')}',
           style: TextStyle(
-            color: AppTheme.primaryColor,
+            color: MelodiTheme.primaryGreen,
             fontSize: 13,
             fontWeight: FontWeight.w500,
           ),

@@ -116,7 +116,7 @@ class _LyricsSheetState extends State<LyricsSheet> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.65,
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: MelodiTheme.containerLow,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
@@ -126,20 +126,20 @@ class _LyricsSheetState extends State<LyricsSheet> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: AppTheme.divider,
+              color: MelodiTheme.outlineVariant,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           Text(
             AppLocale.tr('lyrics'),
             style: TextStyle(
-              color: AppTheme.textPrimary,
+              color: MelodiTheme.onSurface,
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
-          Divider(color: AppTheme.divider, height: 1),
+          Divider(color: MelodiTheme.outlineVariant, height: 1),
           Expanded(child: _buildContent()),
         ],
       ),
@@ -163,7 +163,7 @@ class _LyricsSheetState extends State<LyricsSheet> {
       child: Text(
         AppLocale.tr('no_lyrics'),
         style: TextStyle(
-          color: AppTheme.textSecondary,
+          color: MelodiTheme.onSurfaceVariant,
           fontSize: 16,
         ),
       ),
@@ -189,10 +189,10 @@ class _LyricsSheetState extends State<LyricsSheet> {
             duration: const Duration(milliseconds: 200),
             style: TextStyle(
               color: isCurrent
-                  ? AppTheme.primaryColor
+                  ? MelodiTheme.primaryGreen
                   : isPast
-                      ? AppTheme.textSecondary
-                      : AppTheme.textTertiary,
+                      ? MelodiTheme.onSurfaceVariant
+                      : MelodiTheme.textMuted,
               fontSize: isCurrent ? 18 : 14,
               fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
             ),
@@ -223,7 +223,7 @@ class _LyricsSheetState extends State<LyricsSheet> {
             lines[index].trim(),
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppTheme.textSecondary,
+              color: MelodiTheme.onSurfaceVariant,
               fontSize: 14,
             ),
           ),

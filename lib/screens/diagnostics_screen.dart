@@ -53,7 +53,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Export failed: $e'),
-            backgroundColor: AppTheme.errorColor,
+            backgroundColor: MelodiTheme.errorRed,
           ),
         );
       }
@@ -67,7 +67,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocale.tr('clear_logs')),
-          backgroundColor: AppTheme.primaryColor,
+          backgroundColor: MelodiTheme.primaryGreen,
         ),
       );
     }
@@ -76,11 +76,11 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(AppLocale.tr('diagnostics')),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
         actions: [
           IconButton(
@@ -94,7 +94,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
           : _bundle == null
               ? Center(
                   child: Text('Failed to load diagnostics',
-                      style: TextStyle(color: AppTheme.textSecondary)),
+                      style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
                 )
               : ListView(
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -137,14 +137,14 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                               value: spotify.isConnected
                                   ? 'Connected (${spotify.username ?? ''})'
                                   : 'Not Connected',
-                              valueColor: spotify.isConnected ? Colors.green : AppTheme.textTertiary,
+                              valueColor: spotify.isConnected ? Colors.green : MelodiTheme.textMuted,
                             ),
                             _InfoRow(
                               label: 'YouTube Music',
                               value: ytmusic.isConnected
                                   ? 'Connected'
                                   : 'Not Connected',
-                              valueColor: ytmusic.isConnected ? Colors.green : AppTheme.textTertiary,
+                              valueColor: ytmusic.isConnected ? Colors.green : MelodiTheme.textMuted,
                             ),
                           ],
                         );
@@ -157,7 +157,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         child: Text(
                           'No errors logged',
-                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                          style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
                         ),
                       )
                     else
@@ -167,9 +167,9 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppTheme.surface,
+                            color: MelodiTheme.containerLow,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppTheme.divider),
+                            border: Border.all(color: MelodiTheme.outlineVariant),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,13 +179,13 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: AppTheme.errorColor.withValues(alpha: 0.15),
+                                      color: MelodiTheme.errorRed.withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
                                       '#${_errors.length - i}',
                                       style: TextStyle(
-                                        color: AppTheme.errorColor,
+                                        color: MelodiTheme.errorRed,
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -196,7 +196,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                     child: Text(
                                       error['context'] as String? ?? '',
                                       style: TextStyle(
-                                        color: AppTheme.textPrimary,
+                                        color: MelodiTheme.onSurface,
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -205,7 +205,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                   Text(
                                     _formatTimestamp(error['createdAt'] as String? ?? ''),
                                     style: TextStyle(
-                                      color: AppTheme.textTertiary,
+                                      color: MelodiTheme.textMuted,
                                       fontSize: 11,
                                     ),
                                   ),
@@ -215,7 +215,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                               Text(
                                 error['message'] as String? ?? '',
                                 style: TextStyle(
-                                  color: AppTheme.textSecondary,
+                                  color: MelodiTheme.onSurfaceVariant,
                                   fontSize: 12,
                                 ),
                                 maxLines: 3,
@@ -229,7 +229,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                   child: Text(
                                     'View stack trace',
                                     style: TextStyle(
-                                      color: AppTheme.primaryColor,
+                                      color: MelodiTheme.primaryGreen,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -251,8 +251,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                             icon: const Icon(Icons.delete_sweep_rounded, size: 18),
                             label: Text(AppLocale.tr('clear_logs')),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: AppTheme.errorColor,
-                              side: BorderSide(color: AppTheme.errorColor.withValues(alpha: 0.5)),
+                              foregroundColor: MelodiTheme.errorRed,
+                              side: BorderSide(color: MelodiTheme.errorRed.withValues(alpha: 0.5)),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -271,7 +271,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                           icon: const Icon(Icons.file_upload_rounded, size: 18),
                           label: Text(AppLocale.tr('export_diagnostics')),
                           style: FilledButton.styleFrom(
-                            backgroundColor: AppTheme.primaryColor,
+                            backgroundColor: MelodiTheme.primaryGreen,
                             foregroundColor: Colors.black,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
@@ -290,7 +290,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
   void _showStackTrace(BuildContext context, String trace) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: MelodiTheme.containerLow,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -307,14 +307,14 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: AppTheme.divider,
+                  color: MelodiTheme.outlineVariant,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               Text(
                 'Stack Trace',
                 style: TextStyle(
-                  color: AppTheme.textPrimary,
+                  color: MelodiTheme.onSurface,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -325,7 +325,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                   child: SelectableText(
                     trace,
                     style: TextStyle(
-                      color: AppTheme.textSecondary,
+                      color: MelodiTheme.onSurfaceVariant,
                       fontSize: 11,
                       fontFamily: 'monospace',
                       height: 1.5,
@@ -374,7 +374,7 @@ class _SectionTitle extends StatelessWidget {
       child: Text(
         title.toUpperCase(),
         style: TextStyle(
-          color: AppTheme.textTertiary,
+          color: MelodiTheme.textMuted,
           fontSize: 12,
           fontWeight: FontWeight.w600,
           letterSpacing: 1.5,
@@ -404,12 +404,12 @@ class _InfoRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+            style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
           ),
           Text(
             value,
             style: TextStyle(
-              color: valueColor ?? AppTheme.textPrimary,
+              color: valueColor ?? MelodiTheme.onSurface,
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),

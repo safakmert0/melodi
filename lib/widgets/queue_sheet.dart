@@ -23,7 +23,7 @@ class QueueSheet extends StatelessWidget {
         return Container(
           height: MediaQuery.of(context).size.height * 0.7,
           decoration: BoxDecoration(
-            color: AppTheme.surface,
+            color: MelodiTheme.containerLow,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
@@ -33,7 +33,7 @@ class QueueSheet extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppTheme.divider,
+                  color: MelodiTheme.outlineVariant,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -45,7 +45,7 @@ class QueueSheet extends StatelessWidget {
                     Text(
                       AppLocale.tr('queue'),
                       style: TextStyle(
-                        color: AppTheme.textPrimary,
+                        color: MelodiTheme.onSurface,
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -58,14 +58,14 @@ class QueueSheet extends StatelessWidget {
                                 ? Icons.shuffle_on_rounded
                                 : Icons.shuffle_rounded,
                             color: player.isShuffled
-                                ? AppTheme.primaryColor
-                                : AppTheme.textSecondary,
+                                ? MelodiTheme.primaryGreen
+                                : MelodiTheme.onSurfaceVariant,
                           ),
                           onPressed: player.toggleShuffle,
                         ),
                         IconButton(
                           icon: Icon(Icons.delete_sweep_rounded,
-                              color: AppTheme.textSecondary),
+                              color: MelodiTheme.onSurfaceVariant),
                           onPressed: player.clearQueue,
                         ),
                       ],
@@ -73,7 +73,7 @@ class QueueSheet extends StatelessWidget {
                   ],
                 ),
               ),
-              Divider(color: AppTheme.divider),
+              Divider(color: MelodiTheme.outlineVariant),
               Expanded(
                 child: queue.isEmpty
                     ? Center(
@@ -81,12 +81,12 @@ class QueueSheet extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.queue_music_rounded,
-                                size: 64, color: AppTheme.textTertiary),
+                                size: 64, color: MelodiTheme.textMuted),
                             const SizedBox(height: 16),
                             Text(
                               AppLocale.tr('queue_is_empty'),
                               style: TextStyle(
-                                color: AppTheme.textSecondary,
+                                color: MelodiTheme.onSurfaceVariant,
                                 fontSize: 16,
                               ),
                             ),
@@ -94,7 +94,7 @@ class QueueSheet extends StatelessWidget {
                             Text(
                               AppLocale.tr('add_songs_to_start'),
                               style: TextStyle(
-                                color: AppTheme.textTertiary,
+                                color: MelodiTheme.textMuted,
                                 fontSize: 14,
                               ),
                             ),
@@ -116,7 +116,7 @@ class QueueSheet extends StatelessWidget {
                             background: Container(
                               alignment: Alignment.centerRight,
                               padding: const EdgeInsets.only(right: 20),
-                              color: AppTheme.errorColor,
+                              color: MelodiTheme.errorRed,
                               child: const Icon(Icons.delete_outline,
                                   color: Colors.white),
                             ),
@@ -131,8 +131,8 @@ class QueueSheet extends StatelessWidget {
                                 song.title,
                                 style: TextStyle(
                                   color: isCurrent
-                                      ? AppTheme.primaryColor
-                                      : AppTheme.textPrimary,
+                                      ? MelodiTheme.primaryGreen
+                                      : MelodiTheme.onSurface,
                                   fontWeight: isCurrent
                                       ? FontWeight.w600
                                       : FontWeight.normal,
@@ -144,7 +144,7 @@ class QueueSheet extends StatelessWidget {
                               subtitle: Text(
                                 song.artist,
                                 style: TextStyle(
-                                  color: AppTheme.textSecondary,
+                                  color: MelodiTheme.onSurfaceVariant,
                                   fontSize: 12,
                                 ),
                                 maxLines: 1,
@@ -179,7 +179,7 @@ class AddToPlaylistSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: MelodiTheme.containerLow,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
@@ -191,14 +191,14 @@ class AddToPlaylistSheet extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: AppTheme.divider,
+              color: MelodiTheme.outlineVariant,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           Text(
             AppLocale.tr('add_to_playlist'),
             style: TextStyle(
-              color: AppTheme.textPrimary,
+              color: MelodiTheme.onSurface,
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
@@ -207,14 +207,14 @@ class AddToPlaylistSheet extends StatelessWidget {
           if (playlists.isEmpty)
             Text(
               AppLocale.tr('no_playlists_yet'),
-              style: TextStyle(color: AppTheme.textSecondary),
+              style: TextStyle(color: MelodiTheme.onSurfaceVariant),
             )
           else
             ...playlists.map((pl) => ListTile(
                   title: Text(pl.name,
-                      style: TextStyle(color: AppTheme.textPrimary)),
+                      style: TextStyle(color: MelodiTheme.onSurface)),
                   leading: Icon(Icons.playlist_play_rounded,
-                      color: AppTheme.textSecondary),
+                      color: MelodiTheme.onSurfaceVariant),
                   onTap: () {
                     context
                         .read<PlaylistProvider>()
@@ -223,7 +223,7 @@ class AddToPlaylistSheet extends StatelessWidget {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('${AppLocale.tr('added_to')} ${pl.name}'),
-                        backgroundColor: AppTheme.primaryColor,
+                        backgroundColor: MelodiTheme.primaryGreen,
                       ),
                     );
                   },
@@ -231,9 +231,9 @@ class AddToPlaylistSheet extends StatelessWidget {
           const SizedBox(height: 8),
           ListTile(
             leading: Icon(Icons.add_circle_outline,
-                color: AppTheme.primaryColor),
+                color: MelodiTheme.primaryGreen),
             title: Text(AppLocale.tr('create_new_playlist'),
-                style: TextStyle(color: AppTheme.primaryColor)),
+                style: TextStyle(color: MelodiTheme.primaryGreen)),
             onTap: () {
               Navigator.pop(context);
               _showCreatePlaylistDialog(context);
@@ -249,18 +249,18 @@ class AddToPlaylistSheet extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: MelodiTheme.containerLow,
         title: Text(AppLocale.tr('new_playlist'),
-            style: TextStyle(color: AppTheme.textPrimary)),
+            style: TextStyle(color: MelodiTheme.onSurface)),
         content: TextField(
           controller: controller,
           autofocus: true,
-          style: TextStyle(color: AppTheme.textPrimary),
+          style: TextStyle(color: MelodiTheme.onSurface),
           decoration: InputDecoration(
             hintText: AppLocale.tr('playlist_name'),
-            hintStyle: TextStyle(color: AppTheme.textTertiary),
+            hintStyle: TextStyle(color: MelodiTheme.textMuted),
             filled: true,
-            fillColor: AppTheme.card,
+            fillColor: MelodiTheme.containerLow,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide.none,
@@ -271,7 +271,7 @@ class AddToPlaylistSheet extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(AppLocale.tr('cancel'),
-                style: TextStyle(color: AppTheme.textSecondary)),
+                style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () async {
@@ -286,13 +286,13 @@ class AddToPlaylistSheet extends StatelessWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('${AppLocale.tr('created_and_added_to')} ${pl.name}'),
-                    backgroundColor: AppTheme.primaryColor,
+                    backgroundColor: MelodiTheme.primaryGreen,
                   ),
                 );
               }
             },
             child: Text(AppLocale.tr('create'),
-                style: TextStyle(color: AppTheme.primaryColor)),
+                style: TextStyle(color: MelodiTheme.primaryGreen)),
           ),
         ],
       ),

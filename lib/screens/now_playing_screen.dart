@@ -9,6 +9,7 @@ import '../services/share_service.dart';
 import '../services/color_extractor.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
+import 'queue_screen.dart';
 import '../core/extensions/duration_ext.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
@@ -39,7 +40,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   bool _showVolumeSlider = false;
   bool _showLyrics = true;
   String? _lastSongId;
-  Color _dynamicColor = AppTheme.primaryColor;
+  Color _dynamicColor = MelodiTheme.primaryGreen;
 
   LyricsResult? _lyricsResult;
   List<LrcLine> _lyricsLines = [];
@@ -549,7 +550,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             onPressed: () {
                               showModalBottomSheet(
                                 context: context,
-                                backgroundColor: AppTheme.surface,
+                                backgroundColor: MelodiTheme.containerLow,
                                 shape: const RoundedRectangleBorder(
                                   borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                                 ),
@@ -854,9 +855,9 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: MelodiTheme.containerLow,
         title: Text(song.title,
-            style: TextStyle(color: AppTheme.textPrimary)),
+            style: TextStyle(color: MelodiTheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -875,7 +876,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(AppLocale.tr('cancel'),
-                style: TextStyle(color: AppTheme.textSecondary)),
+                style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
           ),
         ],
       ),
@@ -892,12 +893,12 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
             width: 80,
             child: Text(label,
                 style: TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 13)),
+                    color: MelodiTheme.onSurfaceVariant, fontSize: 13)),
           ),
           Expanded(
             child: Text(value,
                 style: TextStyle(
-                    color: AppTheme.textPrimary, fontSize: 13)),
+                    color: MelodiTheme.onSurface, fontSize: 13)),
           ),
         ],
       ),
@@ -913,7 +914,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocale.tr('share')),
-            backgroundColor: AppTheme.errorColor,
+            backgroundColor: MelodiTheme.errorRed,
           ),
         );
       }
@@ -926,7 +927,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     ];
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: MelodiTheme.containerLow,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -939,13 +940,13 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.divider,
+                color: MelodiTheme.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             Text(AppLocale.tr('sleep_timer'),
                 style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: MelodiTheme.onSurface,
                     fontSize: 20,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
@@ -955,10 +956,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                   : '$minutes ${AppLocale.tr('min')}';
               final isSelected = minutes == player.sleepTimerMinutes;
               return ListTile(
-                leading: Icon(Icons.timer_outlined, color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary),
+                leading: Icon(Icons.timer_outlined, color: isSelected ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant),
                 title: Text(label,
-                    style: TextStyle(color: isSelected ? AppTheme.primaryColor : AppTheme.textPrimary)),
-                trailing: isSelected ? Icon(Icons.check, color: AppTheme.primaryColor, size: 20) : null,
+                    style: TextStyle(color: isSelected ? MelodiTheme.primaryGreen : MelodiTheme.onSurface)),
+                trailing: isSelected ? Icon(Icons.check, color: MelodiTheme.primaryGreen, size: 20) : null,
                 onTap: () {
                   final timerDuration = Duration(minutes: minutes);
                   player.handler.setSleepTimer(timerDuration);
@@ -966,23 +967,23 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('${AppLocale.tr('sleep_timer')}: $label'),
-                      backgroundColor: AppTheme.primaryColor,
+                      backgroundColor: MelodiTheme.primaryGreen,
                     ),
                   );
                 },
               );
             }),
             ListTile(
-              leading: Icon(Icons.close, color: AppTheme.errorColor),
+              leading: Icon(Icons.close, color: MelodiTheme.errorRed),
               title: Text(AppLocale.tr('off'),
-                  style: TextStyle(color: AppTheme.errorColor)),
+                  style: TextStyle(color: MelodiTheme.errorRed)),
               onTap: () {
                 player.handler.setSleepTimer(Duration.zero);
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(AppLocale.tr('sleep_timer_canceled')),
-                    backgroundColor: AppTheme.primaryColor,
+                    backgroundColor: MelodiTheme.primaryGreen,
                   ),
                 );
               },
@@ -999,7 +1000,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     if (song == null) return;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: MelodiTheme.containerLow,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1012,57 +1013,57 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.divider,
+                color: MelodiTheme.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             ListTile(
-              leading: Icon(Icons.playlist_add, color: AppTheme.textSecondary),
+              leading: Icon(Icons.playlist_add, color: MelodiTheme.onSurfaceVariant),
               title: Text(AppLocale.tr('add_to_playlist'),
-                  style: TextStyle(color: AppTheme.textPrimary)),
+                  style: TextStyle(color: MelodiTheme.onSurface)),
               onTap: () {
                 Navigator.pop(context);
                 _showAddToPlaylist(context, song!);
               },
             ),
             ListTile(
-              leading: Icon(Icons.info_outline, color: AppTheme.textSecondary),
+              leading: Icon(Icons.info_outline, color: MelodiTheme.onSurfaceVariant),
               title: Text(AppLocale.tr('song_info'),
-                  style: TextStyle(color: AppTheme.textPrimary)),
+                  style: TextStyle(color: MelodiTheme.onSurface)),
               onTap: () {
                 Navigator.pop(context);
                 _showSongInfo(context, song!);
               },
             ),
             ListTile(
-              leading: Icon(Icons.share_outlined, color: AppTheme.textSecondary),
+              leading: Icon(Icons.share_outlined, color: MelodiTheme.onSurfaceVariant),
               title: Text(AppLocale.tr('share'),
-                  style: TextStyle(color: AppTheme.textPrimary)),
+                  style: TextStyle(color: MelodiTheme.onSurface)),
               subtitle: Text(AppLocale.tr('share_file'),
-                  style: TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
+                  style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
               onTap: () {
                 Navigator.pop(context);
                 _shareSong(context, song!);
               },
             ),
             ListTile(
-              leading: Icon(Icons.timer, color: AppTheme.textSecondary),
+              leading: Icon(Icons.timer, color: MelodiTheme.onSurfaceVariant),
               title: Text(AppLocale.tr('sleep_timer'),
-                  style: TextStyle(color: AppTheme.textPrimary)),
+                  style: TextStyle(color: MelodiTheme.onSurface)),
               onTap: () {
                 Navigator.pop(context);
                 _showSleepTimer(context, player);
               },
             ),
             ListTile(
-              leading: Icon(Icons.swap_horiz_rounded, color: AppTheme.textSecondary),
+              leading: Icon(Icons.swap_horiz_rounded, color: MelodiTheme.onSurfaceVariant),
               title: Text(AppLocale.tr('crossfade'),
-                  style: TextStyle(color: AppTheme.textPrimary)),
+                  style: TextStyle(color: MelodiTheme.onSurface)),
               onTap: () {
                 Navigator.pop(context);
                 showModalBottomSheet(
                   context: context,
-                  backgroundColor: AppTheme.surface,
+                  backgroundColor: MelodiTheme.containerLow,
                   shape: const RoundedRectangleBorder(
                     borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                   ),
@@ -1076,7 +1077,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             width: 40,
                             height: 4,
                             decoration: BoxDecoration(
-                              color: AppTheme.divider,
+                              color: MelodiTheme.outlineVariant,
                               borderRadius: BorderRadius.circular(2),
                             ),
                           ),

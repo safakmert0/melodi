@@ -69,22 +69,22 @@ class _StorageScreenState extends State<StorageScreen> {
     int used = totalAudio + totalArt + totalOther;
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(
           AppLocale.tr('storage'),
-          style: TextStyle(color: AppTheme.textPrimary),
+          style: TextStyle(color: MelodiTheme.onSurface),
         ),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
       body: _isLoading
           ? Center(
-              child: CircularProgressIndicator(color: AppTheme.primaryColor))
+              child: CircularProgressIndicator(color: MelodiTheme.primaryGreen))
           : RefreshIndicator(
               onRefresh: _refresh,
-              color: AppTheme.primaryColor,
+              color: MelodiTheme.primaryGreen,
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -120,7 +120,7 @@ class _StorageScreenState extends State<StorageScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: MelodiTheme.containerLow,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -129,7 +129,7 @@ class _StorageScreenState extends State<StorageScreen> {
           Text(
             AppLocale.tr('library_size'),
             style: TextStyle(
-              color: AppTheme.textSecondary,
+              color: MelodiTheme.onSurfaceVariant,
               fontSize: 13,
             ),
           ),
@@ -137,7 +137,7 @@ class _StorageScreenState extends State<StorageScreen> {
           Text(
             _formatBytes(used),
             style: TextStyle(
-              color: AppTheme.textPrimary,
+              color: MelodiTheme.onSurface,
               fontSize: 32,
               fontWeight: FontWeight.bold,
             ),
@@ -152,7 +152,7 @@ class _StorageScreenState extends State<StorageScreen> {
                   if (totalAudio > 0)
                     Expanded(
                       flex: totalAudio,
-                      child: Container(color: AppTheme.primaryColor),
+                      child: Container(color: MelodiTheme.primaryGreen),
                     ),
                   if (totalArt > 0)
                     Expanded(
@@ -169,7 +169,7 @@ class _StorageScreenState extends State<StorageScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          _usageLegend(AppTheme.primaryColor, AppLocale.tr('audio'),
+          _usageLegend(MelodiTheme.primaryGreen, AppLocale.tr('audio'),
               _formatBytes(totalAudio)),
           const SizedBox(height: 4),
           _usageLegend(Colors.amber, AppLocale.tr('artists'),
@@ -196,13 +196,13 @@ class _StorageScreenState extends State<StorageScreen> {
         const SizedBox(width: 8),
         Text(
           label,
-          style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+          style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
         ),
         const Spacer(),
         Text(
           size,
           style: TextStyle(
-            color: AppTheme.textPrimary,
+            color: MelodiTheme.onSurface,
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
@@ -216,7 +216,7 @@ class _StorageScreenState extends State<StorageScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: MelodiTheme.containerLow,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -236,13 +236,13 @@ class _StorageScreenState extends State<StorageScreen> {
               children: [
                 Text(
                   label,
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 12),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
                   style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: MelodiTheme.onSurface,
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -262,7 +262,7 @@ class _StorageScreenState extends State<StorageScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: MelodiTheme.containerLow,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -271,7 +271,7 @@ class _StorageScreenState extends State<StorageScreen> {
           Text(
             AppLocale.tr('format_breakdown'),
             style: TextStyle(
-              color: AppTheme.textSecondary,
+              color: MelodiTheme.onSurfaceVariant,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -290,14 +290,14 @@ class _StorageScreenState extends State<StorageScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                      color: MelodiTheme.primaryGreen.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       ext,
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: AppTheme.primaryColor,
+                        color: MelodiTheme.primaryGreen,
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
@@ -307,7 +307,7 @@ class _StorageScreenState extends State<StorageScreen> {
                   Text(
                     '$count ${AppLocale.tr('songs')}',
                     style: TextStyle(
-                      color: AppTheme.textPrimary,
+                      color: MelodiTheme.onSurface,
                       fontSize: 14,
                     ),
                   ),
@@ -315,7 +315,7 @@ class _StorageScreenState extends State<StorageScreen> {
                   Text(
                     _formatBytes(size),
                     style: TextStyle(
-                      color: AppTheme.textSecondary,
+                      color: MelodiTheme.onSurfaceVariant,
                       fontSize: 13,
                     ),
                   ),
@@ -338,8 +338,8 @@ class _StorageScreenState extends State<StorageScreen> {
             icon: Icon(Icons.delete_sweep_rounded, size: 18),
             label: Text(AppLocale.tr('clear_cache')),
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppTheme.errorColor,
-              side: BorderSide(color: AppTheme.errorColor),
+              foregroundColor: MelodiTheme.errorRed,
+              side: BorderSide(color: MelodiTheme.errorRed),
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -366,7 +366,7 @@ class _StorageScreenState extends State<StorageScreen> {
                 ? AppLocale.tr('move_library')
                 : AppLocale.tr('move_library')),
             style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
+              backgroundColor: MelodiTheme.primaryGreen,
               foregroundColor: Colors.black,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
@@ -383,8 +383,8 @@ class _StorageScreenState extends State<StorageScreen> {
             icon: Icon(Icons.backup_rounded, size: 18),
             label: Text('Veritabanı Yedekle'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppTheme.primaryColor,
-              side: BorderSide(color: AppTheme.primaryColor),
+              foregroundColor: MelodiTheme.primaryGreen,
+              side: BorderSide(color: MelodiTheme.primaryGreen),
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -400,28 +400,28 @@ class _StorageScreenState extends State<StorageScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: MelodiTheme.containerLow,
         title: Text(
           AppLocale.tr('clear_cache'),
-          style: TextStyle(color: AppTheme.textPrimary),
+          style: TextStyle(color: MelodiTheme.onSurface),
         ),
         content: Text(
           '${AppLocale.tr('clear_cache')}?',
-          style: TextStyle(color: AppTheme.textSecondary),
+          style: TextStyle(color: MelodiTheme.onSurfaceVariant),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(
               AppLocale.tr('cancel'),
-              style: TextStyle(color: AppTheme.textSecondary),
+              style: TextStyle(color: MelodiTheme.onSurfaceVariant),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
               AppLocale.tr('clear_cache'),
-              style: TextStyle(color: AppTheme.errorColor),
+              style: TextStyle(color: MelodiTheme.errorRed),
             ),
           ),
         ],
@@ -434,7 +434,7 @@ class _StorageScreenState extends State<StorageScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocale.tr('clear_cache')),
-          backgroundColor: AppTheme.primaryColor,
+          backgroundColor: MelodiTheme.primaryGreen,
         ),
       );
     }
@@ -453,7 +453,7 @@ class _StorageScreenState extends State<StorageScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocale.tr('move_library')),
-            backgroundColor: AppTheme.primaryColor,
+            backgroundColor: MelodiTheme.primaryGreen,
           ),
         );
       }
@@ -462,7 +462,7 @@ class _StorageScreenState extends State<StorageScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${AppLocale.tr('move_library')}: $e'),
-            backgroundColor: AppTheme.errorColor,
+            backgroundColor: MelodiTheme.errorRed,
           ),
         );
       }
@@ -474,17 +474,17 @@ class _StorageScreenState extends State<StorageScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: Text('Veritabanı Yedekle', style: TextStyle(color: AppTheme.textPrimary)),
-        content: Text('Veritabanı yedeklenecek. Devam edilsin mi?', style: TextStyle(color: AppTheme.textSecondary)),
+        backgroundColor: MelodiTheme.containerLow,
+        title: Text('Veritabanı Yedekle', style: TextStyle(color: MelodiTheme.onSurface)),
+        content: Text('Veritabanı yedeklenecek. Devam edilsin mi?', style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(AppLocale.tr('cancel'), style: TextStyle(color: AppTheme.textSecondary)),
+            child: Text(AppLocale.tr('cancel'), style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Yedekle', style: TextStyle(color: AppTheme.primaryColor)),
+            child: Text('Yedekle', style: TextStyle(color: MelodiTheme.primaryGreen)),
           ),
         ],
       ),
@@ -496,7 +496,7 @@ class _StorageScreenState extends State<StorageScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(path != null ? 'Yedek oluşturuldu: $path' : 'Yedekleme başarısız'),
-          backgroundColor: path != null ? AppTheme.primaryColor : AppTheme.errorColor,
+          backgroundColor: path != null ? MelodiTheme.primaryGreen : MelodiTheme.errorRed,
         ),
       );
     }

@@ -34,7 +34,7 @@ class AlbumCard extends StatelessWidget {
                 width: 160,
                 height: 160,
                 decoration: BoxDecoration(
-                  color: AppTheme.card,
+                  color: MelodiTheme.containerLow,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Consumer<LibraryProvider>(
@@ -53,15 +53,15 @@ class AlbumCard extends StatelessWidget {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                AppTheme.card,
-                                AppTheme.cardHover,
+                                MelodiTheme.containerLow,
+                                MelodiTheme.surfaceHigh,
                               ],
                             ),
                           ),
                           child: Icon(
                             Icons.album_rounded,
                             size: 64,
-                            color: AppTheme.textTertiary,
+                            color: MelodiTheme.textMuted,
                           ),
                         ),
                         Positioned(
@@ -95,7 +95,7 @@ class AlbumCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: AppTheme.textPrimary,
+                color: MelodiTheme.onSurface,
                 fontWeight: FontWeight.w500,
                 fontSize: 14,
               ),
@@ -105,7 +105,7 @@ class AlbumCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: AppTheme.textSecondary,
+                color: MelodiTheme.onSurfaceVariant,
                 fontSize: 12,
               ),
             ),

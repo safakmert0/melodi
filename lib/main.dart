@@ -42,6 +42,7 @@ import 'services/widget_service.dart';
 import 'services/airplay_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'widgets/main_shell.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,16 +53,16 @@ Future<void> main() async {
       DeviceOrientation.portraitDown,
     ]);
 
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: const Color(0xFF121212),
+      systemNavigationBarColor: MelodiTheme.background,
       systemNavigationBarIconBrightness: Brightness.light,
     ));
 
     CrashReporter.init();
     DiagnosticsService.instance;
-    AppLogger.i('Melodi starting...');
+    AppLogger.i('Melodi v3.0 starting...');
 
     final db = DatabaseService.instance;
     await db.database;
@@ -69,8 +70,6 @@ Future<void> main() async {
     await NotificationService.instance.init();
     await AudioEffectsService().initialize();
     BluetoothService.instance.detectBluetoothConnection();
-
-    AppLogger.i('Services initialized');
 
     AppLogger.i('Services initialized');
 
@@ -91,7 +90,7 @@ Future<void> main() async {
           androidNotificationOngoing: true,
           androidStopForegroundOnPause: true,
           androidShowNotificationBadge: true,
-          notificationColor: const Color(0xFF1DB954),
+          notificationColor: MelodiTheme.primaryGreen,
           fastForwardInterval: const Duration(seconds: 10),
           rewindInterval: const Duration(seconds: 10),
         ),
@@ -102,7 +101,7 @@ Future<void> main() async {
 
     ErrorWidget.builder = (details) {
       return Scaffold(
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: MelodiTheme.background,
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -111,13 +110,13 @@ Future<void> main() async {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('Build Error:',
-                    style: TextStyle(color: Colors.red, fontSize: 20, fontWeight: FontWeight.bold)),
+                    style: TextStyle(color: MelodiTheme.errorRed, fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
                 Flexible(
                   child: SingleChildScrollView(
                     child: Text(
                       '${details.exception}',
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      style: const TextStyle(color: MelodiTheme.onSurface, fontSize: 14),
                     ),
                   ),
                 ),
@@ -132,13 +131,13 @@ Future<void> main() async {
   } catch (e) {
     runApp(MaterialApp(
       home: Scaffold(
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: MelodiTheme.background,
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Text(
               'Startup error:\n$e',
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+              style: const TextStyle(color: MelodiTheme.onSurface, fontSize: 16),
               textAlign: TextAlign.center,
             ),
           ),
@@ -179,12 +178,13 @@ class _AppEntryState extends State<_AppEntry> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
+        backgroundColor: MelodiTheme.background,
         body: Center(
-          child: CircularProgressIndicator(),
+          child: CircularProgressIndicator(color: MelodiTheme.primaryGreen),
         ),
       );
     }
-    return _showOnboarding ? const OnboardingScreen() : const HomeScreen();
+    return _showOnboarding ? const OnboardingScreen() : const MainShell();
   }
 }
 
@@ -197,27 +197,13 @@ class MelodiApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => PlayerProvider(audioHandler),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => LibraryProvider()..loadAll(),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => PlaylistProvider()..loadPlaylists(),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => SearchProvider(),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => YouTubeProvider(),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => LocaleNotifier(),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => ThemeProvider()..loadSettings(),
-        ),
+        ChangeNotifierProvider(create: (_) => PlayerProvider(audioHandler)),
+        ChangeNotifierProvider(create: (_) => LibraryProvider()..loadAll()),
+        ChangeNotifierProvider(create: (_) => PlaylistProvider()..loadPlaylists()),
+        ChangeNotifierProvider(create: (_) => SearchProvider()),
+        ChangeNotifierProvider(create: (_) => YouTubeProvider()),
+        ChangeNotifierProvider(create: (_) => LocaleNotifier()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()..loadSettings()),
         ChangeNotifierProvider(
           create: (_) {
             final provider = LastFmProvider();
@@ -233,27 +219,20 @@ class MelodiApp extends StatelessWidget {
             return provider;
           },
         ),
-        ChangeNotifierProvider(
-          create: (_) => SpotifyProvider()..init(),
-        ),
+        ChangeNotifierProvider(create: (_) => SpotifyProvider()..init()),
         ChangeNotifierProvider(
           create: (ctx) {
             final spotify = ctx.read<SpotifyProvider>();
             return MixProvider(spotifyService: spotify.service)..init();
           },
         ),
-        ChangeNotifierProvider(
-          create: (_) => SettingsProvider()..load(),
-        ),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()..load()),
         ChangeNotifierProvider(
           create: (ctx) {
             final sync = SyncProvider()..init();
             final spotify = ctx.read<SpotifyProvider>();
             final ytmusic = ctx.read<YTMusicProvider>();
-            sync.setServices(
-              spotify: spotify.service,
-              ytmusic: ytmusic.service,
-            );
+            sync.setServices(spotify: spotify.service, ytmusic: ytmusic.service);
             return sync;
           },
         ),
@@ -261,10 +240,7 @@ class MelodiApp extends StatelessWidget {
           create: (ctx) {
             final ytmusic = ctx.read<YTMusicProvider>();
             final spotify = ctx.read<SpotifyProvider>();
-            final service = ScrobbleService(
-              ytmusic: ytmusic.service,
-              spotify: spotify.service,
-            );
+            final service = ScrobbleService(ytmusic: ytmusic.service, spotify: spotify.service);
             final provider = ScrobbleProvider(service: service);
             provider.init();
             return provider;
@@ -286,28 +262,20 @@ class MelodiApp extends StatelessWidget {
           create: (ctx) {
             final spotify = ctx.read<SpotifyProvider>();
             final ytmusic = ctx.read<YTMusicProvider>();
-            return MetadataProvider(
-              spotifyService: spotify.service,
-              ytmusicService: ytmusic.service,
-            );
+            return MetadataProvider(spotifyService: spotify.service, ytmusicService: ytmusic.service);
           },
         ),
         ChangeNotifierProvider(
           create: (ctx) {
             final spotify = ctx.read<SpotifyProvider>();
             final ytmusic = ctx.read<YTMusicProvider>();
-            final service = LikeMirrorService(
-              spotifyService: spotify.service,
-              ytMusicService: ytmusic.service,
-            );
+            final service = LikeMirrorService(spotifyService: spotify.service, ytMusicService: ytmusic.service);
             final provider = LikeMirrorProvider(service);
             provider.init();
             return provider;
           },
         ),
-        ChangeNotifierProvider(
-          create: (_) => DownloadProvider(),
-        ),
+        ChangeNotifierProvider(create: (_) => DownloadProvider()),
         ChangeNotifierProvider(
           create: (_) {
             final qm = QueueManager();
@@ -330,73 +298,32 @@ class MelodiApp extends StatelessWidget {
           player.onNowPlaying = () {
             final song = player.currentSong;
             if (song != null) {
-              lastfm.updateNowPlaying(
-                artist: song.artist,
-                track: song.title,
-                album: song.album,
-              );
+              lastfm.updateNowPlaying(artist: song.artist, track: song.title, album: song.album);
             }
           };
           player.onScrobble = (song, timestamp) {
-            lastfm.scrobble(
-              artist: song.artist,
-              track: song.title,
-              timestamp: timestamp,
-              album: song.album,
-            );
+            lastfm.scrobble(artist: song.artist, track: song.title, timestamp: timestamp, album: song.album);
           };
-          return Consumer<ThemeProvider>(
-            builder: (context, themeProvider, _) {
-              final pageTransitions = PageTransitionsTheme(
-                builders: {
-                  TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-                  TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-                },
-              );
-              return DynamicColorBuilder(
-                builder: (lightDynamic, darkDynamic) {
-                  final seedColor = lightDynamic != null && themeProvider.useDynamicColor
-                      ? lightDynamic.primary
-                      : themeProvider.accentColor;
-                  if (themeProvider.useDynamicColor && lightDynamic != null) {
-                    themeProvider.setAccentColor(lightDynamic.primary);
-                  }
-                  return MaterialApp(
-                    title: 'Melodi',
-                    debugShowCheckedModeBanner: false,
-                    theme: themeProvider.lightTheme.copyWith(
-                      pageTransitionsTheme: pageTransitions,
-                      colorScheme: lightDynamic ?? themeProvider.lightTheme.colorScheme,
-                    ),
-                    darkTheme: themeProvider.darkTheme.copyWith(
-                      pageTransitionsTheme: pageTransitions,
-                      colorScheme: darkDynamic ?? themeProvider.darkTheme.colorScheme,
-                    ),
-                    themeMode: themeProvider.themeMode,
-                    home: const _AppEntry(),
-                    localizationsDelegates: const [
-                      GlobalMaterialLocalizations.delegate,
-                      GlobalWidgetsLocalizations.delegate,
-                      GlobalCupertinoLocalizations.delegate,
-                    ],
-                    supportedLocales: const [
-                      Locale('en'),
-                      Locale('tr'),
-                      Locale('de'),
-                    ],
-                    localeResolutionCallback: (locale, supportedLocales) {
-                      if (locale != null) {
-                        for (final supported in supportedLocales) {
-                          if (supported.languageCode == locale.languageCode) {
-                            return supported;
-                          }
-                        }
-                      }
-                      return const Locale('en');
-                    },
-                  );
-                },
-              );
+          return MaterialApp(
+            title: 'Melodi',
+            debugShowCheckedModeBanner: false,
+            theme: MelodiTheme.darkTheme(),
+            darkTheme: MelodiTheme.darkTheme(),
+            themeMode: ThemeMode.dark,
+            home: const _AppEntry(),
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [Locale('en'), Locale('tr'), Locale('de')],
+            localeResolutionCallback: (locale, supportedLocales) {
+              if (locale != null) {
+                for (final supported in supportedLocales) {
+                  if (supported.languageCode == locale.languageCode) return supported;
+                }
+              }
+              return const Locale('en');
             },
           );
         },

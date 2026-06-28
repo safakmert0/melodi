@@ -134,7 +134,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: Colors.teal,
                         title: AppLocale.tr('app_language'),
                         subtitle: _selectedLanguage,
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => _showLanguagePicker(context),
                       ),
                       const SizedBox(height: 8),
@@ -145,10 +145,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         subtitle: Consumer<ThemeProvider>(
                           builder: (context, tp, _) => Text(
                             tp.isDark ? AppLocale.tr('dark') : tp.isLight ? AppLocale.tr('light') : AppLocale.tr('system'),
-                            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                            style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
                           ),
                         ),
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => _AppearanceSettingsPage()),
                         ),
@@ -159,7 +159,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: Colors.amber,
                         title: AppLocale.tr('playback'),
                         subtitle: AppLocale.tr('gapless_playback'),
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => _PlaybackSettingsPage(
                             crossfadeSeconds: _crossfadeSeconds,
@@ -174,7 +174,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Divider(color: AppTheme.divider, height: 1),
+                  Divider(color: MelodiTheme.outlineVariant, height: 1),
                   _CollapsibleSection(
                     title: AppLocale.tr('playback'),
                     children: [
@@ -195,7 +195,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onTap: () {
                           showModalBottomSheet(
                             context: context,
-                            backgroundColor: AppTheme.surface,
+                            backgroundColor: MelodiTheme.containerLow,
                             shape: const RoundedRectangleBorder(
                               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                             ),
@@ -235,19 +235,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Divider(color: AppTheme.divider, height: 1),
+                  Divider(color: MelodiTheme.outlineVariant, height: 1),
                   _CollapsibleSection(
                     title: AppLocale.tr('music_library'),
                     children: [
                       _SettingsTile(
                         icon: Icons.refresh_rounded,
-                        iconColor: AppTheme.primaryColor,
+                        iconColor: MelodiTheme.primaryGreen,
                         title: AppLocale.tr('rescan_library'),
                         subtitle: AppLocale.tr('scan_device_for_music'),
                         trailing: library.isScanning
                             ? SizedBox(
                                 width: 20, height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor),
+                                child: CircularProgressIndicator(strokeWidth: 2, color: MelodiTheme.primaryGreen),
                               )
                             : null,
                         onTap: () => library.scanMusic(),
@@ -278,7 +278,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             : AppLocale.tr('auto_scan_folder'),
                         trailing: _watchedFolderPath.isNotEmpty
                             ? IconButton(
-                                icon: Icon(Icons.close, color: AppTheme.textTertiary, size: 18),
+                                icon: Icon(Icons.close, color: MelodiTheme.textMuted, size: 18),
                                 onPressed: () async {
                                   await library.clearWatchedFolder();
                                   setState(() => _watchedFolderPath = '');
@@ -292,7 +292,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Divider(color: AppTheme.divider, height: 1),
+                  Divider(color: MelodiTheme.outlineVariant, height: 1),
                   _CollapsibleSection(
                     title: AppLocale.tr('metadata_backfill'),
                     children: [
@@ -311,7 +311,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               trailing: md.isBackfilling
                                   ? SizedBox(
                                       width: 20, height: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor),
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: MelodiTheme.primaryGreen),
                                     )
                                   : null,
                               onTap: md.isBackfilling ? null : () => md.startBackfillAlbumArt(),
@@ -329,7 +329,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               trailing: md.isBackfilling
                                   ? SizedBox(
                                       width: 20, height: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor),
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: MelodiTheme.primaryGreen),
                                     )
                                   : null,
                               onTap: md.isBackfilling ? null : () => md.startBackfillLyrics(),
@@ -352,13 +352,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   icon: md.isBackfilling
                                       ? SizedBox(
                                           width: 16, height: 16,
-                                          child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor),
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: MelodiTheme.primaryGreen),
                                         )
                                       : Icon(Icons.refresh_rounded, size: 18),
                                   label: Text(AppLocale.tr('backfill_all')),
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: AppTheme.primaryColor,
-                                    side: BorderSide(color: AppTheme.primaryColor),
+                                    foregroundColor: MelodiTheme.primaryGreen,
+                                    side: BorderSide(color: MelodiTheme.primaryGreen),
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
@@ -373,7 +373,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Divider(color: AppTheme.divider, height: 1),
+                  Divider(color: MelodiTheme.outlineVariant, height: 1),
                   _CollapsibleSection(
                     title: AppLocale.tr('storage'),
                     children: [
@@ -381,17 +381,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Row(
                           children: [
-                            Icon(Icons.storage_rounded, color: AppTheme.textSecondary, size: 20),
+                            Icon(Icons.storage_rounded, color: MelodiTheme.onSurfaceVariant, size: 20),
                             const SizedBox(width: 16),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(AppLocale.tr('local_songs'),
-                                      style: TextStyle(color: AppTheme.textPrimary, fontSize: 15)),
+                                      style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15)),
                                   Text(
                                     '${library.songCount} ${AppLocale.tr('songs_in_library')} · ${_formatBytes(library.totalSongSizeBytes)}',
-                                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                                    style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
                                   ),
                                 ],
                               ),
@@ -402,7 +402,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 8),
                       _SettingsTile(
                         icon: Icons.delete_sweep_rounded,
-                        iconColor: AppTheme.errorColor,
+                        iconColor: MelodiTheme.errorRed,
                         title: AppLocale.tr('clear_library'),
                         subtitle: AppLocale.tr('remove_cached_data'),
                         onTap: () => _confirmClearLibrary(context),
@@ -420,12 +420,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             return Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                color: AppTheme.errorColor.withValues(alpha: 0.15),
+                                color: MelodiTheme.errorRed.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
                                 count > 0 ? '$count' : '0',
-                                style: TextStyle(color: AppTheme.errorColor, fontSize: 12, fontWeight: FontWeight.bold),
+                                style: TextStyle(color: MelodiTheme.errorRed, fontSize: 12, fontWeight: FontWeight.bold),
                               ),
                             );
                           },
@@ -447,7 +447,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Divider(color: AppTheme.divider, height: 1),
+                  Divider(color: MelodiTheme.outlineVariant, height: 1),
                   _CollapsibleSection(
                     title: AppLocale.tr('accounts'),
                     children: [
@@ -463,7 +463,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           trailing: TextButton(
                             onPressed: () => lastfm.disconnect(),
                             child: Text(AppLocale.tr('disconnect'),
-                                style: TextStyle(color: AppTheme.errorColor, fontSize: 13)),
+                                style: TextStyle(color: MelodiTheme.errorRed, fontSize: 13)),
                           ),
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const _LastFmSettingsPage()),
@@ -475,7 +475,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: Colors.red,
                         title: AppLocale.tr('lastfm'),
                         subtitle: AppLocale.tr('lastfm_connect'),
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const _LastFmSettingsPage()),
                         ),
@@ -494,7 +494,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           trailing: TextButton(
                             onPressed: () => spotify.disconnect(),
                             child: Text(AppLocale.tr('disconnect'),
-                                style: TextStyle(color: AppTheme.errorColor, fontSize: 13)),
+                                style: TextStyle(color: MelodiTheme.errorRed, fontSize: 13)),
                           ),
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const _SpotifySettingsPage()),
@@ -506,7 +506,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: Colors.green,
                         title: AppLocale.tr('spotify'),
                         subtitle: AppLocale.tr('connect_spotify_description'),
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const _SpotifySettingsPage()),
                         ),
@@ -525,7 +525,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           trailing: TextButton(
                             onPressed: () => ytmusic.disconnect(),
                             child: Text(AppLocale.tr('disconnect'),
-                                style: TextStyle(color: AppTheme.errorColor, fontSize: 13)),
+                                style: TextStyle(color: MelodiTheme.errorRed, fontSize: 13)),
                           ),
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const _YtMusicSettingsPage()),
@@ -537,7 +537,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: Colors.red,
                         title: AppLocale.tr('youtube_music'),
                         subtitle: AppLocale.tr('connect_youtube_music'),
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const _YtMusicSettingsPage()),
                         ),
@@ -547,10 +547,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 8),
                   _SettingsTile(
                     icon: Icons.dns_rounded,
-                    iconColor: AppTheme.primaryColor,
+                    iconColor: MelodiTheme.primaryGreen,
                     title: 'YT-DLP Backend',
                     subtitle: 'Gerçek yt-dlp motoru için backend ayarları',
-                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                    trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => BackendSettingsScreen()),
                     ),
@@ -573,7 +573,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         return Text('${AppLocale.tr('sync_enabled')} · $time');
                       },
                     ),
-                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                    trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const _SyncSettingsPage()),
                     ),
@@ -589,7 +589,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: Colors.blue,
                         title: AppLocale.tr('like_mirroring'),
                         subtitle: AppLocale.tr('mirror_likes_description'),
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const _LikeMirrorSettingsPage()),
                         ),
@@ -607,7 +607,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: Colors.teal,
                         title: AppLocale.tr('default_sync'),
                         subtitle: AppLocale.tr('sync_settings'),
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const _DefaultSyncSettingsPage()),
                         ),
@@ -625,7 +625,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: Colors.orange,
                         title: AppLocale.tr('yt_history_scrobbling'),
                         subtitle: AppLocale.tr('scrobbling'),
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const _ScrobbleSettingsPage()),
                         ),
@@ -635,7 +635,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Divider(color: AppTheme.divider, height: 1),
+                  Divider(color: MelodiTheme.outlineVariant, height: 1),
                   _CollapsibleSection(
                     title: AppLocale.tr('audio'),
                     children: [
@@ -644,7 +644,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: Colors.purple,
                         title: AppLocale.tr('equalizer'),
                         subtitle: AppLocale.tr('adjust_sound_frequencies'),
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const _EqualizerPage()),
                         ),
@@ -655,7 +655,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: const Color(0xFF53e076),
                         title: 'Audio Effects',
                         subtitle: 'Spatial audio, reverb, bass boost',
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const _AudioEffectsPage()),
                         ),
@@ -666,7 +666,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: Colors.teal,
                         title: 'EQ Presets',
                         subtitle: 'Choose from preset equalizer profiles',
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => _showEqPresetsDialog(context),
                       ),
                       const SizedBox(height: 8),
@@ -699,7 +699,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         subtitle: _crossfadeSeconds.toInt() > 0
                             ? '${_crossfadeSeconds.toInt()} seconds'
                             : AppLocale.tr('off'),
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => _showCrossfadeSlider(context, context.read<PlayerProvider>()),
                       ),
                       const SizedBox(height: 8),
@@ -727,7 +727,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: Colors.orange,
                         title: 'Siri Shortcuts',
                         subtitle: 'Configure voice control shortcuts',
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const _VoiceControlPage()),
                         ),
@@ -738,7 +738,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: Colors.deepPurple,
                         title: 'AirPlay',
                         subtitle: 'Stream to available AirPlay devices',
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => _showAirPlayDevicesDialog(context),
                       ),
                       const SizedBox(height: 8),
@@ -747,7 +747,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: Colors.pink,
                         title: 'Podcast',
                         subtitle: 'Manage podcast subscriptions',
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const _PodcastSubscriptionsPage()),
                         ),
@@ -758,7 +758,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: Colors.brown,
                         title: 'Audiobook',
                         subtitle: 'Browse audiobook library',
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const _AudiobookLibraryPage()),
                         ),
@@ -769,13 +769,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: Colors.amber,
                         title: 'Widget',
                         subtitle: 'Configure home screen widgets',
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => _showWidgetConfigDialog(context),
                       ),
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Divider(color: AppTheme.divider, height: 1),
+                  Divider(color: MelodiTheme.outlineVariant, height: 1),
                   _CollapsibleSection(
                     title: AppLocale.tr('streaming'),
                     children: [
@@ -787,7 +787,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           subtitle: settings.streamingEnabled
                               ? AppLocale.tr('online_mode')
                               : AppLocale.tr('offline_mode'),
-                          trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                          trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const _StreamingSettingsPage()),
                           ),
@@ -799,7 +799,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: Colors.teal,
                         title: AppLocale.tr('auto_sync'),
                         subtitle: AppLocale.tr('sync_schedule'),
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const _SyncSettingsPage()),
                         ),
@@ -807,7 +807,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Divider(color: AppTheme.divider, height: 1),
+                  Divider(color: MelodiTheme.outlineVariant, height: 1),
                   _CollapsibleSection(
                     title: AppLocale.tr('lossless'),
                     children: [
@@ -815,7 +815,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Divider(color: AppTheme.divider, height: 1),
+                  Divider(color: MelodiTheme.outlineVariant, height: 1),
                   _CollapsibleSection(
                     title: AppLocale.tr('downloads'),
                     children: [
@@ -827,7 +827,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           subtitle: dp.isDownloading
                               ? '${dp.activeCount} active · ${dp.completedCount} completed'
                               : '${dp.completedCount} ${AppLocale.tr('completed')}',
-                          trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                          trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const DownloadsScreen()),
                           ),
@@ -839,13 +839,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           if (dp.failedCount == 0) return const SizedBox.shrink();
                           return _SettingsTile(
                             icon: Icons.error_outline_rounded,
-                            iconColor: AppTheme.errorColor,
+                            iconColor: MelodiTheme.errorRed,
                             title: AppLocale.tr('failed'),
                             subtitle: '${dp.failedCount} ${AppLocale.tr('failed')}',
                             trailing: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                color: AppTheme.errorColor,
+                                color: MelodiTheme.errorRed,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
@@ -865,7 +865,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: Colors.orange,
                         title: AppLocale.tr('download_location'),
                         subtitle: 'Documents/downloads',
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () async {
                           final db = DatabaseService.instance;
                           final dir = await db.getSetting('download_path');
@@ -873,7 +873,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(dir ?? 'Documents/downloads'),
-                                backgroundColor: AppTheme.primaryColor,
+                                backgroundColor: MelodiTheme.primaryGreen,
                               ),
                             );
                           }
@@ -885,7 +885,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         iconColor: Colors.pink,
                         title: AppLocale.tr('audio_quality'),
                         subtitle: AppLocale.tr('streaming_quality'),
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const AudioQualityScreen()),
                         ),
@@ -901,11 +901,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             final organized = snap.data ?? false;
                             return Text(
                               organized ? AppLocale.tr('organized_by_artist') : AppLocale.tr('flat_structure'),
-                              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                              style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 12),
                             );
                           },
                         ),
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => _showFileOrganizationDialog(context),
                       ),
                       const SizedBox(height: 8),
@@ -915,9 +915,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: AppLocale.tr('storage'),
                         subtitle: Text(
                           '${_formatBytes(context.read<LibraryProvider>().totalSongSizeBytes)} · ${AppLocale.tr('library_size')}',
-                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                          style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 12),
                         ),
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const StorageScreen()),
                         ),
@@ -933,17 +933,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             final size = snap.data ?? 0;
                             return Text(
                               '${_formatBytes(size)}',
-                              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                              style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
                             );
                           },
                         ),
-                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => _showStreamCacheDialog(context),
                       ),
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Divider(color: AppTheme.divider, height: 1),
+                  Divider(color: MelodiTheme.outlineVariant, height: 1),
                   _CollapsibleSection(
                     title: AppLocale.tr('developer'),
                     children: [
@@ -965,20 +965,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Divider(color: AppTheme.divider, height: 1),
+                  Divider(color: MelodiTheme.outlineVariant, height: 1),
                   _CollapsibleSection(
                     title: AppLocale.tr('about'),
                     children: [
                       _SettingsTile(
                         icon: Icons.info_outline_rounded,
-                        iconColor: AppTheme.textSecondary,
+                        iconColor: MelodiTheme.onSurfaceVariant,
                         title: 'Melodi',
                         subtitle: '${AppLocale.tr('version')} ${AppConstants.appVersion}',
                       ),
                       const SizedBox(height: 8),
                       _SettingsTile(
                         icon: Icons.auto_awesome_rounded,
-                        iconColor: AppTheme.primaryColor,
+                        iconColor: MelodiTheme.primaryGreen,
                         title: AppLocale.tr('acknowledgments'),
                         subtitle: 'yt-dlp, Media3, ytmusicapi ve diğerleri',
                         onTap: () => _showAcknowledgments(context),
@@ -986,7 +986,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 8),
                       _SettingsTile(
                         icon: Icons.favorite_rounded,
-                        iconColor: AppTheme.favoriteColor,
+                        iconColor: MelodiTheme.primaryGreen,
                         title: AppLocale.tr('credits'),
                         subtitle: AppLocale.tr('open_source_licenses'),
                         onTap: () => _showCredits(context),
@@ -1018,9 +1018,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: MelodiTheme.containerLow,
         title: Text(AppLocale.tr('stream_cache'),
-            style: TextStyle(color: AppTheme.textPrimary)),
+            style: TextStyle(color: MelodiTheme.onSurface)),
         content: FutureBuilder<int>(
           future: streamCache.getCacheSize(),
           builder: (_, snap) {
@@ -1034,11 +1034,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     SizedBox(
                       width: 100,
                       child: Text(AppLocale.tr('cache_size'),
-                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                          style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14)),
                     ),
                     Expanded(
                       child: Text(_formatBytes(size),
-                          style: TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
+                          style: TextStyle(color: MelodiTheme.onSurface, fontSize: 14)),
                     ),
                   ],
                 ),
@@ -1053,7 +1053,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(AppLocale.tr('cache_cleared')),
-                            backgroundColor: AppTheme.primaryColor,
+                            backgroundColor: MelodiTheme.primaryGreen,
                           ),
                         );
                       }
@@ -1061,8 +1061,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: const Icon(Icons.delete_outline_rounded, size: 18),
                     label: Text(AppLocale.tr('clear_cache')),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.errorColor,
-                      side: BorderSide(color: AppTheme.errorColor),
+                      foregroundColor: MelodiTheme.errorRed,
+                      side: BorderSide(color: MelodiTheme.errorRed),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -1078,7 +1078,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(AppLocale.tr('cancel'),
-                style: TextStyle(color: AppTheme.textSecondary)),
+                style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
           ),
         ],
       ),
@@ -1088,7 +1088,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showThemePicker(BuildContext context, ThemeProvider themeProvider) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: MelodiTheme.containerLow,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1101,38 +1101,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.divider,
+                color: MelodiTheme.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             Text(AppLocale.tr('theme'),
                 style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: MelodiTheme.onSurface,
                     fontSize: 20,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             ListTile(
-              leading: Icon(Icons.dark_mode_rounded, color: themeProvider.isDark ? AppTheme.primaryColor : AppTheme.textTertiary),
-              title: Text(AppLocale.tr('dark'), style: TextStyle(color: AppTheme.textPrimary)),
-              trailing: themeProvider.isDark ? Icon(Icons.check, color: AppTheme.primaryColor) : null,
+              leading: Icon(Icons.dark_mode_rounded, color: themeProvider.isDark ? MelodiTheme.primaryGreen : MelodiTheme.textMuted),
+              title: Text(AppLocale.tr('dark'), style: TextStyle(color: MelodiTheme.onSurface)),
+              trailing: themeProvider.isDark ? Icon(Icons.check, color: MelodiTheme.primaryGreen) : null,
               onTap: () {
                 themeProvider.setThemeMode(ThemeMode.dark);
                 Navigator.pop(ctx);
               },
             ),
             ListTile(
-              leading: Icon(Icons.light_mode_rounded, color: themeProvider.isLight ? AppTheme.primaryColor : AppTheme.textTertiary),
-              title: Text(AppLocale.tr('light'), style: TextStyle(color: AppTheme.textPrimary)),
-              trailing: themeProvider.isLight ? Icon(Icons.check, color: AppTheme.primaryColor) : null,
+              leading: Icon(Icons.light_mode_rounded, color: themeProvider.isLight ? MelodiTheme.primaryGreen : MelodiTheme.textMuted),
+              title: Text(AppLocale.tr('light'), style: TextStyle(color: MelodiTheme.onSurface)),
+              trailing: themeProvider.isLight ? Icon(Icons.check, color: MelodiTheme.primaryGreen) : null,
               onTap: () {
                 themeProvider.setThemeMode(ThemeMode.light);
                 Navigator.pop(ctx);
               },
             ),
             ListTile(
-              leading: Icon(Icons.settings_brightness_rounded, color: themeProvider.isSystem ? AppTheme.primaryColor : AppTheme.textTertiary),
-              title: Text(AppLocale.tr('system'), style: TextStyle(color: AppTheme.textPrimary)),
-              trailing: themeProvider.isSystem ? Icon(Icons.check, color: AppTheme.primaryColor) : null,
+              leading: Icon(Icons.settings_brightness_rounded, color: themeProvider.isSystem ? MelodiTheme.primaryGreen : MelodiTheme.textMuted),
+              title: Text(AppLocale.tr('system'), style: TextStyle(color: MelodiTheme.onSurface)),
+              trailing: themeProvider.isSystem ? Icon(Icons.check, color: MelodiTheme.primaryGreen) : null,
               onTap: () {
                 themeProvider.setThemeMode(ThemeMode.system);
                 Navigator.pop(ctx);
@@ -1150,7 +1150,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showAccentColorPicker(BuildContext context, ThemeProvider themeProvider) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: MelodiTheme.containerLow,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1163,13 +1163,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.divider,
+                color: MelodiTheme.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             Text(AppLocale.tr('accent_color'),
                 style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: MelodiTheme.onSurface,
                     fontSize: 20,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
@@ -1217,7 +1217,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showLanguagePicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: MelodiTheme.containerLow,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1230,13 +1230,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.divider,
+                color: MelodiTheme.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             Text(AppLocale.tr('app_language'),
                 style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: MelodiTheme.onSurface,
                     fontSize: 20,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
@@ -1247,9 +1247,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ].map((entry) {
               return ListTile(
                 title: Text(entry.$1,
-                    style: TextStyle(color: AppTheme.textPrimary)),
+                    style: TextStyle(color: MelodiTheme.onSurface)),
                 trailing: _selectedLanguage == entry.$1
-                    ? Icon(Icons.check, color: AppTheme.primaryColor)
+                    ? Icon(Icons.check, color: MelodiTheme.primaryGreen)
                     : null,
                 onTap: () {
                   setState(() {
@@ -1272,7 +1272,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showCrossfadeSlider(BuildContext context, PlayerProvider player) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: MelodiTheme.containerLow,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1290,26 +1290,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: AppTheme.divider,
+                      color: MelodiTheme.outlineVariant,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                   Text(AppLocale.tr('crossfade'),
                       style: TextStyle(
-                          color: AppTheme.textPrimary,
+                          color: MelodiTheme.onSurface,
                           fontSize: 20,
                           fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   Text('${localCrossfade.toInt()} ${AppLocale.tr('seconds')}',
                       style: TextStyle(
-                          color: AppTheme.primaryColor, fontSize: 32, fontWeight: FontWeight.bold)),
+                          color: MelodiTheme.primaryGreen, fontSize: 32, fontWeight: FontWeight.bold)),
                   Slider(
                     value: localCrossfade,
                     min: 0,
                     max: 12,
                     divisions: 12,
-                    activeColor: AppTheme.primaryColor,
-                    inactiveColor: AppTheme.divider,
+                    activeColor: MelodiTheme.primaryGreen,
+                    inactiveColor: MelodiTheme.outlineVariant,
                     onChanged: (v) {
                       setSheetState(() => localCrossfade = v);
                     },
@@ -1318,9 +1318,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(AppLocale.tr('off'),
-                          style: TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
+                          style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
                       Text('12s',
-                          style: TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
+                          style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -1334,7 +1334,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Navigator.pop(ctx);
                       },
                       style: FilledButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
+                        backgroundColor: MelodiTheme.primaryGreen,
                         foregroundColor: Colors.black,
                       ),
                       child: Text(AppLocale.tr('apply')),
@@ -1353,14 +1353,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: MelodiTheme.containerLow,
         title: Text(AppLocale.tr('file_organization'),
-            style: TextStyle(color: AppTheme.textPrimary)),
+            style: TextStyle(color: MelodiTheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(AppLocale.tr('file_organization'),
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14)),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -1372,7 +1372,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(AppLocale.tr('organize_now')),
-                        backgroundColor: AppTheme.primaryColor,
+                        backgroundColor: MelodiTheme.primaryGreen,
                       ),
                     );
                   }
@@ -1380,7 +1380,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 icon: const Icon(Icons.folder_rounded, size: 18),
                 label: Text(AppLocale.tr('organize_now')),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
+                  backgroundColor: MelodiTheme.primaryGreen,
                   foregroundColor: Colors.black,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
@@ -1400,7 +1400,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(AppLocale.tr('flat_structure')),
-                        backgroundColor: AppTheme.primaryColor,
+                        backgroundColor: MelodiTheme.primaryGreen,
                       ),
                     );
                   }
@@ -1408,8 +1408,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 icon: const Icon(Icons.unfold_less_rounded, size: 18),
                 label: Text(AppLocale.tr('flat_structure')),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTheme.textPrimary,
-                  side: BorderSide(color: AppTheme.divider),
+                  foregroundColor: MelodiTheme.onSurface,
+                  side: BorderSide(color: MelodiTheme.outlineVariant),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -1427,15 +1427,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(AppLocale.tr('preview')),
-                      backgroundColor: AppTheme.primaryColor,
+                      backgroundColor: MelodiTheme.primaryGreen,
                     ),
                   );
                 },
                 icon: const Icon(Icons.preview_rounded, size: 18),
                 label: Text(AppLocale.tr('preview')),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTheme.textPrimary,
-                  side: BorderSide(color: AppTheme.divider),
+                  foregroundColor: MelodiTheme.onSurface,
+                  side: BorderSide(color: MelodiTheme.outlineVariant),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -1453,15 +1453,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: MelodiTheme.containerLow,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(Icons.auto_awesome_rounded, color: AppTheme.primaryColor, size: 24),
+            Icon(Icons.auto_awesome_rounded, color: MelodiTheme.primaryGreen, size: 24),
             const SizedBox(width: 12),
             Text(
               AppLocale.tr('acknowledgments'),
-              style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(color: MelodiTheme.onSurface, fontSize: 20, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -1473,7 +1473,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Text(
                   'Melodi, aşağıdaki açık kaynak projeler sayesinde hayata geçti:',
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                  style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
                 ),
                 const SizedBox(height: 20),
                 _ackItem(
@@ -1528,7 +1528,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Kapat', style: TextStyle(color: AppTheme.primaryColor)),
+            child: Text('Kapat', style: TextStyle(color: MelodiTheme.primaryGreen)),
           ),
         ],
       ),
@@ -1546,10 +1546,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Container(
               width: 36, height: 36,
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                color: MelodiTheme.primaryGreen.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.code_rounded, color: AppTheme.primaryColor, size: 18),
+              child: Icon(Icons.code_rounded, color: MelodiTheme.primaryGreen, size: 18),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1558,17 +1558,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Text(
                     name,
-                    style: TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     description,
-                    style: TextStyle(color: AppTheme.textTertiary, fontSize: 12),
+                    style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.open_in_new_rounded, color: AppTheme.textTertiary, size: 16),
+            Icon(Icons.open_in_new_rounded, color: MelodiTheme.textMuted, size: 16),
           ],
         ),
       ),
@@ -1584,7 +1584,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         width: 64,
         height: 64,
         decoration: BoxDecoration(
-          color: AppTheme.primaryColor,
+          color: MelodiTheme.primaryGreen,
           borderRadius: BorderRadius.circular(16),
         ),
         child: const Icon(Icons.music_note_rounded, color: Colors.black, size: 32),
@@ -1652,7 +1652,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${AppLocale.tr('watching')}: $dir'),
-            backgroundColor: AppTheme.primaryColor,
+            backgroundColor: MelodiTheme.primaryGreen,
           ),
         );
       }
@@ -1668,7 +1668,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocale.tr('could_not_open_link')),
-            backgroundColor: AppTheme.errorColor,
+            backgroundColor: MelodiTheme.errorRed,
           ),
         );
       }
@@ -1689,18 +1689,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: MelodiTheme.containerLow,
         title: Text(AppLocale.tr('clear_library_title'),
-            style: TextStyle(color: AppTheme.textPrimary)),
+            style: TextStyle(color: MelodiTheme.onSurface)),
         content: Text(
           AppLocale.tr('clear_library_confirm'),
-          style: TextStyle(color: AppTheme.textSecondary),
+          style: TextStyle(color: MelodiTheme.onSurfaceVariant),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(AppLocale.tr('cancel'),
-                style: TextStyle(color: AppTheme.textSecondary)),
+                style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () {
@@ -1708,7 +1708,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Navigator.pop(context);
             },
             child: Text(AppLocale.tr('delete'),
-                style: TextStyle(color: AppTheme.errorColor)),
+                style: TextStyle(color: MelodiTheme.errorRed)),
           ),
         ],
       ),
@@ -1755,7 +1755,7 @@ class _PlaybackTileState extends State<_PlaybackTile> {
       iconColor: widget.iconColor,
       title: widget.title,
       subtitle: subtitle,
-      trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+      trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
       onTap: widget.onTap,
     );
   }
@@ -1855,11 +1855,11 @@ class _AppearanceSettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(AppLocale.tr('appearance')),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
       body: Consumer<ThemeProvider>(
@@ -1877,7 +1877,7 @@ class _AppearanceSettingsPage extends StatelessWidget {
                     : themeProvider.isLight
                         ? AppLocale.tr('light')
                         : AppLocale.tr('system'),
-                trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                 onTap: () => _showThemePicker(context, themeProvider),
               ),
               const SizedBox(height: 16),
@@ -1903,10 +1903,10 @@ class _AppearanceSettingsPage extends StatelessWidget {
                   ),
                   title: Text(
                     _accentColorName(c),
-                    style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
+                    style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15),
                   ),
                   trailing: isSelected
-                      ? Icon(Icons.check_circle, color: AppTheme.primaryColor, size: 20)
+                      ? Icon(Icons.check_circle, color: MelodiTheme.primaryGreen, size: 20)
                       : null,
                   onTap: () => themeProvider.setAccentColor(c),
                 );
@@ -1917,35 +1917,35 @@ class _AppearanceSettingsPage extends StatelessWidget {
                 label: AppLocale.tr('background'),
                 icon: Icons.wallpaper_rounded,
                 currentColor: themeProvider.customBackground,
-                defaultColor: AppTheme.isLightMode ? AppTheme.lightBackground : AppTheme.darkBackground,
+                defaultColor: MelodiTheme.background == MelodiTheme.background ? MelodiTheme.background : MelodiTheme.background,
                 onChanged: (c) => themeProvider.setCustomBackground(c),
               ),
               _CustomColorTile(
                 label: AppLocale.tr('surface'),
                 icon: Icons.square_rounded,
                 currentColor: themeProvider.customSurface,
-                defaultColor: AppTheme.isLightMode ? AppTheme.lightSurface : AppTheme.darkSurface,
+                defaultColor: MelodiTheme.background == MelodiTheme.background ? MelodiTheme.containerLow : MelodiTheme.containerLow,
                 onChanged: (c) => themeProvider.setCustomSurface(c),
               ),
               _CustomColorTile(
                 label: AppLocale.tr('card'),
                 icon: Icons.crop_square_rounded,
                 currentColor: themeProvider.customCard,
-                defaultColor: AppTheme.isLightMode ? AppTheme.lightCard : AppTheme.darkCard,
+                defaultColor: MelodiTheme.background == MelodiTheme.background ? MelodiTheme.containerLow : MelodiTheme.containerLow,
                 onChanged: (c) => themeProvider.setCustomCard(c),
               ),
               _CustomColorTile(
                 label: AppLocale.tr('text_primary'),
                 icon: Icons.text_fields_rounded,
                 currentColor: themeProvider.customTextPrimary,
-                defaultColor: AppTheme.isLightMode ? const Color(0xFF1A1A1A) : Colors.white,
+                defaultColor: MelodiTheme.background == MelodiTheme.background ? const Color(0xFF1A1A1A) : Colors.white,
                 onChanged: (c) => themeProvider.setCustomTextPrimary(c),
               ),
               _CustomColorTile(
                 label: AppLocale.tr('text_secondary'),
                 icon: Icons.text_fields_rounded,
                 currentColor: themeProvider.customTextSecondary,
-                defaultColor: AppTheme.isLightMode ? const Color(0xFF666666) : const Color(0xFFB3B3B3),
+                defaultColor: MelodiTheme.background == MelodiTheme.background ? const Color(0xFF666666) : const Color(0xFFB3B3B3),
                 onChanged: (c) => themeProvider.setCustomTextSecondary(c),
               ),
               if (themeProvider.customBackground != null ||
@@ -1997,7 +1997,7 @@ class _AppearanceSettingsPage extends StatelessWidget {
   void _showThemePicker(BuildContext context, ThemeProvider themeProvider) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: MelodiTheme.containerLow,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -2011,13 +2011,13 @@ class _AppearanceSettingsPage extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppTheme.divider,
+                  color: MelodiTheme.outlineVariant,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(height: 16),
               Text(AppLocale.tr('theme'),
-                  style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
+                  style: TextStyle(color: MelodiTheme.onSurface, fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 24),
               _themeOption(ctx, themeProvider, AppLocale.tr('system'), null),
               _themeOption(ctx, themeProvider, AppLocale.tr('light'), false),
@@ -2035,9 +2035,9 @@ class _AppearanceSettingsPage extends StatelessWidget {
     return ListTile(
       leading: Icon(
         selected ? Icons.radio_button_checked : Icons.radio_button_off,
-        color: selected ? AppTheme.primaryColor : AppTheme.textTertiary,
+        color: selected ? MelodiTheme.primaryGreen : MelodiTheme.textMuted,
       ),
-      title: Text(label, style: TextStyle(color: AppTheme.textPrimary)),
+      title: Text(label, style: TextStyle(color: MelodiTheme.onSurface)),
       onTap: () {
         if (isDark == null) {
           themeProvider.setThemeMode(ThemeMode.system);
@@ -2086,11 +2086,11 @@ class _PlaybackSettingsPageState extends State<_PlaybackSettingsPage> {
   Widget build(BuildContext context) {
     final player = context.read<PlayerProvider>();
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(AppLocale.tr('playback')),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
       body: ListView(
@@ -2108,7 +2108,7 @@ class _PlaybackSettingsPageState extends State<_PlaybackSettingsPage> {
                 player.setAutoShuffle(v);
                 DatabaseService.instance.setSetting('auto_shuffle', v.toString());
               },
-              activeColor: AppTheme.primaryColor,
+              activeColor: MelodiTheme.primaryGreen,
             ),
             onTap: () {
               final v = !widget.autoShuffle;
@@ -2129,7 +2129,7 @@ class _PlaybackSettingsPageState extends State<_PlaybackSettingsPage> {
                 player.setGaplessPlayback(v);
                 DatabaseService.instance.setSetting('gapless_playback', v.toString());
               },
-              activeColor: AppTheme.primaryColor,
+              activeColor: MelodiTheme.primaryGreen,
             ),
             onTap: () {
               final v = !widget.gaplessPlayback;
@@ -2143,7 +2143,7 @@ class _PlaybackSettingsPageState extends State<_PlaybackSettingsPage> {
             iconColor: Colors.indigo,
             title: AppLocale.tr('crossfade'),
             subtitle: '${_crossfade.toInt()} ${AppLocale.tr('seconds_crossfade')}',
-            trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+            trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
             onTap: () => _showCrossfadeSlider(context),
           ),
         ],
@@ -2154,7 +2154,7 @@ class _PlaybackSettingsPageState extends State<_PlaybackSettingsPage> {
   void _showCrossfadeSlider(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: MelodiTheme.containerLow,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -2169,25 +2169,25 @@ class _PlaybackSettingsPageState extends State<_PlaybackSettingsPage> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppTheme.divider,
+                    color: MelodiTheme.outlineVariant,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
                 const SizedBox(height: 16),
                 Text(AppLocale.tr('crossfade'),
-                    style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
+                    style: TextStyle(color: MelodiTheme.onSurface, fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Text(
                   '${_crossfade.toInt()} ${AppLocale.tr('seconds_crossfade')}',
-                  style: TextStyle(color: AppTheme.primaryColor, fontSize: 32, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: MelodiTheme.primaryGreen, fontSize: 32, fontWeight: FontWeight.bold),
                 ),
                 Slider(
                   value: _crossfade,
                   min: 0,
                   max: 12,
                   divisions: 12,
-                  activeColor: AppTheme.primaryColor,
-                  inactiveColor: AppTheme.textTertiary,
+                  activeColor: MelodiTheme.primaryGreen,
+                  inactiveColor: MelodiTheme.textMuted,
                   onChanged: (v) => setSheetState(() => _crossfade = v),
                 ),
                 const SizedBox(height: 8),
@@ -2202,7 +2202,7 @@ class _PlaybackSettingsPageState extends State<_PlaybackSettingsPage> {
                       Navigator.pop(ctx);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
+                      backgroundColor: MelodiTheme.primaryGreen,
                       foregroundColor: Colors.black,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -2241,9 +2241,9 @@ class _LastFmSettingsPageState extends State<_LastFmSettingsPage> {
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: MelodiTheme.containerLow,
         title: Text(AppLocale.tr('connect_lastfm'),
-            style: TextStyle(color: AppTheme.textPrimary)),
+            style: TextStyle(color: MelodiTheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -2251,15 +2251,15 @@ class _LastFmSettingsPageState extends State<_LastFmSettingsPage> {
               controller: _apiKeyController,
               decoration: InputDecoration(
                 labelText: AppLocale.tr('lastfm_api_key'),
-                labelStyle: TextStyle(color: AppTheme.textSecondary),
+                labelStyle: TextStyle(color: MelodiTheme.onSurfaceVariant),
                 filled: true,
-                fillColor: AppTheme.card,
+                fillColor: MelodiTheme.containerLow,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide.none,
                 ),
               ),
-              style: TextStyle(color: AppTheme.textPrimary),
+              style: TextStyle(color: MelodiTheme.onSurface),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -2267,15 +2267,15 @@ class _LastFmSettingsPageState extends State<_LastFmSettingsPage> {
               obscureText: true,
               decoration: InputDecoration(
                 labelText: AppLocale.tr('lastfm_api_secret'),
-                labelStyle: TextStyle(color: AppTheme.textSecondary),
+                labelStyle: TextStyle(color: MelodiTheme.onSurfaceVariant),
                 filled: true,
-                fillColor: AppTheme.card,
+                fillColor: MelodiTheme.containerLow,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide.none,
                 ),
               ),
-              style: TextStyle(color: AppTheme.textPrimary),
+              style: TextStyle(color: MelodiTheme.onSurface),
             ),
           ],
         ),
@@ -2283,12 +2283,12 @@ class _LastFmSettingsPageState extends State<_LastFmSettingsPage> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(AppLocale.tr('cancel'),
-                style: TextStyle(color: AppTheme.textSecondary)),
+                style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(AppLocale.tr('connect_lastfm'),
-                style: TextStyle(color: AppTheme.primaryColor)),
+                style: TextStyle(color: MelodiTheme.primaryGreen)),
           ),
         ],
       ),
@@ -2304,14 +2304,14 @@ class _LastFmSettingsPageState extends State<_LastFmSettingsPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('${AppLocale.tr('connected_as')} ${lastfm.username}'),
-              backgroundColor: AppTheme.primaryColor,
+              backgroundColor: MelodiTheme.primaryGreen,
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(lastfm.error ?? AppLocale.tr('auth_failed_try_again')),
-              backgroundColor: AppTheme.errorColor,
+              backgroundColor: MelodiTheme.errorRed,
             ),
           );
         }
@@ -2322,11 +2322,11 @@ class _LastFmSettingsPageState extends State<_LastFmSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(AppLocale.tr('lastfm')),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
       body: Consumer<LastFmProvider>(
@@ -2348,7 +2348,7 @@ class _LastFmSettingsPageState extends State<_LastFmSettingsPage> {
                       if (context.mounted) Navigator.pop(context);
                     },
                     child: Text(AppLocale.tr('disconnect'),
-                        style: TextStyle(color: AppTheme.errorColor)),
+                        style: TextStyle(color: MelodiTheme.errorRed)),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -2359,7 +2359,7 @@ class _LastFmSettingsPageState extends State<_LastFmSettingsPage> {
                   trailing: Switch(
                     value: lastfm.scrobbleEnabled,
                     onChanged: (v) => lastfm.setScrobbleEnabled(v),
-                    activeColor: AppTheme.primaryColor,
+                    activeColor: MelodiTheme.primaryGreen,
                   ),
                   onTap: () => lastfm.setScrobbleEnabled(!lastfm.scrobbleEnabled),
                 ),
@@ -2371,7 +2371,7 @@ class _LastFmSettingsPageState extends State<_LastFmSettingsPage> {
             children: [
               Text(
                 AppLocale.tr('lastfm_description'),
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
               ),
               const SizedBox(height: 24),
               if (lastfm.isConnecting)
@@ -2384,7 +2384,7 @@ class _LastFmSettingsPageState extends State<_LastFmSettingsPage> {
                     icon: const Icon(Icons.login_rounded),
                     label: Text(AppLocale.tr('connect_lastfm')),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
+                      backgroundColor: MelodiTheme.primaryGreen,
                       foregroundColor: Colors.black,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -2396,7 +2396,7 @@ class _LastFmSettingsPageState extends State<_LastFmSettingsPage> {
               ],
               if (lastfm.error != null) ...[
                 const SizedBox(height: 16),
-                Text(lastfm.error!, style: TextStyle(color: AppTheme.errorColor, fontSize: 13)),
+                Text(lastfm.error!, style: TextStyle(color: MelodiTheme.errorRed, fontSize: 13)),
               ],
             ],
           );
@@ -2417,11 +2417,11 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(AppLocale.tr('youtube_music')),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
       body: Consumer<YTMusicProvider>(
@@ -2441,7 +2441,7 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                       if (context.mounted) Navigator.pop(context);
                     },
                     child: Text(AppLocale.tr('disconnect'),
-                        style: TextStyle(color: AppTheme.errorColor)),
+                        style: TextStyle(color: MelodiTheme.errorRed)),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -2454,7 +2454,7 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('${playlists.length} ${AppLocale.tr('playlists')} ${AppLocale.tr('import_songs')}'),
-                            backgroundColor: AppTheme.primaryColor,
+                            backgroundColor: MelodiTheme.primaryGreen,
                           ),
                         );
                       }
@@ -2462,7 +2462,7 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                     icon: const Icon(Icons.playlist_play_rounded),
                     label: Text(AppLocale.tr('playlists')),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
+                      backgroundColor: MelodiTheme.primaryGreen,
                       foregroundColor: Colors.black,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -2481,7 +2481,7 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('${songs.length} ${AppLocale.tr('songs')} ${AppLocale.tr('import_songs')}'),
-                            backgroundColor: AppTheme.primaryColor,
+                            backgroundColor: MelodiTheme.primaryGreen,
                           ),
                         );
                       }
@@ -2507,7 +2507,7 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
             children: [
               Text(
                 AppLocale.tr('connect_ytmusic_description'),
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -2526,14 +2526,14 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(AppLocale.tr('connected_as')),
-                                    backgroundColor: AppTheme.primaryColor,
+                                    backgroundColor: MelodiTheme.primaryGreen,
                                   ),
                                 );
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(ytmusic.error ?? AppLocale.tr('auth_failed_try_again')),
-                                    backgroundColor: AppTheme.errorColor,
+                                    backgroundColor: MelodiTheme.errorRed,
                                   ),
                                 );
                               }
@@ -2557,7 +2557,7 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
               ),
               if (ytmusic.error != null) ...[
                 const SizedBox(height: 16),
-                Text(ytmusic.error!, style: TextStyle(color: AppTheme.errorColor, fontSize: 13)),
+                Text(ytmusic.error!, style: TextStyle(color: MelodiTheme.errorRed, fontSize: 13)),
               ],
             ],
           );
@@ -2578,11 +2578,11 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(AppLocale.tr('spotify')),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
       body: Consumer<SpotifyProvider>(
@@ -2602,7 +2602,7 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                       if (context.mounted) Navigator.pop(context);
                     },
                     child: Text(AppLocale.tr('disconnect'),
-                        style: TextStyle(color: AppTheme.errorColor)),
+                        style: TextStyle(color: MelodiTheme.errorRed)),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -2618,7 +2618,7 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                                 SnackBar(
                                   content: Text(
                                       '${playlists.length} ${AppLocale.tr('playlists')} ${AppLocale.tr('import_songs')}'),
-                                  backgroundColor: AppTheme.primaryColor,
+                                  backgroundColor: MelodiTheme.primaryGreen,
                                 ),
                               );
                             }
@@ -2632,7 +2632,7 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                         : const Icon(Icons.playlist_play_rounded),
                     label: Text(AppLocale.tr('import_playlists')),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
+                      backgroundColor: MelodiTheme.primaryGreen,
                       foregroundColor: Colors.black,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -2654,7 +2654,7 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                                 SnackBar(
                                   content: Text(
                                       '${songs.length} ${AppLocale.tr('songs')} ${AppLocale.tr('import_songs')}'),
-                                  backgroundColor: AppTheme.primaryColor,
+                                  backgroundColor: MelodiTheme.primaryGreen,
                                 ),
                               );
                             }
@@ -2686,7 +2686,7 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
             children: [
               Text(
                 AppLocale.tr('connect_spotify_description'),
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -2705,14 +2705,14 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(AppLocale.tr('connected_as')),
-                                    backgroundColor: AppTheme.primaryColor,
+                                    backgroundColor: MelodiTheme.primaryGreen,
                                   ),
                                 );
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(spotify.error ?? AppLocale.tr('auth_failed_try_again')),
-                                    backgroundColor: AppTheme.errorColor,
+                                    backgroundColor: MelodiTheme.errorRed,
                                   ),
                                 );
                               }
@@ -2736,7 +2736,7 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
               ),
               if (spotify.error != null) ...[
                 const SizedBox(height: 16),
-                Text(spotify.error!, style: TextStyle(color: AppTheme.errorColor, fontSize: 13)),
+                Text(spotify.error!, style: TextStyle(color: MelodiTheme.errorRed, fontSize: 13)),
               ],
             ],
           );
@@ -2839,11 +2839,11 @@ class _EqualizerPageState extends State<_EqualizerPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(AppLocale.tr('equalizer')),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
       body: ListView(
@@ -2853,7 +2853,7 @@ class _EqualizerPageState extends State<_EqualizerPage> {
           Row(
             children: [
               Text(AppLocale.tr('equalizer'),
-                  style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
+                  style: TextStyle(color: MelodiTheme.onSurface, fontSize: 18, fontWeight: FontWeight.bold)),
               const Spacer(),
               Switch(
                 value: _enabled,
@@ -2861,13 +2861,13 @@ class _EqualizerPageState extends State<_EqualizerPage> {
                   setState(() => _enabled = v);
                   _saveAndApply();
                 },
-                activeColor: AppTheme.primaryColor,
+                activeColor: MelodiTheme.primaryGreen,
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(AppLocale.tr('adjust_sound_frequencies'),
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+              style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13)),
           const SizedBox(height: 24),
 
           // EQ curve preview
@@ -2880,7 +2880,7 @@ class _EqualizerPageState extends State<_EqualizerPage> {
                 painter: _EqCurvePainter(
                   gains: _gains,
                   bassBoost: _bassBoost,
-                  primaryColor: AppTheme.primaryColor,
+                  primaryColor: MelodiTheme.primaryGreen,
                 ),
               ),
             ),
@@ -2894,7 +2894,7 @@ class _EqualizerPageState extends State<_EqualizerPage> {
                 child: Column(
                   children: [
                     Text('${_gains[i].isNegative ? '' : '+'}${_gains[i].toInt()}',
-                        style: TextStyle(color: AppTheme.primaryColor, fontSize: 11, fontWeight: FontWeight.bold)),
+                        style: TextStyle(color: MelodiTheme.primaryGreen, fontSize: 11, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
                     SizedBox(
                       height: 140,
@@ -2909,14 +2909,14 @@ class _EqualizerPageState extends State<_EqualizerPage> {
                             });
                             _saveAndApply();
                           } : null,
-                          activeColor: AppTheme.primaryColor,
-                          inactiveColor: AppTheme.textTertiary,
+                          activeColor: MelodiTheme.primaryGreen,
+                          inactiveColor: MelodiTheme.textMuted,
                         ),
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(_bandFreqs[i],
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
+                        style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 10)),
                   ],
                 ),
               );
@@ -2926,7 +2926,7 @@ class _EqualizerPageState extends State<_EqualizerPage> {
 
           // Presets
           Text(AppLocale.tr('presets').toUpperCase(),
-              style: TextStyle(color: AppTheme.textTertiary, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1.5)),
+              style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1.5)),
           const SizedBox(height: 8),
           SizedBox(
             height: 40,
@@ -2940,11 +2940,11 @@ class _EqualizerPageState extends State<_EqualizerPage> {
                     selected: selected,
                     label: Text(e.value, style: TextStyle(fontSize: 12)),
                     onSelected: _enabled ? (v) => _applyPreset(e.key) : null,
-                    selectedColor: AppTheme.primaryColor.withValues(alpha: 0.3),
-                    checkmarkColor: AppTheme.primaryColor,
-                    backgroundColor: AppTheme.surface,
+                    selectedColor: MelodiTheme.primaryGreen.withValues(alpha: 0.3),
+                    checkmarkColor: MelodiTheme.primaryGreen,
+                    backgroundColor: MelodiTheme.containerLow,
                     labelStyle: TextStyle(
-                      color: selected ? AppTheme.primaryColor : AppTheme.textSecondary,
+                      color: selected ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant,
                       fontSize: 12,
                     ),
                   ),
@@ -2983,7 +2983,7 @@ class _EqualizerPageState extends State<_EqualizerPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label.toUpperCase(),
-            style: TextStyle(color: AppTheme.textTertiary, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1.5)),
+            style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1.5)),
         const SizedBox(height: 4),
         Row(
           children: [
@@ -2993,14 +2993,14 @@ class _EqualizerPageState extends State<_EqualizerPage> {
                 min: min,
                 max: max,
                 onChanged: onChanged,
-                activeColor: AppTheme.primaryColor,
-                inactiveColor: AppTheme.textTertiary,
+                activeColor: MelodiTheme.primaryGreen,
+                inactiveColor: MelodiTheme.textMuted,
               ),
             ),
             SizedBox(
               width: 56,
               child: Text('${value >= 0 ? '+' : ''}${value.toStringAsFixed(1)} dB',
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 12),
                   textAlign: TextAlign.right),
             ),
           ],
@@ -3093,11 +3093,11 @@ class _StreamingSettingsPageState extends State<_StreamingSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(AppLocale.tr('streaming')),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
       body: Consumer<SettingsProvider>(
@@ -3116,7 +3116,7 @@ class _StreamingSettingsPageState extends State<_StreamingSettingsPage> {
                     settings.setStreamingEnabled(v);
                     context.read<PlayerProvider>().setStreamingEnabled(v);
                   },
-                  activeColor: AppTheme.primaryColor,
+                  activeColor: MelodiTheme.primaryGreen,
                 ),
                 onTap: () {
                   final v = !settings.streamingEnabled;
@@ -3133,7 +3133,7 @@ class _StreamingSettingsPageState extends State<_StreamingSettingsPage> {
                 trailing: Switch(
                   value: settings.streamOnCellular,
                   onChanged: (v) => settings.setStreamOnCellular(v),
-                  activeColor: AppTheme.primaryColor,
+                  activeColor: MelodiTheme.primaryGreen,
                 ),
                 onTap: () {
                   final v = !settings.streamOnCellular;
@@ -3186,11 +3186,11 @@ class _SyncSettingsPageState extends State<_SyncSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(AppLocale.tr('auto_sync')),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
       body: ListView(
@@ -3217,7 +3217,7 @@ class _SyncSettingsPageState extends State<_SyncSettingsPage> {
                   provider.cancelSync();
                 }
               },
-              activeColor: AppTheme.primaryColor,
+              activeColor: MelodiTheme.primaryGreen,
             ),
             onTap: () {
               final v = !_syncEnabled;
@@ -3242,7 +3242,7 @@ class _SyncSettingsPageState extends State<_SyncSettingsPage> {
               iconColor: Colors.orange,
               title: AppLocale.tr('sync_time'),
               subtitle: _syncTime.format(context),
-              trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+              trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
               onTap: () async {
                 final picked = await showTimePicker(
                   context: context,
@@ -3250,8 +3250,8 @@ class _SyncSettingsPageState extends State<_SyncSettingsPage> {
                   builder: (context, child) => Theme(
                     data: Theme.of(context).copyWith(
                       colorScheme: ColorScheme.dark(
-                        primary: AppTheme.primaryColor,
-                        surface: AppTheme.surface,
+                        primary: MelodiTheme.primaryGreen,
+                        surface: MelodiTheme.containerLow,
                       ),
                     ),
                     child: child!,
@@ -3285,7 +3285,7 @@ class _SyncSettingsPageState extends State<_SyncSettingsPage> {
                     days: _selectedDays.toList(),
                   );
                 },
-                activeColor: AppTheme.primaryColor,
+                activeColor: MelodiTheme.primaryGreen,
               ),
               onTap: () {
                 final v = !_wifiOnly;
@@ -3326,11 +3326,11 @@ class _SyncSettingsPageState extends State<_SyncSettingsPage> {
                         days: _selectedDays.toList(),
                       );
                     },
-                    selectedColor: AppTheme.primaryColor.withValues(alpha: 0.3),
-                    checkmarkColor: AppTheme.primaryColor,
-                    backgroundColor: AppTheme.surface,
+                    selectedColor: MelodiTheme.primaryGreen.withValues(alpha: 0.3),
+                    checkmarkColor: MelodiTheme.primaryGreen,
+                    backgroundColor: MelodiTheme.containerLow,
                     labelStyle: TextStyle(
-                      color: selected ? AppTheme.primaryColor : AppTheme.textSecondary,
+                      color: selected ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant,
                       fontSize: 13,
                     ),
                   );
@@ -3381,7 +3381,7 @@ class _DefaultSyncSettingsPageState extends State<_DefaultSyncSettingsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocale.tr('save')),
-          backgroundColor: AppTheme.primaryColor,
+          backgroundColor: MelodiTheme.primaryGreen,
         ),
       );
     }
@@ -3390,11 +3390,11 @@ class _DefaultSyncSettingsPageState extends State<_DefaultSyncSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(AppLocale.tr('default_sync')),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
       body: ListView(
@@ -3402,7 +3402,7 @@ class _DefaultSyncSettingsPageState extends State<_DefaultSyncSettingsPage> {
         children: [
           Text(
             AppLocale.tr('sync_settings'),
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+            style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
           ),
           const SizedBox(height: 24),
           _SettingsTile(
@@ -3413,7 +3413,7 @@ class _DefaultSyncSettingsPageState extends State<_DefaultSyncSettingsPage> {
             trailing: Switch(
               value: _autoSync,
               onChanged: (v) => setState(() => _autoSync = v),
-              activeColor: AppTheme.primaryColor,
+              activeColor: MelodiTheme.primaryGreen,
             ),
             onTap: () => setState(() => _autoSync = !_autoSync),
           ),
@@ -3431,7 +3431,7 @@ class _DefaultSyncSettingsPageState extends State<_DefaultSyncSettingsPage> {
               icon: const Icon(Icons.save_rounded, size: 20),
               label: Text(AppLocale.tr('save')),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
+                backgroundColor: MelodiTheme.primaryGreen,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
@@ -3450,13 +3450,13 @@ class _DefaultSyncSettingsPageState extends State<_DefaultSyncSettingsPage> {
     return ListTile(
       leading: Icon(
         selected ? Icons.radio_button_checked : Icons.radio_button_off,
-        color: selected ? AppTheme.primaryColor : AppTheme.textTertiary,
+        color: selected ? MelodiTheme.primaryGreen : MelodiTheme.textMuted,
         size: 20,
       ),
       title: Text(
         label,
         style: TextStyle(
-          color: selected ? AppTheme.primaryColor : AppTheme.textPrimary,
+          color: selected ? MelodiTheme.primaryGreen : MelodiTheme.onSurface,
           fontSize: 15,
         ),
       ),
@@ -3472,11 +3472,11 @@ class _LikeMirrorSettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<LikeMirrorProvider>();
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(AppLocale.tr('like_mirroring')),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
       body: ListView(
@@ -3484,7 +3484,7 @@ class _LikeMirrorSettingsPage extends StatelessWidget {
         children: [
           Text(
             AppLocale.tr('mirror_likes_description'),
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+            style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
           ),
           const SizedBox(height: 24),
           _SettingsTile(
@@ -3494,7 +3494,7 @@ class _LikeMirrorSettingsPage extends StatelessWidget {
             trailing: Switch(
               value: provider.enabled,
               onChanged: (v) => provider.setEnabled(v),
-              activeColor: AppTheme.primaryColor,
+              activeColor: MelodiTheme.primaryGreen,
             ),
             onTap: () => provider.setEnabled(!provider.enabled),
           ),
@@ -3510,7 +3510,7 @@ class _LikeMirrorSettingsPage extends StatelessWidget {
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: AppTheme.primaryColor,
+                        color: MelodiTheme.primaryGreen,
                       ),
                     )
                   : null,
@@ -3529,7 +3529,7 @@ class _LikeMirrorSettingsPage extends StatelessWidget {
                   : const Icon(Icons.sync_rounded),
               label: Text(AppLocale.tr('mirror_now')),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
+                backgroundColor: MelodiTheme.primaryGreen,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
@@ -3552,7 +3552,7 @@ class _LikeMirrorSettingsPage extends StatelessWidget {
           ),
           if (provider.error != null) ...[
             const SizedBox(height: 16),
-            Text(provider.error!, style: TextStyle(color: AppTheme.errorColor, fontSize: 13)),
+            Text(provider.error!, style: TextStyle(color: MelodiTheme.errorRed, fontSize: 13)),
           ],
         ],
       ),
@@ -3576,11 +3576,11 @@ class _ScrobbleSettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<ScrobbleProvider>();
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(AppLocale.tr('yt_history_scrobbling')),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
       body: ListView(
@@ -3588,7 +3588,7 @@ class _ScrobbleSettingsPage extends StatelessWidget {
         children: [
           Text(
             AppLocale.tr('yt_history_scrobbling'),
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+            style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
           ),
           const SizedBox(height: 24),
           _SettingsTile(
@@ -3604,7 +3604,7 @@ class _ScrobbleSettingsPage extends StatelessWidget {
                   provider.disable();
                 }
               },
-              activeColor: AppTheme.primaryColor,
+              activeColor: MelodiTheme.primaryGreen,
             ),
             onTap: () {
               if (provider.enabled) {
@@ -3628,7 +3628,7 @@ class _ScrobbleSettingsPage extends StatelessWidget {
                   : const Icon(Icons.sync_rounded),
               label: Text(AppLocale.tr('scrobble_now')),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
+                backgroundColor: MelodiTheme.primaryGreen,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
@@ -3659,7 +3659,7 @@ class _ScrobbleSettingsPage extends StatelessWidget {
           ],
           if (provider.error != null) ...[
             const SizedBox(height: 16),
-            Text(provider.error!, style: TextStyle(color: AppTheme.errorColor, fontSize: 13)),
+            Text(provider.error!, style: TextStyle(color: MelodiTheme.errorRed, fontSize: 13)),
           ],
         ],
       ),
@@ -3703,14 +3703,14 @@ class _ScrobbleHistoryTile extends StatelessWidget {
               children: [
                 Text(
                   item.title.isNotEmpty ? item.title : item.videoId,
-                  style: TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                  style: TextStyle(color: MelodiTheme.onSurface, fontSize: 14),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (item.artists.isNotEmpty)
                   Text(
                     item.artists,
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 12),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -3718,7 +3718,7 @@ class _ScrobbleHistoryTile extends StatelessWidget {
             ),
           ),
           if (item.spotifyTrackId != null)
-            Icon(Icons.check_circle, color: AppTheme.primaryColor, size: 16),
+            Icon(Icons.check_circle, color: MelodiTheme.primaryGreen, size: 16),
         ],
       ),
     );
@@ -3740,11 +3740,11 @@ class _InfoRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+            style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
           ),
           Text(
             value,
-            style: TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+            style: TextStyle(color: MelodiTheme.onSurface, fontSize: 14, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -3803,12 +3803,12 @@ class _CustomColorTile extends StatelessWidget {
         child: Icon(icon, color: color, size: 20),
       ),
       title: Text(label,
-          style: TextStyle(color: AppTheme.textPrimary, fontSize: 15)),
+          style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15)),
       subtitle: Text(
         currentColor != null
             ? '#${currentColor!.value.toRadixString(16).substring(2).toUpperCase()}'
             : AppLocale.tr('default_color'),
-        style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+        style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 12),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -3819,7 +3819,7 @@ class _CustomColorTile extends StatelessWidget {
               onPressed: () => onChanged(null),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
-              color: AppTheme.textTertiary,
+              color: MelodiTheme.textMuted,
             ),
           const SizedBox(width: 8),
           GestureDetector(
@@ -3830,7 +3830,7 @@ class _CustomColorTile extends StatelessWidget {
               decoration: BoxDecoration(
                 color: color,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppTheme.textTertiary, width: 2),
+                border: Border.all(color: MelodiTheme.textMuted, width: 2),
               ),
             ),
           ),
@@ -3843,7 +3843,7 @@ class _CustomColorTile extends StatelessWidget {
   void _showColorPicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: MelodiTheme.containerLow,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -3856,13 +3856,13 @@ class _CustomColorTile extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.divider,
+                color: MelodiTheme.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             Text(label,
                 style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: MelodiTheme.onSurface,
                     fontSize: 20,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
@@ -3969,7 +3969,7 @@ class _LosslessDownloadsSectionState extends State<_LosslessDownloadsSection> {
               DatabaseService.instance
                   .setSetting('lossless_quality', v.toString());
             },
-            activeColor: AppTheme.primaryColor,
+            activeColor: MelodiTheme.primaryGreen,
           ),
           onTap: () {
             final v = !_losslessQuality;
@@ -3988,7 +3988,7 @@ class _LosslessDownloadsSectionState extends State<_LosslessDownloadsSection> {
               : _coverResolution == 'medium'
                   ? AppLocale.tr('medium')
                   : AppLocale.tr('low'),
-          trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+          trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
           onTap: () => _showResolutionPicker(context),
         ),
         const SizedBox(height: 8),
@@ -4004,7 +4004,7 @@ class _LosslessDownloadsSectionState extends State<_LosslessDownloadsSection> {
               DatabaseService.instance
                   .setSetting('embed_metadata', v.toString());
             },
-            activeColor: AppTheme.primaryColor,
+            activeColor: MelodiTheme.primaryGreen,
           ),
           onTap: () {
             final v = !_embedMetadata;
@@ -4026,7 +4026,7 @@ class _LosslessDownloadsSectionState extends State<_LosslessDownloadsSection> {
               DatabaseService.instance
                   .setSetting('loudness_norm', v.toString());
             },
-            activeColor: AppTheme.primaryColor,
+            activeColor: MelodiTheme.primaryGreen,
           ),
           onTap: () {
             final v = !_loudnessNorm;
@@ -4042,7 +4042,7 @@ class _LosslessDownloadsSectionState extends State<_LosslessDownloadsSection> {
   void _showResolutionPicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: MelodiTheme.containerLow,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -4055,13 +4055,13 @@ class _LosslessDownloadsSectionState extends State<_LosslessDownloadsSection> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.divider,
+                color: MelodiTheme.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             Text(AppLocale.tr('cover_resolution'),
                 style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: MelodiTheme.onSurface,
                     fontSize: 20,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
@@ -4077,11 +4077,11 @@ class _LosslessDownloadsSectionState extends State<_LosslessDownloadsSection> {
                       ? Icons.radio_button_checked
                       : Icons.radio_button_off,
                   color: selected
-                      ? AppTheme.primaryColor
-                      : AppTheme.textTertiary,
+                      ? MelodiTheme.primaryGreen
+                      : MelodiTheme.textMuted,
                 ),
                 title: Text(entry.$1,
-                    style: TextStyle(color: AppTheme.textPrimary)),
+                    style: TextStyle(color: MelodiTheme.onSurface)),
                 onTap: () {
                   setState(() => _coverResolution = entry.$2);
                   DatabaseService.instance
@@ -4192,9 +4192,9 @@ class _LibraryHealthSettingsTileState extends State<_LibraryHealthSettingsTile> 
       trailing: _loading
           ? SizedBox(
               width: 20, height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryColor),
+              child: CircularProgressIndicator(strokeWidth: 2, color: MelodiTheme.primaryGreen),
             )
-          : Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+          : Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const LibraryHealthScreen()),
       ),
@@ -4208,11 +4208,11 @@ class _AudioEffectsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: const Text('Audio Effects'),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
       body: ListView(
@@ -4277,11 +4277,11 @@ class _VoiceControlPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: const Text('Voice Control'),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
       body: ListView(
@@ -4304,7 +4304,7 @@ class _VoiceControlPage extends StatelessWidget {
             iconColor: Colors.teal,
             title: 'Custom Shortcuts',
             subtitle: 'Create custom voice commands',
-            trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+            trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
             onTap: () {},
           ),
           const SizedBox(height: 8),
@@ -4331,27 +4331,27 @@ class _PodcastSubscriptionsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: const Text('Podcasts'),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.headphones, size: 64, color: AppTheme.textTertiary),
+            Icon(Icons.headphones, size: 64, color: MelodiTheme.textMuted),
             const SizedBox(height: 16),
             Text(
               'No podcast subscriptions yet',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 16),
+              style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 16),
             ),
             const SizedBox(height: 8),
             Text(
               'Browse and subscribe to your favorite podcasts',
-              style: TextStyle(color: AppTheme.textTertiary, fontSize: 13),
+              style: TextStyle(color: MelodiTheme.textMuted, fontSize: 13),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -4401,14 +4401,14 @@ class _AudiobookLibraryPageState extends State<_AudiobookLibraryPage> {
     final book = await _service.loadAudiobook(path);
     if (book == null) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ses dosyası bulunamadı'), backgroundColor: AppTheme.errorColor),
+        SnackBar(content: Text('Ses dosyası bulunamadı'), backgroundColor: MelodiTheme.errorRed),
       );
       return;
     }
     await _service.saveAudiobook(book);
     _load();
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${book.title} eklendi'), backgroundColor: AppTheme.primaryColor),
+      SnackBar(content: Text('${book.title} eklendi'), backgroundColor: MelodiTheme.primaryGreen),
     );
   }
 
@@ -4416,12 +4416,12 @@ class _AudiobookLibraryPageState extends State<_AudiobookLibraryPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: Text('Sil', style: TextStyle(color: AppTheme.textPrimary)),
-        content: Text('${book.title} silinecek. Emin misiniz?', style: TextStyle(color: AppTheme.textSecondary)),
+        backgroundColor: MelodiTheme.containerLow,
+        title: Text('Sil', style: TextStyle(color: MelodiTheme.onSurface)),
+        content: Text('${book.title} silinecek. Emin misiniz?', style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('İptal', style: TextStyle(color: AppTheme.textSecondary))),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Sil', style: TextStyle(color: AppTheme.errorColor))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('İptal', style: TextStyle(color: MelodiTheme.onSurfaceVariant))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Sil', style: TextStyle(color: MelodiTheme.errorRed))),
         ],
       ),
     );
@@ -4433,11 +4433,11 @@ class _AudiobookLibraryPageState extends State<_AudiobookLibraryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: const Text('Audiobooks'),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
         actions: [
           IconButton(
@@ -4447,24 +4447,24 @@ class _AudiobookLibraryPageState extends State<_AudiobookLibraryPage> {
         ],
       ),
       body: _loading
-          ? Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))
+          ? Center(child: CircularProgressIndicator(color: MelodiTheme.primaryGreen))
           : _books.isEmpty
               ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.menu_book, size: 64, color: AppTheme.textTertiary),
+                      Icon(Icons.menu_book, size: 64, color: MelodiTheme.textMuted),
                       const SizedBox(height: 16),
-                      Text('Sesli kitap bulunamadı', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
+                      Text('Sesli kitap bulunamadı', style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 16)),
                       const SizedBox(height: 8),
-                      Text('Klasör içe aktararak başlayın', style: TextStyle(color: AppTheme.textTertiary, fontSize: 13)),
+                      Text('Klasör içe aktararak başlayın', style: TextStyle(color: MelodiTheme.textMuted, fontSize: 13)),
                       const SizedBox(height: 24),
                       ElevatedButton.icon(
                         onPressed: _importFolder,
                         icon: const Icon(Icons.folder_open, size: 18),
                         label: const Text('Klasör İçe Aktar'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
+                          backgroundColor: MelodiTheme.primaryGreen,
                           foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -4485,7 +4485,7 @@ class _AudiobookLibraryPageState extends State<_AudiobookLibraryPage> {
                       background: Container(
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: 20),
-                        color: AppTheme.errorColor,
+                        color: MelodiTheme.errorRed,
                         child: Icon(Icons.delete, color: Colors.white),
                       ),
                       onDismissed: (_) => _deleteBook(book),
@@ -4493,7 +4493,7 @@ class _AudiobookLibraryPageState extends State<_AudiobookLibraryPage> {
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppTheme.surface,
+                          color: MelodiTheme.containerLow,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -4501,32 +4501,32 @@ class _AudiobookLibraryPageState extends State<_AudiobookLibraryPage> {
                             Container(
                               width: 56, height: 56,
                               decoration: BoxDecoration(
-                                color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                                color: MelodiTheme.primaryGreen.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Icon(Icons.menu_book, color: AppTheme.primaryColor, size: 28),
+                              child: Icon(Icons.menu_book, color: MelodiTheme.primaryGreen, size: 28),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(book.title, style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+                                  Text(book.title, style: TextStyle(color: MelodiTheme.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
                                   const SizedBox(height: 4),
-                                  Text('${book.author} · ${book.chapters.length} bölüm', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                                  Text('${book.author} · ${book.chapters.length} bölüm', style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13)),
                                   if (progress > 0) ...[
                                     const SizedBox(height: 8),
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(2),
                                       child: LinearProgressIndicator(
                                         value: book.progress,
-                                        backgroundColor: AppTheme.divider,
-                                        valueColor: AlwaysStoppedAnimation(AppTheme.primaryColor),
+                                        backgroundColor: MelodiTheme.outlineVariant,
+                                        valueColor: AlwaysStoppedAnimation(MelodiTheme.primaryGreen),
                                         minHeight: 4,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
-                                    Text('${(progress * 100).toInt()}% tamamlandı', style: TextStyle(color: AppTheme.textTertiary, fontSize: 11)),
+                                    Text('${(progress * 100).toInt()}% tamamlandı', style: TextStyle(color: MelodiTheme.textMuted, fontSize: 11)),
                                   ],
                                 ],
                               ),
@@ -4558,7 +4558,7 @@ void _showEqPresetsDialog(BuildContext context) {
     builder: (ctx) => AlertDialog(
       backgroundColor: const Color(0xFF201f1f),
       title: Text('EQ Presets',
-          style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
+          style: TextStyle(color: MelodiTheme.onSurface, fontSize: 20, fontWeight: FontWeight.bold)),
       content: SizedBox(
         width: double.maxFinite,
         child: ListView.builder(
@@ -4568,7 +4568,7 @@ void _showEqPresetsDialog(BuildContext context) {
             final (name, icon) = presets[i];
             return ListTile(
               leading: Icon(icon, color: const Color(0xFF53e076), size: 20),
-              title: Text(name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 15)),
+              title: Text(name, style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15)),
               onTap: () {
                 DatabaseService.instance.setSetting('eq_preset', name);
                 Navigator.pop(ctx);
@@ -4586,7 +4586,7 @@ void _showEqPresetsDialog(BuildContext context) {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx),
-          child: Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+          child: Text('Cancel', style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
         ),
       ],
     ),
@@ -4599,22 +4599,22 @@ void _showAirPlayDevicesDialog(BuildContext context) {
     builder: (ctx) => AlertDialog(
       backgroundColor: const Color(0xFF201f1f),
       title: Text('AirPlay',
-          style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
+          style: TextStyle(color: MelodiTheme.onSurface, fontSize: 20, fontWeight: FontWeight.bold)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
             leading: Icon(Icons.speaker, color: const Color(0xFF53e076), size: 20),
-            title: Text('No devices found', style: TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
+            title: Text('No devices found', style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 15)),
             subtitle: Text('Make sure AirPlay devices are on the same network',
-                style: TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
+                style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
           ),
         ],
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx),
-          child: Text('Close', style: TextStyle(color: AppTheme.primaryColor)),
+          child: Text('Close', style: TextStyle(color: MelodiTheme.primaryGreen)),
         ),
       ],
     ),
@@ -4627,13 +4627,13 @@ void _showWidgetConfigDialog(BuildContext context) {
     builder: (ctx) => AlertDialog(
       backgroundColor: const Color(0xFF201f1f),
       title: Text('Widget Configuration',
-          style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
+          style: TextStyle(color: MelodiTheme.onSurface, fontSize: 20, fontWeight: FontWeight.bold)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Choose which widgets to display on your home screen:',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+              style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14)),
           const SizedBox(height: 16),
           _widgetOption(ctx, 'Now Playing', Icons.music_note, true),
           _widgetOption(ctx, 'Quick Play', Icons.play_arrow, false),
@@ -4644,7 +4644,7 @@ void _showWidgetConfigDialog(BuildContext context) {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx),
-          child: Text('Done', style: TextStyle(color: AppTheme.primaryColor)),
+          child: Text('Done', style: TextStyle(color: MelodiTheme.primaryGreen)),
         ),
       ],
     ),

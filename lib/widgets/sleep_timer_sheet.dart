@@ -52,17 +52,17 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.divider,
+                color: MelodiTheme.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 16),
-            Icon(Icons.timer_outlined, size: 48, color: isActive ? AppTheme.primaryColor : AppTheme.textSecondary),
+            Icon(Icons.timer_outlined, size: 48, color: isActive ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant),
             const SizedBox(height: 12),
             Text(
               AppLocale.tr('sleep_timer'),
               style: TextStyle(
-                color: AppTheme.textPrimary,
+                color: MelodiTheme.onSurface,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -74,19 +74,19 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppTheme.primaryColor.withValues(alpha: 0.2),
-                      AppTheme.primaryColor.withValues(alpha: 0.05),
+                      MelodiTheme.primaryGreen.withValues(alpha: 0.2),
+                      MelodiTheme.primaryGreen.withValues(alpha: 0.05),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
+                  border: Border.all(color: MelodiTheme.primaryGreen.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   children: [
                     Text(
                       AppLocale.tr('timer_active'),
                       style: TextStyle(
-                        color: AppTheme.primaryColor,
+                        color: MelodiTheme.primaryGreen,
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
@@ -95,7 +95,7 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                     Text(
                       _formatDuration(remaining),
                       style: TextStyle(
-                        color: AppTheme.textPrimary,
+                        color: MelodiTheme.onSurface,
                         fontSize: 36,
                         fontWeight: FontWeight.bold,
                       ),
@@ -114,8 +114,8 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                   icon: const Icon(Icons.close, size: 18),
                   label: Text(AppLocale.tr('cancel_timer')),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.errorColor,
-                    side: BorderSide(color: AppTheme.errorColor.withValues(alpha: 0.5)),
+                    foregroundColor: MelodiTheme.errorRed,
+                    side: BorderSide(color: MelodiTheme.errorRed.withValues(alpha: 0.5)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -147,16 +147,16 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
                         hintText: AppLocale.tr('minutes'),
-                        hintStyle: TextStyle(color: AppTheme.textTertiary),
+                        hintStyle: TextStyle(color: MelodiTheme.textMuted),
                         filled: true,
-                        fillColor: AppTheme.surface,
+                        fillColor: MelodiTheme.containerLow,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       ),
-                      style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
+                      style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -170,7 +170,7 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                       }
                     },
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
+                      backgroundColor: MelodiTheme.primaryGreen,
                       foregroundColor: Colors.black,
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -216,21 +216,21 @@ class _QuickButton extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              AppTheme.primaryColor.withValues(alpha: 0.15),
-              AppTheme.primaryColor.withValues(alpha: 0.05),
+              MelodiTheme.primaryGreen.withValues(alpha: 0.15),
+              MelodiTheme.primaryGreen.withValues(alpha: 0.05),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: AppTheme.primaryColor.withValues(alpha: 0.25),
+            color: MelodiTheme.primaryGreen.withValues(alpha: 0.25),
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: AppTheme.primaryColor,
+            color: MelodiTheme.primaryGreen,
             fontSize: 15,
             fontWeight: FontWeight.w600,
           ),

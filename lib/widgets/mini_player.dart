@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
@@ -39,76 +40,89 @@ class MiniPlayer extends StatelessWidget {
                   );
                 }
               : null,
-          child: Container(
-            height: AppConstants.miniPlayerHeight,
-            decoration: BoxDecoration(
-              color: AppTheme.surface,
-              border: Border(
-                top: BorderSide(
-                  color: AppTheme.divider.withValues(alpha: 0.3),
+          child: ClipRRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              child: Container(
+                height: AppConstants.miniPlayerHeight,
+                decoration: BoxDecoration(
+                  color: MelodiTheme.containerLow.withValues(alpha: 0.85),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      offset: const Offset(0, -2),
+                      blurRadius: 8,
+                    ),
+                  ],
+                  border: Border(
+                    top: BorderSide(
+                      color: MelodiTheme.outlineVariant.withValues(alpha: 0.3),
+                      width: 0.5,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            child: song != null
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CompactSeekBar(
-                        position: player.position,
-                        duration: player.duration,
-                        activeColor: AppTheme.primaryColor,
-                        onChanged: (value) {
-                          final pos = Duration(
-                            milliseconds:
-                                (value * player.duration.inMilliseconds).round(),
-                          );
-                          player.seek(pos);
-                        },
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Row(
-                          children: [
-                            ArtworkImage(
-                              imageBytes: song.albumArt,
-                              title: song.title,
-                              size: 44,
-                              borderRadius: 6,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    song.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: AppTheme.textPrimary,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  Text(
-                                    song.artist,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: AppTheme.textSecondary,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
+                child: song != null
+                    ? Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CompactSeekBar(
+                            position: player.position,
+                            duration: player.duration,
+                            activeColor: MelodiTheme.primaryGreen,
+                            onChanged: (value) {
+                              final pos = Duration(
+                                milliseconds: (value * player.duration.inMilliseconds).round(),
+                              );
+                              player.seek(pos);
+                            },
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Row(
                               children: [
+                                Hero(
+                                  tag: 'album_art_${song.id}',
+                                  child: ArtworkImage(
+                                    imageBytes: song.albumArt,
+                                    title: song.title,
+                                    size: 44,
+                                    borderRadius: 4,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        song.title,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontFamily: AppConstants.fontFamily,
+                                          color: MelodiTheme.onSurface,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Text(
+                                        song.artist,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontFamily: AppConstants.fontFamily,
+                                          color: MelodiTheme.onSurfaceVariant,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                                 IconButton(
-                                  icon: Icon(Icons.skip_previous_rounded),
-                                  color: AppTheme.textPrimary,
+                                  icon: const Icon(Icons.skip_previous_rounded),
+                                  color: MelodiTheme.onSurface,
                                   iconSize: 24,
                                   onPressed: player.skipToPrevious,
                                 ),
@@ -118,43 +132,40 @@ class MiniPlayer extends StatelessWidget {
                                         ? Icons.pause_circle_filled_rounded
                                         : Icons.play_circle_fill_rounded,
                                   ),
-                                  color: AppTheme.primaryColor,
+                                  color: MelodiTheme.primaryGreen,
                                   iconSize: 32,
                                   onPressed: player.playPause,
                                 ),
                                 IconButton(
-                                  icon: Icon(Icons.skip_next_rounded),
-                                  color: AppTheme.textPrimary,
+                                  icon: const Icon(Icons.skip_next_rounded),
+                                  color: MelodiTheme.onSurface,
                                   iconSize: 24,
                                   onPressed: player.skipToNext,
                                 ),
                               ],
                             ),
+                          ),
+                        ],
+                      )
+                    : Center(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.music_note_rounded, size: 20, color: MelodiTheme.textMuted),
+                            const SizedBox(width: 8),
+                            Text(
+                              AppLocale.tr('no_music_playing'),
+                              style: const TextStyle(
+                                fontFamily: AppConstants.fontFamily,
+                                color: MelodiTheme.onSurfaceVariant,
+                                fontSize: 14,
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                    ],
-                  )
-                : Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.music_note_rounded,
-                            size: 20, color: AppTheme.textTertiary),
-                        const SizedBox(width: 8),
-                        Text(
-                          AppLocale.tr('no_music_playing'),
-                          style: TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(Icons.play_circle_fill_rounded,
-                            size: 20, color: AppTheme.textTertiary),
-                      ],
-                    ),
-                  ),
+              ),
+            ),
           ),
         );
       },

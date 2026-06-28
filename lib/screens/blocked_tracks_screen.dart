@@ -64,11 +64,11 @@ class _BlockedTracksScreenState extends State<BlockedTracksScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(AppLocale.tr('blocklist')),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
       body: Column(
@@ -80,17 +80,17 @@ class _BlockedTracksScreenState extends State<BlockedTracksScreen> {
                 controller: _searchController,
                 decoration: InputDecoration(
                   hintText: AppLocale.tr('search'),
-                  hintStyle: TextStyle(color: AppTheme.textTertiary),
-                  prefixIcon: Icon(Icons.search_rounded, color: AppTheme.textTertiary, size: 20),
+                  hintStyle: TextStyle(color: MelodiTheme.textMuted),
+                  prefixIcon: Icon(Icons.search_rounded, color: MelodiTheme.textMuted, size: 20),
                   filled: true,
-                  fillColor: AppTheme.surface,
+                  fillColor: MelodiTheme.containerLow,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
                   contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
-                style: TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                style: TextStyle(color: MelodiTheme.onSurface, fontSize: 14),
               ),
             ),
           Expanded(
@@ -121,14 +121,14 @@ class _BlockedTracksScreenState extends State<BlockedTracksScreen> {
           Icon(
             hasQuery ? Icons.search_off_rounded : Icons.block_rounded,
             size: 64,
-            color: AppTheme.textTertiary,
+            color: MelodiTheme.textMuted,
           ),
           const SizedBox(height: 16),
           Text(
             hasQuery
                 ? '${AppLocale.tr('no_results_for')} "${_searchController.text.trim()}"'
                 : AppLocale.tr('no_blocked_tracks'),
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 16),
+            style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 16),
             textAlign: TextAlign.center,
           ),
         ],
@@ -143,7 +143,7 @@ class _BlockedTracksScreenState extends State<BlockedTracksScreen> {
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 24),
-        color: AppTheme.errorColor,
+        color: MelodiTheme.errorRed,
         child: Icon(Icons.delete_outline_rounded, color: Colors.white, size: 24),
       ),
       onDismissed: (_) => _unblockTrack(track.trackId),
@@ -152,20 +152,20 @@ class _BlockedTracksScreenState extends State<BlockedTracksScreen> {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: AppTheme.card,
+            color: MelodiTheme.containerLow,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(Icons.music_note_rounded, color: AppTheme.textTertiary, size: 22),
+          child: Icon(Icons.music_note_rounded, color: MelodiTheme.textMuted, size: 22),
         ),
         title: Text(
           track.title,
-          style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
+          style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
           track.artist,
-          style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+          style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -174,11 +174,11 @@ class _BlockedTracksScreenState extends State<BlockedTracksScreen> {
           child: TextButton(
             onPressed: () => _unblockTrack(track.trackId),
             style: TextButton.styleFrom(
-              foregroundColor: AppTheme.primaryColor,
+              foregroundColor: MelodiTheme.primaryGreen,
               padding: const EdgeInsets.symmetric(horizontal: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: AppTheme.primaryColor.withValues(alpha: 0.4)),
+                side: BorderSide(color: MelodiTheme.primaryGreen.withValues(alpha: 0.4)),
               ),
             ),
             child: Text(

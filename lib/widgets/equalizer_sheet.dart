@@ -94,19 +94,19 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.divider,
+                color: MelodiTheme.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 16),
             Row(
               children: [
-                Icon(Icons.tune_rounded, color: AppTheme.primaryColor, size: 24),
+                Icon(Icons.tune_rounded, color: MelodiTheme.primaryGreen, size: 24),
                 const SizedBox(width: 8),
                 Text(
                   AppLocale.tr('equalizer'),
                   style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: MelodiTheme.onSurface,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
@@ -115,7 +115,7 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
                 Switch(
                   value: _enabled,
                   onChanged: (v) => setState(() => _enabled = v),
-                  activeColor: AppTheme.primaryColor,
+                  activeColor: MelodiTheme.primaryGreen,
                 ),
               ],
             ),
@@ -123,7 +123,7 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
             Text(
               AppLocale.tr('presets').toUpperCase(),
               style: TextStyle(
-                color: AppTheme.textTertiary,
+                color: MelodiTheme.textMuted,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1.2,
@@ -145,11 +145,11 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
                         style: TextStyle(fontSize: 12),
                       ),
                       onSelected: (_) => _applyPreset(preset.name),
-                      selectedColor: AppTheme.primaryColor.withValues(alpha: 0.3),
-                      checkmarkColor: AppTheme.primaryColor,
-                      backgroundColor: AppTheme.surface,
+                      selectedColor: MelodiTheme.primaryGreen.withValues(alpha: 0.3),
+                      checkmarkColor: MelodiTheme.primaryGreen,
+                      backgroundColor: MelodiTheme.containerLow,
                       labelStyle: TextStyle(
-                        color: selected ? AppTheme.primaryColor : AppTheme.textSecondary,
+                        color: selected ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant,
                         fontSize: 12,
                       ),
                     ),
@@ -173,7 +173,7 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
                           Text(
                             '${_currentBands[index] >= 0 ? '+' : ''}${_currentBands[index].toInt()}',
                             style: TextStyle(
-                              color: AppTheme.primaryColor,
+                              color: MelodiTheme.primaryGreen,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -190,8 +190,8 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
                                     _activePreset = 'custom';
                                   });
                                 },
-                                activeColor: AppTheme.primaryColor,
-                                inactiveColor: AppTheme.divider,
+                                activeColor: MelodiTheme.primaryGreen,
+                                inactiveColor: MelodiTheme.outlineVariant,
                               ),
                             ),
                           ),
@@ -199,7 +199,7 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
                           Text(
                             bandLabels[index],
                             style: TextStyle(
-                              color: AppTheme.textTertiary,
+                              color: MelodiTheme.textMuted,
                               fontSize: 8,
                             ),
                           ),
@@ -217,8 +217,8 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
                   icon: const Icon(Icons.restore_rounded, size: 16),
                   label: Text(AppLocale.tr('reset_eq')),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.textSecondary,
-                    side: BorderSide(color: AppTheme.divider),
+                    foregroundColor: MelodiTheme.onSurfaceVariant,
+                    side: BorderSide(color: MelodiTheme.outlineVariant),
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -236,7 +236,7 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
                   Navigator.pop(context);
                 },
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
+                  backgroundColor: MelodiTheme.primaryGreen,
                   foregroundColor: Colors.black,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(

@@ -26,20 +26,20 @@ class _MixesScreenState extends State<MixesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: Text(
           AppLocale.tr('mixes'),
           style: TextStyle(
-            color: AppTheme.textPrimary,
+            color: MelodiTheme.onSurface,
             fontSize: 22,
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh_rounded, color: AppTheme.primaryColor),
+            icon: Icon(Icons.refresh_rounded, color: MelodiTheme.primaryGreen),
             tooltip: AppLocale.tr('regenerate'),
             onPressed: () => context.read<MixProvider>().generateAllMixes(),
           ),
@@ -55,7 +55,7 @@ class _MixesScreenState extends State<MixesScreen> {
           }
           return RefreshIndicator(
             onRefresh: () => mixProvider.generateAllMixes(),
-            color: AppTheme.primaryColor,
+            color: MelodiTheme.primaryGreen,
             child: CustomScrollView(
               physics: const BouncingScrollPhysics(),
               slivers: [
@@ -72,7 +72,7 @@ class _MixesScreenState extends State<MixesScreen> {
                       child: Text(
                         '${AppLocale.tr('generated_at')}: ${_formatDate(mixProvider.lastGenerated!)}',
                         style: TextStyle(
-                          color: AppTheme.textTertiary,
+                          color: MelodiTheme.textMuted,
                           fontSize: 12,
                         ),
                       ),
@@ -95,7 +95,7 @@ class _MixesScreenState extends State<MixesScreen> {
           margin: const EdgeInsets.only(bottom: 16),
           height: 80,
           decoration: BoxDecoration(
-            color: AppTheme.card,
+            color: MelodiTheme.containerLow,
             borderRadius: BorderRadius.circular(12),
           ),
         );
@@ -111,13 +111,13 @@ class _MixesScreenState extends State<MixesScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.error_outline_rounded,
-                size: 64, color: AppTheme.errorColor),
+                size: 64, color: MelodiTheme.errorRed),
             const SizedBox(height: 16),
             Text(
               AppLocale.tr('no_mixes_yet'),
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: AppTheme.textPrimary,
+                color: MelodiTheme.onSurface,
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
               ),
@@ -129,7 +129,7 @@ class _MixesScreenState extends State<MixesScreen> {
               icon: const Icon(Icons.refresh_rounded),
               label: Text(AppLocale.tr('regenerate')),
               style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
+                backgroundColor: MelodiTheme.primaryGreen,
                 foregroundColor: Colors.black,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
@@ -249,7 +249,7 @@ class _MixesScreenState extends State<MixesScreen> {
   void _showTrackInfo(Map<String, dynamic> track) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: MelodiTheme.containerLow,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -263,7 +263,7 @@ class _MixesScreenState extends State<MixesScreen> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppTheme.divider,
+                  color: MelodiTheme.outlineVariant,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -279,17 +279,17 @@ class _MixesScreenState extends State<MixesScreen> {
                         errorBuilder: (_, __, ___) => Container(
                           width: 200,
                           height: 200,
-                          color: AppTheme.card,
+                          color: MelodiTheme.containerLow,
                           child: Icon(Icons.music_note_rounded,
-                              size: 64, color: AppTheme.textTertiary),
+                              size: 64, color: MelodiTheme.textMuted),
                         ),
                       )
                     : Container(
                         width: 200,
                         height: 200,
-                        color: AppTheme.card,
+                        color: MelodiTheme.containerLow,
                         child: Icon(Icons.music_note_rounded,
-                            size: 64, color: AppTheme.textTertiary),
+                            size: 64, color: MelodiTheme.textMuted),
                       ),
               ),
               const SizedBox(height: 20),
@@ -297,7 +297,7 @@ class _MixesScreenState extends State<MixesScreen> {
                 track['title'] as String? ?? '',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: AppTheme.textPrimary,
+                  color: MelodiTheme.onSurface,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -307,7 +307,7 @@ class _MixesScreenState extends State<MixesScreen> {
                 track['artist'] as String? ?? '',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: AppTheme.textSecondary,
+                  color: MelodiTheme.onSurfaceVariant,
                   fontSize: 16,
                 ),
               ),
@@ -317,7 +317,7 @@ class _MixesScreenState extends State<MixesScreen> {
                   track['album'] as String? ?? '',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: AppTheme.textTertiary,
+                    color: MelodiTheme.textMuted,
                     fontSize: 14,
                   ),
                 ),
@@ -360,7 +360,7 @@ class _SectionHeader extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: MelodiTheme.onSurface,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
@@ -370,7 +370,7 @@ class _SectionHeader extends StatelessWidget {
                   Text(
                     subtitle!,
                     style: TextStyle(
-                      color: AppTheme.textTertiary,
+                      color: MelodiTheme.textMuted,
                       fontSize: 13,
                     ),
                   ),
@@ -385,19 +385,19 @@ class _SectionHeader extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  color: MelodiTheme.primaryGreen.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.refresh_rounded,
-                        size: 14, color: AppTheme.primaryColor),
+                        size: 14, color: MelodiTheme.primaryGreen),
                     const SizedBox(width: 4),
                     Text(
                       AppLocale.tr('regenerate'),
                       style: TextStyle(
-                        color: AppTheme.primaryColor,
+                        color: MelodiTheme.primaryGreen,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
@@ -440,7 +440,7 @@ class _TrackCard extends StatelessWidget {
               height: 140,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                color: AppTheme.card,
+                color: MelodiTheme.containerLow,
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
@@ -449,15 +449,15 @@ class _TrackCard extends StatelessWidget {
                         imageUrl!,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Container(
-                          color: AppTheme.card,
+                          color: MelodiTheme.containerLow,
                           child: Icon(Icons.music_note_rounded,
-                              size: 48, color: AppTheme.textTertiary),
+                              size: 48, color: MelodiTheme.textMuted),
                         ),
                       )
                     : Container(
-                        color: AppTheme.card,
+                        color: MelodiTheme.containerLow,
                         child: Icon(Icons.music_note_rounded,
-                            size: 48, color: AppTheme.textTertiary),
+                            size: 48, color: MelodiTheme.textMuted),
                       ),
               ),
             ),
@@ -467,7 +467,7 @@ class _TrackCard extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: AppTheme.textPrimary,
+                color: MelodiTheme.onSurface,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -478,7 +478,7 @@ class _TrackCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: AppTheme.textSecondary,
+                color: MelodiTheme.onSurfaceVariant,
                 fontSize: 11,
               ),
             ),
@@ -530,17 +530,17 @@ class _TrackListTile extends StatelessWidget {
                       errorBuilder: (_, __, ___) => Container(
                         width: 48,
                         height: 48,
-                        color: AppTheme.card,
+                        color: MelodiTheme.containerLow,
                         child: Icon(Icons.music_note_rounded,
-                            size: 24, color: AppTheme.textTertiary),
+                            size: 24, color: MelodiTheme.textMuted),
                       ),
                     )
                   : Container(
                       width: 48,
                       height: 48,
-                      color: AppTheme.card,
+                      color: MelodiTheme.containerLow,
                       child: Icon(Icons.music_note_rounded,
-                          size: 24, color: AppTheme.textTertiary),
+                          size: 24, color: MelodiTheme.textMuted),
                     ),
             ),
             const SizedBox(width: 12),
@@ -553,7 +553,7 @@ class _TrackListTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: AppTheme.textPrimary,
+                      color: MelodiTheme.onSurface,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -564,7 +564,7 @@ class _TrackListTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: AppTheme.textSecondary,
+                      color: MelodiTheme.onSurfaceVariant,
                       fontSize: 12,
                     ),
                   ),
@@ -575,7 +575,7 @@ class _TrackListTile extends StatelessWidget {
             Text(
               durationStr,
               style: TextStyle(
-                color: AppTheme.textTertiary,
+                color: MelodiTheme.textMuted,
                 fontSize: 12,
               ),
             ),
@@ -616,15 +616,15 @@ class _GridTrackCard extends StatelessWidget {
                       width: double.infinity,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
-                        color: AppTheme.card,
+                        color: MelodiTheme.containerLow,
                         child: Icon(Icons.music_note_rounded,
-                            size: 48, color: AppTheme.textTertiary),
+                            size: 48, color: MelodiTheme.textMuted),
                       ),
                     )
                   : Container(
-                      color: AppTheme.card,
+                      color: MelodiTheme.containerLow,
                       child: Icon(Icons.music_note_rounded,
-                          size: 48, color: AppTheme.textTertiary),
+                          size: 48, color: MelodiTheme.textMuted),
                     ),
             ),
           ),
@@ -634,7 +634,7 @@ class _GridTrackCard extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: AppTheme.textPrimary,
+              color: MelodiTheme.onSurface,
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
@@ -645,7 +645,7 @@ class _GridTrackCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: AppTheme.textSecondary,
+              color: MelodiTheme.onSurfaceVariant,
               fontSize: 11,
             ),
           ),

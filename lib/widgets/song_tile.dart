@@ -74,7 +74,7 @@ class SongTile extends StatelessWidget {
                       ),
                       child: Icon(
                         Icons.equalizer_rounded,
-                        color: AppTheme.primaryColor,
+                        color: MelodiTheme.primaryGreen,
                         size: 20,
                       ),
                     ),
@@ -87,7 +87,7 @@ class SongTile extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          color: isPlaying ? AppTheme.primaryColor : AppTheme.textPrimary,
+          color: isPlaying ? MelodiTheme.primaryGreen : MelodiTheme.onSurface,
           fontWeight: isPlaying ? FontWeight.w600 : FontWeight.normal,
           fontSize: 15,
         ),
@@ -116,7 +116,7 @@ class SongTile extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: AppTheme.textSecondary,
+                color: MelodiTheme.onSurfaceVariant,
                 fontSize: 13,
               ),
             ),
@@ -124,12 +124,12 @@ class SongTile extends StatelessWidget {
           if (song.bitrate != null) ...[
             Text(
               ' · ',
-              style: TextStyle(color: AppTheme.textTertiary, fontSize: 11),
+              style: TextStyle(color: MelodiTheme.textMuted, fontSize: 11),
             ),
             Text(
               '${song.bitrate} kbps',
               style: TextStyle(
-                color: AppTheme.textTertiary,
+                color: MelodiTheme.textMuted,
                 fontSize: 11,
               ),
             ),
@@ -147,8 +147,8 @@ class SongTile extends StatelessWidget {
                   icon: Icon(
                     song.isFavorite ? Icons.favorite : Icons.favorite_border,
                     color: song.isFavorite
-                        ? AppTheme.favoriteColor
-                        : AppTheme.textTertiary,
+                        ? MelodiTheme.primaryGreen
+                        : MelodiTheme.textMuted,
                     size: 20,
                   ),
                   onPressed: onFavorite ??
@@ -158,7 +158,7 @@ class SongTile extends StatelessWidget {
                 ),
                   PopupMenuButton<String>(
                 icon: Icon(Icons.more_horiz,
-                    color: AppTheme.textSecondary, size: 20),
+                    color: MelodiTheme.onSurfaceVariant, size: 20),
                 onSelected: (value) {
                   switch (value) {
                     case 'queue':
@@ -281,7 +281,7 @@ class SongTile extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(AppLocale.tr('share')),
-              backgroundColor: AppTheme.errorColor,
+              backgroundColor: MelodiTheme.errorRed,
             ),
           );
         }
@@ -317,11 +317,11 @@ class _DownloadIndicator extends StatelessWidget {
                       CircularProgressIndicator(
                         value: progress,
                         strokeWidth: 2,
-                        color: AppTheme.primaryColor,
+                        color: MelodiTheme.primaryGreen,
                       ),
                       Text(
                         '${(progress * 100).toInt()}',
-                        style: TextStyle(fontSize: 7, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                        style: TextStyle(fontSize: 7, fontWeight: FontWeight.bold, color: MelodiTheme.primaryGreen),
                       ),
                     ],
                   ),
@@ -335,19 +335,19 @@ class _DownloadIndicator extends StatelessWidget {
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: AppTheme.primaryColor,
+                  color: MelodiTheme.primaryGreen,
                 ),
               ),
             );
           case DownloadState.completed:
             return Padding(
               padding: const EdgeInsets.only(right: 4),
-              child: Icon(Icons.check_circle, color: AppTheme.primaryColor, size: 18),
+              child: Icon(Icons.check_circle, color: MelodiTheme.primaryGreen, size: 18),
             );
           case DownloadState.failed:
             return Padding(
               padding: const EdgeInsets.only(right: 4),
-              child: Icon(Icons.error, color: AppTheme.errorColor, size: 18),
+              child: Icon(Icons.error, color: MelodiTheme.errorRed, size: 18),
             );
         }
       },

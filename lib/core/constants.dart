@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'dart:ui' show Brightness;
+import 'dart:ui' show Brightness, ImageFilter;
 import 'localization.dart';
 
 export 'localization.dart' show AppLocale;
 
 class AppConstants {
   static const String appName = 'Melodi';
-  static const String appVersion = '1.9.1';
+  static const String appVersion = '3.0.0';
   static const String buildNumber = '1';
 
   static const List<String> supportedAudioExtensions = [
@@ -24,7 +24,7 @@ class AppConstants {
   static const Duration seekStep = Duration(seconds: 10);
   static const Duration fastForwardStep = Duration(seconds: 30);
 
-  static const double miniPlayerHeight = 64.0;
+  static const double miniPlayerHeight = 60.0;
   static const double bottomNavHeight = 56.0;
 
   static const Duration animationDuration = Duration(milliseconds: 300);
@@ -32,62 +32,239 @@ class AppConstants {
 
   static const int maxRecentSearches = 20;
   static const int maxQueueHistory = 50;
+
+  static const String fontFamily = 'BeVietnamPro';
 }
 
-class AppTheme {
-  static bool isLightMode = false;
+class MelodiTheme {
+  // Stitch Design System - Exact Colors
+  static const Color background = Color(0xFF121414);
+  static const Color surface = Color(0xFF121414);
+  static const Color surfaceBright = Color(0xFF37393A);
+  static const Color surfaceLowest = Color(0xFF0C0F0F);
+  static const Color containerLow = Color(0xFF1A1C1C);
+  static const Color container = Color(0xFF1E2020);
+  static const Color containerHigh = Color(0xFF282A2B);
+  static const Color containerHighest = Color(0xFF333535);
 
-  // Dark theme colors
-  static Color _accentColorValue = const Color(0xFF1DB954);
-  static Color get primaryColor => _accentColorValue;
-  static Color get accentColor => _accentColorValue;
-  static Color get gradientStart => _accentColorValue;
-  static Color get gradientEnd => _accentColorValue;
-  static set accentColor(Color c) => _accentColorValue = c;
+  static const Color onSurface = Color(0xFFE2E2E2);
+  static const Color onSurfaceVariant = Color(0xFFBCCBB9);
 
-  static const Color darkBackground = Color(0xFF121212);
-  static const Color darkSurface = Color(0xFF1E1E1E);
-  static const Color darkCard = Color(0xFF282828);
-  static const Color darkCardHover = Color(0xFF333333);
-  static const Color darkDivider = Color(0xFF404040);
+  // Primary - Emerald
+  static const Color primaryGreen = Color(0xFF53E076);
+  static const Color primaryGreenBright = Color(0xFF72FE8F);
+  static const Color primaryContainer = Color(0xFF1DB954);
+  static const Color onPrimary = Color(0xFF003914);
+  static const Color onPrimaryContainer = Color(0xFF004118);
 
-  // Light theme colors
-  static const Color lightBackground = Color(0xFFF5F5F5);
-  static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color lightCard = Color(0xFFEEEEEE);
-  static const Color lightCardHover = Color(0xFFE0E0E0);
-  static const Color lightDivider = Color(0xFFD0D0D0);
+  // Secondary
+  static const Color secondary = Color(0xFFC8C6C5);
+  static const Color secondaryContainer = Color(0xFF4A4949);
+  static const Color onSecondaryContainer = Color(0xFFBAB8B7);
 
-  // Text colors - dynamic + custom overrides
-  static Color get textTertiary => isLightMode ? const Color(0xFF999999) : const Color(0xFF727272);
+  // Outline
+  static const Color outline = Color(0xFF869585);
+  static const Color outlineVariant = Color(0xFF3D4A3D);
 
-  // Background/surface colors - dynamic + custom overrides
-  // Custom color overrides (null = use default)
-  static Color? _customBackground;
-  static Color? _customSurface;
-  static Color? _customCard;
-  static Color? _customTextPrimary;
-  static Color? _customTextSecondary;
+  // Error
+  static const Color errorRed = Color(0xFFFFB4AB);
+  static const Color errorContainer = Color(0xFF93000A);
+  static const Color onErrorContainer = Color(0xFFFFDAD6);
 
-  static Color get background => _customBackground ?? (isLightMode ? lightBackground : darkBackground);
-  static Color get surface => _customSurface ?? (isLightMode ? lightSurface : darkSurface);
-  static Color get card => _customCard ?? (isLightMode ? lightCard : darkCard);
-  static Color get cardHover => isLightMode ? lightCardHover : darkCardHover;
-  static Color get divider => isLightMode ? lightDivider : darkDivider;
+  // Glass
+  static const Color glassBorder = Color(0x15FFFFFF);
 
-  static Color get textPrimary => _customTextPrimary ?? (isLightMode ? const Color(0xFF1A1A1A) : const Color(0xFFFFFFFF));
-  static Color get textSecondary => _customTextSecondary ?? (isLightMode ? const Color(0xFF666666) : const Color(0xFFB3B3B3));
+  // Liked Songs Gradient
+  static const Color likedGradientStart = Color(0xFF450AF5);
+  static const Color likedGradientEnd = Color(0xFFC4EFD9);
 
-  // Public setters for custom overrides (set null to use default)
-  static set customBackground(Color? c) => _customBackground = c;
-  static set customSurface(Color? c) => _customSurface = c;
-  static set customCard(Color? c) => _customCard = c;
-  static set customTextPrimary(Color? c) => _customTextPrimary = c;
-  static set customTextSecondary(Color? c) => _customTextSecondary = c;
+  // Backward compatibility
+  static Color get textPrimary => onSurface;
+  static Color get textSecondary => onSurfaceVariant;
+  static Color get textMuted => const Color(0xFF869585);
 
-  static const Color errorColor = Color(0xFFE74C3C);
-  static const Color favoriteColor = Color(0xFFE91E63);
-  static const Color appleMusicRed = Color(0xFFFA233B);
-  static const Color spotifyBlack = Color(0xFF191414);
+  // Genre Colors (from Stitch)
+  static const Map<String, Color> genreColors = {
+    'pop': Color(0xFF8D67AB),
+    'rock': Color(0xFFE8115B),
+    'hip_hop': Color(0xFFBC462B),
+    'jazz': Color(0xFF1E3264),
+    'electronic': Color(0xFF006450),
+    'classical': Color(0xFF7358FF),
+    'rnb': Color(0xFFD84000),
+    'indie': Color(0xFFE91429),
+  };
 
+  // Typography - Be Vietnam Pro
+  static TextStyle display({double size = 48, FontWeight weight = FontWeight.w800}) {
+    return TextStyle(
+      fontFamily: AppConstants.fontFamily,
+      fontSize: size,
+      fontWeight: weight,
+      color: onSurface,
+      letterSpacing: -0.02 * size,
+    );
+  }
+
+  static TextStyle heading({double size = 28, FontWeight weight = FontWeight.w700}) {
+    return TextStyle(
+      fontFamily: AppConstants.fontFamily,
+      fontSize: size,
+      fontWeight: weight,
+      color: onSurface,
+      letterSpacing: -0.01 * size,
+    );
+  }
+
+  static TextStyle title({double size = 20, FontWeight weight = FontWeight.w600}) {
+    return TextStyle(
+      fontFamily: AppConstants.fontFamily,
+      fontSize: size,
+      fontWeight: weight,
+      color: onSurface,
+    );
+  }
+
+  static TextStyle body({double size = 16, FontWeight weight = FontWeight.w400, Color? color}) {
+    return TextStyle(
+      fontFamily: AppConstants.fontFamily,
+      fontSize: size,
+      fontWeight: weight,
+      color: color ?? onSurface,
+      height: 1.5,
+    );
+  }
+
+  static TextStyle bodySm({double size = 14, FontWeight weight = FontWeight.w400, Color? color}) {
+    return TextStyle(
+      fontFamily: AppConstants.fontFamily,
+      fontSize: size,
+      fontWeight: weight,
+      color: color ?? onSurface,
+      height: 1.4,
+    );
+  }
+
+  static TextStyle label({double size = 12, FontWeight weight = FontWeight.w700, Color? color, double letterSpacing = 0.05}) {
+    return TextStyle(
+      fontFamily: AppConstants.fontFamily,
+      fontSize: size,
+      fontWeight: weight,
+      color: color ?? onSurfaceVariant,
+      letterSpacing: letterSpacing,
+      height: 1.3,
+    );
+  }
+
+  static TextStyle labelSm({double size = 13, FontWeight weight = FontWeight.w500, Color? color}) {
+    return TextStyle(
+      fontFamily: AppConstants.fontFamily,
+      fontSize: size,
+      fontWeight: weight,
+      color: color ?? onSurfaceVariant,
+      height: 1.4,
+    );
+  }
+
+  // Glassmorphism Helpers
+  static BoxDecoration glassDecoration({double radius = 8, double opacity = 0.6}) {
+    return BoxDecoration(
+      color: background.withValues(alpha: opacity),
+      borderRadius: BorderRadius.circular(radius),
+      border: Border.all(color: glassBorder, width: 0.5),
+    );
+  }
+
+  static Widget glassContainer({
+    required Widget child,
+    double sigmaX = 20,
+    double sigmaY = 20,
+    double opacity = 0.6,
+    double radius = 8,
+    EdgeInsets? padding,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: sigmaX, sigmaY: sigmaY),
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            color: background.withValues(alpha: opacity),
+            border: Border.all(color: glassBorder, width: 0.5),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  // Theme
+  static ThemeData darkTheme() {
+    return ThemeData(
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: background,
+      fontFamily: AppConstants.fontFamily,
+      primaryColor: primaryGreen,
+      colorScheme: const ColorScheme.dark(
+        primary: primaryGreen,
+        secondary: secondary,
+        surface: background,
+        error: errorRed,
+        surfaceContainerLow: containerLow,
+        surfaceContainer: container,
+        surfaceContainerHigh: containerHigh,
+        surfaceContainerHighest: containerHighest,
+      ),
+      cardColor: containerLow,
+      dividerColor: outlineVariant,
+      iconTheme: const IconThemeData(color: onSurfaceVariant),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          fontFamily: AppConstants.fontFamily,
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          color: onSurface,
+          letterSpacing: -0.22,
+        ),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        selectedItemColor: primaryGreen,
+        unselectedItemColor: onSurfaceVariant,
+        type: BottomNavigationBarType.fixed,
+        selectedLabelStyle: TextStyle(fontFamily: AppConstants.fontFamily, fontSize: 11, fontWeight: FontWeight.w500),
+        unselectedLabelStyle: TextStyle(fontFamily: AppConstants.fontFamily, fontSize: 11),
+      ),
+      sliderTheme: const SliderThemeData(
+        activeTrackColor: primaryGreen,
+        inactiveTrackColor: surfaceBright,
+        thumbColor: primaryGreen,
+        overlayColor: Color(0x3353E076),
+        trackHeight: 2,
+        thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6),
+        overlayShape: RoundSliderOverlayShape(overlayRadius: 14),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return primaryGreen;
+          return onSurfaceVariant;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return primaryGreen.withValues(alpha: 0.3);
+          return surfaceBright;
+        }),
+      ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
+    );
+  }
 }

@@ -1,7 +1,7 @@
 name: melodi
 description: A premium local music player for iOS inspired by Spotify and Apple Music.
 publish_to: 'none'
-version: 2.5.1
+version: 3.0.0
 
 environment:
   sdk: ^3.2.0
@@ -40,6 +40,7 @@ dependencies:
   shimmer: ^3.0.0
   sliding_up_panel: ^2.0.0+1
   flutter_animate: ^4.5.0
+  reorderables: ^0.6.0
 
   # URL Launcher
   url_launcher: ^6.3.1
@@ -80,5 +81,15 @@ dependency_overrides:
 
 flutter:
   uses-material-design: true
-  # assets:
-  #   - assets/icons/
+  fonts:
+    - family: BeVietnamPro
+      fonts:
+        - asset: assets/fonts/BeVietnamPro-Regular.ttf
+        - asset: assets/fonts/BeVietnamPro-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/BeVietnamPro-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/BeVietnamPro-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/BeVietnamPro-ExtraBold.ttf
+          weight: 800

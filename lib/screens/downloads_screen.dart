@@ -32,11 +32,11 @@ class _DownloadsScreenState extends State<DownloadsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(AppLocale.tr('downloads')),
-        backgroundColor: AppTheme.surface,
-        foregroundColor: AppTheme.textPrimary,
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
       body: Consumer<DownloadProvider>(
@@ -45,12 +45,12 @@ class _DownloadsScreenState extends State<DownloadsScreen>
           return Column(
             children: [
               Container(
-                color: AppTheme.surface,
+                color: MelodiTheme.containerLow,
                 child: TabBar(
                   controller: _tabController,
-                  indicatorColor: AppTheme.primaryColor,
-                  labelColor: AppTheme.primaryColor,
-                  unselectedLabelColor: AppTheme.textTertiary,
+                  indicatorColor: MelodiTheme.primaryGreen,
+                  labelColor: MelodiTheme.primaryGreen,
+                  unselectedLabelColor: MelodiTheme.textMuted,
                   tabs: [
                     Tab(
                       child: Row(
@@ -62,7 +62,7 @@ class _DownloadsScreenState extends State<DownloadsScreen>
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: AppTheme.primaryColor,
+                                color: MelodiTheme.primaryGreen,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
@@ -108,7 +108,7 @@ class _ActiveTab extends StatelessWidget {
         }
         return RefreshIndicator(
           onRefresh: () async {},
-          color: AppTheme.primaryColor,
+          color: MelodiTheme.primaryGreen,
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: active.length,
@@ -127,11 +127,11 @@ class _ActiveTab extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.download_rounded, size: 64, color: AppTheme.textTertiary),
+          Icon(Icons.download_rounded, size: 64, color: MelodiTheme.textMuted),
           const SizedBox(height: 16),
           Text(
             message,
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 16),
+            style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 16),
           ),
         ],
       ),
@@ -149,7 +149,7 @@ class _ActiveDownloadTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: AppTheme.card,
+        color: MelodiTheme.containerLow,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
@@ -163,10 +163,10 @@ class _ActiveDownloadTile extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                    color: MelodiTheme.primaryGreen.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(Icons.download_rounded, color: AppTheme.primaryColor, size: 22),
+                  child: Icon(Icons.download_rounded, color: MelodiTheme.primaryGreen, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -177,14 +177,14 @@ class _ActiveDownloadTile extends StatelessWidget {
                         task.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w500),
+                        style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15, fontWeight: FontWeight.w500),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         task.artist,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                        style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
                       ),
                     ],
                   ),
@@ -194,7 +194,7 @@ class _ActiveDownloadTile extends StatelessWidget {
                   height: 32,
                   child: IconButton(
                     padding: EdgeInsets.zero,
-                    icon: Icon(Icons.close, color: AppTheme.errorColor, size: 18),
+                    icon: Icon(Icons.close, color: MelodiTheme.errorRed, size: 18),
                     onPressed: () => provider.cancelTask(task.id),
                     tooltip: AppLocale.tr('cancel'),
                   ),
@@ -207,8 +207,8 @@ class _ActiveDownloadTile extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: task.progress,
                 minHeight: 4,
-                backgroundColor: AppTheme.divider,
-                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+                backgroundColor: MelodiTheme.outlineVariant,
+                valueColor: AlwaysStoppedAnimation<Color>(MelodiTheme.primaryGreen),
               ),
             ),
             const SizedBox(height: 6),
@@ -217,11 +217,11 @@ class _ActiveDownloadTile extends StatelessWidget {
               children: [
                 Text(
                   '${(task.progress * 100).toInt()}%',
-                  style: TextStyle(color: AppTheme.primaryColor, fontSize: 12, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: MelodiTheme.primaryGreen, fontSize: 12, fontWeight: FontWeight.w600),
                 ),
                 Text(
                   provider.stateText(task),
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 12),
                 ),
               ],
             ),
@@ -243,7 +243,7 @@ class _CompletedTab extends StatelessWidget {
         }
         return RefreshIndicator(
           onRefresh: () async {},
-          color: AppTheme.primaryColor,
+          color: MelodiTheme.primaryGreen,
           child: Column(
             children: [
               if (completed.isNotEmpty)
@@ -253,14 +253,14 @@ class _CompletedTab extends StatelessWidget {
                     children: [
                       Text(
                         '${completed.length} ${AppLocale.tr('completed')}',
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                        style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
                       ),
                       const Spacer(),
                       TextButton.icon(
                         onPressed: () => provider.clearCompleted(),
-                        icon: Icon(Icons.delete_sweep_rounded, size: 18, color: AppTheme.errorColor),
+                        icon: Icon(Icons.delete_sweep_rounded, size: 18, color: MelodiTheme.errorRed),
                         label: Text(AppLocale.tr('clear_all'),
-                            style: TextStyle(color: AppTheme.errorColor, fontSize: 13)),
+                            style: TextStyle(color: MelodiTheme.errorRed, fontSize: 13)),
                       ),
                     ],
                   ),
@@ -286,11 +286,11 @@ class _CompletedTab extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.download_done_rounded, size: 64, color: AppTheme.textTertiary),
+          Icon(Icons.download_done_rounded, size: 64, color: MelodiTheme.textMuted),
           const SizedBox(height: 16),
           Text(
             message,
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 16),
+            style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 16),
           ),
         ],
       ),
@@ -327,14 +327,14 @@ class _CompletedDownloadTile extends StatelessWidget {
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
-        color: AppTheme.errorColor,
+        color: MelodiTheme.errorRed,
         child: Icon(Icons.delete_rounded, color: Colors.white),
       ),
       onDismissed: (_) => context.read<DownloadProvider>().cancelTask(task.id),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         decoration: BoxDecoration(
-          color: AppTheme.card,
+          color: MelodiTheme.containerLow,
           borderRadius: BorderRadius.circular(12),
         ),
         child: ListTile(
@@ -342,16 +342,16 @@ class _CompletedDownloadTile extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withValues(alpha: 0.1),
+              color: MelodiTheme.primaryGreen.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(Icons.check_circle_rounded, color: AppTheme.primaryColor, size: 22),
+            child: Icon(Icons.check_circle_rounded, color: MelodiTheme.primaryGreen, size: 22),
           ),
           title: Text(
             task.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
+            style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15),
           ),
           subtitle: Row(
             children: [
@@ -360,14 +360,14 @@ class _CompletedDownloadTile extends StatelessWidget {
                   task.artist,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                  style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
                 ),
               ),
               if (_formatSize(task.filePath).isNotEmpty) ...[
-                Text(' · ', style: TextStyle(color: AppTheme.textTertiary, fontSize: 11)),
+                Text(' · ', style: TextStyle(color: MelodiTheme.textMuted, fontSize: 11)),
                 Text(
                   _formatSize(task.filePath),
-                  style: TextStyle(color: AppTheme.textTertiary, fontSize: 11),
+                  style: TextStyle(color: MelodiTheme.textMuted, fontSize: 11),
                 ),
               ],
             ],
@@ -389,7 +389,7 @@ class _FailedTab extends StatelessWidget {
         }
         return RefreshIndicator(
           onRefresh: () async {},
-          color: AppTheme.primaryColor,
+          color: MelodiTheme.primaryGreen,
           child: Column(
             children: [
               if (failed.isNotEmpty)
@@ -399,21 +399,21 @@ class _FailedTab extends StatelessWidget {
                     children: [
                       Text(
                         '${failed.length} ${AppLocale.tr('failed')}',
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                        style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
                       ),
                       const Spacer(),
                       TextButton.icon(
                         onPressed: () => provider.retryAllFailed(),
-                        icon: Icon(Icons.refresh_rounded, size: 18, color: AppTheme.primaryColor),
+                        icon: Icon(Icons.refresh_rounded, size: 18, color: MelodiTheme.primaryGreen),
                         label: Text(AppLocale.tr('retry_all'),
-                            style: TextStyle(color: AppTheme.primaryColor, fontSize: 13)),
+                            style: TextStyle(color: MelodiTheme.primaryGreen, fontSize: 13)),
                       ),
                       const SizedBox(width: 8),
                       TextButton.icon(
                         onPressed: () => provider.clearFailed(),
-                        icon: Icon(Icons.delete_sweep_rounded, size: 18, color: AppTheme.errorColor),
+                        icon: Icon(Icons.delete_sweep_rounded, size: 18, color: MelodiTheme.errorRed),
                         label: Text(AppLocale.tr('clear_all'),
-                            style: TextStyle(color: AppTheme.errorColor, fontSize: 13)),
+                            style: TextStyle(color: MelodiTheme.errorRed, fontSize: 13)),
                       ),
                     ],
                   ),
@@ -439,11 +439,11 @@ class _FailedTab extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.check_circle_outline_rounded, size: 64, color: AppTheme.textTertiary),
+          Icon(Icons.check_circle_outline_rounded, size: 64, color: MelodiTheme.textMuted),
           const SizedBox(height: 16),
           Text(
             message,
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 16),
+            style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 16),
           ),
         ],
       ),
@@ -461,7 +461,7 @@ class _FailedDownloadTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: AppTheme.card,
+        color: MelodiTheme.containerLow,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
@@ -469,33 +469,33 @@ class _FailedDownloadTile extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: AppTheme.errorColor.withValues(alpha: 0.1),
+            color: MelodiTheme.errorRed.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(Icons.error_rounded, color: AppTheme.errorColor, size: 22),
+          child: Icon(Icons.error_rounded, color: MelodiTheme.errorRed, size: 22),
         ),
         title: Text(
           task.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
+          style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15),
         ),
         subtitle: Text(
           task.artist,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+          style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              icon: Icon(Icons.refresh_rounded, color: AppTheme.primaryColor, size: 20),
+              icon: Icon(Icons.refresh_rounded, color: MelodiTheme.primaryGreen, size: 20),
               onPressed: () => provider.retryTask(task.id),
               tooltip: AppLocale.tr('retry'),
             ),
             IconButton(
-              icon: Icon(Icons.close, color: AppTheme.textTertiary, size: 20),
+              icon: Icon(Icons.close, color: MelodiTheme.textMuted, size: 20),
               onPressed: () => provider.cancelTask(task.id),
               tooltip: AppLocale.tr('clear'),
             ),

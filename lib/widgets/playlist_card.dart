@@ -22,7 +22,7 @@ class PlaylistCard extends StatelessWidget {
   void _showContextMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: MelodiTheme.containerLow,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -34,32 +34,32 @@ class PlaylistCard extends StatelessWidget {
               margin: const EdgeInsets.symmetric(vertical: 12),
               width: 40, height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.divider,
+                color: MelodiTheme.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             ListTile(
-              leading: Icon(Icons.add_circle_outline, color: AppTheme.textSecondary),
+              leading: Icon(Icons.add_circle_outline, color: MelodiTheme.onSurfaceVariant),
               title: Text(AppLocale.tr('add_songs'),
-                  style: TextStyle(color: AppTheme.textPrimary)),
+                  style: TextStyle(color: MelodiTheme.onSurface)),
               onTap: () {
                 Navigator.pop(ctx);
                 onAddSongs?.call();
               },
             ),
             ListTile(
-              leading: Icon(Icons.edit_outlined, color: AppTheme.textSecondary),
+              leading: Icon(Icons.edit_outlined, color: MelodiTheme.onSurfaceVariant),
               title: Text(AppLocale.tr('rename_playlist'),
-                  style: TextStyle(color: AppTheme.textPrimary)),
+                  style: TextStyle(color: MelodiTheme.onSurface)),
               onTap: () {
                 Navigator.pop(ctx);
                 onEdit?.call();
               },
             ),
             ListTile(
-              leading: Icon(Icons.delete_outline, color: AppTheme.errorColor),
+              leading: Icon(Icons.delete_outline, color: MelodiTheme.errorRed),
               title: Text(AppLocale.tr('delete_playlist'),
-                  style: TextStyle(color: AppTheme.errorColor)),
+                  style: TextStyle(color: MelodiTheme.errorRed)),
               onTap: () {
                 Navigator.pop(ctx);
                 onDelete?.call();
@@ -92,9 +92,9 @@ class PlaylistCard extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppTheme.card,
-                    AppTheme.cardHover,
-                    AppTheme.card,
+                    MelodiTheme.containerLow,
+                    MelodiTheme.surfaceHigh,
+                    MelodiTheme.containerLow,
                   ],
                 ),
               ),
@@ -104,13 +104,13 @@ class PlaylistCard extends StatelessWidget {
                   Icon(
                     Icons.playlist_play_rounded,
                     size: 48,
-                    color: AppTheme.primaryColor.withValues(alpha: 0.7),
+                    color: MelodiTheme.primaryGreen.withValues(alpha: 0.7),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     '${playlist.songCount} songs',
                     style: TextStyle(
-                      color: AppTheme.textSecondary,
+                      color: MelodiTheme.onSurfaceVariant,
                       fontSize: 12,
                     ),
                   ),
@@ -123,7 +123,7 @@ class PlaylistCard extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: AppTheme.textPrimary,
+                color: MelodiTheme.onSurface,
                 fontWeight: FontWeight.w500,
                 fontSize: 14,
               ),

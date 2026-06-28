@@ -24,10 +24,10 @@ class ArtistCard extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 60,
-              backgroundColor: AppTheme.card,
+              backgroundColor: MelodiTheme.containerLow,
               child: CircleAvatar(
                 radius: 58,
-                backgroundColor: AppTheme.cardHover,
+                backgroundColor: MelodiTheme.surfaceHigh,
                 backgroundImage: artist.image != null
                     ? MemoryImage(artist.image!)
                     : null,
@@ -35,7 +35,7 @@ class ArtistCard extends StatelessWidget {
                     ? Icon(
                         Icons.person_rounded,
                         size: 48,
-                        color: AppTheme.textTertiary.withValues(alpha: 0.5),
+                        color: MelodiTheme.textMuted.withValues(alpha: 0.5),
                       )
                     : null,
               ),
@@ -47,7 +47,7 @@ class ArtistCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: AppTheme.textPrimary,
+                color: MelodiTheme.onSurface,
                 fontWeight: FontWeight.w500,
                 fontSize: 14,
               ),
@@ -55,7 +55,7 @@ class ArtistCard extends StatelessWidget {
             Text(
               '${artist.songCount} songs',
               style: TextStyle(
-                color: AppTheme.textSecondary,
+                color: MelodiTheme.onSurfaceVariant,
                 fontSize: 12,
               ),
             ),

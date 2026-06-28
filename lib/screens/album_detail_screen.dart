@@ -56,13 +56,13 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
   Widget build(BuildContext context) {
     final album = widget.album;
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(album.name),
         actions: [
           PopupMenuButton<String>(
             icon: Icon(Icons.more_horiz_rounded,
-                color: AppTheme.textSecondary),
+                color: MelodiTheme.onSurfaceVariant),
             onSelected: (value) async {
               if (value == 'add_all') {
                 _addAllToPlaylist(context);
@@ -74,7 +74,7 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                 child: Row(
                   children: [
                     Icon(Icons.playlist_add, size: 20,
-                        color: AppTheme.textSecondary),
+                        color: MelodiTheme.onSurfaceVariant),
                     const SizedBox(width: 8),
                     Text(AppLocale.tr('add_to_playlist')),
                   ],
@@ -86,7 +86,7 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
       ),
       body: _isLoading
           ? Center(
-              child: CircularProgressIndicator(color: AppTheme.primaryColor))
+              child: CircularProgressIndicator(color: MelodiTheme.primaryGreen))
           : CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
@@ -103,7 +103,7 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                           icon: const Icon(Icons.play_arrow_rounded, size: 20),
                           label: Text(AppLocale.tr('play_all')),
                           style: FilledButton.styleFrom(
-                            backgroundColor: AppTheme.primaryColor,
+                            backgroundColor: MelodiTheme.primaryGreen,
                             foregroundColor: Colors.black,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
@@ -116,8 +116,8 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                           icon: const Icon(Icons.playlist_add, size: 20),
                           label: Text(AppLocale.tr('add_to_playlist')),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.textSecondary,
-                            side: BorderSide(color: AppTheme.divider),
+                            foregroundColor: MelodiTheme.onSurfaceVariant,
+                            side: BorderSide(color: MelodiTheme.outlineVariant),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
@@ -130,14 +130,14 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Divider(color: AppTheme.divider, height: 1),
+                    child: Divider(color: MelodiTheme.outlineVariant, height: 1),
                   ),
                 ),
                 if (_tracks.isEmpty)
                   SliverFillRemaining(
                     child: Center(
                       child: Text(AppLocale.tr('no_songs'),
-                          style: TextStyle(color: AppTheme.textSecondary)),
+                          style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
                     ),
                   )
                 else
@@ -172,21 +172,21 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
             child: Container(
               width: 140,
               height: 140,
-              color: AppTheme.card,
+              color: MelodiTheme.containerLow,
               child: album.imageUrl != null
                   ? CachedNetworkImage(
                       imageUrl: album.imageUrl!,
                       fit: BoxFit.cover,
                       placeholder: (_, __) => Container(
-                        color: AppTheme.card,
+                        color: MelodiTheme.containerLow,
                         child: Icon(Icons.album_rounded,
-                            size: 48, color: AppTheme.textTertiary),
+                            size: 48, color: MelodiTheme.textMuted),
                       ),
                       errorWidget: (_, __, ___) => Icon(Icons.album_rounded,
-                          size: 48, color: AppTheme.textTertiary),
+                          size: 48, color: MelodiTheme.textMuted),
                     )
                   : Icon(Icons.album_rounded,
-                      size: 48, color: AppTheme.textTertiary),
+                      size: 48, color: MelodiTheme.textMuted),
             ),
           ),
           const SizedBox(width: 16),
@@ -197,7 +197,7 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                 Text(
                   album.name,
                   style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: MelodiTheme.onSurface,
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),
@@ -206,7 +206,7 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                 Text(
                   album.artist,
                   style: TextStyle(
-                    color: AppTheme.textSecondary,
+                    color: MelodiTheme.onSurfaceVariant,
                     fontSize: 15,
                   ),
                 ),
@@ -219,7 +219,7 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                     durationStr,
                   ].where((s) => s.isNotEmpty).join(' · '),
                   style: TextStyle(
-                    color: AppTheme.textTertiary,
+                    color: MelodiTheme.textMuted,
                     fontSize: 13,
                   ),
                 ),
@@ -247,7 +247,7 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
     final playlistProvider = context.read<PlaylistProvider>();
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: MelodiTheme.containerLow,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -261,7 +261,7 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppTheme.divider,
+                  color: MelodiTheme.outlineVariant,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -270,18 +270,18 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                 child: Text(
                   AppLocale.tr('add_to_playlist'),
                   style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: MelodiTheme.onSurface,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-              Divider(color: AppTheme.divider, height: 1),
+              Divider(color: MelodiTheme.outlineVariant, height: 1),
               ...playlistProvider.playlists.map((pl) => ListTile(
                     title: Text(pl.name,
-                        style: TextStyle(color: AppTheme.textPrimary)),
+                        style: TextStyle(color: MelodiTheme.onSurface)),
                     trailing: Icon(Icons.playlist_add,
-                        color: AppTheme.textSecondary, size: 20),
+                        color: MelodiTheme.onSurfaceVariant, size: 20),
                     onTap: () {
                       playlistProvider.addSongsToPlaylist(
                           pl.id, songs.map((s) => s.id).toList());
@@ -289,7 +289,7 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('${AppLocale.tr('added_to')} ${pl.name}'),
-                          backgroundColor: AppTheme.primaryColor,
+                          backgroundColor: MelodiTheme.primaryGreen,
                         ),
                       );
                     },
@@ -341,7 +341,7 @@ class _TrackListTile extends StatelessWidget {
         child: Text(
           '${track.trackNumber}',
           style: TextStyle(
-            color: AppTheme.textTertiary,
+            color: MelodiTheme.textMuted,
             fontSize: 13,
           ),
         ),
@@ -351,7 +351,7 @@ class _TrackListTile extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          color: AppTheme.textPrimary,
+          color: MelodiTheme.onSurface,
           fontSize: 15,
         ),
       ),
@@ -360,7 +360,7 @@ class _TrackListTile extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          color: AppTheme.textSecondary,
+          color: MelodiTheme.onSurfaceVariant,
           fontSize: 13,
         ),
       ),
@@ -368,7 +368,7 @@ class _TrackListTile extends StatelessWidget {
           ? Text(
               durationStr,
               style: TextStyle(
-                color: AppTheme.textTertiary,
+                color: MelodiTheme.textMuted,
                 fontSize: 12,
               ),
             )

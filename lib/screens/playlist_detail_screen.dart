@@ -140,7 +140,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     final playlist = widget.playlist;
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(playlist.name),
         actions: [
@@ -148,21 +148,21 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
             IconButton(
               icon: const Icon(Icons.compare_arrows_rounded, size: 22),
               tooltip: AppLocale.tr('rematch_all'),
-              color: AppTheme.textSecondary,
+              color: MelodiTheme.onSurfaceVariant,
               onPressed: _rematchAll,
             ),
           IconButton(
             icon: Icon(
               _syncEnabled ? Icons.sync : Icons.sync_disabled_rounded,
               color: _syncEnabled
-                  ? AppTheme.primaryColor
-                  : AppTheme.textTertiary,
+                  ? MelodiTheme.primaryGreen
+                  : MelodiTheme.textMuted,
               size: 22,
             ),
             onPressed: () {
               showModalBottomSheet(
                 context: context,
-                backgroundColor: AppTheme.surface,
+                backgroundColor: MelodiTheme.containerLow,
                 shape: const RoundedRectangleBorder(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                 ),
@@ -175,7 +175,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           ),
           PopupMenuButton<String>(
             icon: Icon(Icons.more_horiz_rounded,
-                color: AppTheme.textSecondary),
+                color: MelodiTheme.onSurfaceVariant),
             onSelected: (value) async {
               switch (value) {
                 case 'add':
@@ -194,7 +194,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 value: 'add',
                 child: Row(
                   children: [
-                    Icon(Icons.playlist_add, size: 20, color: AppTheme.textSecondary),
+                    Icon(Icons.playlist_add, size: 20, color: MelodiTheme.onSurfaceVariant),
                     const SizedBox(width: 8),
                     Text(AppLocale.tr('add_songs')),
                   ],
@@ -204,7 +204,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 value: 'rename',
                 child: Row(
                   children: [
-                    Icon(Icons.edit_outlined, size: 20, color: AppTheme.textSecondary),
+                    Icon(Icons.edit_outlined, size: 20, color: MelodiTheme.onSurfaceVariant),
                     const SizedBox(width: 8),
                     Text(AppLocale.tr('rename_playlist')),
                   ],
@@ -214,10 +214,10 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 value: 'delete',
                 child: Row(
                   children: [
-                    Icon(Icons.delete_outline, size: 20, color: AppTheme.errorColor),
+                    Icon(Icons.delete_outline, size: 20, color: MelodiTheme.errorRed),
                     const SizedBox(width: 8),
                     Text(AppLocale.tr('delete_playlist'),
-                        style: TextStyle(color: AppTheme.errorColor)),
+                        style: TextStyle(color: MelodiTheme.errorRed)),
                   ],
                 ),
               ),
@@ -227,23 +227,23 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       ),
       body: _isLoading
           ? Center(
-              child: CircularProgressIndicator(color: AppTheme.primaryColor))
+              child: CircularProgressIndicator(color: MelodiTheme.primaryGreen))
           : _songs.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.playlist_add_rounded,
-                          size: 64, color: AppTheme.textTertiary),
+                          size: 64, color: MelodiTheme.textMuted),
                       const SizedBox(height: 16),
                       Text(
                         AppLocale.tr('no_songs_in_playlist'),
-                        style: TextStyle(color: AppTheme.textSecondary),
+                        style: TextStyle(color: MelodiTheme.onSurfaceVariant),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         AppLocale.tr('add_songs_from_library'),
-                        style: TextStyle(color: AppTheme.textTertiary),
+                        style: TextStyle(color: MelodiTheme.textMuted),
                       ),
                     ],
                   ),
@@ -266,8 +266,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                       colors: [
-                                        AppTheme.card,
-                                        AppTheme.cardHover,
+                                        MelodiTheme.containerLow,
+                                        MelodiTheme.surfaceHigh,
                                       ],
                                     ),
                             ),
@@ -280,7 +280,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                     ),
                                   )
                                 : Icon(Icons.playlist_play_rounded,
-                                    size: 48, color: AppTheme.primaryColor),
+                                    size: 48, color: MelodiTheme.primaryGreen),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -290,7 +290,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                 Text(
                                   playlist.name,
                                   style: TextStyle(
-                                    color: AppTheme.textPrimary,
+                                    color: MelodiTheme.onSurface,
                                     fontSize: 22,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -299,7 +299,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                 Text(
                                   '${_songs.length} ${AppLocale.tr('songs').toLowerCase()}',
                                   style: TextStyle(
-                                    color: AppTheme.textSecondary,
+                                    color: MelodiTheme.onSurfaceVariant,
                                     fontSize: 14,
                                   ),
                                 ),
@@ -314,7 +314,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                         size: 20),
                                     label: Text(AppLocale.tr('play')),
                                     style: FilledButton.styleFrom(
-                                      backgroundColor: AppTheme.primaryColor,
+                                      backgroundColor: MelodiTheme.primaryGreen,
                                       foregroundColor: Colors.black,
                                       shape: RoundedRectangleBorder(
                                         borderRadius:
@@ -329,7 +329,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                         ],
                       ),
                     ),
-                    Divider(color: AppTheme.divider, height: 1),
+                    Divider(color: MelodiTheme.outlineVariant, height: 1),
                     if (_isRematching)
                       Column(
                         children: [
@@ -343,14 +343,14 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                   height: 16,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: AppTheme.primaryColor,
+                                    color: MelodiTheme.primaryGreen,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
                                   AppLocale.tr('match_progress'),
                                   style: TextStyle(
-                                    color: AppTheme.textSecondary,
+                                    color: MelodiTheme.onSurfaceVariant,
                                     fontSize: 13,
                                   ),
                                 ),
@@ -358,7 +358,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                 Text(
                                   '${(_rematchProgress * 100).toInt()}%',
                                   style: TextStyle(
-                                    color: AppTheme.textSecondary,
+                                    color: MelodiTheme.onSurfaceVariant,
                                     fontSize: 13,
                                   ),
                                 ),
@@ -372,9 +372,9 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                               borderRadius: BorderRadius.circular(4),
                               child: LinearProgressIndicator(
                                 value: _rematchProgress,
-                                backgroundColor: AppTheme.card,
+                                backgroundColor: MelodiTheme.containerLow,
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                    AppTheme.primaryColor),
+                                    MelodiTheme.primaryGreen),
                                 minHeight: 4,
                               ),
                             ),
@@ -406,7 +406,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                             background: Container(
                               alignment: Alignment.centerRight,
                               padding: const EdgeInsets.only(right: 20),
-                              color: AppTheme.errorColor,
+                              color: MelodiTheme.errorRed,
                               child: const Icon(Icons.delete_outline,
                                   color: Colors.white),
                             ),
@@ -445,16 +445,16 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: MelodiTheme.containerLow,
         title: Text(AppLocale.tr('rename_playlist'),
-            style: TextStyle(color: AppTheme.textPrimary)),
+            style: TextStyle(color: MelodiTheme.onSurface)),
         content: TextField(
           controller: controller,
           autofocus: true,
-          style: TextStyle(color: AppTheme.textPrimary),
+          style: TextStyle(color: MelodiTheme.onSurface),
           decoration: InputDecoration(
             filled: true,
-            fillColor: AppTheme.card,
+            fillColor: MelodiTheme.containerLow,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide.none,
@@ -465,7 +465,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(AppLocale.tr('cancel'),
-                style: TextStyle(color: AppTheme.textSecondary)),
+                style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () {
@@ -477,7 +477,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               }
             },
             child: Text(AppLocale.tr('rename'),
-                style: TextStyle(color: AppTheme.primaryColor)),
+                style: TextStyle(color: MelodiTheme.primaryGreen)),
           ),
         ],
       ),
@@ -520,18 +520,18 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: MelodiTheme.containerLow,
         title: Text(AppLocale.tr('delete_playlist'),
-            style: TextStyle(color: AppTheme.textPrimary)),
+            style: TextStyle(color: MelodiTheme.onSurface)),
         content: Text(
           '${AppLocale.tr('delete')} "${widget.playlist.name}"?',
-          style: TextStyle(color: AppTheme.textSecondary),
+          style: TextStyle(color: MelodiTheme.onSurfaceVariant),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(AppLocale.tr('cancel'),
-                style: TextStyle(color: AppTheme.textSecondary)),
+                style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () {
@@ -542,7 +542,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               Navigator.pop(context);
             },
             child: Text(AppLocale.tr('delete'),
-                style: TextStyle(color: AppTheme.errorColor)),
+                style: TextStyle(color: MelodiTheme.errorRed)),
           ),
         ],
       ),
@@ -571,7 +571,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: MelodiTheme.containerLow,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -588,7 +588,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                     margin: const EdgeInsets.symmetric(vertical: 12),
                     width: 40, height: 4,
                     decoration: BoxDecoration(
-                      color: AppTheme.divider,
+                      color: MelodiTheme.outlineVariant,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -598,7 +598,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                       children: [
                         Text(AppLocale.tr('add_songs'),
                             style: TextStyle(
-                                color: AppTheme.textPrimary,
+                                color: MelodiTheme.onSurface,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold)),
                         const Spacer(),
@@ -614,18 +614,18 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                             },
                             child: Text(
                               '${AppLocale.tr('add')} (${selected.length})',
-                              style: TextStyle(color: AppTheme.primaryColor),
+                              style: TextStyle(color: MelodiTheme.primaryGreen),
                             ),
                           ),
                       ],
                     ),
                   ),
-                  Divider(color: AppTheme.divider, height: 1),
+                  Divider(color: MelodiTheme.outlineVariant, height: 1),
                   Expanded(
                     child: available.isEmpty
                         ? Center(
                             child: Text(AppLocale.tr('all_songs_added'),
-                                style: TextStyle(color: AppTheme.textSecondary)))
+                                style: TextStyle(color: MelodiTheme.onSurfaceVariant)))
                         : ListView.builder(
                             itemCount: available.length,
                             itemBuilder: (context, index) {
@@ -639,20 +639,20 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                       : null,
                                   child: song.albumArt == null
                                       ? Icon(Icons.music_note_rounded,
-                                          color: AppTheme.textTertiary, size: 20)
+                                          color: MelodiTheme.textMuted, size: 20)
                                       : null,
                                 ),
                                 title: Text(song.title,
-                                    style: TextStyle(color: AppTheme.textPrimary)),
+                                    style: TextStyle(color: MelodiTheme.onSurface)),
                                 subtitle: Text(song.artist,
-                                    style: TextStyle(color: AppTheme.textSecondary)),
+                                    style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
                                 trailing: Icon(
                                   isSelected
                                       ? Icons.check_circle
                                       : Icons.circle_outlined,
                                   color: isSelected
-                                      ? AppTheme.primaryColor
-                                      : AppTheme.textTertiary,
+                                      ? MelodiTheme.primaryGreen
+                                      : MelodiTheme.textMuted,
                                 ),
                                 onTap: () {
                                   setSheetState(() {
@@ -693,7 +693,7 @@ class _SimpleAlbumScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(title: Text(albumName)),
       body: ListView.builder(
         itemCount: songs.length,
@@ -738,7 +738,7 @@ class _SimpleArtistScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(title: Text(artistName)),
       body: ListView.builder(
         itemCount: songs.length,

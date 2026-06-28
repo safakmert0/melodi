@@ -29,23 +29,23 @@ class _SharedUrlsScreenState extends State<SharedUrlsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBackground,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
-        title: Text('Shared Links', style: TextStyle(color: AppTheme.textPrimary)),
+        title: Text('Shared Links', style: TextStyle(color: MelodiTheme.onSurface)),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: IconThemeData(color: AppTheme.textPrimary),
+        iconTheme: IconThemeData(color: MelodiTheme.onSurface),
       ),
       body: _loading
-          ? Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))
+          ? Center(child: CircularProgressIndicator(color: MelodiTheme.primaryGreen))
           : _urls.isEmpty
               ? Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.link_off_rounded, size: 64, color: AppTheme.textTertiary),
+                      Icon(Icons.link_off_rounded, size: 64, color: MelodiTheme.textMuted),
                       const SizedBox(height: 16),
-                      Text(AppLocale.tr('no_shared_links'), style: TextStyle(color: AppTheme.textSecondary)),
+                      Text(AppLocale.tr('no_shared_links'), style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
                     ],
                   ),
                 )
@@ -54,18 +54,18 @@ class _SharedUrlsScreenState extends State<SharedUrlsScreen> {
                   itemBuilder: (context, index) {
                     final item = _urls[index];
                     return ListTile(
-                      leading: Icon(Icons.link_rounded, color: AppTheme.primaryColor),
+                      leading: Icon(Icons.link_rounded, color: MelodiTheme.primaryGreen),
                       title: Text(
                         item['url'] as String,
-                        style: TextStyle(color: AppTheme.textPrimary, fontSize: 13),
+                        style: TextStyle(color: MelodiTheme.onSurface, fontSize: 13),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                       subtitle: Text(
                         item['sharedAt'] as String,
-                        style: TextStyle(color: AppTheme.textTertiary, fontSize: 11),
+                        style: TextStyle(color: MelodiTheme.textMuted, fontSize: 11),
                       ),
-                      trailing: Icon(Icons.check_circle_outline, color: AppTheme.textTertiary, size: 20),
+                      trailing: Icon(Icons.check_circle_outline, color: MelodiTheme.textMuted, size: 20),
                     );
                   },
                 ),

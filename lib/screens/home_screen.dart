@@ -2,27 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
-import '../services/database_service.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
-import '../widgets/mini_player.dart';
-import '../widgets/song_tile.dart';
-import '../widgets/album_card.dart';
-import '../widgets/artist_card.dart';
-import '../widgets/playlist_card.dart';
 import '../models/song_model.dart';
-import '../models/album_model.dart';
-import '../models/artist_model.dart';
-import '../models/playlist_model.dart';
 import '../providers/playlist_provider.dart';
-import '../providers/mix_provider.dart';
 import '../providers/connection_provider.dart';
-import '../providers/download_provider.dart';
-import '../widgets/auth_banner.dart';
-import '../widgets/home_banners.dart';
 import '../widgets/equalizer_sheet.dart';
-import 'library_screen.dart';
-import 'search_screen.dart';
 import 'settings_screen.dart';
 import 'playlist_detail_screen.dart';
 import 'mixes_screen.dart';
@@ -30,112 +15,18 @@ import 'album_discovery_screen.dart';
 import 'downloads_screen.dart';
 import 'library_health_screen.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  int _currentPage = 0;
-  int _libraryTab = 0;
-
-  void _switchToLibrary([int tab = 0]) {
-    setState(() {
-      _libraryTab = tab;
-      _currentPage = 1;
-    });
-  }
-
-  List<Widget> get _pages => [
-    _HomeTab(onNavigateToLibrary: _switchToLibrary),
-    LibraryScreen(initialTab: _libraryTab),
-    SearchScreen(),
-    SettingsScreen(),
-  ];
+class HomeScreen extends StatelessWidget {
+  final VoidCallback? onNavigateToLibrary;
+  const HomeScreen({super.key, this.onNavigateToLibrary});
 
   @override
   Widget build(BuildContext context) {
     context.watch<LocaleNotifier>();
-    return Scaffold(
-      body: Column(
-        children: [
-          SafeArea(
-            child: Consumer<ConnectionProvider>(
-              builder: (context, conn, _) => AuthBanner(
-                connection: conn,
-                onTap: () => setState(() => _currentPage = 3),
-              ),
-            ),
-          ),
-          const HomeBanners(),
-          Expanded(
-            child: IndexedStack(
-              index: _currentPage,
-              children: _pages,
-            ),
-          ),
-          const MiniPlayer(),
-        ],
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: AppTheme.divider.withValues(alpha: 0.3),
-            ),
-          ),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentPage,
-          onTap: (index) => setState(() => _currentPage = index),
-          selectedItemColor: AppTheme.primaryColor,
-          unselectedItemColor: AppTheme.textTertiary,
-          items: [
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.home_rounded),
-              label: AppLocale.tr('home'),
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.my_library_music_rounded),
-              label: AppLocale.tr('library'),
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.search_rounded),
-              label: AppLocale.tr('search'),
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.settings_rounded),
-              label: AppLocale.tr('settings'),
-            ),
-          ],
-          selectedFontSize: 11,
-          unselectedFontSize: 11,
-        ),
-      ),
-    );
-  }
-}
-
-class _HomeTab extends StatelessWidget {
-  final void Function([int])? onNavigateToLibrary;
-  const _HomeTab({this.onNavigateToLibrary});
-
-  String _timeGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good morning';
-    if (hour < 18) return 'Good afternoon';
-    return 'Good evening';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer3<LibraryProvider, PlaylistProvider, LocaleNotifier>(
-      builder: (context, library, playlistProvider, locale, _) {
+    return Consumer3<LibraryProvider, PlaylistProvider, ConnectionProvider>(
+      builder: (context, library, playlistProvider, conn, _) {
         return RefreshIndicator(
           onRefresh: () async => await library.loadAll(),
-          color: AppTheme.primaryColor,
+          color: MelodiTheme.primaryGreen,
           child: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
@@ -143,13 +34,10 @@ class _HomeTab extends StatelessWidget {
                 floating: true,
                 pinned: false,
                 backgroundColor: Colors.transparent,
+                surfaceTintColor: Colors.transparent,
                 title: Text(
-                  AppLocale.tr('melodi'),
-                  style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  'Melodi',
+                  style: MelodiTheme.heading(size: 28),
                 ),
                 actions: [
                   if (library.isScanning)
@@ -160,19 +48,12 @@ class _HomeTab extends StatelessWidget {
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: AppTheme.primaryColor,
+                          color: MelodiTheme.primaryGreen,
                         ),
                       ),
-                    )
-                  else
-                    IconButton(
-                      icon: const Icon(Icons.download_rounded),
-                      tooltip: AppLocale.tr('import_music'),
-                      onPressed: () => _showImportOptions(context),
                     ),
                   IconButton(
-                    icon: Icon(Icons.settings_rounded, color: AppTheme.textSecondary),
-                    tooltip: AppLocale.tr('settings'),
+                    icon: const Icon(Icons.settings_rounded, color: MelodiTheme.onSurfaceVariant),
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const SettingsScreen()),
                     ),
@@ -180,7 +61,7 @@ class _HomeTab extends StatelessWidget {
                 ],
               ),
               SliverToBoxAdapter(
-                child: _buildHeroGradient(context, library),
+                child: _buildQuickPicks(context, library),
               ),
               if (library.songs.isNotEmpty)
                 SliverToBoxAdapter(
@@ -192,7 +73,7 @@ class _HomeTab extends StatelessWidget {
                         child: Padding(
                           padding: const EdgeInsets.only(top: 100),
                           child: CircularProgressIndicator(
-                            color: AppTheme.primaryColor,
+                            color: MelodiTheme.primaryGreen,
                             strokeWidth: 2,
                           ),
                         ),
@@ -201,6 +82,7 @@ class _HomeTab extends StatelessWidget {
                         ? _buildEmptyState(context)
                         : _buildContent(context, library, playlistProvider),
               ),
+              const SliverPadding(padding: EdgeInsets.only(bottom: 120)),
             ],
           ),
         );
@@ -208,102 +90,38 @@ class _HomeTab extends StatelessWidget {
     );
   }
 
-  Widget _buildHeroGradient(BuildContext context, LibraryProvider library) {
+  Widget _buildQuickPicks(BuildContext context, LibraryProvider library) {
     if (library.songs.isEmpty) return const SizedBox.shrink();
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      height: 160,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppTheme.primaryColor.withValues(alpha: 0.6),
-            AppTheme.primaryColor.withValues(alpha: 0.15),
-            AppTheme.card,
-          ],
-        ),
-      ),
-      child: Stack(
+    final recentlyPlayed = library.recent.take(6).toList();
+    if (recentlyPlayed.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Positioned(
-            right: -20,
-            bottom: -20,
-            child: Icon(Icons.music_note_rounded,
-                size: 120, color: Colors.white.withValues(alpha: 0.08)),
+          Text(
+            _timeGreeting(),
+            style: MelodiTheme.heading(size: 24),
           ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _timeGreeting(),
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${library.songCount} ${AppLocale.tr('songs')}, '
-                            '${library.albums.length} ${AppLocale.tr('albums')}',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.7),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => _showImportOptions(context),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.refresh_rounded,
-                                size: 14, color: Colors.white),
-                            const SizedBox(width: 4),
-                            Text(
-                              AppLocale.tr('scan_library'),
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.9),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  AppLocale.tr('your_music_awaits'),
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 12),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 3.2,
             ),
+            itemCount: recentlyPlayed.length,
+            itemBuilder: (context, index) {
+              final song = recentlyPlayed[index];
+              return _QuickPickCard(
+                song: song,
+                onTap: () => context.read<PlayerProvider>().playSong(song),
+              );
+            },
           ),
         ],
       ),
@@ -315,7 +133,7 @@ class _HomeTab extends StatelessWidget {
       _QuickActionItem(
         icon: Icons.wb_sunny_rounded,
         label: AppLocale.tr('mixes'),
-        gradientColors: [const Color(0xFFF39C12), const Color(0xFFE67E22)],
+        color: const Color(0xFFF39C12),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const MixesScreen()),
         ),
@@ -323,7 +141,7 @@ class _HomeTab extends StatelessWidget {
       _QuickActionItem(
         icon: Icons.explore_rounded,
         label: AppLocale.tr('album_discovery'),
-        gradientColors: [const Color(0xFF8E44AD), const Color(0xFF6C3483)],
+        color: const Color(0xFF8E44AD),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const AlbumDiscoveryScreen()),
         ),
@@ -331,7 +149,7 @@ class _HomeTab extends StatelessWidget {
       _QuickActionItem(
         icon: Icons.download_rounded,
         label: AppLocale.tr('downloads'),
-        gradientColors: [const Color(0xFF2980B9), const Color(0xFF1A5276)],
+        color: const Color(0xFF2980B9),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const DownloadsScreen()),
         ),
@@ -339,23 +157,19 @@ class _HomeTab extends StatelessWidget {
       _QuickActionItem(
         icon: Icons.lyrics_rounded,
         label: AppLocale.tr('backfill_lyrics'),
-        gradientColors: [const Color(0xFF008080), const Color(0xFF004D4D)],
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const SettingsScreen()),
-        ),
+        color: const Color(0xFF008080),
+        onTap: () {},
       ),
       _QuickActionItem(
         icon: Icons.image_rounded,
         label: AppLocale.tr('backfill_art'),
-        gradientColors: [const Color(0xFFE91E63), const Color(0xFFAD1457)],
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const SettingsScreen()),
-        ),
+        color: const Color(0xFFE91E63),
+        onTap: () {},
       ),
       _QuickActionItem(
         icon: Icons.favorite_border_rounded,
         label: AppLocale.tr('library_health'),
-        gradientColors: [const Color(0xFF27AE60), const Color(0xFF1E8449)],
+        color: const Color(0xFF27AE60),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const LibraryHealthScreen()),
         ),
@@ -363,23 +177,23 @@ class _HomeTab extends StatelessWidget {
       _QuickActionItem(
         icon: Icons.sync_rounded,
         label: AppLocale.tr('sync'),
-        gradientColors: [const Color(0xFF3F51B5), const Color(0xFF283593)],
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const SettingsScreen()),
-        ),
+        color: const Color(0xFF3F51B5),
+        onTap: () {},
       ),
       _QuickActionItem(
         icon: Icons.tune_rounded,
         label: AppLocale.tr('equalizer'),
-        gradientColors: [const Color(0xFFFF8F00), const Color(0xFFCC7A00)],
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const EqualizerSheet()),
+        color: const Color(0xFFFF8F00),
+        onTap: () => showModalBottomSheet(
+          context: context,
+          backgroundColor: Colors.transparent,
+          builder: (_) => const EqualizerSheet(),
         ),
       ),
     ];
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
@@ -397,34 +211,29 @@ class _HomeTab extends StatelessWidget {
 
   Widget _buildEmptyState(BuildContext context) {
     return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.6,
+      height: MediaQuery.of(context).size.height * 0.5,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.music_note_rounded,
-                size: 80, color: AppTheme.textTertiary),
+            Icon(Icons.music_note_rounded, size: 80, color: MelodiTheme.textMuted),
             const SizedBox(height: 24),
             Text(
               AppLocale.tr('your_music_awaits'),
-              style: TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+              style: MelodiTheme.heading(size: 22),
             ),
             const SizedBox(height: 8),
             Text(
               AppLocale.tr('import_songs_to_start'),
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 15),
+              style: const TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 15),
             ),
             const SizedBox(height: 32),
             FilledButton.icon(
-              onPressed: () => _showImportOptions(context),
+              onPressed: () {},
               icon: const Icon(Icons.library_music_rounded),
               label: Text(AppLocale.tr('import_music')),
               style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
+                backgroundColor: MelodiTheme.primaryGreen,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                 shape: RoundedRectangleBorder(
@@ -438,678 +247,187 @@ class _HomeTab extends StatelessWidget {
     );
   }
 
-  Widget _buildContent(
-      BuildContext context, LibraryProvider library, PlaylistProvider playlistProvider) {
+  Widget _buildContent(BuildContext context, LibraryProvider library, PlaylistProvider playlistProvider) {
     final recentlyPlayed = library.recent.take(10).toList();
     final favorites = library.favorites.take(10).toList();
-    final recentlyAdded = library.songs
-        .toList()
-      ..sort((a, b) => b.dateAdded.compareTo(a.dateAdded));
+    final recentlyAdded = library.songs.toList()..sort((a, b) => b.dateAdded.compareTo(a.dateAdded));
     final recentAdded = recentlyAdded.take(10).toList();
+    final playlists = playlistProvider.playlists;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Recently Played
         if (recentlyPlayed.isNotEmpty)
-          _FadeSlideIn(
-            index: 0,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _SectionHeader(
-                  title: AppLocale.tr('recently_played'),
-                  onSeeAll: () => onNavigateToLibrary?.call(0),
-                ),
-                SizedBox(
-                  height: 160,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.only(left: 16),
-                    itemCount: recentlyPlayed.length,
-                    itemBuilder: (context, i) {
-                      final song = recentlyPlayed[i];
-                      return _RecentSongCard(
-                        song: song,
-                        onTap: () => context
-                            .read<PlayerProvider>()
-                            .playSong(song),
-                      );
-                    },
-                  ),
-                ),
-              ],
+          _SectionWidget(
+            title: AppLocale.tr('recently_played'),
+            child: SizedBox(
+              height: 180,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.only(left: 16),
+                itemCount: recentlyPlayed.length,
+                itemBuilder: (context, i) {
+                  final song = recentlyPlayed[i];
+                  return _RecentSongCard(
+                    song: song,
+                    onTap: () => context.read<PlayerProvider>().playSong(song),
+                  );
+                },
+              ),
             ),
           ),
-        // Favorites
         if (favorites.isNotEmpty)
-          _FadeSlideIn(
-            index: 1,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _SectionHeader(
-                  title: AppLocale.tr('liked_songs'),
-                  onSeeAll: () => onNavigateToLibrary?.call(0),
-                ),
-                SizedBox(
-                  height: 160,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.only(left: 16),
-                    itemCount: favorites.length,
-                    itemBuilder: (context, i) {
-                      final song = favorites[i];
-                      return _RecentSongCard(
-                        song: song,
-                        onTap: () => context
-                            .read<PlayerProvider>()
-                            .playSong(song),
-                      );
-                    },
-                  ),
-                ),
-              ],
+          _SectionWidget(
+            title: AppLocale.tr('liked_songs'),
+            child: SizedBox(
+              height: 180,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.only(left: 16),
+                itemCount: favorites.length,
+                itemBuilder: (context, i) {
+                  final song = favorites[i];
+                  return _RecentSongCard(
+                    song: song,
+                    onTap: () => context.read<PlayerProvider>().playSong(song),
+                  );
+                },
+              ),
             ),
           ),
-        // Albums
-        if (library.albums.isNotEmpty)
-          _FadeSlideIn(
-            index: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _SectionHeader(
-                  title: AppLocale.tr('albums'),
-                  onSeeAll: () => onNavigateToLibrary?.call(1),
-                ),
-                SizedBox(
-                  height: 220,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.only(left: 16),
-                    itemCount: library.albums.length,
-                    itemBuilder: (context, i) {
-                      final album = library.albums[i];
-                      return AlbumCard(
-                        album: album,
-                        onTap: () => _navigateToAlbum(context, album),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        // Recently Added
         if (recentAdded.isNotEmpty)
-          _FadeSlideIn(
-            index: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _SectionHeader(
-                  title: 'Recently Added',
-                  onSeeAll: () => onNavigateToLibrary?.call(0),
-                ),
-                SizedBox(
-                  height: 160,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.only(left: 16),
-                    itemCount: recentAdded.length,
-                    itemBuilder: (context, i) {
-                      final song = recentAdded[i];
-                      return _RecentSongCard(
-                        song: song,
-                        onTap: () => context
-                            .read<PlayerProvider>()
-                            .playSong(song),
-                      );
-                    },
-                  ),
-                ),
-              ],
+          _SectionWidget(
+            title: AppLocale.tr('recently_added'),
+            child: SizedBox(
+              height: 180,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.only(left: 16),
+                itemCount: recentAdded.length,
+                itemBuilder: (context, i) {
+                  final song = recentAdded[i];
+                  return _RecentSongCard(
+                    song: song,
+                    onTap: () => context.read<PlayerProvider>().playSong(song),
+                  );
+                },
+              ),
             ),
           ),
-        // Artists
+        if (playlists.isNotEmpty)
+          _SectionWidget(
+            title: AppLocale.tr('your_playlists'),
+            child: SizedBox(
+              height: 200,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.only(left: 16),
+                itemCount: playlists.length,
+                itemBuilder: (context, i) {
+                  final playlist = playlists[i];
+                  return GestureDetector(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => PlaylistDetailScreen(playlist: playlist),
+                      ),
+                    ),
+                    child: PlaylistCard(playlist: playlist),
+                  );
+                },
+              ),
+            ),
+          ),
+        if (library.albums.isNotEmpty)
+          _SectionWidget(
+            title: AppLocale.tr('albums'),
+            child: SizedBox(
+              height: 200,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.only(left: 16),
+                itemCount: library.albums.length,
+                itemBuilder: (context, i) => AlbumCard(album: library.albums[i]),
+              ),
+            ),
+          ),
         if (library.artists.isNotEmpty)
-          _FadeSlideIn(
-            index: 4,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _SectionHeader(
-                  title: AppLocale.tr('popular_artists'),
-                  onSeeAll: () => onNavigateToLibrary?.call(2),
-                ),
-                SizedBox(
-                  height: 180,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.only(left: 16),
-                    itemCount: library.artists.length,
-                    itemBuilder: (context, i) {
-                      final artist = library.artists[i];
-                      return ArtistCard(
-                        artist: artist,
-                        onTap: () => _navigateToArtist(context, artist),
-                      );
-                    },
-                  ),
-                ),
-              ],
+          _SectionWidget(
+            title: AppLocale.tr('artists'),
+            child: SizedBox(
+              height: 140,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.only(left: 16),
+                itemCount: library.artists.length,
+                itemBuilder: (context, i) => ArtistCard(artist: library.artists[i]),
+              ),
             ),
           ),
-        // Playlists
-        _FadeSlideIn(
-          index: 5,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _SectionHeader(
-                title: AppLocale.tr('playlists'),
-                onSeeAll: () => onNavigateToLibrary?.call(0),
-              ),
-              SizedBox(
-                height: 220,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.only(left: 16),
-                  itemCount: playlistProvider.playlists.length + 1,
-                  itemBuilder: (context, i) {
-                    if (i == 0) {
-                      return _CreatePlaylistCard(
-                        onCreate: () => _showCreatePlaylistDialog(context),
-                      );
-                    }
-                    final playlist = playlistProvider.playlists[i - 1];
-                    return PlaylistCard(
-                      playlist: playlist,
-                      onTap: () => _navigateToPlaylist(context, playlist),
-                      onEdit: () => _showRenamePlaylistDialog(context, playlist),
-                      onDelete: () => _confirmDeletePlaylist(context, playlist),
-                      onAddSongs: () => _navigateToPlaylist(context, playlist),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Discover
-        _FadeSlideIn(
-          index: 6,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _SectionHeader(
-                title: AppLocale.tr('album_discovery'),
-                onSeeAll: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => const AlbumDiscoveryScreen()),
-                ),
-              ),
-              SizedBox(
-                height: 150,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.only(left: 16),
-                  itemCount: 1,
-                  itemBuilder: (context, i) {
-                    return _DiscoverCard(
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                            builder: (_) => const AlbumDiscoveryScreen()),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Mixes
-        _FadeSlideIn(
-          index: 7,
-          child: Consumer<MixProvider>(
-            builder: (context, mixProvider, _) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _SectionHeader(
-                    title: AppLocale.tr('mixes'),
-                    onSeeAll: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const MixesScreen()),
-                    ),
-                  ),
-                  SizedBox(
-                    height: 150,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.only(left: 16),
-                      itemCount: 3,
-                      itemBuilder: (context, index) {
-                        final mixTypes = [
-                          (
-                            Icons.wb_sunny_rounded,
-                            AppLocale.tr('daily_mix'),
-                            mixProvider.dailyMix.isNotEmpty
-                                ? '${mixProvider.dailyMix.length} ${AppLocale.tr('songs')}'
-                                : AppLocale.tr('daily_mix'),
-                            const Color(0xFFF39C12),
-                          ),
-                          (
-                            Icons.radar_rounded,
-                            AppLocale.tr('release_radar'),
-                            mixProvider.releaseRadar.isNotEmpty
-                                ? '${mixProvider.releaseRadar.length} ${AppLocale.tr('songs')}'
-                                : AppLocale.tr('release_radar'),
-                            const Color(0xFFE74C3C),
-                          ),
-                          (
-                            Icons.explore_rounded,
-                            AppLocale.tr('discover_weekly'),
-                            mixProvider.discoverWeekly.isNotEmpty
-                                ? '${mixProvider.discoverWeekly.length} ${AppLocale.tr('songs')}'
-                                : AppLocale.tr('discover_weekly'),
-                            const Color(0xFF8E44AD),
-                          ),
-                        ];
-                        final item = mixTypes[index];
-                        return _MixCard(
-                          icon: item.$1,
-                          title: item.$2,
-                          subtitle: item.$3,
-                          gradientColor: item.$4,
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const MixesScreen()),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  if (mixProvider.lastGenerated != null)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 16, top: 4),
-                      child: Text(
-                        '${AppLocale.tr('generated_at')}: ${_formatDate(mixProvider.lastGenerated!)}',
-                        style: TextStyle(
-                          color: AppTheme.textTertiary,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
-        ),
-        // Library Health
-        _FadeSlideIn(
-          index: 8,
-          child: _LibraryHealthCard(),
-        ),
-        const SizedBox(height: 8),
-        // Downloads
-        Consumer<DownloadProvider>(
-          builder: (context, dp, _) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-              child: GestureDetector(
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const DownloadsScreen()),
-                ),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        dp.totalCount > 0
-                            ? AppTheme.primaryColor.withValues(alpha: 0.6)
-                            : Colors.grey.withValues(alpha: 0.4),
-                        dp.totalCount > 0
-                            ? AppTheme.primaryColor.withValues(alpha: 0.15)
-                            : Colors.grey.withValues(alpha: 0.1),
-                        AppTheme.card,
-                      ],
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          dp.totalCount > 0
-                              ? Icons.download_rounded
-                              : Icons.download_outlined,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              AppLocale.tr('downloads'),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            if (dp.totalCount > 0)
-                              Text(
-                                '${dp.completedCount} ${AppLocale.tr('completed')}, '
-                                '${dp.activeCount} ${AppLocale.tr('active')}, '
-                                '${dp.failedCount} ${AppLocale.tr('failed')}',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.7),
-                                  fontSize: 12,
-                                ),
-                              )
-                            else
-                              Text(
-                                'Start downloading',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.7),
-                                  fontSize: 13,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      if (dp.totalCount > 0) ...[
-                        if (dp.activeCount > 0)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryColor,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${dp.activeCount}',
-                              style: TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        if (dp.failedCount > 0) ...[
-                          const SizedBox(width: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppTheme.errorColor,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${dp.failedCount}',
-                              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      ],
-                      const SizedBox(width: 8),
-                      Icon(Icons.arrow_forward_ios_rounded,
-                          size: 16, color: Colors.white.withValues(alpha: 0.5)),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 24),
       ],
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  String _timeGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return AppLocale.tr('good_morning');
+    if (hour < 18) return AppLocale.tr('good_afternoon');
+    return AppLocale.tr('good_evening');
   }
+}
 
-  void _showCreatePlaylistDialog(BuildContext context) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: Text(AppLocale.tr('new_playlist'),
-            style: TextStyle(color: AppTheme.textPrimary)),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          style: TextStyle(color: AppTheme.textPrimary),
-          decoration: InputDecoration(
-            hintText: AppLocale.tr('playlist_name'),
-            hintStyle: TextStyle(color: AppTheme.textTertiary),
-            filled: true,
-            fillColor: AppTheme.card,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
-            ),
-          ),
+class _QuickPickCard extends StatelessWidget {
+  final SongModel song;
+  final VoidCallback onTap;
+
+  const _QuickPickCard({required this.song, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: MelodiTheme.containerLow,
+          borderRadius: BorderRadius.circular(8),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(AppLocale.tr('cancel'),
-                style: TextStyle(color: AppTheme.textSecondary)),
-          ),
-          TextButton(
-            onPressed: () async {
-              if (controller.text.trim().isNotEmpty) {
-                await context
-                    .read<PlaylistProvider>()
-                    .createPlaylist(controller.text.trim());
-                Navigator.pop(ctx);
-              }
-            },
-            child: Text(AppLocale.tr('create'),
-                style: TextStyle(color: AppTheme.primaryColor)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showImportOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
           children: [
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppTheme.divider,
-                borderRadius: BorderRadius.circular(2),
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(8),
+                bottomLeft: Radius.circular(8),
               ),
+              child: song.albumArt != null
+                  ? Image.memory(
+                      song.albumArt!,
+                      width: 56,
+                      height: 56,
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                    )
+                  : Container(
+                      width: 56,
+                      height: 56,
+                      color: MelodiTheme.surfaceMid2,
+                      child: const Icon(Icons.music_note_rounded, color: MelodiTheme.onSurfaceVariant),
+                    ),
             ),
-            Text(
-              AppLocale.tr('import_music'),
-              style: TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                song.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontFamily: AppConstants.fontFamily,
+                  color: MelodiTheme.onSurface,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
                 ),
-                child: Icon(Icons.library_music_rounded,
-                    color: AppTheme.primaryColor),
               ),
-              title: Text(AppLocale.tr('scan_media_library'),
-                  style: TextStyle(color: AppTheme.textPrimary)),
-              subtitle: Text(AppLocale.tr('import_from_apple_music'),
-                  style: TextStyle(color: AppTheme.textTertiary)),
-              onTap: () {
-                Navigator.pop(context);
-                context.read<LibraryProvider>().scanMusic();
-              },
             ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.folder_open_rounded,
-                    color: Colors.orange),
-              ),
-              title: Text(AppLocale.tr('browse_files'),
-                  style: TextStyle(color: AppTheme.textPrimary)),
-              subtitle: Text(AppLocale.tr('select_audio_files'),
-                  style: TextStyle(color: AppTheme.textTertiary)),
-              onTap: () {
-                Navigator.pop(context);
-                context.read<LibraryProvider>().importFromFiles();
-              },
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.purple.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.folder_special_rounded,
-                    color: Colors.purple),
-              ),
-              title: Text(AppLocale.tr('import_from_folder_title'),
-                  style: TextStyle(color: AppTheme.textPrimary)),
-              subtitle: Text(AppLocale.tr('scan_specific_folder'),
-                  style: TextStyle(color: AppTheme.textTertiary)),
-              onTap: () {
-                Navigator.pop(context);
-                context.read<LibraryProvider>().importFromDirectory();
-              },
-            ),
-            const SizedBox(height: 16),
           ],
         ),
-      ),
-    );
-  }
-
-  void _navigateToAlbum(BuildContext context, AlbumModel album) {
-    final songs = context.read<LibraryProvider>().getSongsForAlbum(album);
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => _AlbumDetailScreen(album: album, songs: songs),
-      ),
-    );
-  }
-
-  void _navigateToArtist(BuildContext context, ArtistModel artist) {
-    final songs = context.read<LibraryProvider>().getSongsForArtist(artist);
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => _ArtistDetailScreen(artist: artist, songs: songs),
-      ),
-    );
-  }
-
-  void _navigateToPlaylist(BuildContext context, PlaylistModel playlist) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => PlaylistDetailScreen(playlist: playlist),
-      ),
-    );
-  }
-
-  void _showRenamePlaylistDialog(BuildContext context, PlaylistModel playlist) {
-    final controller = TextEditingController(text: playlist.name);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: Text(AppLocale.tr('rename_playlist'),
-            style: TextStyle(color: AppTheme.textPrimary)),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          style: TextStyle(color: AppTheme.textPrimary),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: AppTheme.card,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(AppLocale.tr('cancel'),
-                style: TextStyle(color: AppTheme.textSecondary)),
-          ),
-          TextButton(
-            onPressed: () {
-              final newName = controller.text.trim();
-              if (newName.isNotEmpty) {
-                context.read<PlaylistProvider>().renamePlaylist(playlist.id, newName);
-              }
-              Navigator.pop(ctx);
-            },
-            child: Text(AppLocale.tr('rename'),
-                style: TextStyle(color: AppTheme.primaryColor)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmDeletePlaylist(BuildContext context, PlaylistModel playlist) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: Text(AppLocale.tr('delete_playlist'),
-            style: TextStyle(color: AppTheme.textPrimary)),
-        content: Text(
-          '${AppLocale.tr('delete_playlist_warning')} "${playlist.name}"?',
-          style: TextStyle(color: AppTheme.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(AppLocale.tr('cancel'),
-                style: TextStyle(color: AppTheme.textSecondary)),
-          ),
-          TextButton(
-            onPressed: () {
-              context.read<PlaylistProvider>().deletePlaylist(playlist.id);
-              Navigator.pop(ctx);
-            },
-            child: Text(AppLocale.tr('delete'),
-                style: TextStyle(color: AppTheme.errorColor)),
-          ),
-        ],
       ),
     );
   }
@@ -1118,13 +436,13 @@ class _HomeTab extends StatelessWidget {
 class _QuickActionItem extends StatelessWidget {
   final IconData icon;
   final String label;
-  final List<Color> gradientColors;
+  final Color color;
   final VoidCallback onTap;
 
   const _QuickActionItem({
     required this.icon,
     required this.label,
-    required this.gradientColors,
+    required this.color,
     required this.onTap,
   });
 
@@ -1132,80 +450,57 @@ class _QuickActionItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              gradientColors[0].withValues(alpha: 0.7),
-              gradientColors[1].withValues(alpha: 0.3),
-              AppTheme.card,
-            ],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: Colors.white, size: 24),
           ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 24, color: Colors.white),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontFamily: AppConstants.fontFamily,
+              color: MelodiTheme.onSurface,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-class _SectionHeader extends StatelessWidget {
+class _SectionWidget extends StatelessWidget {
   final String title;
-  final VoidCallback? onSeeAll;
+  final Widget child;
 
-  const _SectionHeader({required this.title, this.onSeeAll});
+  const _SectionWidget({required this.title, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: Text(
             title,
-            style: TextStyle(
-              color: AppTheme.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: MelodiTheme.heading(size: 20),
           ),
-          if (onSeeAll != null)
-            GestureDetector(
-              onTap: onSeeAll,
-              child: Text(
-                AppLocale.tr('see_all'),
-                style: TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-        ],
-      ),
+        ),
+        child,
+      ],
     );
   }
 }
@@ -1221,74 +516,58 @@ class _RecentSongCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 120,
+        width: 130,
         margin: const EdgeInsets.only(right: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 120,
-              height: 120,
+              width: 130,
+              height: 130,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: AppTheme.card,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
                 child: song.albumArt != null
-                    ? Image.memory(song.albumArt!, fit: BoxFit.cover)
+                    ? Image.memory(
+                        song.albumArt!,
+                        fit: BoxFit.cover,
+                        gaplessPlayback: true,
+                      )
                     : Container(
-                        color: AppTheme.card,
-                        child: Icon(Icons.music_note_rounded,
-                            size: 40, color: AppTheme.textTertiary),
+                        color: MelodiTheme.surfaceMid2,
+                        child: const Icon(Icons.music_note_rounded, size: 40, color: MelodiTheme.onSurfaceVariant),
                       ),
               ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              song.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CreatePlaylistCard extends StatelessWidget {
-  final VoidCallback onCreate;
-  const _CreatePlaylistCard({required this.onCreate});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onCreate,
-      child: Container(
-        width: 120,
-        margin: const EdgeInsets.only(right: 12),
-        decoration: BoxDecoration(
-          color: AppTheme.card,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.divider, width: 1),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.add_circle_outline_rounded, size: 32, color: AppTheme.textSecondary),
             const SizedBox(height: 8),
             Text(
-              AppLocale.tr('create_playlist'),
-              style: TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: 12,
+              song.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontFamily: AppConstants.fontFamily,
+                color: MelodiTheme.onSurface,
+                fontSize: 13,
                 fontWeight: FontWeight.w500,
+              ),
+            ),
+            Text(
+              song.artist,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontFamily: AppConstants.fontFamily,
+                color: MelodiTheme.onSurfaceVariant,
+                fontSize: 11,
               ),
             ),
           ],
@@ -1298,422 +577,28 @@ class _CreatePlaylistCard extends StatelessWidget {
   }
 }
 
-class _MixCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color gradientColor;
-  final VoidCallback onTap;
-
-  const _MixCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.gradientColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 160,
-        margin: const EdgeInsets.only(right: 12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              gradientColor.withValues(alpha: 0.7),
-              gradientColor.withValues(alpha: 0.2),
-              AppTheme.card,
-            ],
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Icon(icon, size: 32, color: Colors.white),
-              const Spacer(),
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.7),
-                  fontSize: 11,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DiscoverCard extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _DiscoverCard({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 300,
-        margin: const EdgeInsets.only(right: 12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.primaryColor.withValues(alpha: 0.6),
-              AppTheme.primaryColor.withValues(alpha: 0.15),
-              AppTheme.card,
-            ],
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  color: Colors.white.withValues(alpha: 0.15),
-                ),
-                child: Icon(Icons.explore_rounded,
-                    size: 32, color: Colors.white),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      AppLocale.tr('album_discovery'),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      AppLocale.tr('new_releases'),
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.arrow_forward_ios_rounded,
-                  size: 16, color: Colors.white.withValues(alpha: 0.5)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LibraryHealthCard extends StatefulWidget {
-  @override
-  State<_LibraryHealthCard> createState() => _LibraryHealthCardState();
-}
-
-class _LibraryHealthCardState extends State<_LibraryHealthCard> {
-  int _issueCount = 0;
-  bool _loaded = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final db = DatabaseService.instance;
-    final missingArt = await db.getTracksMissingArt();
-    final missingMeta = await db.getTracksMissingMetadata();
-    _issueCount = missingArt.length + missingMeta.length;
-    _loaded = true;
-    if (mounted) setState(() {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_loaded) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-      child: GestureDetector(
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const LibraryHealthScreen()),
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                _issueCount > 0
-                    ? Colors.orange.withValues(alpha: 0.6)
-                    : AppTheme.primaryColor.withValues(alpha: 0.6),
-                _issueCount > 0
-                    ? Colors.orange.withValues(alpha: 0.15)
-                    : AppTheme.primaryColor.withValues(alpha: 0.15),
-                AppTheme.card,
-              ],
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  _issueCount > 0
-                      ? Icons.warning_amber_rounded
-                      : Icons.check_circle_rounded,
-                  color: Colors.white,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AppLocale.tr('library_health'),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _issueCount > 0
-                          ? '$_issueCount ${AppLocale.tr('issues_found')}'
-                          : AppLocale.tr('no_issues'),
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _issueCount > 0
-                      ? Colors.orange
-                      : const Color(0xFF34C759),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _issueCount > 0 ? Icons.warning_amber_rounded : Icons.check_rounded,
-                      size: 14,
-                      color: Colors.black,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _issueCount > 0
-                          ? '${_issueCount}'
-                          : 'OK',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AlbumDetailScreen extends StatelessWidget {
-  final AlbumModel album;
-  final List<SongModel> songs;
-
-  const _AlbumDetailScreen({required this.album, required this.songs});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: Text(album.name),
-      ),
-      body: songs.isEmpty
-          ? Center(child: Text(AppLocale.tr('no_songs'), style: TextStyle(color: AppTheme.textSecondary)))
-          : ListView.builder(
-              itemCount: songs.length,
-              itemBuilder: (context, index) {
-                final song = songs[index];
-                return SongTile(
-                  song: song,
-                  onTap: () => context.read<PlayerProvider>().playFromQueue(songs, index),
-                  onFavorite: () => context.read<LibraryProvider>().toggleFavorite(song),
-                  onViewArtist: () => _navigateToArtistFromSong(context, song),
-                );
-              },
-              ),
-        );
-  }
-
-  void _navigateToArtistFromSong(BuildContext context, SongModel song) {
-    final lib = context.read<LibraryProvider>();
-    final artists = lib.artists.where((a) => a.name == song.artist).toList();
-    if (artists.isNotEmpty) {
-      final artistSongs = lib.getSongsForArtist(artists.first);
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => _ArtistDetailScreen(artist: artists.first, songs: artistSongs),
-        ),
-      );
-    }
-  }
-}
-
-class _ArtistDetailScreen extends StatelessWidget {
-  final ArtistModel artist;
-  final List<SongModel> songs;
-
-  const _ArtistDetailScreen({required this.artist, required this.songs});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: Text(artist.name),
-      ),
-      body: songs.isEmpty
-          ? Center(
-              child: Text(AppLocale.tr('no_songs'), style: TextStyle(color: AppTheme.textSecondary)))
-          : ListView.builder(
-              itemCount: songs.length,
-              itemBuilder: (context, index) {
-                final song = songs[index];
-                return SongTile(
-                  song: song,
-                  onTap: () =>
-                      context.read<PlayerProvider>().playFromQueue(songs, index),
-                  onFavorite: () =>
-                      context.read<LibraryProvider>().toggleFavorite(song),
-                  onViewAlbum: () => _navigateToAlbumFromSong(context, song),
-                );
-              },
-            ),
-     );
-  }
-}
-
-class _FadeSlideIn extends StatefulWidget {
-  final Widget child;
+class _FadeSlideIn extends StatelessWidget {
   final int index;
-  const _FadeSlideIn({required this.child, required this.index});
-  @override
-  State<_FadeSlideIn> createState() => _FadeSlideInState();
-}
+  final Widget child;
 
-class _FadeSlideInState extends State<_FadeSlideIn>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnim;
-  late Animation<Offset> _slideAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    final delay = widget.index * 100;
-    _fadeAnim = CurvedAnimation(
-      parent: _controller,
-      curve: Interval(delay / 1000, (delay + 500) / 1000,
-          curve: Curves.easeOut),
-    );
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.05),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Interval(delay / 1000, (delay + 500) / 1000,
-          curve: Curves.easeOutCubic),
-    ));
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  const _FadeSlideIn({required this.index, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fadeAnim,
-      child: SlideTransition(
-        position: _slideAnim,
-        child: widget.child,
-      ),
-    );
-  }
-}
-
-void _navigateToAlbumFromSong(BuildContext context, SongModel song) {
-  final lib = context.read<LibraryProvider>();
-  final albums = lib.albums.where((a) => a.name == song.album && a.artist == song.artist).toList();
-  if (albums.isNotEmpty) {
-    final albumSongs = lib.getSongsForAlbum(albums.first);
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => _AlbumDetailScreen(album: albums.first, songs: albumSongs),
-      ),
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 400 + (index * 100)),
+      curve: Curves.easeOut,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+      child: child,
     );
   }
 }

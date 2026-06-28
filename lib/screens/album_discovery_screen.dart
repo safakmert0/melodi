@@ -57,7 +57,7 @@ class _AlbumDiscoveryScreenState extends State<AlbumDiscoveryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
         title: Text(AppLocale.tr('album_discovery')),
       ),
@@ -66,7 +66,7 @@ class _AlbumDiscoveryScreenState extends State<AlbumDiscoveryScreen> {
           await _loadNewReleases();
           await _loadGenreAlbums(_selectedGenre);
         },
-        color: AppTheme.primaryColor,
+        color: MelodiTheme.primaryGreen,
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
@@ -77,7 +77,7 @@ class _AlbumDiscoveryScreenState extends State<AlbumDiscoveryScreen> {
                 child: Text(
                   AppLocale.tr('new_releases'),
                   style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: MelodiTheme.onSurface,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
@@ -90,7 +90,7 @@ class _AlbumDiscoveryScreenState extends State<AlbumDiscoveryScreen> {
                       height: 200,
                       child: Center(
                         child: CircularProgressIndicator(
-                            color: AppTheme.primaryColor, strokeWidth: 2),
+                            color: MelodiTheme.primaryGreen, strokeWidth: 2),
                       ),
                     )
                   : _newReleases.isEmpty
@@ -98,7 +98,7 @@ class _AlbumDiscoveryScreenState extends State<AlbumDiscoveryScreen> {
                           padding: const EdgeInsets.all(32),
                           child: Center(
                             child: Text(AppLocale.tr('no_albums_found'),
-                                style: TextStyle(color: AppTheme.textSecondary)),
+                                style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
                           ),
                         )
                       : SizedBox(
@@ -129,7 +129,7 @@ class _AlbumDiscoveryScreenState extends State<AlbumDiscoveryScreen> {
                 child: Text(
                   AppLocale.tr('browse_genre'),
                   style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: MelodiTheme.onSurface,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
@@ -155,12 +155,12 @@ class _AlbumDiscoveryScreenState extends State<AlbumDiscoveryScreen> {
                           setState(() => _selectedGenre = genre);
                           _loadGenreAlbums(genre);
                         },
-                        selectedColor: AppTheme.primaryColor,
-                        backgroundColor: AppTheme.card,
+                        selectedColor: MelodiTheme.primaryGreen,
+                        backgroundColor: MelodiTheme.containerLow,
                         labelStyle: TextStyle(
                           color: isSelected
                               ? Colors.black
-                              : AppTheme.textPrimary,
+                              : MelodiTheme.onSurface,
                           fontSize: 13,
                         ),
                         side: BorderSide.none,
@@ -176,7 +176,7 @@ class _AlbumDiscoveryScreenState extends State<AlbumDiscoveryScreen> {
                       height: 200,
                       child: Center(
                         child: CircularProgressIndicator(
-                            color: AppTheme.primaryColor, strokeWidth: 2),
+                            color: MelodiTheme.primaryGreen, strokeWidth: 2),
                       ),
                     )
                   : _genreAlbums.isEmpty
@@ -184,7 +184,7 @@ class _AlbumDiscoveryScreenState extends State<AlbumDiscoveryScreen> {
                           padding: const EdgeInsets.all(32),
                           child: Center(
                             child: Text(AppLocale.tr('no_albums_found'),
-                                style: TextStyle(color: AppTheme.textSecondary)),
+                                style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
                           ),
                         )
                       : GridView.builder(
@@ -247,23 +247,23 @@ class _AlbumCard extends StatelessWidget {
               child: Container(
                 width: 150,
                 height: 150,
-                color: AppTheme.card,
+                color: MelodiTheme.containerLow,
                 child: album.imageUrl != null
                     ? CachedNetworkImage(
                         imageUrl: album.imageUrl!,
                         fit: BoxFit.cover,
                         placeholder: (_, __) => Container(
-                          color: AppTheme.card,
+                          color: MelodiTheme.containerLow,
                           child: Icon(Icons.album_rounded,
-                              size: 48, color: AppTheme.textTertiary),
+                              size: 48, color: MelodiTheme.textMuted),
                         ),
                         errorWidget: (_, __, ___) => Icon(
                             Icons.album_rounded,
                             size: 48,
-                            color: AppTheme.textTertiary),
+                            color: MelodiTheme.textMuted),
                       )
                     : Icon(Icons.album_rounded,
-                        size: 48, color: AppTheme.textTertiary),
+                        size: 48, color: MelodiTheme.textMuted),
               ),
             ),
             const SizedBox(height: 8),
@@ -272,7 +272,7 @@ class _AlbumCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: AppTheme.textPrimary,
+                color: MelodiTheme.onSurface,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -282,7 +282,7 @@ class _AlbumCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: AppTheme.textSecondary,
+                color: MelodiTheme.onSurfaceVariant,
                 fontSize: 11,
               ),
             ),
@@ -290,7 +290,7 @@ class _AlbumCard extends StatelessWidget {
               Text(
                 '${album.year}',
                 style: TextStyle(
-                  color: AppTheme.textTertiary,
+                  color: MelodiTheme.textMuted,
                   fontSize: 11,
                 ),
               ),

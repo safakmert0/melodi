@@ -65,10 +65,10 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       body: _isLoading
           ? Center(
-              child: CircularProgressIndicator(color: AppTheme.primaryColor))
+              child: CircularProgressIndicator(color: MelodiTheme.primaryGreen))
           : CustomScrollView(
               slivers: [
                 _buildAppBar(context),
@@ -79,7 +79,7 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                     child: Text(
                       AppLocale.tr('top_tracks'),
                       style: TextStyle(
-                        color: AppTheme.textPrimary,
+                        color: MelodiTheme.onSurface,
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -92,7 +92,7 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                       padding: const EdgeInsets.all(32),
                       child: Text(AppLocale.tr('no_songs'),
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: AppTheme.textSecondary)),
+                          style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
                     ),
                   )
                 else
@@ -109,7 +109,7 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                             child: Text(
                               '${index + 1}',
                               style: TextStyle(
-                                color: AppTheme.textTertiary,
+                                color: MelodiTheme.textMuted,
                                 fontSize: 13,
                               ),
                             ),
@@ -119,7 +119,7 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: AppTheme.textPrimary,
+                              color: MelodiTheme.onSurface,
                               fontSize: 15,
                             ),
                           ),
@@ -128,14 +128,14 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: AppTheme.textSecondary,
+                              color: MelodiTheme.onSurfaceVariant,
                               fontSize: 13,
                             ),
                           ),
                           trailing: durationStr.isNotEmpty
                               ? Text(durationStr,
                                   style: TextStyle(
-                                      color: AppTheme.textTertiary,
+                                      color: MelodiTheme.textMuted,
                                       fontSize: 12))
                               : null,
                           onTap: () {
@@ -157,7 +157,7 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                     child: Text(
                       AppLocale.tr('discography'),
                       style: TextStyle(
-                        color: AppTheme.textPrimary,
+                        color: MelodiTheme.onSurface,
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -170,7 +170,7 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                       padding: const EdgeInsets.all(32),
                       child: Text(AppLocale.tr('no_albums_found'),
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: AppTheme.textSecondary)),
+                          style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
                     ),
                   )
                 else
@@ -210,7 +210,7 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                       child: Text(
                         AppLocale.tr('related_artists'),
                         style: TextStyle(
-                          color: AppTheme.textPrimary,
+                          color: MelodiTheme.onSurface,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
@@ -257,7 +257,7 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
     return SliverAppBar(
       expandedHeight: 280,
       pinned: true,
-      backgroundColor: AppTheme.background,
+      backgroundColor: MelodiTheme.background,
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           fit: StackFit.expand,
@@ -267,22 +267,22 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                 imageUrl: _artist!.imageUrl!,
                 fit: BoxFit.cover,
                 placeholder: (_, __) => Container(
-                  color: AppTheme.card,
+                  color: MelodiTheme.containerLow,
                   child: Icon(Icons.person_rounded,
-                      size: 80, color: AppTheme.textTertiary),
+                      size: 80, color: MelodiTheme.textMuted),
                 ),
                 errorWidget: (_, __, ___) => Container(
-                  color: AppTheme.card,
+                  color: MelodiTheme.containerLow,
                   child: Icon(Icons.person_rounded,
-                      size: 80, color: AppTheme.textTertiary),
+                      size: 80, color: MelodiTheme.textMuted),
                 ),
               )
             else
               Container(
-                color: AppTheme.card,
+                color: MelodiTheme.containerLow,
                 child: Center(
                   child: Icon(Icons.person_rounded,
-                      size: 100, color: AppTheme.textTertiary),
+                      size: 100, color: MelodiTheme.textMuted),
                 ),
               ),
             Container(
@@ -292,7 +292,7 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    AppTheme.background,
+                    MelodiTheme.background,
                   ],
                   stops: const [0.5, 1.0],
                 ),
@@ -314,7 +314,7 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
           Text(
             artist?.name ?? widget.artistName,
             style: TextStyle(
-              color: AppTheme.textPrimary,
+              color: MelodiTheme.onSurface,
               fontSize: 28,
               fontWeight: FontWeight.bold,
             ),
@@ -324,7 +324,7 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
             Text(
               '${_formatFollowers(artist!.followers!)} ${AppLocale.tr('followers')}',
               style: TextStyle(
-                color: AppTheme.textSecondary,
+                color: MelodiTheme.onSurfaceVariant,
                 fontSize: 14,
               ),
             ),
@@ -354,8 +354,8 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                                 : AppLocale.tr('unfollow'))
                             : 'Failed'),
                         backgroundColor: success
-                            ? AppTheme.primaryColor
-                            : AppTheme.errorColor,
+                            ? MelodiTheme.primaryGreen
+                            : MelodiTheme.errorRed,
                       ),
                     );
                   }
@@ -376,8 +376,8 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                   icon: const Icon(Icons.shuffle_rounded, size: 18),
                   label: Text(AppLocale.tr('play')),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.textPrimary,
-                    side: BorderSide(color: AppTheme.divider),
+                    foregroundColor: MelodiTheme.onSurface,
+                    side: BorderSide(color: MelodiTheme.outlineVariant),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -436,9 +436,9 @@ class _FollowButton extends StatelessWidget {
       ),
       style: FilledButton.styleFrom(
         backgroundColor: isFollowing
-            ? AppTheme.cardHover
-            : AppTheme.primaryColor,
-        foregroundColor: isFollowing ? AppTheme.textPrimary : Colors.black,
+            ? MelodiTheme.surfaceHigh
+            : MelodiTheme.primaryGreen,
+        foregroundColor: isFollowing ? MelodiTheme.onSurface : Colors.black,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
@@ -467,16 +467,16 @@ class _RelatedArtistCard extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 45,
-              backgroundColor: AppTheme.card,
+              backgroundColor: MelodiTheme.containerLow,
               child: CircleAvatar(
                 radius: 43,
-                backgroundColor: AppTheme.cardHover,
+                backgroundColor: MelodiTheme.surfaceHigh,
                 backgroundImage: artist.imageUrl != null
                     ? CachedNetworkImageProvider(artist.imageUrl!)
                     : null,
                 child: artist.imageUrl == null
                     ? Icon(Icons.person_rounded,
-                        size: 36, color: AppTheme.textTertiary)
+                        size: 36, color: MelodiTheme.textMuted)
                     : null,
               ),
             ),
@@ -487,7 +487,7 @@ class _RelatedArtistCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: AppTheme.textPrimary,
+                color: MelodiTheme.onSurface,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
@@ -520,23 +520,23 @@ class _AlbumGridCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               child: Container(
                 width: double.infinity,
-                color: AppTheme.card,
+                color: MelodiTheme.containerLow,
                 child: album.imageUrl != null
                     ? CachedNetworkImage(
                         imageUrl: album.imageUrl!,
                         fit: BoxFit.cover,
                         placeholder: (_, __) => Container(
-                          color: AppTheme.card,
+                          color: MelodiTheme.containerLow,
                           child: Icon(Icons.album_rounded,
-                              size: 40, color: AppTheme.textTertiary),
+                              size: 40, color: MelodiTheme.textMuted),
                         ),
                         errorWidget: (_, __, ___) => Icon(
                             Icons.album_rounded,
                             size: 40,
-                            color: AppTheme.textTertiary),
+                            color: MelodiTheme.textMuted),
                       )
                     : Icon(Icons.album_rounded,
-                        size: 40, color: AppTheme.textTertiary),
+                        size: 40, color: MelodiTheme.textMuted),
               ),
             ),
           ),
@@ -546,7 +546,7 @@ class _AlbumGridCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: AppTheme.textPrimary,
+              color: MelodiTheme.onSurface,
               fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
@@ -556,7 +556,7 @@ class _AlbumGridCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: AppTheme.textSecondary,
+              color: MelodiTheme.onSurfaceVariant,
               fontSize: 11,
             ),
           ),

@@ -46,15 +46,15 @@ class ArtworkImage extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                AppTheme.card,
-                AppTheme.cardHover,
+                MelodiTheme.containerLow,
+                MelodiTheme.surfaceHigh,
               ],
             ),
           ),
           child: Icon(
             Icons.music_note_rounded,
             size: size * 0.45,
-            color: AppTheme.textSecondary,
+            color: MelodiTheme.onSurfaceVariant,
           ),
         );
   }
@@ -88,7 +88,7 @@ class ArtworkBackground extends StatelessWidget {
                 end: Alignment.bottomCenter,
                 colors: [
                   Colors.transparent,
-                  AppTheme.background,
+                  MelodiTheme.background,
                 ],
                 stops: [0.3, 1.0],
               ),
