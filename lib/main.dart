@@ -35,6 +35,11 @@ import 'services/scrobble_service.dart';
 import 'services/like_mirror_service.dart';
 import 'services/queue_manager.dart';
 import 'services/resume_playback.dart';
+import 'services/notification_service.dart';
+import 'services/bluetooth_service.dart';
+import 'services/audio_effects_service.dart';
+import 'services/widget_service.dart';
+import 'services/airplay_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
 
@@ -60,6 +65,10 @@ Future<void> main() async {
 
     final db = DatabaseService.instance;
     await db.database;
+
+    await NotificationService.instance.init();
+    await AudioEffectsService().initialize();
+    BluetoothService.instance.detectBluetoothConnection();
 
     AppLogger.i('Services initialized');
 

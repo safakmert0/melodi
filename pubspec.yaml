@@ -53,6 +53,9 @@ dependencies:
   # Sharing
   share_plus: ^12.0.2
 
+  # Local notifications
+  flutter_local_notifications: ^18.0.1
+
   # Color extraction from images
   palette_generator: ^0.3.3
 

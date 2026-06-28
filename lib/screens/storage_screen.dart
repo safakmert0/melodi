@@ -6,6 +6,7 @@ import '../core/constants.dart';
 import '../core/localization.dart';
 import '../services/storage_manager.dart';
 import '../services/database_service.dart';
+import '../services/database_backup.dart';
 
 class StorageScreen extends StatefulWidget {
   const StorageScreen({super.key});
@@ -374,6 +375,23 @@ class _StorageScreenState extends State<StorageScreen> {
             ),
           ),
         ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _backupDatabase,
+            icon: Icon(Icons.backup_rounded, size: 18),
+            label: Text('Veritabanı Yedekle'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.primaryColor,
+              side: BorderSide(color: AppTheme.primaryColor),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -450,5 +468,37 @@ class _StorageScreenState extends State<StorageScreen> {
       }
     }
     if (mounted) setState(() => _isMoving = false);
+  }
+
+  Future<void> _backupDatabase() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: Text('Veritabanı Yedekle', style: TextStyle(color: AppTheme.textPrimary)),
+        content: Text('Veritabanı yedeklenecek. Devam edilsin mi?', style: TextStyle(color: AppTheme.textSecondary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(AppLocale.tr('cancel'), style: TextStyle(color: AppTheme.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Yedekle', style: TextStyle(color: AppTheme.primaryColor)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    final backup = DatabaseBackup();
+    final path = await backup.createBackup();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(path != null ? 'Yedek oluşturuldu: $path' : 'Yedekleme başarısız'),
+          backgroundColor: path != null ? AppTheme.primaryColor : AppTheme.errorColor,
+        ),
+      );
+    }
   }
 }

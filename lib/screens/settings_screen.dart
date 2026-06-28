@@ -26,13 +26,12 @@ import '../services/library_health_service.dart';
 import '../services/playback_service.dart';
 import '../services/file_organizer.dart';
 import '../services/stream_cache.dart';
+import '../services/audiobook_service.dart';
 import 'audio_quality_screen.dart';
 import '../widgets/sleep_timer_sheet.dart';
 import '../widgets/equalizer_sheet.dart';
 import '../widgets/crossfade_slider.dart';
 import '../widgets/spotify_webview_login.dart';
-import '../services/spotify_cookie_auth.dart';
-import '../services/youtube_cookie_auth.dart';
 import 'diagnostics_screen.dart';
 import 'failed_downloads_screen.dart';
 import 'downloads_screen.dart';
@@ -41,6 +40,7 @@ import 'shared_urls_screen.dart';
 import 'library_health_screen.dart';
 import 'storage_screen.dart';
 import '../widgets/ytmusic_webview_login.dart';
+import 'backend_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -65,11 +65,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final crossfade = await db.getSetting('crossfade_seconds');
     final shuffle = await db.getSetting('auto_shuffle');
     final gapless = await db.getSetting('gapless_playback');
+    final btAutoEq = await db.getSetting('bluetooth_auto_eq');
     if (mounted) {
       setState(() {
         _crossfadeSeconds = double.tryParse(crossfade ?? '') ?? 0;
         _autoShuffle = shuffle == 'true';
         _gaplessPlayback = gapless != 'false';
+        _bluetoothAutoEq = btAutoEq == 'true';
       });
     }
   }
@@ -84,6 +86,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   double _crossfadeSeconds = 0;
   bool _autoShuffle = false;
   bool _gaplessPlayback = true;
+  bool _bluetoothAutoEq = false;
   String _watchedFolderPath = '';
 
   String _formatBytes(int bytes) {
@@ -106,10 +109,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           physics: const BouncingScrollPhysics(),
           slivers: [
             SliverAppBar(
+              backgroundColor: const Color(0xFF131313),
+              surfaceTintColor: Colors.transparent,
               title: Text(
                 AppLocale.tr('settings'),
-                style: TextStyle(
-                  color: AppTheme.textPrimary,
+                style: const TextStyle(
+                  color: Color(0xFFe5e2e1),
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                 ),
@@ -541,21 +546,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 8),
                   _SettingsTile(
-                    icon: Icons.cookie_rounded,
-                    iconColor: Colors.green,
-                    title: AppLocale.tr('spotify_cookie_login'),
-                    subtitle: AppLocale.tr('cookie_auth_desc'),
+                    icon: Icons.dns_rounded,
+                    iconColor: AppTheme.primaryColor,
+                    title: 'YT-DLP Backend',
+                    subtitle: 'Gerçek yt-dlp motoru için backend ayarları',
                     trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
-                    onTap: () => _showSpotifyCookieDialog(context),
-                  ),
-                  const SizedBox(height: 8),
-                  _SettingsTile(
-                    icon: Icons.cookie_rounded,
-                    iconColor: Colors.red,
-                    title: AppLocale.tr('yt_cookie_login'),
-                    subtitle: AppLocale.tr('cookie_auth_desc'),
-                    trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
-                    onTap: () => _showYouTubeCookieDialog(context),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const BackendSettingsScreen()),
+                    ),
                   ),
                   const SizedBox(height: 8),
                   _SettingsTile(
@@ -650,6 +648,129 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const _EqualizerPage()),
                         ),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.equalizer,
+                        iconColor: const Color(0xFF53e076),
+                        title: 'Audio Effects',
+                        subtitle: 'Spatial audio, reverb, bass boost',
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const _AudioEffectsPage()),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.tune,
+                        iconColor: Colors.teal,
+                        title: 'EQ Presets',
+                        subtitle: 'Choose from preset equalizer profiles',
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () => _showEqPresetsDialog(context),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.queue_music,
+                        iconColor: Colors.cyan,
+                        title: 'Gapless Playback',
+                        subtitle: 'Seamless transitions between tracks',
+                        trailing: Switch(
+                          value: _gaplessPlayback,
+                          onChanged: (v) {
+                            setState(() => _gaplessPlayback = v);
+                            context.read<PlayerProvider>().setGaplessPlayback(v);
+                            DatabaseService.instance.setSetting('gapless_playback', v.toString());
+                          },
+                          activeColor: const Color(0xFF53e076),
+                        ),
+                        onTap: () {
+                          final v = !_gaplessPlayback;
+                          setState(() => _gaplessPlayback = v);
+                          context.read<PlayerProvider>().setGaplessPlayback(v);
+                          DatabaseService.instance.setSetting('gapless_playback', v.toString());
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.swap_horiz,
+                        iconColor: Colors.indigo,
+                        title: 'Crossfade',
+                        subtitle: _crossfadeSeconds.toInt() > 0
+                            ? '${_crossfadeSeconds.toInt()} seconds'
+                            : AppLocale.tr('off'),
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () => _showCrossfadeSlider(context, context.read<PlayerProvider>()),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.bluetooth,
+                        iconColor: Colors.blue,
+                        title: 'Bluetooth Auto-EQ',
+                        subtitle: 'Automatically adjust EQ for Bluetooth devices',
+                        trailing: Switch(
+                          value: _bluetoothAutoEq,
+                          onChanged: (v) {
+                            setState(() => _bluetoothAutoEq = v);
+                            DatabaseService.instance.setSetting('bluetooth_auto_eq', v.toString());
+                          },
+                          activeColor: const Color(0xFF53e076),
+                        ),
+                        onTap: () {
+                          setState(() => _bluetoothAutoEq = !_bluetoothAutoEq);
+                          DatabaseService.instance.setSetting('bluetooth_auto_eq', _bluetoothAutoEq.toString());
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.mic,
+                        iconColor: Colors.orange,
+                        title: 'Siri Shortcuts',
+                        subtitle: 'Configure voice control shortcuts',
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const _VoiceControlPage()),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.cast,
+                        iconColor: Colors.deepPurple,
+                        title: 'AirPlay',
+                        subtitle: 'Stream to available AirPlay devices',
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () => _showAirPlayDevicesDialog(context),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.podcast,
+                        iconColor: Colors.pink,
+                        title: 'Podcast',
+                        subtitle: 'Manage podcast subscriptions',
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const _PodcastSubscriptionsPage()),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.menu_book,
+                        iconColor: Colors.brown,
+                        title: 'Audiobook',
+                        subtitle: 'Browse audiobook library',
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const _AudiobookLibraryPage()),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _SettingsTile(
+                        icon: Icons.widgets,
+                        iconColor: Colors.amber,
+                        title: 'Widget',
+                        subtitle: 'Configure home screen widgets',
+                        trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+                        onTap: () => _showWidgetConfigDialog(context),
                       ),
                     ],
                   ),
@@ -1594,158 +1715,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showSpotifyCookieDialog(BuildContext context) {
-    final spDcController = TextEditingController();
-    final spKeyController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: Text(AppLocale.tr('spotify_cookie_login'),
-            style: TextStyle(color: AppTheme.textPrimary)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(AppLocale.tr('cookie_auth_desc'),
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-              const SizedBox(height: 16),
-              TextField(
-                controller: spDcController,
-                decoration: InputDecoration(
-                  labelText: AppLocale.tr('sp_dc_label'),
-                  labelStyle: TextStyle(color: AppTheme.textSecondary),
-                  filled: true,
-                  fillColor: AppTheme.card,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-                style: TextStyle(color: AppTheme.textPrimary),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: spKeyController,
-                decoration: InputDecoration(
-                  labelText: AppLocale.tr('sp_key_label'),
-                  labelStyle: TextStyle(color: AppTheme.textSecondary),
-                  filled: true,
-                  fillColor: AppTheme.card,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-                style: TextStyle(color: AppTheme.textPrimary),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(AppLocale.tr('cancel'),
-                style: TextStyle(color: AppTheme.textSecondary)),
-          ),
-          TextButton(
-            onPressed: () async {
-              final spDc = spDcController.text.trim();
-              final spKey = spKeyController.text.trim();
-              if (spDc.isEmpty) return;
-              final auth = SpotifyCookieAuth();
-              final success = await auth.loginWithCookies(spDc, spKey);
-              if (success) {
-                await auth.storeCookiesEncrypted(spDc, spKey);
-                if (ctx.mounted) {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(AppLocale.tr('connected_as')),
-                      backgroundColor: AppTheme.primaryColor,
-                    ),
-                  );
-                }
-              } else {
-                if (ctx.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(AppLocale.tr('auth_failed_try_again')),
-                      backgroundColor: AppTheme.errorColor,
-                    ),
-                  );
-                }
-              }
-            },
-            child: Text(AppLocale.tr('connect_spotify'),
-                style: TextStyle(color: AppTheme.primaryColor)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showYouTubeCookieDialog(BuildContext context) {
-    final cookieController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: Text(AppLocale.tr('yt_cookie_login'),
-            style: TextStyle(color: AppTheme.textPrimary)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(AppLocale.tr('cookie_auth_desc'),
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-            const SizedBox(height: 16),
-            TextField(
-              controller: cookieController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: AppLocale.tr('yt_cookie_label'),
-                labelStyle: TextStyle(color: AppTheme.textSecondary),
-                filled: true,
-                fillColor: AppTheme.card,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-              style: TextStyle(color: AppTheme.textPrimary),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(AppLocale.tr('cancel'),
-                style: TextStyle(color: AppTheme.textSecondary)),
-          ),
-          TextButton(
-            onPressed: () async {
-              final cookie = cookieController.text.trim();
-              if (cookie.isEmpty) return;
-              final auth = YouTubeCookieAuth();
-              auth.loginWithCookies(cookie);
-              await auth.storeCookiesEncrypted(cookie);
-              if (ctx.mounted) {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(AppLocale.tr('connected_as')),
-                    backgroundColor: AppTheme.primaryColor,
-                  ),
-                );
-              }
-            },
-            child: Text(AppLocale.tr('connect_youtube_music'),
-                style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _PlaybackTile extends StatefulWidget {
@@ -1829,8 +1798,8 @@ class _CollapsibleSectionState extends State<_CollapsibleSection> {
                 Expanded(
                   child: Text(
                     widget.title.toUpperCase(),
-                    style: TextStyle(
-                      color: AppTheme.textTertiary,
+                    style: const TextStyle(
+                      color: Color(0xFF53e076),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 1.5,
@@ -1839,7 +1808,7 @@ class _CollapsibleSectionState extends State<_CollapsibleSection> {
                 ),
                 Icon(
                   _expanded ? Icons.expand_less : Icons.expand_more,
-                  color: AppTheme.textTertiary,
+                  color: const Color(0xFF53e076),
                   size: 20,
                 ),
               ],
@@ -1869,8 +1838,8 @@ class _SectionTitle extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       child: Text(
         title.toUpperCase(),
-        style: TextStyle(
-          color: AppTheme.textTertiary,
+        style: const TextStyle(
+          color: Color(0xFF53e076),
           fontSize: 12,
           fontWeight: FontWeight.w600,
           letterSpacing: 1.5,
@@ -2445,38 +2414,6 @@ class _YtMusicSettingsPage extends StatefulWidget {
 }
 
 class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
-  final _cookieController = TextEditingController();
-
-  @override
-  void dispose() {
-    _cookieController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submitCookie(YTMusicProvider ytmusic) async {
-    final cookie = _cookieController.text.trim();
-    if (cookie.isEmpty) return;
-    final success = await ytmusic.connectWithCookie(cookie);
-    if (context.mounted) {
-      if (success) {
-        context.read<SyncProvider>().triggerSync();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocale.tr('connected_as')),
-            backgroundColor: AppTheme.primaryColor,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(ytmusic.error ?? AppLocale.tr('auth_failed_try_again')),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -2618,59 +2555,6 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(child: Divider(color: AppTheme.divider)),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(AppLocale.tr('cookie_paste'),
-                        style: TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
-                  ),
-                  Expanded(child: Divider(color: AppTheme.divider)),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                AppLocale.tr('ytmusic_cookie_instructions'),
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.5),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _cookieController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: AppLocale.tr('paste_ytmusic_cookie'),
-                  hintStyle: TextStyle(color: AppTheme.textTertiary),
-                  filled: true,
-                  fillColor: AppTheme.surface,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.all(16),
-                ),
-                style: TextStyle(color: AppTheme.textPrimary, fontSize: 13),
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _submitCookie(ytmusic),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => _submitCookie(ytmusic),
-                  icon: const Icon(Icons.content_paste_rounded),
-                  label: Text(AppLocale.tr('connect_youtube_music')),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.withValues(alpha: 0.7),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
               if (ytmusic.error != null) ...[
                 const SizedBox(height: 16),
                 Text(ytmusic.error!, style: TextStyle(color: AppTheme.errorColor, fontSize: 13)),
@@ -2691,38 +2575,6 @@ class _SpotifySettingsPage extends StatefulWidget {
 }
 
 class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
-  final _cookieController = TextEditingController();
-
-  @override
-  void dispose() {
-    _cookieController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submitCookie(SpotifyProvider spotify) async {
-    final cookie = _cookieController.text.trim();
-    if (cookie.isEmpty) return;
-    final success = await spotify.connectWithCookie(cookie);
-    if (context.mounted) {
-      if (success) {
-        context.read<SyncProvider>().triggerSync();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocale.tr('connected_as')),
-            backgroundColor: AppTheme.primaryColor,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(spotify.error ?? AppLocale.tr('auth_failed_try_again')),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -2874,59 +2726,6 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                   label: Text(AppLocale.tr('login_with_browser')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(child: Divider(color: AppTheme.divider)),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(AppLocale.tr('cookie_paste'),
-                        style: TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
-                  ),
-                  Expanded(child: Divider(color: AppTheme.divider)),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                AppLocale.tr('spotify_cookie_instructions'),
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.5),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _cookieController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: AppLocale.tr('paste_sp_dc_cookie'),
-                  hintStyle: TextStyle(color: AppTheme.textTertiary),
-                  filled: true,
-                  fillColor: AppTheme.surface,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.all(16),
-                ),
-                style: TextStyle(color: AppTheme.textPrimary, fontSize: 13),
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _submitCookie(spotify),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => _submitCookie(spotify),
-                  icon: const Icon(Icons.content_paste_rounded),
-                  label: Text(AppLocale.tr('spotify')),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.withValues(alpha: 0.7),
                     foregroundColor: Colors.black,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
@@ -4321,27 +4120,34 @@ class _SettingsTile extends StatelessWidget {
     Widget? subtitleWidget;
     if (subtitle is String) {
       subtitleWidget = Text(subtitle as String,
-          style: TextStyle(
-              color: AppTheme.textSecondary, fontSize: 12));
+          style: const TextStyle(
+              color: Color(0xFFbccbb9), fontSize: 12));
     } else if (subtitle is Widget) {
       subtitleWidget = subtitle as Widget;
     }
 
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: iconColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, color: iconColor, size: 20),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF201f1f),
+        borderRadius: BorderRadius.circular(12),
       ),
-      title: Text(title,
-          style: TextStyle(
-              color: AppTheme.textPrimary, fontSize: 15)),
-      subtitle: subtitleWidget,
-      trailing: trailing,
-      onTap: onTap,
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: iconColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: iconColor, size: 20),
+        ),
+        title: Text(title,
+            style: const TextStyle(
+                color: Color(0xFFe5e2e1), fontSize: 15)),
+        subtitle: subtitleWidget,
+        trailing: trailing,
+        onTap: onTap,
+      ),
     );
   }
 }
@@ -4394,4 +4200,465 @@ class _LibraryHealthSettingsTileState extends State<_LibraryHealthSettingsTile> 
       ),
     );
   }
+}
+
+class _AudioEffectsPage extends StatelessWidget {
+  const _AudioEffectsPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        title: const Text('Audio Effects'),
+        backgroundColor: AppTheme.surface,
+        foregroundColor: AppTheme.textPrimary,
+        elevation: 0,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        children: [
+          _SettingsTile(
+            icon: Icons.spatial_audio_off,
+            iconColor: Colors.purple,
+            title: 'Spatial Audio',
+            subtitle: '3D sound positioning',
+            trailing: Switch(
+              value: false,
+              onChanged: (v) {},
+              activeColor: const Color(0xFF53e076),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _SettingsTile(
+            icon: Icons.waves,
+            iconColor: Colors.blue,
+            title: 'Reverb',
+            subtitle: 'Add room ambience effects',
+            trailing: Switch(
+              value: false,
+              onChanged: (v) {},
+              activeColor: const Color(0xFF53e076),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _SettingsTile(
+            icon: Icons.graphic_eq,
+            iconColor: Colors.orange,
+            title: 'Bass Boost',
+            subtitle: 'Enhance low frequency response',
+            trailing: Switch(
+              value: false,
+              onChanged: (v) {},
+              activeColor: const Color(0xFF53e076),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _SettingsTile(
+            icon: Icons.hearing,
+            iconColor: Colors.teal,
+            title: 'Virtualizer',
+            subtitle: 'Simulate surround sound through headphones',
+            trailing: Switch(
+              value: false,
+              onChanged: (v) {},
+              activeColor: const Color(0xFF53e076),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VoiceControlPage extends StatelessWidget {
+  const _VoiceControlPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        title: const Text('Voice Control'),
+        backgroundColor: AppTheme.surface,
+        foregroundColor: AppTheme.textPrimary,
+        elevation: 0,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        children: [
+          _SettingsTile(
+            icon: Icons.mic,
+            iconColor: Colors.orange,
+            title: 'Siri Integration',
+            subtitle: 'Control playback with Siri commands',
+            trailing: Switch(
+              value: false,
+              onChanged: (v) {},
+              activeColor: const Color(0xFF53e076),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _SettingsTile(
+            icon: Icons.shortcut,
+            iconColor: Colors.teal,
+            title: 'Custom Shortcuts',
+            subtitle: 'Create custom voice commands',
+            trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
+            onTap: () {},
+          ),
+          const SizedBox(height: 8),
+          _SettingsTile(
+            icon: Icons.record_voice_over,
+            iconColor: Colors.indigo,
+            title: 'Voice Feedback',
+            subtitle: 'Announce track changes and status',
+            trailing: Switch(
+              value: false,
+              onChanged: (v) {},
+              activeColor: const Color(0xFF53e076),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PodcastSubscriptionsPage extends StatelessWidget {
+  const _PodcastSubscriptionsPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        title: const Text('Podcasts'),
+        backgroundColor: AppTheme.surface,
+        foregroundColor: AppTheme.textPrimary,
+        elevation: 0,
+      ),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.podcast, size: 64, color: AppTheme.textTertiary),
+            const SizedBox(height: 16),
+            Text(
+              'No podcast subscriptions yet',
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Browse and subscribe to your favorite podcasts',
+              style: TextStyle(color: AppTheme.textTertiary, fontSize: 13),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () {},
+              icon: const Icon(Icons.search, size: 18),
+              label: const Text('Browse Podcasts'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF53e076),
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AudiobookLibraryPage extends StatefulWidget {
+  const _AudiobookLibraryPage();
+
+  @override
+  State<_AudiobookLibraryPage> createState() => _AudiobookLibraryPageState();
+}
+
+class _AudiobookLibraryPageState extends State<_AudiobookLibraryPage> {
+  final AudiobookService _service = AudiobookService.instance;
+  List<Audiobook> _books = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final books = await _service.getAllAudiobooks();
+    if (mounted) setState(() { _books = books; _loading = false; });
+  }
+
+  Future<void> _importFolder() async {
+    final path = await FilePicker.platform.getDirectoryPath();
+    if (path == null) return;
+    final book = await _service.loadAudiobook(path);
+    if (book == null) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ses dosyası bulunamadı'), backgroundColor: AppTheme.errorColor),
+      );
+      return;
+    }
+    await _service.saveAudiobook(book);
+    _load();
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${book.title} eklendi'), backgroundColor: AppTheme.primaryColor),
+    );
+  }
+
+  Future<void> _deleteBook(Audiobook book) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: Text('Sil', style: TextStyle(color: AppTheme.textPrimary)),
+        content: Text('${book.title} silinecek. Emin misiniz?', style: TextStyle(color: AppTheme.textSecondary)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('İptal', style: TextStyle(color: AppTheme.textSecondary))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Sil', style: TextStyle(color: AppTheme.errorColor))),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    await _service.deleteAudiobook(book.id);
+    _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        title: const Text('Audiobooks'),
+        backgroundColor: AppTheme.surface,
+        foregroundColor: AppTheme.textPrimary,
+        elevation: 0,
+        actions: [
+          IconButton(
+            onPressed: _importFolder,
+            icon: const Icon(Icons.add_rounded),
+          ),
+        ],
+      ),
+      body: _loading
+          ? Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))
+          : _books.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.menu_book, size: 64, color: AppTheme.textTertiary),
+                      const SizedBox(height: 16),
+                      Text('Sesli kitap bulunamadı', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
+                      const SizedBox(height: 8),
+                      Text('Klasör içe aktararak başlayın', style: TextStyle(color: AppTheme.textTertiary, fontSize: 13)),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: _importFolder,
+                        icon: const Icon(Icons.folder_open, size: 18),
+                        label: const Text('Klasör İçe Aktar'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryColor,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _books.length,
+                  itemBuilder: (context, index) {
+                    final book = _books[index];
+                    final progress = (book.progress * 100).toInt();
+                    return Dismissible(
+                      key: Key(book.id),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        color: AppTheme.errorColor,
+                        child: Icon(Icons.delete, color: Colors.white),
+                      ),
+                      onDismissed: (_) => _deleteBook(book),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surface,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 56, height: 56,
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(Icons.menu_book, color: AppTheme.primaryColor, size: 28),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(book.title, style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+                                  const SizedBox(height: 4),
+                                  Text('${book.author} · ${book.chapters.length} bölüm', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                                  if (progress > 0) ...[
+                                    const SizedBox(height: 8),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(2),
+                                      child: LinearProgressIndicator(
+                                        value: book.progress,
+                                        backgroundColor: AppTheme.divider,
+                                        valueColor: AlwaysStoppedAnimation(AppTheme.primaryColor),
+                                        minHeight: 4,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text '%$progress tamamlandı', style: TextStyle(color: AppTheme.textTertiary, fontSize: 11)),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+}
+
+void _showEqPresetsDialog(BuildContext context) {
+  final presets = [
+    ('Flat', Icons.equalizer),
+    ('Bass Boost', Icons.graphic_eq),
+    ('Treble Boost', Icons.trending_up),
+    ('Vocal', Icons.mic),
+    ('Rock', Icons.music_note),
+    ('Jazz', Icons.piano),
+    ('Classical', Icons.queue_music),
+    ('Electronic', Icons.electric_bolt),
+    ('Podcast', Icons.podcast),
+  ];
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: const Color(0xFF201f1f),
+      title: Text('EQ Presets',
+          style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: ListView.builder(
+          shrinkWrap: true,
+          itemCount: presets.length,
+          itemBuilder: (ctx, i) {
+            final (name, icon) = presets[i];
+            return ListTile(
+              leading: Icon(icon, color: const Color(0xFF53e076), size: 20),
+              title: Text(name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 15)),
+              onTap: () {
+                DatabaseService.instance.setSetting('eq_preset', name);
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('EQ preset set to $name'),
+                    backgroundColor: const Color(0xFF53e076),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+        ),
+      ],
+    ),
+  );
+}
+
+void _showAirPlayDevicesDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: const Color(0xFF201f1f),
+      title: Text('AirPlay',
+          style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: Icon(Icons.speaker, color: const Color(0xFF53e076), size: 20),
+            title: Text('No devices found', style: TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
+            subtitle: Text('Make sure AirPlay devices are on the same network',
+                style: TextStyle(color: AppTheme.textTertiary, fontSize: 12)),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: Text('Close', style: TextStyle(color: AppTheme.primaryColor)),
+        ),
+      ],
+    ),
+  );
+}
+
+void _showWidgetConfigDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: const Color(0xFF201f1f),
+      title: Text('Widget Configuration',
+          style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Choose which widgets to display on your home screen:',
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+          const SizedBox(height: 16),
+          _widgetOption(ctx, 'Now Playing', Icons.music_note, true),
+          _widgetOption(ctx, 'Quick Play', Icons.play_arrow, false),
+          _widgetOption(ctx, 'Favorites', Icons.favorite, false),
+          _widgetOption(ctx, 'Recently Played', Icons.history, false),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: Text('Done', style: TextStyle(color: AppTheme.primaryColor)),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _widgetOption(BuildContext ctx, String name, IconData icon, bool enabled) {
+  return ListTile(
+    leading: Icon(icon, color: const Color(0xFF53e076), size: 20),
+    title: Text(name, style: const TextStyle(color: Color(0xFFe5e2e1), fontSize: 15)),
+    trailing: Switch(
+      value: enabled,
+      onChanged: (v) {},
+      activeColor: const Color(0xFF53e076),
+    ),
+  );
 }

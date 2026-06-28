@@ -5,6 +5,8 @@ import '../models/song_model.dart';
 import '../services/audio_handler.dart';
 import '../services/database_service.dart';
 import '../services/carplay_service.dart';
+import '../services/listening_recorder.dart';
+import '../services/widget_service.dart';
 
 typedef ScrobbleCallback = void Function(SongModel song, int timestamp);
 
@@ -130,6 +132,12 @@ class PlayerProvider extends ChangeNotifier {
     _playStartTime = DateTime.now();
     _startScrobbleTimer(song);
     CarPlayService.updateNowPlaying(song);
+    ListeningRecorder.instance.recordPlayback(
+      song.id, song.title, song.artist,
+      album: song.album, source: song.filePath,
+      durationMs: _handler.duration.inMilliseconds,
+    );
+    try { WidgetService.instance.updateNowPlaying(song); } catch (_) {}
     onNowPlaying?.call();
     notifyListeners();
   }
