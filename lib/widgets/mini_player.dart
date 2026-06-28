@@ -31,9 +31,9 @@ class MiniPlayer extends StatelessWidget {
               child: Container(
                 height: 64,
                 decoration: BoxDecoration(
-                  color: MelodiTheme.containerLow.withValues(alpha: 0.85),
+                  color: MelodiTheme.containerLow.withOpacity(0.85),
                   border: Border(
-                    top: BorderSide(color: MelodiTheme.outlineVariant.withValues(alpha: 0.3), width: 0.5)),
+                    top: BorderSide(color: MelodiTheme.outlineVariant.withOpacity(0.3), width: 0.5)),
                 ),
                 child: song != null
                     ? Column(

@@ -35,7 +35,7 @@ class ArtistCard extends StatelessWidget {
                     ? Icon(
                         Icons.person_rounded,
                         size: 48,
-                        color: MelodiTheme.textMuted.withValues(alpha: 0.5),
+                        color: MelodiTheme.textMuted.withOpacity(0.5),
                       )
                     : null,
               ),

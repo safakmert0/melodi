@@ -74,12 +74,12 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      MelodiTheme.primaryGreen.withValues(alpha: 0.2),
-                      MelodiTheme.primaryGreen.withValues(alpha: 0.05),
+                      MelodiTheme.primaryGreen.withOpacity(0.2),
+                      MelodiTheme.primaryGreen.withOpacity(0.05),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: MelodiTheme.primaryGreen.withValues(alpha: 0.3)),
+                  border: Border.all(color: MelodiTheme.primaryGreen.withOpacity(0.3)),
                 ),
                 child: Column(
                   children: [
@@ -115,7 +115,7 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                   label: Text(AppLocale.tr('cancel_timer')),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: MelodiTheme.errorRed,
-                    side: BorderSide(color: MelodiTheme.errorRed.withValues(alpha: 0.5)),
+                    side: BorderSide(color: MelodiTheme.errorRed.withOpacity(0.5)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -216,15 +216,15 @@ class _QuickButton extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              MelodiTheme.primaryGreen.withValues(alpha: 0.15),
-              MelodiTheme.primaryGreen.withValues(alpha: 0.05),
+              MelodiTheme.primaryGreen.withOpacity(0.15),
+              MelodiTheme.primaryGreen.withOpacity(0.05),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: MelodiTheme.primaryGreen.withValues(alpha: 0.25),
+            color: MelodiTheme.primaryGreen.withOpacity(0.25),
           ),
         ),
         child: Text(

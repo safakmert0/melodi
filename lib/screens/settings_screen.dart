@@ -420,7 +420,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             return Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                color: MelodiTheme.errorRed.withValues(alpha: 0.15),
+                                color: MelodiTheme.errorRed.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
@@ -1196,7 +1196,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           width: 3,
                         ),
                         boxShadow: isSelected
-                            ? [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 8)]
+                            ? [BoxShadow(color: color.withOpacity(0.5), blurRadius: 8)]
                             : null,
                       ),
                       child: isSelected
@@ -1546,7 +1546,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Container(
               width: 36, height: 36,
               decoration: BoxDecoration(
-                color: MelodiTheme.primaryGreen.withValues(alpha: 0.15),
+                color: MelodiTheme.primaryGreen.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(Icons.code_rounded, color: MelodiTheme.primaryGreen, size: 18),
@@ -2489,7 +2489,7 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                     icon: const Icon(Icons.music_note_rounded),
                     label: Text(AppLocale.tr('import_songs')),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.withValues(alpha: 0.8),
+                      backgroundColor: Colors.red.withOpacity(0.8),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -2668,7 +2668,7 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                         : const Icon(Icons.favorite_rounded),
                     label: Text(AppLocale.tr('import_liked_songs')),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green.withValues(alpha: 0.8),
+                      backgroundColor: Colors.green.withOpacity(0.8),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -2940,7 +2940,7 @@ class _EqualizerPageState extends State<_EqualizerPage> {
                     selected: selected,
                     label: Text(e.value, style: TextStyle(fontSize: 12)),
                     onSelected: _enabled ? (v) => _applyPreset(e.key) : null,
-                    selectedColor: MelodiTheme.primaryGreen.withValues(alpha: 0.3),
+                    selectedColor: MelodiTheme.primaryGreen.withOpacity(0.3),
                     checkmarkColor: MelodiTheme.primaryGreen,
                     backgroundColor: MelodiTheme.containerLow,
                     labelStyle: TextStyle(
@@ -3031,7 +3031,7 @@ class _EqCurvePainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round;
 
     final fillPaint = Paint()
-      ..color = primaryColor.withValues(alpha: 0.1)
+      ..color = primaryColor.withOpacity(0.1)
       ..style = PaintingStyle.fill;
 
     final midY = size.height / 2;
@@ -3072,7 +3072,7 @@ class _EqCurvePainter extends CustomPainter {
 
     // center line
     final centerPaint = Paint()
-      ..color = primaryColor.withValues(alpha: 0.15)
+      ..color = primaryColor.withOpacity(0.15)
       ..strokeWidth = 1;
     canvas.drawLine(Offset(0, midY), Offset(w, midY), centerPaint);
   }
@@ -3326,7 +3326,7 @@ class _SyncSettingsPageState extends State<_SyncSettingsPage> {
                         days: _selectedDays.toList(),
                       );
                     },
-                    selectedColor: MelodiTheme.primaryGreen.withValues(alpha: 0.3),
+                    selectedColor: MelodiTheme.primaryGreen.withOpacity(0.3),
                     checkmarkColor: MelodiTheme.primaryGreen,
                     backgroundColor: MelodiTheme.containerLow,
                     labelStyle: TextStyle(
@@ -3691,7 +3691,7 @@ class _ScrobbleHistoryTile extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.1),
+              color: Colors.orange.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.music_note_rounded, color: Colors.orange, size: 18),
@@ -3797,7 +3797,7 @@ class _CustomColorTile extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
+          color: color.withOpacity(0.15),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: color, size: 20),
@@ -3889,7 +3889,7 @@ class _CustomColorTile extends StatelessWidget {
                           width: 3,
                         ),
                         boxShadow: isSelected
-                            ? [BoxShadow(color: c.withValues(alpha: 0.5), blurRadius: 8)]
+                            ? [BoxShadow(color: c.withOpacity(0.5), blurRadius: 8)]
                             : null,
                       ),
                       child: isSelected
@@ -4136,7 +4136,7 @@ class _SettingsTile extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: iconColor.withValues(alpha: 0.1),
+            color: iconColor.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: iconColor, size: 20),
@@ -4501,7 +4501,7 @@ class _AudiobookLibraryPageState extends State<_AudiobookLibraryPage> {
                             Container(
                               width: 56, height: 56,
                               decoration: BoxDecoration(
-                                color: MelodiTheme.primaryGreen.withValues(alpha: 0.15),
+                                color: MelodiTheme.primaryGreen.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(Icons.menu_book, color: MelodiTheme.primaryGreen, size: 28),

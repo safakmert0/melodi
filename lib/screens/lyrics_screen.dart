@@ -103,7 +103,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
               child: Container(
-                color: Colors.black.withValues(alpha: 0.3),
+                color: Colors.black.withOpacity(0.3),
                 child: Column(
                   children: [
                     SafeArea(
@@ -188,7 +188,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
                                       letterSpacing: -0.8,
                                       color: isActive
                                           ? MelodiTheme.onSurface
-                                          : MelodiTheme.onSurface.withValues(alpha: 0.2),
+                                          : MelodiTheme.onSurface.withOpacity(0.2),
                                     ),
                                     child: Padding(
                                       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -206,7 +206,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
                           end: Alignment.bottomCenter,
                           colors: [
                             Colors.transparent,
-                            MelodiTheme.background.withValues(alpha: 0.9),
+                            MelodiTheme.background.withOpacity(0.9),
                           ],
                         ),
                       ),

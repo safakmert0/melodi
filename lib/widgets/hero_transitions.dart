@@ -26,7 +26,7 @@ class MelodiHero {
                 decoration: BoxDecoration(
                   boxShadow: [
                     BoxShadow(
-                      color: MelodiTheme.primaryGreen.withValues(alpha: t * 0.2),
+                      color: MelodiTheme.primaryGreen.withOpacity( t * 0.2),
                       blurRadius: t * 40,
                       spreadRadius: t * 10,
                     ),

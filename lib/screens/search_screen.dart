@@ -64,7 +64,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 child: Container(
                   height: 50,
                   decoration: BoxDecoration(
-                    color: MelodiTheme.surfaceBright.withValues(alpha: 0.15),
+                    color: MelodiTheme.surfaceBright.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: TextField(
@@ -199,7 +199,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   child: Transform.rotate(
                     angle: 0.3,
                     child: Container(width: 56, height: 24,
-                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4))),
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(4))),
                   ),
                 ),
                 Positioned(

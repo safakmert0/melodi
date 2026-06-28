@@ -178,7 +178,7 @@ class _BlockedTracksScreenState extends State<BlockedTracksScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: MelodiTheme.primaryGreen.withValues(alpha: 0.4)),
+                side: BorderSide(color: MelodiTheme.primaryGreen.withOpacity(0.4)),
               ),
             ),
             child: Text(

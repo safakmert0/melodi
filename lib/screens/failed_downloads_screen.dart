@@ -118,7 +118,7 @@ class _FailedDownloadTileState extends State<_FailedDownloadTile> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: MelodiTheme.errorRed.withValues(alpha: 0.1),
+                color: MelodiTheme.errorRed.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(Icons.error_rounded, color: MelodiTheme.errorRed, size: 22),

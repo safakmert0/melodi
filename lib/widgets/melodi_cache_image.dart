@@ -66,8 +66,8 @@ class MelodiCacheImage extends StatelessWidget {
 
   Widget _buildShimmer() {
     return Shimmer.fromColors(
-      baseColor: MelodiTheme.surfaceBright.withValues(alpha: 0.5),
-      highlightColor: MelodiTheme.onSurfaceVariant.withValues(alpha: 0.1),
+      baseColor: MelodiTheme.surfaceBright.withOpacity(0.5),
+      highlightColor: MelodiTheme.onSurfaceVariant.withOpacity(0.1),
       child: Container(
         width: width,
         height: height,

@@ -125,12 +125,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: MelodiTheme.primaryGreen.withValues(alpha: opacity * 0.3),
+                color: MelodiTheme.primaryGreen.withOpacity( opacity * 0.3),
                 width: 2,
               ),
               gradient: RadialGradient(
                 colors: [
-                  MelodiTheme.primaryGreen.withValues(alpha: opacity * 0.1),
+                  MelodiTheme.primaryGreen.withOpacity( opacity * 0.1),
                   Colors.transparent,
                 ],
               ),
@@ -188,7 +188,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                 borderRadius: BorderRadius.circular(2),
                 boxShadow: [
                   BoxShadow(
-                    color: MelodiTheme.primaryGreen.withValues(alpha: 0.5),
+                    color: MelodiTheme.primaryGreen.withOpacity(0.5),
                     blurRadius: 10,
                   ),
                 ],

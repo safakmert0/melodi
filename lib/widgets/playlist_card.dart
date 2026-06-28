@@ -104,7 +104,7 @@ class PlaylistCard extends StatelessWidget {
                   Icon(
                     Icons.playlist_play_rounded,
                     size: 48,
-                    color: MelodiTheme.primaryGreen.withValues(alpha: 0.7),
+                    color: MelodiTheme.primaryGreen.withOpacity(0.7),
                   ),
                   const SizedBox(height: 8),
                   Text(

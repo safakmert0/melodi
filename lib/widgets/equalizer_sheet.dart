@@ -145,7 +145,7 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
                         style: TextStyle(fontSize: 12),
                       ),
                       onSelected: (_) => _applyPreset(preset.name),
-                      selectedColor: MelodiTheme.primaryGreen.withValues(alpha: 0.3),
+                      selectedColor: MelodiTheme.primaryGreen.withOpacity(0.3),
                       checkmarkColor: MelodiTheme.primaryGreen,
                       backgroundColor: MelodiTheme.containerLow,
                       labelStyle: TextStyle(

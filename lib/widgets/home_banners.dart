@@ -320,7 +320,7 @@ class _BannerCard extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -334,7 +334,7 @@ class _BannerCard extends StatelessWidget {
               const SizedBox(width: 8),
               GestureDetector(
                 onTap: onDismiss,
-                child: Icon(Icons.close, color: Colors.white.withValues(alpha: 0.7), size: 18),
+                child: Icon(Icons.close, color: Colors.white.withOpacity(0.7), size: 18),
               ),
             ],
           ],

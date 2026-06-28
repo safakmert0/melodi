@@ -224,7 +224,7 @@ class _StorageScreenState extends State<StorageScreen> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
+              color: iconColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: iconColor, size: 20),
@@ -290,7 +290,7 @@ class _StorageScreenState extends State<StorageScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: MelodiTheme.primaryGreen.withValues(alpha: 0.15),
+                      color: MelodiTheme.primaryGreen.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(

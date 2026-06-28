@@ -48,10 +48,10 @@ class _MainShellState extends State<MainShell> {
                     filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: MelodiTheme.background.withValues(alpha: 0.85),
+                        color: MelodiTheme.background.withOpacity(0.85),
                         border: Border(
                           top: BorderSide(
-                            color: MelodiTheme.outlineVariant.withValues(alpha: 0.3),
+                            color: MelodiTheme.outlineVariant.withOpacity(0.3),
                             width: 0.5,
                           ),
                         ),

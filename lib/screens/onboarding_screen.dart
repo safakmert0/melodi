@@ -145,7 +145,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   borderRadius: BorderRadius.circular(28),
                 ),
                 elevation: 8,
-                shadowColor: MelodiTheme.primaryGreen.withValues(alpha: 0.3),
+                shadowColor: MelodiTheme.primaryGreen.withOpacity(0.3),
               ),
               child: Text(
                 _currentPage < 3
@@ -193,7 +193,7 @@ class _OnboardingPage extends StatelessWidget {
               borderRadius: BorderRadius.circular(32),
               boxShadow: [
                 BoxShadow(
-                  color: MelodiTheme.primaryGreen.withValues(alpha: 0.1),
+                  color: MelodiTheme.primaryGreen.withOpacity(0.1),
                   blurRadius: 40,
                   spreadRadius: 5,
                 ),
@@ -239,14 +239,14 @@ class _LanguageSelector extends StatelessWidget {
           onTap: () {
             AppLocale.currentLocale = lang.$2;
             DatabaseService.instance.setSetting('app_locale', lang.$2);
-            context.read<LocaleNotifier>().notify();
+            context.read<LocaleNotifier>().notifyListeners();
           },
           child: Container(
             margin: const EdgeInsets.symmetric(vertical: 4),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             decoration: BoxDecoration(
               color: isSelected
-                  ? MelodiTheme.primaryGreen.withValues(alpha: 0.15)
+                  ? MelodiTheme.primaryGreen.withOpacity(0.15)
                   : MelodiTheme.containerLow,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
@@ -320,7 +320,7 @@ class _ThemeOption extends StatelessWidget {
         width: 120,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? MelodiTheme.primaryGreen.withValues(alpha: 0.15) : MelodiTheme.containerLow,
+          color: isSelected ? MelodiTheme.primaryGreen.withOpacity(0.15) : MelodiTheme.containerLow,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected ? MelodiTheme.primaryGreen : MelodiTheme.outlineVariant,

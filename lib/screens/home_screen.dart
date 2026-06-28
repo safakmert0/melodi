@@ -190,12 +190,12 @@ class HomeScreen extends StatelessWidget {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            MelodiTheme.primaryGreen.withValues(alpha: 0.3 + index * 0.1),
+                            MelodiTheme.primaryGreen.withOpacity( 0.3 + index * 0.1),
                             MelodiTheme.containerHigh,
                           ],
                         ),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                          BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
                         ],
                       ),
                       child: Stack(

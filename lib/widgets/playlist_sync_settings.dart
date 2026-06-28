@@ -230,7 +230,7 @@ class _PlaylistSyncSettingsState extends State<PlaylistSyncSettings> {
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: MelodiTheme.primaryGreen.withValues(alpha: 0.1),
+            color: MelodiTheme.primaryGreen.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: MelodiTheme.primaryGreen, size: 20),

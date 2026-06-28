@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
@@ -62,7 +63,7 @@ class QueueScreen extends StatelessWidget {
                           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: MelodiTheme.containerHigh.withValues(alpha: 0.6),
+                            color: MelodiTheme.containerHigh.withOpacity(0.6),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: MelodiTheme.outlineVariant, width: 0.5),
                           ),
@@ -109,7 +110,7 @@ class QueueScreen extends StatelessWidget {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
-                                  border: Border.all(color: MelodiTheme.primaryGreen.withValues(alpha: 0.4)),
+                                  border: Border.all(color: MelodiTheme.primaryGreen.withOpacity(0.4)),
                                   borderRadius: BorderRadius.circular(4)),
                                 child: Text('HI-RES', style: MelodiTheme.label(
                                   size: 10, color: MelodiTheme.primaryGreen, letterSpacing: 0.08)),
@@ -171,7 +172,7 @@ class QueueScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 decoration: BoxDecoration(
                   color: MelodiTheme.background,
-                  border: Border(top: BorderSide(color: MelodiTheme.outlineVariant.withValues(alpha: 0.3), width: 0.5)),
+                  border: Border(top: BorderSide(color: MelodiTheme.outlineVariant.withOpacity(0.3), width: 0.5)),
                 ),
                 child: SafeArea(
                   top: false,
@@ -194,15 +195,15 @@ class QueueScreen extends StatelessWidget {
                       Container(width: 1, height: 20, margin: const EdgeInsets.symmetric(horizontal: 16),
                         color: MelodiTheme.outlineVariant),
                       GestureDetector(
-                        onTap: () => player.toggleLoopMode(),
+                        onTap: () => player.cycleRepeatMode(),
                         child: Row(
                           children: [
                             Icon(Icons.repeat_rounded, size: 20,
-                              color: player.loopMode != LoopMode.off ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant),
+                              color: player.repeatMode != LoopStyle.off ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant),
                             const SizedBox(width: 6),
                             Text('Repeat', style: TextStyle(
                               fontFamily: AppConstants.fontFamily,
-                              color: player.loopMode != LoopMode.off ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant,
+                              color: player.repeatMode != LoopStyle.off ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant,
                               fontSize: 13, fontWeight: FontWeight.w500)),
                           ],
                         ),
@@ -216,7 +217,7 @@ class QueueScreen extends StatelessWidget {
                             shape: BoxShape.circle,
                             color: MelodiTheme.primaryGreen,
                             boxShadow: [BoxShadow(
-                              color: MelodiTheme.primaryGreen.withValues(alpha: 0.4),
+                              color: MelodiTheme.primaryGreen.withOpacity(0.4),
                               blurRadius: 12, spreadRadius: 2)],
                           ),
                           child: Icon(

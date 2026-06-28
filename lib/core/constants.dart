@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'dart:ui' show Brightness, ImageFilter;
 import 'localization.dart';
 
@@ -174,7 +175,7 @@ class MelodiTheme {
   // Glassmorphism Helpers
   static BoxDecoration glassDecoration({double radius = 8, double opacity = 0.6}) {
     return BoxDecoration(
-      color: background.withValues(alpha: opacity),
+      color: background.withOpacity( opacity),
       borderRadius: BorderRadius.circular(radius),
       border: Border.all(color: glassBorder, width: 0.5),
     );
@@ -195,7 +196,7 @@ class MelodiTheme {
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            color: background.withValues(alpha: opacity),
+            color: background.withOpacity( opacity),
             border: Border.all(color: glassBorder, width: 0.5),
           ),
           child: child,
@@ -260,7 +261,7 @@ class MelodiTheme {
           return onSurfaceVariant;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return primaryGreen.withValues(alpha: 0.3);
+          if (states.contains(WidgetState.selected)) return primaryGreen.withOpacity(0.3);
           return surfaceBright;
         }),
       ),

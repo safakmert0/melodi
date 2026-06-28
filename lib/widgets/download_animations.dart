@@ -225,14 +225,14 @@ class _PulseStorageMeterState extends State<PulseStorageMeter>
             alignment: Alignment.centerLeft,
             child: Container(
               decoration: BoxDecoration(
-                color: MelodiTheme.primaryGreen.withValues(
-                  alpha: 0.6 + _pulseController.value * 0.4,
+                color: MelodiTheme.primaryGreen.withOpacity(
+                  0.6 + _pulseController.value * 0.4,
                 ),
                 borderRadius: BorderRadius.circular(3),
                 boxShadow: [
                   BoxShadow(
-                    color: MelodiTheme.primaryGreen.withValues(
-                      alpha: 0.1 + _pulseController.value * 0.2,
+                    color: MelodiTheme.primaryGreen.withOpacity(
+                      0.1 + _pulseController.value * 0.2,
                     ),
                     blurRadius: 8,
                   ),

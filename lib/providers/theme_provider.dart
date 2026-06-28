@@ -265,7 +265,7 @@ class ThemeProvider extends ChangeNotifier {
         activeTrackColor: _accentColor,
         inactiveTrackColor: const Color(0xFFD0D0D0),
         thumbColor: textPri,
-        overlayColor: _accentColor.withValues(alpha: 0.2),
+        overlayColor: _accentColor.withOpacity(0.2),
         trackHeight: 4,
       ),
     );
@@ -327,7 +327,7 @@ class ThemeProvider extends ChangeNotifier {
         activeTrackColor: _accentColor,
         inactiveTrackColor: const Color(0xFF404040),
         thumbColor: textPri,
-        overlayColor: _accentColor.withValues(alpha: 0.2),
+        overlayColor: _accentColor.withOpacity(0.2),
         trackHeight: 4,
       ),
     );

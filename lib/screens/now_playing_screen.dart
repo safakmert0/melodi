@@ -244,7 +244,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                 Positioned.fill(
                   child: BackdropFilter(
                     filter: ui.ImageFilter.blur(sigmaX: 60, sigmaY: 60),
-                    child: Container(color: Colors.black.withValues(alpha: 0.5)),
+                    child: Container(color: Colors.black.withOpacity(0.5)),
                   ),
                 ),
               ] else
@@ -261,7 +261,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                   ),
                 ),
                 child: Container(
-                  color: Colors.black.withValues(alpha: 0.45),
+                  color: Colors.black.withOpacity(0.45),
                 ),
               ),
               // Top bar
@@ -283,7 +283,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               Text(
                                 'NOW PLAYING',
                                 style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.6),
+                                  color: Colors.white.withOpacity(0.6),
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 2,
@@ -332,7 +332,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFF53e076).withValues(alpha: 0.2),
+                                        color: const Color(0xFF53e076).withOpacity(0.2),
                                         blurRadius: 80,
                                         spreadRadius: 10,
                                       ),
@@ -347,7 +347,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                   borderRadius: BorderRadius.circular(20),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.4),
+                                      color: Colors.black.withOpacity(0.4),
                                       blurRadius: 40,
                                       offset: const Offset(0, 12),
                                     ),
@@ -441,7 +441,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             color: const Color(0xFF53e076),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF53e076).withValues(alpha: 0.5),
+                                color: const Color(0xFF53e076).withOpacity(0.5),
                                 blurRadius: 24,
                                 spreadRadius: 2,
                               ),
@@ -653,7 +653,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               fontWeight: hasTiming ? FontWeight.w600 : FontWeight.w400,
               shadows: [
                 Shadow(
-                  color: Colors.black.withValues(alpha: 0.4),
+                  color: Colors.black.withOpacity(0.4),
                   blurRadius: 10,
                 ),
               ],
@@ -750,7 +750,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.3),
+                color: Colors.white.withOpacity(0.3),
                 fontSize: 15,
               ),
             ),
@@ -784,7 +784,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                   fontWeight: FontWeight.bold,
                   shadows: [
                     Shadow(
-                      color: Colors.black.withValues(alpha: 0.3),
+                      color: Colors.black.withOpacity(0.3),
                       blurRadius: 8,
                     ),
                   ],
@@ -802,7 +802,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.3),
+                color: Colors.white.withOpacity(0.3),
                 fontSize: 15,
               ),
             ),
@@ -1142,7 +1142,7 @@ class _SpeedButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: Colors.white.withOpacity(0.1),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Colors.white24),
         ),
@@ -1186,7 +1186,7 @@ class _VolumeBoostButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: showSlider ? accentColor.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.1),
+          color: showSlider ? accentColor.withOpacity(0.2) : Colors.white.withOpacity(0.1),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: showSlider ? accentColor : Colors.white24,

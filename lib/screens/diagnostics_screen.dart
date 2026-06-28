@@ -179,7 +179,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: MelodiTheme.errorRed.withValues(alpha: 0.15),
+                                      color: MelodiTheme.errorRed.withOpacity(0.15),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
@@ -252,7 +252,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                             label: Text(AppLocale.tr('clear_logs')),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: MelodiTheme.errorRed,
-                              side: BorderSide(color: MelodiTheme.errorRed.withValues(alpha: 0.5)),
+                              side: BorderSide(color: MelodiTheme.errorRed.withOpacity(0.5)),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
