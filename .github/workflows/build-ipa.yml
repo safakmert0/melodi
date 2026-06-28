@@ -26,12 +26,8 @@ jobs:
         run: |
           flutter pub get
           flutter create . --platforms=ios
-          cd ios
-          if ! grep -q "platform :ios" Podfile; then
-            sed -i '' '1s/^/platform :ios, '\''13.0'\''\n/' Podfile
-          fi
-          pod install
-          cd ..
+          sed -i '' 's/platform :ios,.*/platform :ios, '\''13.0'\''/' ios/Podfile
+          cd ios && pod install && cd ..
 
       - name: Build unsigned IPA
         run: |
@@ -53,8 +49,7 @@ jobs:
 
       - name: Extract version
         id: version
-        run: |
-          echo "ipa=Melodi-${GITHUB_REF_NAME}.ipa" >> $GITHUB_OUTPUT
+        run: echo "ipa=Melodi-${GITHUB_REF_NAME}.ipa" >> $GITHUB_OUTPUT
 
       - name: Upload IPA to release
         uses: softprops/action-gh-release@v2
