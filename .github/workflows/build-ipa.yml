@@ -23,7 +23,18 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          flutter pub get
+          cd ios && pod install && cd ..
+
+      - name: Disable code signing
+        run: |
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' ios/Runner.xcodeproj/project.pbxproj || true
+          sed -i '' 's/DEVELOPMENT_TEAM = .*//g' ios/Runner.xcodeproj/project.pbxproj || true
+          sed -i '' 's/CODE_SIGN_IDENTITY = .*//g' ios/Runner.xcodeproj/project.pbxproj || true
+          sed -i '' 's/PROVISIONING_PROFILE_SPECIFIER = .*//g' ios/Runner.xcodeproj/project.pbxproj || true
+          echo 'CODE_SIGNING_REQUIRED=NO' >> ios/Flutter/Release.xcconfig
+          echo 'CODE_SIGNING_ALLOWED=NO' >> ios/Flutter/Release.xcconfig
 
       - name: Build unsigned IPA
         run: |
