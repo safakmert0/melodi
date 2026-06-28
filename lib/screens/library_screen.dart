@@ -4,373 +4,241 @@ import '../core/constants.dart';
 import '../core/localization.dart';
 import '../providers/library_provider.dart';
 import '../providers/playlist_provider.dart';
+import '../providers/player_provider.dart';
 import '../models/playlist_model.dart';
 import 'playlist_detail_screen.dart';
 import 'create_playlist_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
-  final int initialTab;
-  const LibraryScreen({super.key, this.initialTab = 0});
+  const LibraryScreen({super.key});
 
   @override
   State<LibraryScreen> createState() => _LibraryScreenState();
 }
 
-class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this, initialIndex: widget.initialTab);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+class _LibraryScreenState extends State<LibraryScreen> {
+  bool _isGridView = false;
+  String _sortBy = 'Recently Played';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: MelodiTheme.background,
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Text(
-                AppLocale.tr('library'),
-                style: MelodiTheme.heading(size: 28),
-              ),
-            ),
-          ),
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _TabBarDelegate(
-              child: ClipRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Container(
-                    color: MelodiTheme.background.withValues(alpha: 0.85),
-                    child: TabBar(
-                      controller: _tabController,
-                      labelColor: MelodiTheme.primaryGreen,
-                      unselectedLabelColor: MelodiTheme.onSurfaceVariant,
-                      indicatorColor: MelodiTheme.primaryGreen,
-                      indicatorSize: TabBarIndicatorSize.label,
-                      labelStyle: const TextStyle(
-                        fontFamily: AppConstants.fontFamily,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                      unselectedLabelStyle: const TextStyle(
-                        fontFamily: AppConstants.fontFamily,
-                        fontWeight: FontWeight.w400,
-                        fontSize: 14,
-                      ),
-                      tabs: [
-                        Tab(text: AppLocale.tr('playlists')),
-                        Tab(text: AppLocale.tr('artists')),
-                        Tab(text: AppLocale.tr('albums')),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-        body: TabBarView(
-          controller: _tabController,
+      body: SafeArea(
+        child: Column(
           children: [
-            _PlaylistsTab(),
-            _ArtistsTab(),
-            _AlbumsTab(),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const CreatePlaylistScreen()),
-        ),
-        backgroundColor: MelodiTheme.primaryGreen,
-        foregroundColor: Colors.black,
-        child: const Icon(Icons.add_rounded, size: 28),
-      ),
-    );
-  }
-}
-
-class _TabBarDelegate extends SliverPersistentHeaderDelegate {
-  final Widget child;
-
-  const _TabBarDelegate({required this.child});
-
-  @override
-  double get minExtent => 48;
-
-  @override
-  double get maxExtent => 48;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return child;
-  }
-
-  @override
-  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) => false;
-}
-
-class _PlaylistsTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Consumer2<PlaylistProvider, LibraryProvider>(
-      builder: (context, playlistProvider, library, _) {
-        final playlists = playlistProvider.playlists;
-        final favoritesCount = library.favorites.length;
-
-        return CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                child: GestureDetector(
-                  onTap: () {},
-                  child: Container(
-                    height: 64,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [MelodiTheme.likedGradientStart, MelodiTheme.likedGradientEnd],
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Center(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.favorite_rounded, color: Colors.white, size: 24),
-                          const SizedBox(width: 10),
-                          Text(
-                            '${AppLocale.tr('liked_songs')} ($favoritesCount)',
-                            style: const TextStyle(
-                              fontFamily: AppConstants.fontFamily,
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: MelodiTheme.containerHigh),
+                    child: const Icon(Icons.person, size: 20, color: MelodiTheme.onSurfaceVariant),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  Text('Your Library', style: MelodiTheme.heading(size: 20)),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.add_rounded, color: MelodiTheme.onSurfaceVariant, size: 24),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const CreatePlaylistScreen())),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.search_rounded, color: MelodiTheme.onSurfaceVariant, size: 22),
+                    onPressed: () {},
+                  ),
+                ],
               ),
             ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 0.8,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final playlist = playlists[index];
-                    return GestureDetector(
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => PlaylistDetailScreen(playlist: playlist),
-                        ),
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: MelodiTheme.containerLow,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: MelodiTheme.surfaceMid2,
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                                ),
-                                child: const Center(
-                                  child: Icon(Icons.queue_music_rounded, size: 40, color: MelodiTheme.onSurfaceVariant),
-                                ),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(10),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    playlist.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontFamily: AppConstants.fontFamily,
-                                      color: MelodiTheme.onSurface,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${playlist.songs?.length ?? 0} ${AppLocale.tr('songs')}',
-                                    style: const TextStyle(
-                                      fontFamily: AppConstants.fontFamily,
-                                      color: MelodiTheme.onSurfaceVariant,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: Row(
+                children: [
+                  Icon(Icons.swap_vert_rounded, size: 18, color: MelodiTheme.onSurfaceVariant),
+                  const SizedBox(width: 4),
+                  Text(_sortBy, style: const TextStyle(
+                    fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurfaceVariant,
+                    fontSize: 13, fontWeight: FontWeight.w500)),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => setState(() => _isGridView = !_isGridView),
+                    child: Icon(_isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded,
+                      size: 20, color: MelodiTheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Consumer2<PlaylistProvider, LibraryProvider>(
+                builder: (context, playlistProvider, library, _) {
+                  final items = _buildLibraryItems(playlistProvider, library);
+
+                  if (_isGridView) {
+                    return GridView.builder(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 0.8),
+                      itemCount: items.length,
+                      itemBuilder: (context, index) => _buildGridItem(context, items[index]),
                     );
-                  },
-                  childCount: playlists.length,
-                ),
+                  }
+
+                  return ListView.builder(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(0, 8, 0, 100),
+                    itemCount: items.length,
+                    itemBuilder: (context, index) => _buildListItem(context, items[index]),
+                  );
+                },
               ),
             ),
-            const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
           ],
-        );
+        ),
+      ),
+    );
+  }
+
+  List<_LibraryItem> _buildLibraryItems(PlaylistProvider pp, LibraryProvider lib) {
+    final items = <_LibraryItem>[];
+
+    items.add(_LibraryItem(
+      title: 'Liked Songs',
+      subtitle: 'Playlist • ${lib.favorites.length} songs',
+      gradient: const LinearGradient(colors: [Color(0xFF450AF5), Color(0xFFC4EFD9)]),
+      icon: Icons.favorite_rounded,
+      type: _LibraryItemType.likedSongs,
+    ));
+
+    for (final p in pp.playlists) {
+      items.add(_LibraryItem(
+        title: p.name,
+        subtitle: 'Playlist • ${p.songIds.length} songs',
+        icon: Icons.queue_music_rounded,
+        type: _LibraryItemType.playlist,
+        playlist: p,
+      ));
+    }
+
+    for (final a in lib.artists) {
+      items.add(_LibraryItem(
+        title: a.name,
+        subtitle: 'Artist',
+        icon: Icons.person_rounded,
+        type: _LibraryItemType.artist,
+      ));
+    }
+
+    for (final a in lib.albums) {
+      items.add(_LibraryItem(
+        title: a.name,
+        subtitle: 'Album • ${a.artist ?? ''}',
+        icon: Icons.album_rounded,
+        type: _LibraryItemType.album,
+      ));
+    }
+
+    return items;
+  }
+
+  Widget _buildListItem(BuildContext context, _LibraryItem item) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: Container(
+        width: 56, height: 56,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(4),
+          gradient: item.gradient,
+          color: item.gradient == null ? MelodiTheme.containerHigh : null,
+        ),
+        child: item.gradient != null
+            ? Icon(item.icon, color: Colors.white, size: 24)
+            : Icon(item.icon, color: MelodiTheme.onSurfaceVariant, size: 24),
+      ),
+      title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurface,
+          fontSize: 15, fontWeight: FontWeight.w500)),
+      subtitle: Text(item.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurfaceVariant, fontSize: 13)),
+      trailing: const Icon(Icons.chevron_right_rounded, color: MelodiTheme.onSurfaceVariant, size: 20),
+      onTap: () {
+        if (item.type == _LibraryItemType.playlist && item.playlist != null) {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => PlaylistDetailScreen(playlist: item.playlist!)));
+        }
       },
     );
   }
-}
 
-class _ArtistsTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<LibraryProvider>(
-      builder: (context, library, _) {
-        final artists = library.artists;
-
-        if (artists.isEmpty) {
-          return Center(
-            child: Text(
-              AppLocale.tr('no_artists_found'),
-              style: const TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 15),
-            ),
-          );
+  Widget _buildGridItem(BuildContext context, _LibraryItem item) {
+    return GestureDetector(
+      onTap: () {
+        if (item.type == _LibraryItemType.playlist && item.playlist != null) {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => PlaylistDetailScreen(playlist: item.playlist!)));
         }
-
-        return ListView.builder(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-          itemCount: artists.length,
-          itemBuilder: (context, index) {
-            final artist = artists[index];
-            return ListTile(
-              leading: CircleAvatar(
-                radius: 30,
-                backgroundColor: MelodiTheme.surfaceMid2,
-                child: Text(
-                  artist.name.isNotEmpty ? artist.name[0].toUpperCase() : '?',
-                  style: const TextStyle(
-                    fontFamily: AppConstants.fontFamily,
-                    color: MelodiTheme.onSurface,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              title: Text(
-                artist.name,
-                style: const TextStyle(
-                  fontFamily: AppConstants.fontFamily,
-                  color: MelodiTheme.onSurface,
-                  fontSize: 15,
-                ),
-              ),
-              subtitle: Text(
-                AppLocale.tr('artist'),
-                style: const TextStyle(
-                  fontFamily: AppConstants.fontFamily,
-                  color: MelodiTheme.onSurfaceVariant,
-                  fontSize: 13,
-                ),
-              ),
-              trailing: const Icon(Icons.chevron_right_rounded, color: MelodiTheme.onSurfaceVariant),
-            );
-          },
-        );
       },
-    );
-  }
-}
-
-class _AlbumsTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<LibraryProvider>(
-      builder: (context, library, _) {
-        final albums = library.albums;
-
-        if (albums.isEmpty) {
-          return Center(
-            child: Text(
-              AppLocale.tr('no_albums_found'),
-              style: const TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 15),
-            ),
-          );
-        }
-
-        return ListView.builder(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-          itemCount: albums.length,
-          itemBuilder: (context, index) {
-            final album = albums[index];
-            return ListTile(
-              leading: Container(
-                width: 56,
-                height: 56,
+      child: Container(
+        decoration: BoxDecoration(
+          color: MelodiTheme.containerLow,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Container(
+                width: double.infinity,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(4),
-                  color: MelodiTheme.surfaceMid2,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                  gradient: item.gradient,
+                  color: item.gradient == null ? MelodiTheme.containerHigh : null,
                 ),
-                child: const Icon(Icons.album_rounded, color: MelodiTheme.onSurfaceVariant),
-              ),
-              title: Text(
-                album.name,
-                style: const TextStyle(
-                  fontFamily: AppConstants.fontFamily,
-                  color: MelodiTheme.onSurface,
-                  fontSize: 15,
+                child: Center(
+                  child: Icon(item.icon, size: 40,
+                    color: item.gradient != null ? Colors.white : MelodiTheme.onSurfaceVariant),
                 ),
               ),
-              subtitle: Text(
-                album.artist ?? '',
-                style: const TextStyle(
-                  fontFamily: AppConstants.fontFamily,
-                  color: MelodiTheme.onSurfaceVariant,
-                  fontSize: 13,
-                ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurface,
+                      fontSize: 13, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 2),
+                  Text(item.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontFamily: AppConstants.fontFamily,
+                      color: MelodiTheme.onSurfaceVariant, fontSize: 11)),
+                ],
               ),
-              trailing: Text(
-                '${album.songCount} ${AppLocale.tr('songs')}',
-                style: const TextStyle(
-                  fontFamily: AppConstants.fontFamily,
-                  color: MelodiTheme.onSurfaceVariant,
-                  fontSize: 12,
-                ),
-              ),
-            );
-          },
-        );
-      },
+            ),
+          ],
+        ),
+      ),
     );
   }
+}
+
+enum _LibraryItemType { likedSongs, playlist, artist, album }
+
+class _LibraryItem {
+  final String title;
+  final String subtitle;
+  final Gradient? gradient;
+  final IconData icon;
+  final _LibraryItemType type;
+  final PlaylistModel? playlist;
+
+  _LibraryItem({
+    required this.title,
+    required this.subtitle,
+    this.gradient,
+    required this.icon,
+    required this.type,
+    this.playlist,
+  });
 }
