@@ -83,6 +83,11 @@ class MelodiTheme {
   static Color get textSecondary => onSurfaceVariant;
   static Color get textMuted => const Color(0xFF869585);
 
+  // Additional surface colors
+  static const Color surfaceMid2 = container;
+  static const Color surfaceMid1 = containerLow;
+  static const Color surfaceHigh = containerHighest;
+
   // Genre Colors (from Stitch)
   static const Map<String, Color> genreColors = {
     'pop': Color(0xFF8D67AB),
