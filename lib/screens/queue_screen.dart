@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
 import '../providers/player_provider.dart';
+import '../services/audio_handler.dart';
 import '../models/song_model.dart';
 
 class QueueScreen extends StatelessWidget {

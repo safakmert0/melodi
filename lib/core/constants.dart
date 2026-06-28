@@ -82,7 +82,7 @@ class MelodiTheme {
   // Backward compatibility
   static Color get textPrimary => onSurface;
   static Color get textSecondary => onSurfaceVariant;
-  static Color get textMuted => const Color(0xFF869585);
+  static const Color textMuted = Color(0xFF869585);
 
   // Additional surface colors
   static const Color surfaceMid2 = container;
