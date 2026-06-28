@@ -273,3 +273,31 @@ class MelodiTheme {
     );
   }
 }
+
+// Backward compatibility for theme_provider.dart
+class AppTheme {
+  static bool isLightMode = false;
+  static Color accentColor = MelodiTheme.primaryGreen;
+  static Color? customBackground;
+  static Color? customSurface;
+  static Color? customCard;
+  static Color? customTextPrimary;
+  static Color? customTextSecondary;
+
+  static Color get background => customBackground ?? (isLightMode ? const Color(0xFFF5F5F5) : MelodiTheme.background);
+  static Color get surface => customSurface ?? (isLightMode ? const Color(0xFFFFFFFF) : MelodiTheme.containerLow);
+  static Color get card => customCard ?? (isLightMode ? const Color(0xFFEEEEEE) : MelodiTheme.containerLow);
+  static Color get textPrimary => customTextPrimary ?? (isLightMode ? const Color(0xFF1A1A1A) : MelodiTheme.onSurface);
+  static Color get textSecondary => customTextSecondary ?? (isLightMode ? const Color(0xFF666666) : MelodiTheme.onSurfaceVariant);
+  static Color get textTertiary => isLightMode ? const Color(0xFF999999) : MelodiTheme.textMuted;
+  static Color get primaryColor => accentColor;
+  static Color get errorColor => MelodiTheme.errorRed;
+  static Color get favoriteColor => MelodiTheme.primaryGreen;
+  static Color get divider => MelodiTheme.outlineVariant;
+  static const Color lightBackground = Color(0xFFF5F5F5);
+  static const Color lightSurface = Color(0xFFFFFFFF);
+  static const Color lightCard = Color(0xFFEEEEEE);
+  static const Color darkBackground = MelodiTheme.background;
+  static const Color darkSurface = MelodiTheme.containerLow;
+  static const Color darkCard = MelodiTheme.containerLow;
+}
