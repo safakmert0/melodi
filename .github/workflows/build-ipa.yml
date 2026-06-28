@@ -65,14 +65,7 @@ jobs:
       - name: Pod install
         run: cd ios && pod install && cd ..
 
-      - name: Disable code signing in Xcode project
-        run: |
-          sed -i '' 's/CODE_SIGN_IDENTITY = "Apple Development"/CODE_SIGN_IDENTITY = ""/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/CODE_SIGN_IDENTITY = "iPhone Developer"/CODE_SIGN_IDENTITY = ""/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/DEVELOPMENT_TEAM = .*/DEVELOPMENT_TEAM = ""/g' ios/Runner.xcodeproj/project.pbxproj
-          sed -i '' 's/PROVISIONING_PROFILE_SPECIFIER = .*/PROVISIONING_PROFILE_SPECIFIER = ""/g' ios/Runner.xcodeproj/project.pbxproj
-
-      - name: Patch xcconfig
+      - name: Patch xcconfig for codesign
         run: |
           for f in ios/Flutter/Debug.xcconfig ios/Flutter/Release.xcconfig ios/Flutter/Profile.xcconfig; do
             if [ -f "$f" ]; then
@@ -86,7 +79,16 @@ jobs:
 
       - name: Build unsigned IPA
         run: |
-          flutter build ios --release --no-codesign
+          cd ios
+          xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release -destination 'generic/platform=iOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            BUILD_DIR=../build/ios \
+            SYMROOT=../build/ios
+          cd ..
           mkdir -p build/unsigned_ipa/Payload
           cp -r build/ios/iphoneos/Runner.app build/unsigned_ipa/Payload/
           cd build/unsigned_ipa
