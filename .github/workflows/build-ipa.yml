@@ -25,7 +25,12 @@ jobs:
       - name: Install dependencies
         run: |
           flutter pub get
-          cd ios && pod install && cd ..
+          cd ios
+          if ! grep -q "platform :ios" Podfile; then
+            sed -i '' '1s/^/platform :ios, '\''13.0'\''\n/' Podfile
+          fi
+          pod install
+          cd ..
 
       - name: Disable code signing
         run: |
