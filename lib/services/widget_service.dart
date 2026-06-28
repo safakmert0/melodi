@@ -14,8 +14,8 @@ class WidgetService {
       'artist': song.artist,
       'albumArt': song.albumArt,
       'duration': song.duration,
-      'position': song.position,
-      'isPlaying': song.isPlaying,
+      'position': 0,
+      'isPlaying': false,
     });
   }
 

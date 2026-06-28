@@ -552,7 +552,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: 'Gerçek yt-dlp motoru için backend ayarları',
                     trailing: Icon(Icons.chevron_right, color: AppTheme.textTertiary),
                     onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const BackendSettingsScreen()),
+                      MaterialPageRoute(builder: (_) => BackendSettingsScreen()),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -743,7 +743,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 8),
                       _SettingsTile(
-                        icon: Icons.podcast,
+                        icon: Icons.headphones,
                         iconColor: Colors.pink,
                         title: 'Podcast',
                         subtitle: 'Manage podcast subscriptions',
@@ -4342,7 +4342,7 @@ class _PodcastSubscriptionsPage extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.podcast, size: 64, color: AppTheme.textTertiary),
+            Icon(Icons.headphones, size: 64, color: AppTheme.textTertiary),
             const SizedBox(height: 16),
             Text(
               'No podcast subscriptions yet',
@@ -4526,7 +4526,7 @@ class _AudiobookLibraryPageState extends State<_AudiobookLibraryPage> {
                                       ),
                                     ),
                                     const SizedBox(height: 4),
-                                    Text '%$progress tamamlandı', style: TextStyle(color: AppTheme.textTertiary, fontSize: 11)),
+                                    Text('${(progress * 100).toInt()}% tamamlandı', style: TextStyle(color: AppTheme.textTertiary, fontSize: 11)),
                                   ],
                                 ],
                               ),
@@ -4551,7 +4551,7 @@ void _showEqPresetsDialog(BuildContext context) {
     ('Jazz', Icons.piano),
     ('Classical', Icons.queue_music),
     ('Electronic', Icons.electric_bolt),
-    ('Podcast', Icons.podcast),
+    ('Podcast', Icons.headphones),
   ];
   showDialog(
     context: context,
