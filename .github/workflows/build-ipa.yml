@@ -25,10 +25,9 @@ jobs:
       - name: Install dependencies
         run: |
           flutter pub get
+          flutter create . --platforms=ios
           cd ios
-          if ! grep -q "platform :ios" Podfile; then
-            sed -i '' '1s/^/platform :ios, '\''13.0'\''\n/' Podfile
-          fi
+          sed -i '' '1s/^/platform :ios, '\''13.0'\''\n/' Podfile
           pod install
           cd ..
 
