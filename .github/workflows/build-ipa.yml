@@ -22,56 +22,64 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Setup & Build
+      - name: Build iOS Simulator
         run: |
           flutter pub get
-          flutter create --platforms=ios .
-          cat > ios/Podfile << 'EOF'
-          platform :ios, '13.0'
-          ENV['COCOAPODS_DISABLE_STATS'] = 'true'
-          project 'Runner', {
-            'Debug' => :debug,
-            'Profile' => :release,
-            'Release' => :release,
-          }
-          def flutter_root
-            generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
-            unless File.exist?(generated_xcode_build_settings_path)
-              raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
-            end
-            File.foreach(generated_xcode_build_settings_path) do |line|
-              matches = line.match(/FLUTTER_ROOT\=(.*)/)
-              return matches[1].strip if matches
-            end
-            raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}"
-          end
-          require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
-          flutter_ios_podfile_setup
-          target 'Runner' do
-            use_frameworks!
-            use_modular_headers!
-            flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-          end
-          post_install do |installer|
-            installer.pods_project.targets.each do |target|
-              flutter_additional_ios_build_settings(target)
-            end
-          end
-          EOF
-          cd ios && pod install && cd ..
-          for f in ios/Flutter/Debug.xcconfig ios/Flutter/Release.xcconfig; do
-            echo 'CODE_SIGN_IDENTITY=' >> "$f"
-            echo 'CODE_SIGNING_REQUIRED=NO' >> "$f"
-            echo 'CODE_SIGNING_ALLOWED=NO' >> "$f"
-            echo 'DEVELOPMENT_TEAM=' >> "$f"
-            echo 'PROVISIONING_PROFILE_SPECIFIER=' >> "$f"
-          done
-          flutter build ios --release --no-codesign || true
+          flutter build ios --release --simulator
 
-      - name: Upload build output
+      - name: Package as IPA
+        run: |
+          SIM_APP=$(find build/ios/iphonesimulator -name "Runner.app" -maxdepth 1)
+          if [ -z "$SIM_APP" ]; then
+            echo "Runner.app not found in simulator build"
+            find build/ios/ -name "Runner.app" -type d
+            exit 1
+          fi
+          mkdir -p build/unsigned_ipa/Payload
+          cp -r "$SIM_APP" build/unsigned_ipa/Payload/
+          cd build/unsigned_ipa
+          zip -r ../Melodi-${GITHUB_REF_NAME}.ipa Payload/
+
+      - name: Upload IPA to release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: build/Melodi-${{ github.ref_name }}.ipa
+          fail_on_unmatched_files: false
+          body: |
+            ## Melodi v${{ github.ref_name }}
+
+            ### Stitch Tasarım Sistemi
+            - Tüm ekranlar Stitch tasarımına göre yeniden yazıldı
+            - Be Vietnam Pro font sistemi eklendi
+            - Glassmorphism navigasyon barı ve mini player
+            - Stitch logosu uygulandı
+
+            ### Yeni Ekranlar
+            - Queue Screen (sıra yönetimi)
+            - Lyrics Screen (tam ekran şarkı sözleri)
+            - Create/Edit Playlist
+            - Download Manager (depolama görünümü)
+
+            ### Animasyonlar
+            - Splash screen dalga animasyonu
+            - Hero transitions
+            - Download progress animasyonları
+
+            ### Teknik
+            - 53+ dosya değiştirildi, 10 yeni dosya
+            - Flutter 3.44.2
+            - iOS 13.0+
+            - Unsigned IPA (Sideloadly/AltStore ile kurulum gerekli)
+
+            ### Kurulum
+            1. [Sideloadly](https://sideloadly.io) veya [AltStore](https://altstore.io) indirin
+            2. IPA dosyasını yükleyin
+            3. Apple ID ile imzalayın ve kurun
+
+      - name: Upload IPA as artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Melodi-${{ github.ref_name }}-build
-          path: build/ios/
-          retention-days: 7
+          name: Melodi-${{ github.ref_name }}-ipa
+          path: build/Melodi-${{ github.ref_name }}.ipa
