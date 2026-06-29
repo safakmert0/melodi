@@ -22,21 +22,24 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Build iOS Simulator
+      - name: Install dependencies
         run: |
           flutter pub get
-          flutter build ios --debug --simulator
+          cd ios && pod install && cd ..
+
+      - name: Build iOS Device (unsigned)
+        run: flutter build ios --debug --no-codesign
 
       - name: Package as IPA
         run: |
-          SIM_APP=$(find build/ios/iphonesimulator -name "Runner.app" -maxdepth 1)
-          if [ -z "$SIM_APP" ]; then
-            echo "Runner.app not found in simulator build"
+          DEVICE_APP=$(find build/ios/iphoneos -name "Runner.app" -maxdepth 1)
+          if [ -z "$DEVICE_APP" ]; then
+            echo "Runner.app not found in device build"
             find build/ios/ -name "Runner.app" -type d
             exit 1
           fi
           mkdir -p build/unsigned_ipa/Payload
-          cp -r "$SIM_APP" build/unsigned_ipa/Payload/
+          cp -r "$DEVICE_APP" build/unsigned_ipa/Payload/
           cd build/unsigned_ipa
           zip -r ../Melodi-${GITHUB_REF_NAME}.ipa Payload/
 
