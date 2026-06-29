@@ -25,7 +25,7 @@ jobs:
       - name: Build iOS Simulator
         run: |
           flutter pub get
-          flutter build ios --release --simulator
+          flutter build ios --debug --simulator
 
       - name: Package as IPA
         run: |
