@@ -13,6 +13,11 @@ jobs:
   build:
     name: Build
     runs-on: macos-15
+    env:
+      CODE_SIGN_IDENTITY: ""
+      CODE_SIGNING_REQUIRED: "NO"
+      CODE_SIGNING_ALLOWED: "NO"
+      DEVELOPMENT_TEAM: ""
     steps:
       - uses: actions/checkout@v4
 
@@ -60,17 +65,20 @@ jobs:
           EOF
           cd ios && pod install && cd ..
 
-      - name: Patch xcconfig for codesign
+      - name: Patch xcconfig
         run: |
-          for f in ios/Flutter/Debug.xcconfig ios/Flutter/Release.xcconfig; do
+          for f in ios/Flutter/Debug.xcconfig ios/Flutter/Release.xcconfig ios/Flutter/Profile.xcconfig; do
+            [ -f "$f" ] || continue
             echo 'CODE_SIGN_IDENTITY=' >> "$f"
             echo 'CODE_SIGNING_REQUIRED=NO' >> "$f"
             echo 'CODE_SIGNING_ALLOWED=NO' >> "$f"
             echo 'DEVELOPMENT_TEAM=' >> "$f"
             echo 'PROVISIONING_PROFILE_SPECIFIER=' >> "$f"
           done
+          pbxproj="ios/Runner.xcodeproj/project.pbxproj"
+          sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = "iPhone Developer"/"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = ""/g' "$pbxproj"
 
-      - name: Build unsigned IPA
+      - name: Build IPA
         run: |
           flutter build ios --release --no-codesign
           mkdir -p build/unsigned_ipa/Payload
