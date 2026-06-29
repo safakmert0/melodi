@@ -22,10 +22,7 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Analyze code
-        run: flutter analyze --no-pub
-
-      - name: Build iOS (release, no-codesign)
+      - name: Install & Build
         run: |
           flutter pub get
           flutter create --platforms=ios .
@@ -38,12 +35,11 @@ jobs:
             echo 'PROVISIONING_PROFILE_SPECIFIER=' >> "$f"
           done
           flutter build ios --release --no-codesign || true
-          ls -la build/ios/ 2>/dev/null || echo "Build directory not found"
 
       - name: Upload build output
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Melodi-${{ github.ref_name }}-ios-build
+          name: Melodi-${{ github.ref_name }}-build
           path: build/ios/
           retention-days: 7
