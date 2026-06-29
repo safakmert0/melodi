@@ -60,7 +60,7 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const.fromLTRB(16, 12, 16, 0),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: Container(
                   height: 50,
                   decoration: BoxDecoration(
