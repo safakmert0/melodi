@@ -13,11 +13,6 @@ jobs:
   build:
     name: Build
     runs-on: macos-15
-    env:
-      CODE_SIGN_IDENTITY: ""
-      CODE_SIGNING_REQUIRED: "NO"
-      CODE_SIGNING_ALLOWED: "NO"
-      DEVELOPMENT_TEAM: ""
     steps:
       - uses: actions/checkout@v4
 
@@ -27,59 +22,25 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Install dependencies
+      - name: Setup iOS project
         run: |
-          flutter pub get
-          flutter create . --platforms=ios
-          cat > ios/Podfile << 'EOF'
-          platform :ios, '13.0'
-          ENV['COCOAPODS_DISABLE_STATS'] = 'true'
-          project 'Runner', {
-            'Debug' => :debug,
-            'Profile' => :release,
-            'Release' => :release,
-          }
-          def flutter_root
-            generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
-            unless File.exist?(generated_xcode_build_settings_path)
-              raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
-            end
-            File.foreach(generated_xcode_build_settings_path) do |line|
-              matches = line.match(/FLUTTER_ROOT\=(.*)/)
-              return matches[1].strip if matches
-            end
-            raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}"
-          end
-          require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
-          flutter_ios_podfile_setup
-          target 'Runner' do
-            use_frameworks!
-            use_modular_headers!
-            flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-          end
-          post_install do |installer|
-            installer.pods_project.targets.each do |target|
-              flutter_additional_ios_build_settings(target)
-            end
-          end
-          EOF
+          rm -rf ios
+          flutter create --platforms=ios .
           cd ios && pod install && cd ..
 
-      - name: Patch xcconfig
+      - name: Disable signing and build
         run: |
-          for f in ios/Flutter/Debug.xcconfig ios/Flutter/Release.xcconfig ios/Flutter/Profile.xcconfig; do
-            [ -f "$f" ] || continue
+          # Patch all xcconfig files
+          for f in ios/Flutter/*.xcconfig; do
             echo 'CODE_SIGN_IDENTITY=' >> "$f"
             echo 'CODE_SIGNING_REQUIRED=NO' >> "$f"
             echo 'CODE_SIGNING_ALLOWED=NO' >> "$f"
             echo 'DEVELOPMENT_TEAM=' >> "$f"
             echo 'PROVISIONING_PROFILE_SPECIFIER=' >> "$f"
           done
-          pbxproj="ios/Runner.xcodeproj/project.pbxproj"
-          sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = "iPhone Developer"/"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = ""/g' "$pbxproj"
-
-      - name: Build IPA
-        run: |
+          # Patch pbxproj
+          sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = "iPhone Developer"/"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = ""/g' ios/Runner.xcodeproj/project.pbxproj
+          # Build
           flutter build ios --release --no-codesign
           mkdir -p build/unsigned_ipa/Payload
           cp -r build/ios/iphoneos/Runner.app build/unsigned_ipa/Payload/
