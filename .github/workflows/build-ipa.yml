@@ -26,10 +26,7 @@ jobs:
         run: |
           flutter pub get
           flutter create . --platforms=ios
-
-      - name: Write Podfile
-        run: |
-          cat > ios/Podfile << 'PODEOF'
+          cat > ios/Podfile << 'EOF'
           platform :ios, '13.0'
           ENV['COCOAPODS_DISABLE_STATS'] = 'true'
           project 'Runner', {
@@ -60,38 +57,18 @@ jobs:
               flutter_additional_ios_build_settings(target)
             end
           end
-          PODEOF
+          EOF
+          cd ios && pod install && cd ..
 
-      - name: Pod install
-        run: cd ios && pod install && cd ..
-
-      - name: Disable code signing
+      - name: Patch xcconfig for codesign
         run: |
-          xcconfig_debug="ios/Flutter/Debug.xcconfig"
-          xcconfig_release="ios/Flutter/Release.xcconfig"
-          xcconfig_profile="ios/Flutter/Profile.xcconfig"
-          for f in "$xcconfig_debug" "$xcconfig_release" "$xcconfig_profile"; do
-            [ -f "$f" ] || continue
-            # Remove any existing signing lines and add our own
-            sed -i '' '/CODE_SIGN_IDENTITY/d' "$f"
-            sed -i '' '/CODE_SIGNING_REQUIRED/d' "$f"
-            sed -i '' '/CODE_SIGNING_ALLOWED/d' "$f"
-            sed -i '' '/DEVELOPMENT_TEAM/d' "$f"
-            sed -i '' '/PROVISIONING_PROFILE_SPECIFIER/d' "$f"
+          for f in ios/Flutter/Debug.xcconfig ios/Flutter/Release.xcconfig; do
             echo 'CODE_SIGN_IDENTITY=' >> "$f"
             echo 'CODE_SIGNING_REQUIRED=NO' >> "$f"
             echo 'CODE_SIGNING_ALLOWED=NO' >> "$f"
             echo 'DEVELOPMENT_TEAM=' >> "$f"
             echo 'PROVISIONING_PROFILE_SPECIFIER=' >> "$f"
           done
-          # Also patch pbxproj
-          pbxproj="ios/Runner.xcodeproj/project.pbxproj"
-          if [ -f "$pbxproj" ]; then
-            sed -i '' 's/CODE_SIGN_IDENTITY = "Apple Development"/CODE_SIGN_IDENTITY = ""/g' "$pbxproj"
-            sed -i '' 's/CODE_SIGN_IDENTITY = "iPhone Developer"/CODE_SIGN_IDENTITY = ""/g' "$pbxproj"
-            sed -i '' 's/DEVELOPMENT_TEAM = "[A-Z0-9]*"/DEVELOPMENT_TEAM = ""/g' "$pbxproj"
-            sed -i '' 's/ProvisioningStyle = Automatic/ProvisioningStyle = Manual/g' "$pbxproj"
-          fi
 
       - name: Build unsigned IPA
         run: |
