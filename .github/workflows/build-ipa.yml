@@ -56,7 +56,7 @@ jobs:
           files: build/Melodi-${{ github.ref_name }}.ipa
           fail_on_unmatched_files: false
           body: |
-            ## Melodi v${{ github.ref_name }}
+            ## Melodi ${{ github.ref_name }}
 
             ### Bug Fix
             - CI build artık simulator yerine gerçek iPhone cihazı için compile ediyor
