@@ -25,6 +25,12 @@ jobs:
       - name: Install dependencies
         run: |
           flutter pub get
+          flutter create . --platforms=ios
+          echo 'platform :ios, "13.0"' > ios/Podfile.tmp
+          cat ios/Podfile >> ios/Podfile.tmp
+          mv ios/Podfile.tmp ios/Podfile
+          echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Debug.xcconfig
+          echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Release.xcconfig
           cd ios && pod install && cd ..
 
       - name: Build iOS Device (unsigned)
@@ -52,31 +58,12 @@ jobs:
           body: |
             ## Melodi v${{ github.ref_name }}
 
-            ### Stitch Tasarım Sistemi
-            - Tüm ekranlar Stitch tasarımına göre yeniden yazıldı
-            - Be Vietnam Pro font sistemi eklendi
-            - Glassmorphism navigasyon barı ve mini player
-            - Stitch logosu uygulandı
-
-            ### Yeni Ekranlar
-            - Queue Screen (sıra yönetimi)
-            - Lyrics Screen (tam ekran şarkı sözleri)
-            - Create/Edit Playlist
-            - Download Manager (depolama görünümü)
-
-            ### Animasyonlar
-            - Splash screen dalga animasyonu
-            - Hero transitions
-            - Download progress animasyonları
-
-            ### Teknik
-            - 53+ dosya değiştirildi, 10 yeni dosya
-            - Flutter 3.44.2
-            - iOS 13.0+
-            - Unsigned IPA (Sideloadly/AltStore ile kurulum gerekli)
+            ### Bug Fix
+            - CI build artık simulator yerine gerçek iPhone cihazı için compile ediyor
+            - SideStore/AltStore ile kurulum hatası düzeltildi
 
             ### Kurulum
-            1. [Sideloadly](https://sideloadly.io) veya [AltStore](https://altstore.io) indirin
+            1. [SideStore](https://sidestore.io) veya [Sideloadly](https://sideloadly.io) indirin
             2. IPA dosyasını yükleyin
             3. Apple ID ile imzalayın ve kurun
 
