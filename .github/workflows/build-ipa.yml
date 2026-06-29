@@ -31,10 +31,44 @@ jobs:
           mv ios/Podfile.tmp ios/Podfile
           echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Debug.xcconfig
           echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Release.xcconfig
-          cd ios && pod install && cd ..
+
+      - name: Add keychain entitlements
+        run: |
+          cat > ios/Runner/Runner.entitlements << 'XMLEOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>keychain-access-groups</key>
+            <array>
+              <string>$(AppIdentifierPrefix)com.example.melodiV2</string>
+            </array>
+          </dict>
+          </plist>
+          XMLEOF
+
+      - name: Patch project for entitlements
+        run: |
+          python3 << 'PYEOF'
+          import re
+          pbx = "ios/Runner.xcodeproj/project.pbxproj"
+          with open(pbx) as f:
+              content = f.read()
+          # Add CODE_SIGN_ENTITLEMENTS to Runner target configs only
+          # These are the blocks containing PRODUCT_BUNDLE_IDENTIFIER = com.example.melodiV2
+          marker = 'PRODUCT_BUNDLE_IDENTIFIER = com.example.melodiV2;'
+          replacement = 'CODE_SIGN_ENTITLEMENTS = "Runner/Runner.entitlements";\n\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.example.melodiV2;'
+          content = content.replace(marker, replacement)
+          with open(pbx, 'w') as f:
+              f.write(content)
+          print("Patched project.pbxproj with entitlements")
+          PYEOF
+
+      - name: Install CocoaPods
+        run: cd ios && pod install && cd ..
 
       - name: Build iOS Device (unsigned)
-        run: flutter build ios --debug --no-codesign
+        run: flutter build ios --release --no-codesign
 
       - name: Package as IPA
         run: |
