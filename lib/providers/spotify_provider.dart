@@ -129,7 +129,7 @@ class SpotifyProvider extends ChangeNotifier {
       }
     }
     _matchedTrackIds.addAll(matches);
-    await _saveMatches();
+    _saveMatches();
     notifyListeners();
     return matches;
   }
