@@ -105,9 +105,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Consumer3<LibraryProvider, PlayerProvider, LocaleNotifier>(
       builder: (context, library, player, locale, _) {
-        return CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
+        return Scaffold(
+          backgroundColor: MelodiTheme.background,
+          body: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
             SliverAppBar(
               backgroundColor: const Color(0xFF131313),
               surfaceTintColor: Colors.transparent,
@@ -1008,6 +1010,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ],
+          ),
         );
       },
     );
