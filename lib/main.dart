@@ -60,16 +60,16 @@ Future<void> main() async {
       systemNavigationBarIconBrightness: Brightness.light,
     ));
 
-    CrashReporter.init();
-    DiagnosticsService.instance;
+    try { CrashReporter.init(); } catch (_) {}
+    try { DiagnosticsService.instance; } catch (_) {}
     AppLogger.i('Melodi v3.0 starting...');
 
     final db = DatabaseService.instance;
-    await db.database;
+    try { await db.database; } catch (_) {}
 
-    await NotificationService.instance.init();
-    await AudioEffectsService().initialize();
-    BluetoothService.instance.detectBluetoothConnection();
+    try { await NotificationService.instance.init(); } catch (_) {}
+    try { await AudioEffectsService().initialize(); } catch (_) {}
+    try { BluetoothService.instance.detectBluetoothConnection(); } catch (_) {}
 
     AppLogger.i('Services initialized');
 
