@@ -5,6 +5,7 @@ import '../core/constants.dart';
 import '../core/localization.dart';
 import '../providers/download_provider.dart';
 import '../services/download_manager.dart';
+import 'settings_screen.dart';
 
 class DownloadsScreen extends StatelessWidget {
   const DownloadsScreen({super.key});
@@ -24,7 +25,9 @@ class DownloadsScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_rounded, color: MelodiTheme.onSurfaceVariant, size: 22),
-            onPressed: () {},
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
           ),
           Container(
             width: 36, height: 36, margin: const EdgeInsets.only(right: 8),
@@ -51,7 +54,7 @@ class DownloadsScreen extends StatelessWidget {
                       children: [
                         Text('In Progress (${active.length})', style: MelodiTheme.heading(size: 18)),
                         TextButton(
-                          onPressed: () {},
+                          onPressed: () => context.read<DownloadProvider>().cancelAll(),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                             decoration: BoxDecoration(

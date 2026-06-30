@@ -165,13 +165,21 @@ class _AppEntryState extends State<_AppEntry> {
   }
 
   Future<void> _checkOnboarding() async {
-    final db = DatabaseService.instance;
-    final value = await db.getSetting('onboarding_completed');
-    if (!mounted) return;
-    setState(() {
-      _showOnboarding = value != 'true';
-      _loading = false;
-    });
+    try {
+      final db = DatabaseService.instance;
+      final value = await db.getSetting('onboarding_completed');
+      if (!mounted) return;
+      setState(() {
+        _showOnboarding = value != 'true';
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _showOnboarding = true;
+        _loading = false;
+      });
+    }
   }
 
   @override
@@ -229,10 +237,11 @@ class MelodiApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SettingsProvider()..load()),
         ChangeNotifierProvider(
           create: (ctx) {
-            final sync = SyncProvider()..init();
+            final sync = SyncProvider();
             final spotify = ctx.read<SpotifyProvider>();
             final ytmusic = ctx.read<YTMusicProvider>();
             sync.setServices(spotify: spotify.service, ytmusic: ytmusic.service);
+            sync.init();
             return sync;
           },
         ),

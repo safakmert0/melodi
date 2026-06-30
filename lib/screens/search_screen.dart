@@ -5,6 +5,7 @@ import '../core/localization.dart';
 import '../providers/search_provider.dart';
 import '../providers/player_provider.dart';
 import '../models/song_model.dart';
+import 'settings_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -46,7 +47,9 @@ class _SearchScreenState extends State<SearchScreen> {
                     const Spacer(),
                     IconButton(
                       icon: const Icon(Icons.settings_rounded, color: MelodiTheme.onSurfaceVariant, size: 22),
-                      onPressed: () {},
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                      ),
                     ),
                   ],
                 ),

@@ -4,6 +4,7 @@ import '../core/constants.dart';
 import '../core/localization.dart';
 import '../models/playlist_model.dart';
 import '../providers/playlist_provider.dart';
+import '../providers/library_provider.dart';
 import '../models/song_model.dart';
 
 class EditPlaylistScreen extends StatefulWidget {
@@ -230,7 +231,13 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
             ),
             const SizedBox(height: 8),
             TextButton.icon(
-              onPressed: () {},
+              onPressed: () async {
+                final library = context.read<LibraryProvider>();
+                await library.importFromFiles();
+                setState(() {
+                  _songs.addAll(library.songs.where((s) => !_songs.any((existing) => existing.id == s.id)));
+                });
+              },
               icon: const Icon(Icons.add_circle_outline_rounded, color: MelodiTheme.primaryGreen),
               label: Text(
                 AppLocale.tr('add_song'),

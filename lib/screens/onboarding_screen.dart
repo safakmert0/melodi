@@ -284,15 +284,15 @@ class _ThemeSelector extends StatelessWidget {
         _ThemeOption(
           label: AppLocale.tr('dark'),
           icon: Icons.dark_mode_rounded,
-          isSelected: true,
-          onTap: () {},
+          isSelected: context.watch<ThemeProvider>().isDark,
+          onTap: () => context.read<ThemeProvider>().setThemeMode(ThemeMode.dark),
         ),
         const SizedBox(width: 16),
         _ThemeOption(
           label: AppLocale.tr('light'),
           icon: Icons.light_mode_rounded,
-          isSelected: false,
-          onTap: () {},
+          isSelected: context.watch<ThemeProvider>().isLight,
+          onTap: () => context.read<ThemeProvider>().setThemeMode(ThemeMode.light),
         ),
       ],
     );

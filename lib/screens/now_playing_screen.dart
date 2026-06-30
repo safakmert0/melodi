@@ -248,20 +248,22 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                   ),
                 ),
               ] else
-                Container(color: const Color(0xFF131313)),
-              Container(
-                decoration: const BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment.topCenter,
-                    radius: 1.2,
-                    colors: [
-                      Color(0xFF53e076),
-                      Color(0xFF5203d5),
-                    ],
-                  ),
-                ),
+                Positioned.fill(child: Container(color: const Color(0xFF131313))),
+              Positioned.fill(
                 child: Container(
-                  color: Colors.black.withOpacity(0.45),
+                  decoration: const BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment.topCenter,
+                      radius: 1.2,
+                      colors: [
+                        Color(0xFF53e076),
+                        Color(0xFF5203d5),
+                      ],
+                    ),
+                  ),
+                  child: Container(
+                    color: Colors.black.withOpacity(0.45),
+                  ),
                 ),
               ),
               // Top bar

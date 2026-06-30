@@ -166,6 +166,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
         if (item.type == _LibraryItemType.playlist && item.playlist != null) {
           Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => PlaylistDetailScreen(playlist: item.playlist!)));
+        } else if (item.type == _LibraryItemType.likedSongs) {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => PlaylistDetailScreen(
+              playlist: PlaylistModel(
+                id: 'favorites',
+                name: 'Liked Songs',
+                songIds: context.read<LibraryProvider>().favorites.map((s) => s.id).toList(),
+              ),
+            ),
+          ));
         }
       },
     );
@@ -177,6 +187,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
         if (item.type == _LibraryItemType.playlist && item.playlist != null) {
           Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => PlaylistDetailScreen(playlist: item.playlist!)));
+        } else if (item.type == _LibraryItemType.likedSongs) {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => PlaylistDetailScreen(
+              playlist: PlaylistModel(
+                id: 'favorites',
+                name: 'Liked Songs',
+                songIds: context.read<LibraryProvider>().favorites.map((s) => s.id).toList(),
+              ),
+            ),
+          ));
         }
       },
       child: Container(

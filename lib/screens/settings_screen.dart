@@ -4305,7 +4305,14 @@ class _VoiceControlPage extends StatelessWidget {
             title: 'Custom Shortcuts',
             subtitle: 'Create custom voice commands',
             trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
-            onTap: () {},
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Custom Shortcuts coming soon'),
+                  duration: Duration(seconds: 1),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 8),
           _SettingsTile(
@@ -4355,7 +4362,14 @@ class _PodcastSubscriptionsPage extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () {},
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Podcast browsing coming soon'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
               icon: const Icon(Icons.search, size: 18),
               label: const Text('Browse Podcasts'),
               style: ElevatedButton.styleFrom(

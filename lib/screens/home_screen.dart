@@ -270,6 +270,15 @@ class HomeScreen extends StatelessWidget {
             style: const TextStyle(fontFamily: AppConstants.fontFamily,
               color: MelodiTheme.onSurfaceVariant, fontSize: 13, height: 1.3)),
           trailing: const Icon(Icons.chevron_right_rounded, color: MelodiTheme.onSurfaceVariant),
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${item.$2} coming soon'),
+                backgroundColor: MelodiTheme.primaryGreen,
+                duration: const Duration(seconds: 1),
+              ),
+            );
+          },
         )),
       ],
     );
@@ -289,7 +298,10 @@ class HomeScreen extends StatelessWidget {
             Text(AppLocale.tr('import_songs_to_start'), style: const TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 15)),
             const SizedBox(height: 32),
             FilledButton.icon(
-              onPressed: () {},
+              onPressed: () async {
+                final library = context.read<LibraryProvider>();
+                await library.importFromDirectory();
+              },
               icon: const Icon(Icons.library_music_rounded),
               label: Text(AppLocale.tr('import_music')),
               style: FilledButton.styleFrom(

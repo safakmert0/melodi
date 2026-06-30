@@ -49,37 +49,46 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   Future<void> loadSettings() async {
-    final db = DatabaseService.instance;
-    final mode = await db.getSetting('theme_mode');
-    if (mode != null) {
-      _themeMode = ThemeMode.values[int.parse(mode)];
-    }
-    final dynamicColorStr = await db.getSetting('use_dynamic_color');
-    if (dynamicColorStr != null) {
-      _useDynamicColor = dynamicColorStr == 'true';
-    }
-    final colorStr = await db.getSetting('accent_color');
-    if (colorStr != null) {
-      _accentColor = Color(int.parse(colorStr));
-    }
-    AppTheme.accentColor = _accentColor;
+    try {
+      final db = DatabaseService.instance;
+      final mode = await db.getSetting('theme_mode');
+      if (mode != null) {
+        final index = int.tryParse(mode);
+        if (index != null && index >= 0 && index < ThemeMode.values.length) {
+          _themeMode = ThemeMode.values[index];
+        }
+      }
+      final dynamicColorStr = await db.getSetting('use_dynamic_color');
+      if (dynamicColorStr != null) {
+        _useDynamicColor = dynamicColorStr == 'true';
+      }
+      final colorStr = await db.getSetting('accent_color');
+      if (colorStr != null && colorStr.isNotEmpty) {
+        final val = int.tryParse(colorStr);
+        if (val != null) _accentColor = Color(val);
+      }
+      AppTheme.accentColor = _accentColor;
 
-    _customBackground = await _loadColor(db, 'custom_bg');
-    _customSurface = await _loadColor(db, 'custom_surface');
-    _customCard = await _loadColor(db, 'custom_card');
-    _customTextPrimary = await _loadColor(db, 'custom_text_primary');
-    _customTextSecondary = await _loadColor(db, 'custom_text_secondary');
+      _customBackground = await _loadColor(db, 'custom_bg');
+      _customSurface = await _loadColor(db, 'custom_surface');
+      _customCard = await _loadColor(db, 'custom_card');
+      _customTextPrimary = await _loadColor(db, 'custom_text_primary');
+      _customTextSecondary = await _loadColor(db, 'custom_text_secondary');
 
-    _applyCustomColors();
-    _syncIsLightMode();
-    notifyListeners();
+      _applyCustomColors();
+      _syncIsLightMode();
+      notifyListeners();
+    } catch (_) {}
   }
 
   Future<Color?> _loadColor(DatabaseService db, String key) async {
-    final val = await db.getSetting(key);
-    if (val != null && val.isNotEmpty) {
-      return Color(int.parse(val));
-    }
+    try {
+      final val = await db.getSetting(key);
+      if (val != null && val.isNotEmpty) {
+        final parsed = int.tryParse(val);
+        if (parsed != null) return Color(parsed);
+      }
+    } catch (_) {}
     return null;
   }
 

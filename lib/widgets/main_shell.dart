@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
@@ -39,16 +38,13 @@ class _MainShellState extends State<MainShell> {
             left: 0,
             right: 0,
             bottom: 0,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const MiniPlayer(),
-                ClipRect(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                    child: Container(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const MiniPlayer(),
+                    Container(
                       decoration: BoxDecoration(
-                        color: MelodiTheme.background.withOpacity(0.85),
+                        color: MelodiTheme.background,
                         border: Border(
                           top: BorderSide(
                             color: MelodiTheme.outlineVariant.withOpacity(0.3),
@@ -85,10 +81,8 @@ class _MainShellState extends State<MainShell> {
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
           ),
         ],
       ),

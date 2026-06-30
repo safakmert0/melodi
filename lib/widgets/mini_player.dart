@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
@@ -25,18 +24,15 @@ class MiniPlayer extends StatelessWidget {
                     child: child),
                   fullscreenDialog: true))
               : null,
-          child: ClipRRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(
-                height: 64,
-                decoration: BoxDecoration(
-                  color: MelodiTheme.containerLow.withOpacity(0.85),
-                  border: Border(
-                    top: BorderSide(color: MelodiTheme.outlineVariant.withOpacity(0.3), width: 0.5)),
-                ),
-                child: song != null
-                    ? Column(
+          child: Container(
+            height: 64,
+            decoration: BoxDecoration(
+              color: MelodiTheme.containerLow,
+              border: Border(
+                top: BorderSide(color: MelodiTheme.outlineVariant.withOpacity(0.3), width: 0.5)),
+            ),
+            child: song != null
+                ? Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           ClipRRect(
@@ -104,7 +100,6 @@ class MiniPlayer extends StatelessWidget {
                         ),
                       ),
               ),
-            ),
           ),
         );
       },
