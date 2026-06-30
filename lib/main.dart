@@ -99,35 +99,50 @@ Future<void> main() async {
       audioHandler = AudioPlayerHandler();
     }
 
+    FlutterError.onError = (details) {
+      FlutterError.presentError(details);
+      debugPrint('=== FLUTTER ERROR ===\n${details.exceptionAsString()}\n${details.stack}');
+    };
+
     ErrorWidget.builder = (details) {
-      return Scaffold(
-        backgroundColor: MelodiTheme.background,
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Build Error:',
-                    style: TextStyle(color: MelodiTheme.errorRed, fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 16),
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Text(
-                      '${details.exception}',
-                      style: const TextStyle(color: MelodiTheme.onSurface, fontSize: 14),
+      return MaterialApp(
+        home: Scaffold(
+          backgroundColor: MelodiTheme.background,
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.error_outline, color: MelodiTheme.errorRed, size: 48),
+                  const SizedBox(height: 16),
+                  const Text('HATA:',
+                      style: TextStyle(color: MelodiTheme.errorRed, fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text('${details.exception}',
+                      style: const TextStyle(color: MelodiTheme.onSurface, fontSize: 12)),
+                  const SizedBox(height: 16),
+                  if (details.stack != null)
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Text('${details.stack}',
+                            style: const TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 10)),
+                      ),
                     ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       );
     };
 
-    runApp(MelodiApp(audioHandler: audioHandler));
+    runZonedGuarded(() {
+      runApp(MelodiApp(audioHandler: audioHandler));
+    }, (error, stack) {
+      debugPrint('=== UNCAUGHT ERROR ===\n$error\n$stack');
+    });
   } catch (e) {
     runApp(MaterialApp(
       home: Scaffold(
