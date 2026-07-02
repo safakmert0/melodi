@@ -25,50 +25,15 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Setup iOS project with flutter create
+      - name: Setup iOS project
         run: |
-          # flutter create generates proper plugin registration in project.pbxproj
-          # This is required for native plugins (just_audio, audio_service, sqflite, etc.)
+          # flutter create sets up iOS project structure + plugin references
           flutter create . --platforms=ios
 
-          # Now overwrite Podfile with our custom version (platform, post_install hooks)
-          cat > ios/Podfile << 'PODEOF'
-          platform :ios, '13.0'
-          ENV['COCOAPODS_DISABLE_STATS'] = 'true'
-          project 'Runner', {
-            'Debug' => :debug,
-            'Profile' => :release,
-            'Release' => :release,
-          }
-          def flutter_root
-            generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
-            unless File.exist?(generated_xcode_build_settings_path)
-              raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
-            end
-            File.foreach(generated_xcode_build_settings_path) do |line|
-              matches = line.match(/FLUTTER_ROOT\=(.*)/)
-              return matches[1].strip if matches
-            end
-            raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig, then run flutter pub get"
-          end
-          require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
-          flutter_ios_podfile_setup
-          target 'Runner' do
-            use_frameworks!
-            use_modular_headers!
-            flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-          end
-          post_install do |installer|
-            installer.pods_project.targets.each do |target|
-              flutter_additional_ios_build_settings(target)
-              target.build_configurations.each do |config|
-                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
-              end
-            end
-          end
-          PODEOF
+          # Patch Podfile: set platform to 13.0
+          sed -i '' 's/platform :ios, .*/platform :ios, '\''13.0'\''/' ios/Podfile
 
-          # Overwrite entitlements (remove macOS sandbox, set correct bundle ID)
+          # Overwrite entitlements
           cat > ios/Runner/Runner.entitlements << 'XMLEOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -82,27 +47,23 @@ jobs:
           </plist>
           XMLEOF
 
-          # Set development team for signing
+          # Set development team
           echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Debug.xcconfig
           echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Release.xcconfig
 
-          # Patch project.pbxproj: set bundle ID and entitlements
+          # Patch project.pbxproj
           python3 << 'PYEOF'
-          import re
           pbx = "ios/Runner.xcodeproj/project.pbxproj"
           with open(pbx) as f:
               content = f.read()
-          # Update bundle ID from placeholder to real one
           content = content.replace('com.example.melodi', 'com.melodi.app')
           content = content.replace('com.example.melodiV2', 'com.melodi.app')
-          # Add CODE_SIGN_ENTITLEMENTS if not already present
           if 'CODE_SIGN_ENTITLEMENTS' not in content:
               marker = 'PRODUCT_BUNDLE_IDENTIFIER = com.melodi.app;'
               replacement = 'CODE_SIGN_ENTITLEMENTS = "Runner/Runner.entitlements";\n\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.melodi.app;'
               content = content.replace(marker, replacement)
           with open(pbx, 'w') as f:
               f.write(content)
-          print("Patched project.pbxproj with bundle ID and entitlements")
           PYEOF
 
       - name: Install CocoaPods
@@ -119,10 +80,17 @@ jobs:
             find build/ios/ -name "Runner.app" -type d
             exit 1
           fi
+          # Check IPA size
+          echo "=== Runner.app size ==="
+          du -sh "$DEVICE_APP"
+          echo "=== Frameworks in Runner.app ==="
+          ls -la "$DEVICE_APP/Frameworks/" 2>/dev/null || echo "No Frameworks directory"
           mkdir -p build/unsigned_ipa/Payload
           cp -r "$DEVICE_APP" build/unsigned_ipa/Payload/
           cd build/unsigned_ipa
           zip -r ../Melodi-${GITHUB_REF_NAME}.ipa Payload/
+          echo "=== IPA size ==="
+          ls -lh ../Melodi-${GITHUB_REF_NAME}.ipa
 
       - name: Upload IPA to release
         uses: softprops/action-gh-release@v2
