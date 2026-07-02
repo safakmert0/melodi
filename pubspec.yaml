@@ -23,7 +23,7 @@ dependencies:
   # Music Scanning & Metadata
   on_audio_query: ^2.9.0
   permission_handler: ^11.3.1
-  audio_metadata_reader: ^1.6.0
+  audio_metadata_reader: ^1.5.0
 
   # File Import
   file_picker: ^8.0.3
@@ -63,7 +63,6 @@ dependencies:
   # Utilities
   crypto: ^3.0.6
   uuid: ^4.4.2
-  intl: ^0.20.2
   collection: ^1.18.0
   connectivity_plus: ^6.0.5
   http: ^1.2.1
