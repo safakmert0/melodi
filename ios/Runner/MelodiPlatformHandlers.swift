@@ -4,11 +4,13 @@ import AVFAudio
 import MediaPlayer
 
 // MARK: - AirPlay Handler
-class AirPlayHandler: NSObject, FlutterPlugin {
-    static func register(with messenger: FlutterBinaryMessenger) {
-        let channel = FlutterMethodChannel(name: "com.melodi/airplay", binaryMessenger: messenger)
-        let instance = AirPlayHandler()
-        channel.setMethodCallHandler(instance.handle)
+class AirPlayHandler: NSObject {
+    private let channel: FlutterMethodChannel
+
+    init(messenger: FlutterBinaryMessenger) {
+        channel = FlutterMethodChannel(name: "com.melodi/airplay", binaryMessenger: messenger)
+        super.init()
+        channel.setMethodCallHandler(handle)
     }
 
     func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -56,11 +58,13 @@ class AirPlayHandler: NSObject, FlutterPlugin {
 }
 
 // MARK: - CarPlay Handler
-class CarPlayHandler: NSObject, FlutterPlugin {
-    static func register(with messenger: FlutterBinaryMessenger) {
-        let channel = FlutterMethodChannel(name: "com.melodi/carplay", binaryMessenger: messenger)
-        let instance = CarPlayHandler()
-        channel.setMethodCallHandler(instance.handle)
+class CarPlayHandler: NSObject {
+    private let channel: FlutterMethodChannel
+
+    init(messenger: FlutterBinaryMessenger) {
+        channel = FlutterMethodChannel(name: "com.melodi/carplay", binaryMessenger: messenger)
+        super.init()
+        channel.setMethodCallHandler(handle)
     }
 
     func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -92,11 +96,13 @@ class CarPlayHandler: NSObject, FlutterPlugin {
 }
 
 // MARK: - Voice Control Handler
-class VoiceControlHandler: NSObject, FlutterPlugin {
-    static func register(with messenger: FlutterBinaryMessenger) {
-        let channel = FlutterMethodChannel(name: "com.melodi/voice_control", binaryMessenger: messenger)
-        let instance = VoiceControlHandler()
-        channel.setMethodCallHandler(instance.handle)
+class VoiceControlHandler: NSObject {
+    private let channel: FlutterMethodChannel
+
+    init(messenger: FlutterBinaryMessenger) {
+        channel = FlutterMethodChannel(name: "com.melodi/voice_control", binaryMessenger: messenger)
+        super.init()
+        channel.setMethodCallHandler(handle)
     }
 
     func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -176,11 +182,13 @@ class VoiceControlHandler: NSObject, FlutterPlugin {
 }
 
 // MARK: - Widget Handler
-class WidgetHandler: NSObject, FlutterPlugin {
-    static func register(with messenger: FlutterBinaryMessenger) {
-        let channel = FlutterMethodChannel(name: "com.melodi/widgets", binaryMessenger: messenger)
-        let instance = WidgetHandler()
-        channel.setMethodCallHandler(instance.handle)
+class WidgetHandler: NSObject {
+    private let channel: FlutterMethodChannel
+
+    init(messenger: FlutterBinaryMessenger) {
+        channel = FlutterMethodChannel(name: "com.melodi/widgets", binaryMessenger: messenger)
+        super.init()
+        channel.setMethodCallHandler(handle)
     }
 
     func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
