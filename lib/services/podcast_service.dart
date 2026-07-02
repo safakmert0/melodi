@@ -142,7 +142,7 @@ class PodcastService {
     final imageUrl = _extractTag(channel, 'itunes:image') ?? _extractTag(channel, 'image');
 
     final items = RegExp(r'<item>(.*?)</item>', dotAll: true).allMatches(channel);
-    final episodes = items.map((m) => _parseEpisode(m.group(1)!, title)).toList();
+    final episodes = items.map((m) => _parseEpisode(m.group(1)!, title ?? '')).toList();
 
     final id = _hashUrl(rssUrl);
 
