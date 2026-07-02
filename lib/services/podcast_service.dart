@@ -148,7 +148,7 @@ class PodcastService {
 
     return PodcastFeed(
       id: id,
-      title: title,
+      title: title ?? 'Unknown Podcast',
       description: description ?? '',
       imageUrl: imageUrl,
       episodes: episodes,
