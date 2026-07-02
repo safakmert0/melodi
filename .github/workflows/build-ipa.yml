@@ -23,17 +23,15 @@ jobs:
           cache: true
 
       - name: Install dependencies
-        run: |
-          flutter pub get
+        run: flutter pub get
 
-      - name: Setup iOS project
+      - name: Setup iOS project with flutter create
         run: |
-          # Ensure ios/ directory exists with proper structure
-          cd ios
-          flutter build ios --release --no-codesign --dry-run 2>/dev/null || true
-          cd ..
+          # flutter create generates proper plugin registration in project.pbxproj
+          # This is required for native plugins (just_audio, audio_service, sqflite, etc.)
+          flutter create . --platforms=ios
 
-          # Create proper Podfile
+          # Now overwrite Podfile with our custom version (platform, post_install hooks)
           cat > ios/Podfile << 'PODEOF'
           platform :ios, '13.0'
           ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -70,7 +68,7 @@ jobs:
           end
           PODEOF
 
-          # Ensure entitlements exist
+          # Overwrite entitlements (remove macOS sandbox, set correct bundle ID)
           cat > ios/Runner/Runner.entitlements << 'XMLEOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -88,13 +86,14 @@ jobs:
           echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Debug.xcconfig
           echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Release.xcconfig
 
-          # Ensure CODE_SIGN_ENTITLEMENTS is set in project.pbxproj
+          # Patch project.pbxproj: set bundle ID and entitlements
           python3 << 'PYEOF'
           import re
           pbx = "ios/Runner.xcodeproj/project.pbxproj"
           with open(pbx) as f:
               content = f.read()
           # Update bundle ID from placeholder to real one
+          content = content.replace('com.example.melodi', 'com.melodi.app')
           content = content.replace('com.example.melodiV2', 'com.melodi.app')
           # Add CODE_SIGN_ENTITLEMENTS if not already present
           if 'CODE_SIGN_ENTITLEMENTS' not in content:
@@ -103,7 +102,7 @@ jobs:
               content = content.replace(marker, replacement)
           with open(pbx, 'w') as f:
               f.write(content)
-          print("Patched project.pbxproj")
+          print("Patched project.pbxproj with bundle ID and entitlements")
           PYEOF
 
       - name: Install CocoaPods
