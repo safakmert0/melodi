@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'database_service.dart';
 
 class BackendVideo {
   final String id;
@@ -79,9 +80,10 @@ class DownloadProgress {
 }
 
 class BackendApiService {
-  String _baseUrl = 'http://localhost:8000';
+  String _baseUrl = '';
   final StreamController<DownloadProgress> _progressController =
       StreamController<DownloadProgress>.broadcast();
+  bool _initialized = false;
 
   Stream<DownloadProgress> get progressStream => _progressController.stream;
 
@@ -91,7 +93,20 @@ class BackendApiService {
 
   String get baseUrl => _baseUrl;
 
+  Future<void> _ensureInitialized() async {
+    if (_initialized) return;
+    _initialized = true;
+    try {
+      final saved = await DatabaseService.instance.getSetting('backend_api_url');
+      if (saved != null && saved.isNotEmpty) {
+        _baseUrl = saved;
+      }
+    } catch (_) {}
+  }
+
   Future<bool> checkConnection() async {
+    await _ensureInitialized();
+    if (_baseUrl.isEmpty) return false;
     try {
       final response = await http.get(Uri.parse('$_baseUrl/'))
           .timeout(const Duration(seconds: 5));

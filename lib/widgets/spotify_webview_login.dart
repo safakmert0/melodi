@@ -56,7 +56,7 @@ class _SpotifyWebViewLoginState extends State<SpotifyWebViewLogin> {
           }
         }
       }
-    } catch (_) {}
+    } catch (e) { debugPrint('Spotify cookie extraction failed: $e'); }
   }
 
   @override

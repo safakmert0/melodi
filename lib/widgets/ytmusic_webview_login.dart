@@ -49,7 +49,7 @@ class _YTMusicWebViewLoginState extends State<YTMusicWebViewLogin> {
         _pollTimer?.cancel();
         widget.onCookieObtained(cookieString);
       }
-    } catch (_) {}
+    } catch (e) { debugPrint('YT Music cookie extraction failed: $e'); }
   }
 
   @override

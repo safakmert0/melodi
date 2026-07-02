@@ -18,17 +18,22 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.2'
+          flutter-version: '3.22.2'
           channel: 'stable'
           cache: true
 
       - name: Install dependencies
         run: |
           flutter pub get
-          flutter create . --platforms=ios
-          echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Debug.xcconfig
-          echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Release.xcconfig
-          # Overwrite Podfile to ensure correct platform and no missing pods
+
+      - name: Setup iOS project
+        run: |
+          # Ensure ios/ directory exists with proper structure
+          cd ios
+          flutter build ios --release --no-codesign --dry-run 2>/dev/null || true
+          cd ..
+
+          # Create proper Podfile
           cat > ios/Podfile << 'PODEOF'
           platform :ios, '13.0'
           ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -65,38 +70,40 @@ jobs:
           end
           PODEOF
 
-      - name: Add keychain entitlements
-        run: |
+          # Ensure entitlements exist
           cat > ios/Runner/Runner.entitlements << 'XMLEOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
-            <key>com.apple.security.app-sandbox</key>
-            <true/>
             <key>keychain-access-groups</key>
             <array>
-              <string>$(AppIdentifierPrefix)com.example.melodiV2</string>
+              <string>$(AppIdentifierPrefix)com.melodi.app</string>
             </array>
           </dict>
           </plist>
           XMLEOF
 
-      - name: Patch project for entitlements
-        run: |
+          # Set development team for signing
+          echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Debug.xcconfig
+          echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Release.xcconfig
+
+          # Ensure CODE_SIGN_ENTITLEMENTS is set in project.pbxproj
           python3 << 'PYEOF'
           import re
           pbx = "ios/Runner.xcodeproj/project.pbxproj"
           with open(pbx) as f:
               content = f.read()
-          # Add CODE_SIGN_ENTITLEMENTS to Runner target configs only
-          # These are the blocks containing PRODUCT_BUNDLE_IDENTIFIER = com.example.melodiV2
-          marker = 'PRODUCT_BUNDLE_IDENTIFIER = com.example.melodiV2;'
-          replacement = 'CODE_SIGN_ENTITLEMENTS = "Runner/Runner.entitlements";\n\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.example.melodiV2;'
-          content = content.replace(marker, replacement)
+          # Update bundle ID from placeholder to real one
+          content = content.replace('com.example.melodiV2', 'com.melodi.app')
+          # Add CODE_SIGN_ENTITLEMENTS if not already present
+          if 'CODE_SIGN_ENTITLEMENTS' not in content:
+              marker = 'PRODUCT_BUNDLE_IDENTIFIER = com.melodi.app;'
+              replacement = 'CODE_SIGN_ENTITLEMENTS = "Runner/Runner.entitlements";\n\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.melodi.app;'
+              content = content.replace(marker, replacement)
           with open(pbx, 'w') as f:
               f.write(content)
-          print("Patched project.pbxproj with entitlements")
+          print("Patched project.pbxproj")
           PYEOF
 
       - name: Install CocoaPods
@@ -126,10 +133,6 @@ jobs:
           fail_on_unmatched_files: false
           body: |
             ## Melodi ${{ github.ref_name }}
-
-            ### Bug Fix
-            - CI build artık simulator yerine gerçek iPhone cihazı için compile ediyor
-            - SideStore/AltStore ile kurulum hatası düzeltildi
 
             ### Kurulum
             1. [SideStore](https://sidestore.io) veya [Sideloadly](https://sideloadly.io) indirin

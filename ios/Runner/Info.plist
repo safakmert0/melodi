@@ -56,15 +56,18 @@
 		<string>com.melodi.refresh</string>
 		<string>com.melodi.processing</string>
 	</array>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Melodi needs access to your music library to scan and play your songs.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Melodi uses microphone for audio playback</string>
+	<string>Melodi uses microphone for audio recording features.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Melodi needs access to save album art</string>
+	<string>Melodi needs access to your photo library to display album art.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Melodi needs permission to save album art to your photo library.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Melodi needs local network access for device discovery</string>
+	<string>Melodi needs local network access for AirPlay device discovery.</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
-		<string>file</string>
 		<string>music</string>
 		<string>itms</string>
 		<string>itmss</string>

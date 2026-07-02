@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
@@ -77,6 +78,63 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
         child: Padding(
           padding: EdgeInsets.all(24),
           child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        ),
+      );
+    }
+
+    if (Platform.isIOS) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: MelodiTheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Icon(Icons.tune_rounded, color: MelodiTheme.textMuted, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                AppLocale.tr('equalizer'),
+                style: TextStyle(
+                  color: MelodiTheme.onSurface,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Equalizer is not available on iOS.\nThis feature is supported on Android only.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: MelodiTheme.onSurfaceVariant,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: MelodiTheme.containerHigh,
+                    foregroundColor: MelodiTheme.onSurface,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(AppLocale.tr('close')),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }

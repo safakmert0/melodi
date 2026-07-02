@@ -21,8 +21,8 @@ class AudioPlayerHandler extends BaseAudioHandler
   LoopStyle _repeatMode = LoopStyle.off;
   bool _isInitialized = false;
   bool _autoShuffleEnabled = false;
-  bool _gaplessPlaybackEnabled = false;
   Duration _crossfadeDuration = Duration.zero;
+  StreamSubscription<Duration>? _crossfadeSubscription;
   Timer? _sleepTimer;
   DateTime? _sleepTimerEnd;
 
@@ -106,7 +106,6 @@ class AudioPlayerHandler extends BaseAudioHandler
   Stream<bool> get playingStream => _player.playingStream;
   double get playbackSpeed => _player.speed;
   double get volume => _player.volume;
-  bool get gaplessPlaybackEnabled => _gaplessPlaybackEnabled;
   Duration get crossfadeDuration => _crossfadeDuration;
   bool get autoShuffleEnabled => _autoShuffleEnabled;
 
@@ -273,6 +272,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (_currentIndex < 0 || _currentIndex >= _queue.length) return;
 
     _isInitialized = false;
+    _crossfadeSubscription?.cancel();
     final song = _queue[_currentIndex];
 
     try {
@@ -294,6 +294,20 @@ class AudioPlayerHandler extends BaseAudioHandler
 
       await _player.play();
 
+      // Crossfade: monitor position and trigger next track early
+      if (_crossfadeDuration > Duration.zero && _queue.length > 1) {
+        _crossfadeSubscription = _player.positionStream.listen((position) {
+          final totalDuration = _player.duration;
+          if (totalDuration == null || !_player.playing) return;
+          final remaining = totalDuration - position;
+          if (remaining <= _crossfadeDuration && remaining > Duration.zero) {
+            _crossfadeSubscription?.cancel();
+            _crossfadeSubscription = null;
+            _onTrackComplete();
+          }
+        });
+      }
+
       if (_player.playing) {
         if (_currentIndex < 0 || _currentIndex >= _queue.length) {
           _currentIndex = _queue.isNotEmpty ? 0 : -1;
@@ -307,7 +321,7 @@ class AudioPlayerHandler extends BaseAudioHandler
           final artFile = File('${dir.path}/nowplaying_art.jpg');
           await artFile.writeAsBytes(song.albumArt!);
           artUri = Uri.file(artFile.path);
-        } catch (_) {}
+        } catch (e) { debugPrint('Album art write failed: $e'); }
       }
 
       final mediaItem = MediaItem(
@@ -394,24 +408,25 @@ class AudioPlayerHandler extends BaseAudioHandler
     await _player.setVolume(_volumeOverride!);
   }
 
-  Future<void> enableGaplessPlayback() async {
-    _gaplessPlaybackEnabled = true;
-  }
-
-  Future<void> disableGaplessPlayback() async {
-    _gaplessPlaybackEnabled = false;
-  }
-
-  Future<void> setGaplessPlaybackEnabled(bool enabled) async {
-    if (enabled) {
-      await enableGaplessPlayback();
-    } else {
-      await disableGaplessPlayback();
-    }
-  }
-
   Future<void> setCrossfade(Duration duration) async {
     _crossfadeDuration = duration;
+    // If currently playing, restart crossfade monitoring
+    if (_player.playing && _crossfadeDuration > Duration.zero) {
+      _crossfadeSubscription?.cancel();
+      _crossfadeSubscription = _player.positionStream.listen((position) {
+        final totalDuration = _player.duration;
+        if (totalDuration == null || !_player.playing) return;
+        final remaining = totalDuration - position;
+        if (remaining <= _crossfadeDuration && remaining > Duration.zero) {
+          _crossfadeSubscription?.cancel();
+          _crossfadeSubscription = null;
+          _onTrackComplete();
+        }
+      });
+    } else {
+      _crossfadeSubscription?.cancel();
+      _crossfadeSubscription = null;
+    }
   }
 
   Future<void> setAutoShuffle(bool enabled) async {
@@ -495,6 +510,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   void dispose() {
+    _crossfadeSubscription?.cancel();
     _player.dispose();
   }
 }

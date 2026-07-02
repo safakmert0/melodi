@@ -38,8 +38,6 @@ import 'services/resume_playback.dart';
 import 'services/notification_service.dart';
 import 'services/bluetooth_service.dart';
 import 'services/audio_effects_service.dart';
-import 'services/widget_service.dart';
-import 'services/airplay_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'widgets/main_shell.dart';
@@ -60,16 +58,16 @@ Future<void> main() async {
       systemNavigationBarIconBrightness: Brightness.light,
     ));
 
-    try { CrashReporter.init(); } catch (_) {}
-    try { DiagnosticsService.instance; } catch (_) {}
+    try { CrashReporter.init(); } catch (e) { AppLogger.e('CrashReporter init failed: $e'); }
+    try { DiagnosticsService.instance; } catch (e) { AppLogger.e('DiagnosticsService init failed: $e'); }
     AppLogger.i('Melodi v3.0 starting...');
 
     final db = DatabaseService.instance;
-    try { await db.database; } catch (_) {}
+    try { await db.database; } catch (e) { AppLogger.e('Database init failed: $e'); }
 
-    try { await NotificationService.instance.init(); } catch (_) {}
-    try { await AudioEffectsService().initialize(); } catch (_) {}
-    try { BluetoothService.instance.detectBluetoothConnection(); } catch (_) {}
+    try { await NotificationService.instance.init(); } catch (e) { AppLogger.e('NotificationService init failed: $e'); }
+    try { await AudioEffectsService().initialize(); } catch (e) { AppLogger.e('AudioEffectsService init failed: $e'); }
+    try { BluetoothService.instance.detectBluetoothConnection(); } catch (e) { AppLogger.e('BluetoothService init failed: $e'); }
 
     AppLogger.i('Services initialized');
 

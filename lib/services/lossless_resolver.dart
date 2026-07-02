@@ -274,39 +274,16 @@ class LosslessResolver {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
       final previewUrl = body['preview'] as String?;
 
+      // Deezer previews are 30-second MP3 clips.
+      // Full track downloads require authentication which we don't have.
+      // Return null to let the caller fall back to other sources.
       if (previewUrl != null && previewUrl.isNotEmpty) {
-        return previewUrl.replaceAll('preview.mp3', 'flac.mp3');
-      }
-
-      final md5Image = body['album']?['cover_md5'] as String?;
-      if (md5Image != null) {
-        final trackHash = _deezerTrackHash(trackId, md5Image);
-        if (trackHash != null) {
-          return 'https://e-cdns-proxy-${trackHash['cdn']}.deezer.com/mobile/3/${trackHash['media']}';
-        }
+        debugPrint('Deezer: only preview available for track $trackId');
       }
 
       return null;
     } catch (e) {
       debugPrint('getDeezerDownloadUrl failed: $e');
-      return null;
-    }
-  }
-
-  static Map<String, String>? _deezerTrackHash(int trackId, String md5Image) {
-    try {
-      final step1 = utf8.encode('$md5Image\u00a4$trackId\u00a4${md5Image[0]}${md5Image[1]}${md5Image[2]}');
-      final step2 = step1.map((b) => b ^ 0xa4).toList();
-      final step3 = base64Encode(step2);
-      final step4 = step3.replaceFirst(RegExp(r'=+$'), '');
-      final step5 = step4.replaceAll('/', '_').replaceAll('+', '-');
-
-      final cdn = '${md5Image[0]}${md5Image[1]}${md5Image[2]}';
-      return {
-        'media': step5,
-        'cdn': cdn,
-      };
-    } catch (_) {
       return null;
     }
   }
