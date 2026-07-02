@@ -4429,6 +4429,7 @@ class _PodcastSubscriptionsPageState extends State<_PodcastSubscriptionsPage> {
       album: '',
       filePath: episode.audioUrl,
       duration: episode.duration,
+      fileSize: 0,
     );
     context.read<PlayerProvider>().playSong(song);
   }
@@ -4612,6 +4613,7 @@ class _AudiobookLibraryPageState extends State<_AudiobookLibraryPage> {
       album: '',
       filePath: chapter.audioPath,
       duration: chapter.duration,
+      fileSize: 0,
     );
     context.read<PlayerProvider>().playSong(song);
   }
