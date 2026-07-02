@@ -15,10 +15,11 @@ import AVFAudio
 
     // Register platform channel handlers
     let controller = window?.rootViewController as! FlutterViewController
-    AirPlayHandler.register(with: controller.binaryMessenger)
-    CarPlayHandler.register(with: controller.binaryMessenger)
-    VoiceControlHandler.register(with: controller.binaryMessenger)
-    WidgetHandler.register(with: controller.binaryMessenger)
+    let messenger = controller.binaryMessenger
+    AirPlayHandler.register(with: messenger)
+    CarPlayHandler.register(with: messenger)
+    VoiceControlHandler.register(with: messenger)
+    WidgetHandler.register(with: messenger)
 
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)

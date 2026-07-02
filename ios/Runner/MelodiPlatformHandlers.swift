@@ -5,10 +5,10 @@ import MediaPlayer
 
 // MARK: - AirPlay Handler
 class AirPlayHandler: NSObject, FlutterPlugin {
-    static func register(with registrar: FlutterPluginRegistrar) {
-        let channel = FlutterMethodChannel(name: "com.melodi/airplay", binaryMessenger: registrar.messenger())
+    static func register(with messenger: FlutterBinaryMessenger) {
+        let channel = FlutterMethodChannel(name: "com.melodi/airplay", binaryMessenger: messenger)
         let instance = AirPlayHandler()
-        registrar.addMethodCallDelegate(instance, channel: channel)
+        channel.setMethodCallHandler(instance.handle)
     }
 
     func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -17,11 +17,10 @@ class AirPlayHandler: NSObject, FlutterPlugin {
             let route = AVAudioSession.sharedInstance().currentRoute
             var devices: [[String: Any]] = []
             for output in route.outputs {
-                let port = output
                 let device: [String: Any] = [
-                    "id": port.uid,
-                    "name": port.portName,
-                    "model": portType.rawValue,
+                    "id": output.uid,
+                    "name": output.portName,
+                    "model": output.portType.rawValue,
                     "isAvailable": true
                 ]
                 devices.append(device)
@@ -34,8 +33,6 @@ class AirPlayHandler: NSObject, FlutterPlugin {
                 result(false)
                 return
             }
-            // AVAudioSession handles AirPlay routing automatically
-            // when the user selects a device from Control Center
             NotificationCenter.default.post(
                 name: NSNotification.Name("MelodiAirPlayRoute"),
                 object: nil,
@@ -44,7 +41,6 @@ class AirPlayHandler: NSObject, FlutterPlugin {
             result(true)
 
         case "stopStreaming":
-            // Return to built-in speaker
             do {
                 try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
                 try AVAudioSession.sharedInstance().setActive(true)
@@ -61,10 +57,10 @@ class AirPlayHandler: NSObject, FlutterPlugin {
 
 // MARK: - CarPlay Handler
 class CarPlayHandler: NSObject, FlutterPlugin {
-    static func register(with registrar: FlutterPluginRegistrar) {
-        let channel = FlutterMethodChannel(name: "com.melodi/carplay", binaryMessenger: registrar.messenger())
+    static func register(with messenger: FlutterBinaryMessenger) {
+        let channel = FlutterMethodChannel(name: "com.melodi/carplay", binaryMessenger: messenger)
         let instance = CarPlayHandler()
-        registrar.addMethodCallDelegate(instance, channel: channel)
+        channel.setMethodCallHandler(instance.handle)
     }
 
     func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -97,32 +93,27 @@ class CarPlayHandler: NSObject, FlutterPlugin {
 
 // MARK: - Voice Control Handler
 class VoiceControlHandler: NSObject, FlutterPlugin {
-    static func register(with registrar: FlutterPluginRegistrar) {
-        let channel = FlutterMethodChannel(name: "com.melodi/voice_control", binaryMessenger: registrar.messenger())
+    static func register(with messenger: FlutterBinaryMessenger) {
+        let channel = FlutterMethodChannel(name: "com.melodi/voice_control", binaryMessenger: messenger)
         let instance = VoiceControlHandler()
-        registrar.addMethodCallDelegate(instance, channel: channel)
+        channel.setMethodCallHandler(instance.handle)
     }
 
     func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
         case "registerShortcuts":
-            // Siri Shortcuts registration would require INVoiceShortcut
-            // For now, we use MPRemoteCommandCenter which works without SiriKit
             setupRemoteCommands()
             result(true)
 
         case "playPause":
-            MPRemoteCommandCenter.shared().togglePlayPauseCommand.addTarget { _ in .success }
             MPRemoteCommandCenter.shared().togglePlayPauseCommand.isEnabled = true
             result(true)
 
         case "nextTrack":
-            MPRemoteCommandCenter.shared().nextTrackCommand.addTarget { _ in .success }
             MPRemoteCommandCenter.shared().nextTrackCommand.isEnabled = true
             result(true)
 
         case "previousTrack":
-            MPRemoteCommandCenter.shared().previousTrackCommand.addTarget { _ in .success }
             MPRemoteCommandCenter.shared().previousTrackCommand.isEnabled = true
             result(true)
 
@@ -184,12 +175,12 @@ class VoiceControlHandler: NSObject, FlutterPlugin {
     }
 }
 
-// MARK: - Widget Handler (App Group shared data)
+// MARK: - Widget Handler
 class WidgetHandler: NSObject, FlutterPlugin {
-    static func register(with registrar: FlutterPluginRegistrar) {
-        let channel = FlutterMethodChannel(name: "com.melodi/widgets", binaryMessenger: registrar.messenger())
+    static func register(with messenger: FlutterBinaryMessenger) {
+        let channel = FlutterMethodChannel(name: "com.melodi/widgets", binaryMessenger: messenger)
         let instance = WidgetHandler()
-        registrar.addMethodCallDelegate(instance, channel: channel)
+        channel.setMethodCallHandler(instance.handle)
     }
 
     func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
