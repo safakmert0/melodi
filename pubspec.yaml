@@ -68,7 +68,7 @@ dependencies:
   http: ^1.2.1
 
   # SpotiFLAC ports
-  dynamic_color: ^1.9.0
+  dynamic_color: 1.7.0
   flutter_secure_storage: ^10.3.1
   logger: ^2.5.0
 
