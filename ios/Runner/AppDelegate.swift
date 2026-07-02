@@ -13,6 +13,13 @@ import AVFAudio
     try? audioSession.setCategory(.playback, mode: .default, options: [.mixWithOthers])
     try? audioSession.setActive(true)
 
+    // Register platform channel handlers
+    let controller = window?.rootViewController as! FlutterViewController
+    AirPlayHandler.register(with: controller.binaryMessenger)
+    CarPlayHandler.register(with: controller.binaryMessenger)
+    VoiceControlHandler.register(with: controller.binaryMessenger)
+    WidgetHandler.register(with: controller.binaryMessenger)
+
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }

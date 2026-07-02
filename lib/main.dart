@@ -38,6 +38,7 @@ import 'services/resume_playback.dart';
 import 'services/notification_service.dart';
 import 'services/bluetooth_service.dart';
 import 'services/audio_effects_service.dart';
+import 'services/voice_control_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'widgets/main_shell.dart';
@@ -68,6 +69,7 @@ Future<void> main() async {
     try { await NotificationService.instance.init(); } catch (e) { AppLogger.e('NotificationService init failed: $e'); }
     try { await AudioEffectsService().initialize(); } catch (e) { AppLogger.e('AudioEffectsService init failed: $e'); }
     try { BluetoothService.instance.detectBluetoothConnection(); } catch (e) { AppLogger.e('BluetoothService init failed: $e'); }
+    try { VoiceControlService.instance.registerShortcuts(); } catch (e) { AppLogger.e('VoiceControlService init failed: $e'); }
 
     AppLogger.i('Services initialized');
 
