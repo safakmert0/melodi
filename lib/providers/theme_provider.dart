@@ -252,7 +252,7 @@ class ThemeProvider extends ChangeNotifier {
         type: BottomNavigationBarType.fixed,
         elevation: 8,
       ),
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         color: card,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -314,7 +314,7 @@ class ThemeProvider extends ChangeNotifier {
         type: BottomNavigationBarType.fixed,
         elevation: 8,
       ),
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         color: card,
         elevation: 0,
         shape: RoundedRectangleBorder(
