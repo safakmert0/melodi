@@ -1,14 +1,9 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
 import 'database_service.dart';
-import 'lossless_resolver.dart';
-import 'flac_embedder.dart';
-import 'loudness_service.dart';
 import 'youtube_service.dart';
 import 'metadata_service.dart';
 
@@ -108,182 +103,70 @@ class DownloadManager {
       final downloadDir = Directory('${dir.path}/downloads');
       await downloadDir.create(recursive: true);
 
-      bool losslessAttempted = false;
+      // YouTube is the primary and most reliable download source
+      task.progress = 0.1;
+      task.error = 'YouTube aranıyor...';
+      _notify();
 
-      if (task.spotifyTrackId.isNotEmpty &&
-          task.spotifyTrackId != 'youtube' &&
-          task.spotifyTrackId != 'local') {
-        losslessAttempted = true;
-        final spotifyService = _SpotifyServiceAccess();
-        final token = await spotifyService.getToken();
+      final query = '${task.artist} - ${task.title}';
+      final videos = await _youtubeService.search(query);
 
-        if (token != null && !task.cancelled) {
-          task.progress = 0.05;
-          _notify();
-
-          final detail = await LosslessResolver.getSpotifyTrackDetail(
-              task.spotifyTrackId, token);
-          if (detail != null && !task.cancelled) {
-            task.progress = 0.15;
-            _notify();
-
-            final source = await LosslessResolver.getBestSource(detail.isrc);
-            if (source.isNotEmpty && !task.cancelled) {
-              final downloadUrl = source['url'] as String?;
-              if (downloadUrl != null && !task.cancelled) {
-                task.progress = 0.25;
-                _notify();
-
-                final safeName = '${task.artist} - ${task.title}'
-                    .replaceAll(RegExp(r'[^\w\s-]'), '')
-                    .replaceAll(RegExp(r'\s+'), ' ');
-                final flacPath = '${downloadDir.path}/$safeName.flac';
-
-                await LosslessResolver.downloadFLAC(
-                  downloadUrl,
-                  flacPath,
-                  onProgress: (p) {
-                    if (!task.cancelled) {
-                      task.progress = 0.25 + (p * 0.50);
-                      _notify();
-                    }
-                  },
-                );
-
-                if (!task.cancelled) {
-                  task.filePath = flacPath;
-                  task.progress = 0.75;
-                  _notify();
-
-                  final embedMetadata =
-                      await db.getSetting('embed_metadata') ?? 'true';
-                  final loudnessNorm =
-                      await db.getSetting('loudness_norm') ?? 'false';
-
-                  if (embedMetadata == 'true' && !task.cancelled) {
-                    task.progress = 0.78;
-                    _notify();
-
-                    String? coverUrl;
-                    final coverResolution =
-                        await db.getSetting('cover_resolution') ?? 'high';
-                    if (coverResolution != 'low' && token != null) {
-                      coverUrl = await LosslessResolver.getHighResCoverUrl(
-                          task.spotifyTrackId, token);
-                    }
-
-                    Uint8List? coverBytes;
-                    final coverSrc = coverUrl ?? task.imageUrl;
-                    if (coverSrc != null) {
-                      final bytes = await LosslessResolver.fetchCoverArt(coverSrc);
-                      if (bytes.isNotEmpty) coverBytes = Uint8List.fromList(bytes);
-                    }
-
-                    if (!task.cancelled) {
-                      await FlacEmbedder.embedMetadata(
-                        flacPath,
-                        title: detail.title,
-                        artist: detail.artist,
-                        album: detail.album,
-                        coverArt: coverBytes,
-                      );
-                    }
-                    task.progress = 0.88;
-                    _notify();
-                  }
-
-                  if (loudnessNorm == 'true' && !task.cancelled) {
-                    task.progress = 0.90;
-                    _notify();
-                    await LoudnessService.addReplayGainTags(flacPath);
-                    task.progress = 0.95;
-                    _notify();
-                  }
-
-                  if (!task.cancelled) {
-                    task.state = DownloadState.completed;
-                    task.progress = 1.0;
-                    await db.insertFailedMatch(
-                        'spotify:track:${task.spotifyTrackId}', flacPath);
-                    await _importDownloadedFile(flacPath, task);
-                    _notify();
-                    _activeDownloads--;
-                    _processQueue();
-                    return;
-                  }
-                }
-              }
-            }
-          }
-        }
+      String? videoId;
+      if (videos.isNotEmpty) {
+        final exactMatch = videos.where((v) =>
+            v.title.toLowerCase().contains(task.title.toLowerCase()) &&
+            v.author.toLowerCase().contains(task.artist.toLowerCase().split(',').first.trim().toLowerCase())
+        ).toList();
+        videoId = (exactMatch.isNotEmpty ? exactMatch.first : videos.first).id;
       }
 
-      if (!task.cancelled && task.state != DownloadState.completed) {
-        task.progress = 0.1;
-        task.error = losslessAttempted ? 'Lossless kaynak bulunamadı, YouTube deneniyor...' : 'YouTube aranıyor...';
+      if (videoId == null || task.cancelled) {
+        task.state = DownloadState.failed;
+        task.error = 'YouTube\'da eşleşen video bulunamadı';
         _notify();
+        _activeDownloads--;
+        _processQueue();
+        return;
+      }
 
-        final query = '${task.artist} - ${task.title}';
-        final videos = await _youtubeService.search(query);
+      task.progress = 0.3;
+      _notify();
 
-        String? videoId;
-        if (videos.isNotEmpty) {
-          final exactMatch = videos.where((v) =>
-              v.title.toLowerCase().contains(task.title.toLowerCase()) &&
-              v.author.toLowerCase().contains(task.artist.toLowerCase().split(',').first.trim().toLowerCase())
-          ).toList();
-          videoId = (exactMatch.isNotEmpty ? exactMatch.first : videos.first).id;
-        }
+      final resultPath = await _youtubeService.downloadAudio(videoId, task.title);
 
-        if (videoId == null || task.cancelled) {
-          task.state = DownloadState.failed;
-          task.error = 'YouTube\'da eşleşen video bulunamadı';
-          _notify();
-          _activeDownloads--;
-          _processQueue();
-          return;
-        }
-
-        task.progress = 0.3;
-        _notify();
-
-        final resultPath = await _youtubeService.downloadAudio(videoId, task.title);
-
-        if (resultPath == null || task.cancelled) {
-          if (task.cancelled) {
-            task.state = DownloadState.failed;
-            task.error = 'İptal edildi';
-          } else {
-            task.state = DownloadState.failed;
-            task.error = 'YouTube indirme başarısız';
-          }
-          _notify();
-          _activeDownloads--;
-          _processQueue();
-          return;
-        }
-
-        task.filePath = resultPath;
-        task.progress = 0.8;
-        _notify();
-
-        if (!task.cancelled) {
-          final importedPath = await _importDownloadedFile(resultPath, task);
-          if (importedPath != null) {
-            task.filePath = importedPath;
-            task.state = DownloadState.completed;
-            task.progress = 1.0;
-            task.error = null;
-            final sourceLabel = losslessAttempted ? 'YouTube (lossless kaynak yoktu)' : 'YouTube';
-            await db.insertFailedMatch(task.spotifyTrackId, importedPath);
-          } else {
-            task.state = DownloadState.completed;
-            task.progress = 1.0;
-          }
-        } else {
+      if (resultPath == null || task.cancelled) {
+        if (task.cancelled) {
           task.state = DownloadState.failed;
           task.error = 'İptal edildi';
+        } else {
+          task.state = DownloadState.failed;
+          task.error = 'YouTube indirme başarısız';
         }
+        _notify();
+        _activeDownloads--;
+        _processQueue();
+        return;
+      }
+
+      task.filePath = resultPath;
+      task.progress = 0.8;
+      _notify();
+
+      if (!task.cancelled) {
+        final importedPath = await _importDownloadedFile(resultPath, task);
+        if (importedPath != null) {
+          task.filePath = importedPath;
+          task.state = DownloadState.completed;
+          task.progress = 1.0;
+          task.error = null;
+          await db.insertFailedMatch(task.spotifyTrackId, importedPath);
+        } else {
+          task.state = DownloadState.completed;
+          task.progress = 1.0;
+        }
+      } else {
+        task.state = DownloadState.failed;
+        task.error = 'İptal edildi';
       }
     } catch (e) {
       task.state = DownloadState.failed;
@@ -389,12 +272,5 @@ class DownloadManager {
   void dispose() {
     _controller.close();
     _youtubeService.dispose();
-  }
-}
-
-class _SpotifyServiceAccess {
-  Future<String?> getToken() async {
-    final db = DatabaseService.instance;
-    return db.getSetting('spotify_access_token');
   }
 }

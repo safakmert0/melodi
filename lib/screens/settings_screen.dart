@@ -17,6 +17,9 @@ import '../providers/spotify_provider.dart';
 import '../providers/like_mirror_provider.dart';
 import '../providers/scrobble_provider.dart';
 import '../services/scrobble_service.dart';
+import '../services/podcast_service.dart';
+import '../services/audiobook_service.dart';
+import '../models/song_model.dart';
 import '../providers/settings_provider.dart';
 import '../providers/metadata_provider.dart';
 import '../providers/sync_provider.dart';
@@ -4335,8 +4338,100 @@ class _VoiceControlPage extends StatelessWidget {
   }
 }
 
-class _PodcastSubscriptionsPage extends StatelessWidget {
+class _PodcastSubscriptionsPage extends StatefulWidget {
   const _PodcastSubscriptionsPage();
+
+  @override
+  State<_PodcastSubscriptionsPage> createState() => _PodcastSubscriptionsPageState();
+}
+
+class _PodcastSubscriptionsPageState extends State<_PodcastSubscriptionsPage> {
+  final PodcastService _service = PodcastService.instance;
+  List<PodcastFeed> _subscriptions = [];
+  bool _loading = true;
+  final TextEditingController _urlController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final subs = await _service.getSubscriptions();
+    if (mounted) setState(() { _subscriptions = subs; _loading = false; });
+  }
+
+  Future<void> _addByUrl() async {
+    final url = _urlController.text.trim();
+    if (url.isEmpty) return;
+    _urlController.clear();
+    showDialog(context: context, builder: (_) => const Center(child: CircularProgressIndicator()), barrierDismissible: false);
+    try {
+      final feed = await _service.fetchFeed(url);
+      await _service.subscribe(feed);
+      Navigator.of(context).pop();
+      await _load();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Subscribed to ${feed.title}')));
+    } catch (e) {
+      Navigator.of(context).pop();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  Future<void> _unsubscribe(PodcastFeed feed) async {
+    await _service.unsubscribe(feed.id);
+    await _load();
+  }
+
+  void _showEpisodes(PodcastFeed feed) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: MelodiTheme.containerLow,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.7, maxChildSize: 0.95, minChildSize: 0.4,
+        expand: false,
+        builder: (ctx, scrollCtrl) => Column(
+          children: [
+            Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(color: MelodiTheme.outlineVariant, borderRadius: BorderRadius.circular(2))),
+            Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(feed.title, style: TextStyle(color: MelodiTheme.onSurface, fontSize: 18, fontWeight: FontWeight.bold))),
+            const SizedBox(height: 8),
+            Expanded(child: ListView.builder(
+              controller: scrollCtrl, itemCount: feed.episodes.length,
+              itemBuilder: (ctx, i) {
+                final ep = feed.episodes[i];
+                return ListTile(
+                  leading: const Icon(Icons.podcasts, color: Color(0xFF53e076)),
+                  title: Text(ep.title, style: TextStyle(color: MelodiTheme.onSurface, fontSize: 14), maxLines: 2),
+                  subtitle: Text('${ep.duration.inMinutes} min', style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _playEpisode(ep);
+                  },
+                );
+              },
+            )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _playEpisode(PodcastEpisode episode) {
+    final song = SongModel(
+      id: 'podcast_${episode.id}',
+      title: episode.title,
+      artist: 'Podcast',
+      album: '',
+      filePath: episode.audioUrl,
+      duration: episode.duration,
+    );
+    context.read<PlayerProvider>().playSong(song);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -4348,43 +4443,63 @@ class _PodcastSubscriptionsPage extends StatelessWidget {
         foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.headphones, size: 64, color: MelodiTheme.textMuted),
-            const SizedBox(height: 16),
-            Text(
-              'No podcast subscriptions yet',
-              style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Browse and subscribe to your favorite podcasts',
-              style: TextStyle(color: MelodiTheme.textMuted, fontSize: 13),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Podcast browsing coming soon'),
-                    duration: Duration(seconds: 1),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(children: [
+                  Expanded(child: TextField(
+                    controller: _urlController,
+                    decoration: InputDecoration(
+                      hintText: 'Paste RSS feed URL...',
+                      hintStyle: TextStyle(color: MelodiTheme.textMuted),
+                      filled: true, fillColor: MelodiTheme.container,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                    style: TextStyle(color: MelodiTheme.onSurface, fontSize: 14),
+                    onSubmitted: (_) => _addByUrl(),
+                  )),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: _addByUrl,
+                    icon: const Icon(Icons.add_circle, color: Color(0xFF53e076), size: 36),
                   ),
-                );
-              },
-              icon: const Icon(Icons.search, size: 18),
-              label: const Text('Browse Podcasts'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF53e076),
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ]),
               ),
-            ),
-          ],
-        ),
-      ),
+              if (_subscriptions.isEmpty)
+                Expanded(child: Center(child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.headphones, size: 64, color: MelodiTheme.textMuted),
+                    const SizedBox(height: 16),
+                    Text('No subscriptions yet', style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 16)),
+                    const SizedBox(height: 8),
+                    Text('Paste an RSS feed URL above to subscribe', style: TextStyle(color: MelodiTheme.textMuted, fontSize: 13)),
+                  ],
+                )))
+              else
+                Expanded(child: ListView.builder(
+                  itemCount: _subscriptions.length,
+                  itemBuilder: (ctx, i) {
+                    final feed = _subscriptions[i];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: MelodiTheme.containerHigh,
+                        child: const Icon(Icons.podcasts, color: Color(0xFF53e076)),
+                      ),
+                      title: Text(feed.title, style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15)),
+                      subtitle: Text('${feed.episodes.length} episodes', style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
+                      trailing: IconButton(
+                        icon: Icon(Icons.remove_circle_outline, color: MelodiTheme.errorRed, size: 20),
+                        onPressed: () => _unsubscribe(feed),
+                      ),
+                      onTap: () => _showEpisodes(feed),
+                    );
+                  },
+                )),
+            ]),
     );
   }
 }
@@ -4447,6 +4562,60 @@ class _AudiobookLibraryPageState extends State<_AudiobookLibraryPage> {
     _load();
   }
 
+  void _showChapters(Audiobook book) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: MelodiTheme.containerLow,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.7, maxChildSize: 0.95, minChildSize: 0.4,
+        expand: false,
+        builder: (ctx, scrollCtrl) => Column(
+          children: [
+            Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(color: MelodiTheme.outlineVariant, borderRadius: BorderRadius.circular(2))),
+            Padding(padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(book.title, style: TextStyle(color: MelodiTheme.onSurface, fontSize: 18, fontWeight: FontWeight.bold))),
+            const SizedBox(height: 8),
+            Expanded(child: ListView.builder(
+              controller: scrollCtrl, itemCount: book.chapters.length,
+              itemBuilder: (ctx, i) {
+                final ch = book.chapters[i];
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: ch.completed ? MelodiTheme.primaryGreen.withOpacity(0.2) : MelodiTheme.containerHigh,
+                    child: ch.completed
+                        ? Icon(Icons.check, color: MelodiTheme.primaryGreen, size: 18)
+                        : Text('${i + 1}', style: TextStyle(color: MelodiTheme.onSurface, fontSize: 12)),
+                  ),
+                  title: Text(ch.title, style: TextStyle(color: MelodiTheme.onSurface, fontSize: 14), maxLines: 2),
+                  subtitle: Text('${ch.duration.inMinutes} min', style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _playChapter(ch);
+                  },
+                );
+              },
+            )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _playChapter(AudiobookChapter chapter) {
+    final song = SongModel(
+      id: 'audiobook_${chapter.id}',
+      title: chapter.title,
+      artist: 'Audiobook',
+      album: '',
+      filePath: chapter.audioPath,
+      duration: chapter.duration,
+    );
+    context.read<PlayerProvider>().playSong(song);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -4506,49 +4675,54 @@ class _AudiobookLibraryPageState extends State<_AudiobookLibraryPage> {
                         child: Icon(Icons.delete, color: Colors.white),
                       ),
                       onDismissed: (_) => _deleteBook(book),
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: MelodiTheme.containerLow,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 56, height: 56,
-                              decoration: BoxDecoration(
-                                color: MelodiTheme.primaryGreen.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(8),
+                      child: InkWell(
+                        onTap: () => _showChapters(book),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: MelodiTheme.containerLow,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 56, height: 56,
+                                decoration: BoxDecoration(
+                                  color: MelodiTheme.primaryGreen.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(Icons.menu_book, color: MelodiTheme.primaryGreen, size: 28),
                               ),
-                              child: Icon(Icons.menu_book, color: MelodiTheme.primaryGreen, size: 28),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(book.title, style: TextStyle(color: MelodiTheme.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
-                                  const SizedBox(height: 4),
-                                  Text('${book.author} · ${book.chapters.length} bölüm', style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13)),
-                                  if (progress > 0) ...[
-                                    const SizedBox(height: 8),
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(2),
-                                      child: LinearProgressIndicator(
-                                        value: book.progress,
-                                        backgroundColor: MelodiTheme.outlineVariant,
-                                        valueColor: AlwaysStoppedAnimation(MelodiTheme.primaryGreen),
-                                        minHeight: 4,
-                                      ),
-                                    ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(book.title, style: TextStyle(color: MelodiTheme.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
                                     const SizedBox(height: 4),
-                                    Text('${(progress * 100).toInt()}% tamamlandı', style: TextStyle(color: MelodiTheme.textMuted, fontSize: 11)),
+                                    Text('${book.author} · ${book.chapters.length} bölüm', style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13)),
+                                    if (progress > 0) ...[
+                                      const SizedBox(height: 8),
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(2),
+                                        child: LinearProgressIndicator(
+                                          value: book.progress,
+                                          backgroundColor: MelodiTheme.outlineVariant,
+                                          valueColor: AlwaysStoppedAnimation(MelodiTheme.primaryGreen),
+                                          minHeight: 4,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text('${progress}% tamamlandı', style: TextStyle(color: MelodiTheme.textMuted, fontSize: 11)),
+                                    ],
                                   ],
-                                ],
+                                ),
                               ),
-                            ),
-                          ],
+                              Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
+                            ],
+                          ),
                         ),
                       ),
                     );
