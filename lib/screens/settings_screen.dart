@@ -2340,6 +2340,8 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                     onPressed: () async {
                       final playlists = await ytmusic.importPlaylists();
                       if (context.mounted) {
+                        // Trigger sync to pull playlist tracks into local library
+                        context.read<SyncProvider>().triggerSync();
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('${playlists.length} ${AppLocale.tr('playlists')} ${AppLocale.tr('import_songs')}'),
@@ -2555,6 +2557,8 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                         : () async {
                             final playlists = await spotify.importPlaylists();
                             if (context.mounted) {
+                              // Trigger sync to pull playlist tracks into local library
+                              context.read<SyncProvider>().triggerSync();
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(

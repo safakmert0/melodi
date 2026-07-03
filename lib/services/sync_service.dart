@@ -143,24 +143,25 @@ class SyncService {
         if (bestId != null) matchedIds.add(bestId);
       }
 
-      if (matchedIds.isNotEmpty) {
-        String localId;
-        if (existing != null) {
+      // Create or update playlist even if no tracks matched locally
+      String localId;
+      if (existing != null) {
+        if (matchedIds.isNotEmpty) {
           final updated = existing.copyWith(songIds: matchedIds);
           await _db.insertPlaylist(updated);
-          localId = existing.id;
-        } else {
-          localId = Uuid().v4();
-          final newPlaylist = PlaylistModel(
-            id: localId,
-            name: playlistName,
-            description: 'Synced from Spotify',
-            songIds: matchedIds,
-          );
-          await _db.insertPlaylist(newPlaylist);
         }
-        await _db.setRemotePlaylistId(localId, rp.id, 'spotify');
+        localId = existing.id;
+      } else {
+        localId = Uuid().v4();
+        final newPlaylist = PlaylistModel(
+          id: localId,
+          name: playlistName,
+          description: 'Synced from Spotify',
+          songIds: matchedIds,
+        );
+        await _db.insertPlaylist(newPlaylist);
       }
+      await _db.setRemotePlaylistId(localId, rp.id, 'spotify');
     }
   }
 
@@ -202,24 +203,25 @@ class SyncService {
         if (bestId != null) matchedIds.add(bestId);
       }
 
-      if (matchedIds.isNotEmpty) {
-        String localId;
-        if (existing != null) {
+      // Create or update playlist even if no tracks matched locally
+      String localId;
+      if (existing != null) {
+        if (matchedIds.isNotEmpty) {
           final updated = existing.copyWith(songIds: matchedIds);
           await _db.insertPlaylist(updated);
-          localId = existing.id;
-        } else {
-          localId = Uuid().v4();
-          final newPlaylist = PlaylistModel(
-            id: localId,
-            name: playlistName,
-            description: 'Synced from YT Music',
-            songIds: matchedIds,
-          );
-          await _db.insertPlaylist(newPlaylist);
         }
-        await _db.setRemotePlaylistId(localId, rp.playlistId, 'ytmusic');
+        localId = existing.id;
+      } else {
+        localId = Uuid().v4();
+        final newPlaylist = PlaylistModel(
+          id: localId,
+          name: playlistName,
+          description: 'Synced from YT Music',
+          songIds: matchedIds,
+        );
+        await _db.insertPlaylist(newPlaylist);
       }
+      await _db.setRemotePlaylistId(localId, rp.playlistId, 'ytmusic');
     }
   }
 

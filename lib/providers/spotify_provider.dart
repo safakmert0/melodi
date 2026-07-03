@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../services/database_service.dart';
 import '../services/spotify_service.dart';
@@ -32,23 +33,48 @@ class SpotifyProvider extends ChangeNotifier {
     final spDc = await db.getSetting('spotify_sp_dc');
     if (spDc != null && spDc.isNotEmpty) {
       _spDc = spDc;
-      try {
-        final session = await _service.getAccessToken(spDc);
-        if (session != null) {
-          _username = session.username;
-          notifyListeners();
-        } else {
-          // Token failed but keep sp_dc for retry - user may need to re-login
-          debugPrint('Spotify: Token refresh failed, keeping sp_dc for retry');
-          _username = null;
-          notifyListeners();
+
+      // Try to restore saved session first (avoids network call on every launch)
+      final savedToken = await db.getSetting('spotify_access_token');
+      final savedExpiry = await db.getSetting('spotify_expires_at');
+      final savedUsername = await db.getSetting('spotify_username');
+      final savedClientId = await db.getSetting('spotify_client_id');
+
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final expiry = int.tryParse(savedExpiry ?? '0') ?? 0;
+
+      if (savedToken != null && savedToken.isNotEmpty && now < expiry - 60) {
+        // Saved token is still valid — use it directly
+        _service.restoreSession(
+          accessToken: savedToken,
+          refreshToken: spDc,
+          expiresAtEpoch: expiry,
+          username: savedUsername,
+          clientId: savedClientId,
+        );
+        _username = savedUsername;
+        notifyListeners();
+      } else {
+        // Token expired or missing — refresh from server
+        try {
+          final session = await _service.getAccessToken(spDc);
+          if (session != null) {
+            _username = session.username;
+            await _saveSession(session);
+            notifyListeners();
+          } else {
+            debugPrint('Spotify: Token refresh failed, keeping sp_dc for retry');
+            _username = savedUsername;
+            notifyListeners();
+          }
+        } catch (e) {
+          debugPrint('Spotify: Init error, keeping session for retry: $e');
+          _username = savedUsername;
         }
-      } catch (e) {
-        // Network error - keep sp_dc and username for retry
-        debugPrint('Spotify: Init error, keeping session for retry: $e');
       }
     }
     await _loadMatches();
+    await _loadPlaylists();
   }
 
   Future<bool> connectWithCookie(String spDc) async {
@@ -70,6 +96,7 @@ class SpotifyProvider extends ChangeNotifier {
 
       final db = DatabaseService.instance;
       await db.setSetting('spotify_sp_dc', spDc);
+      await _saveSession(session);
 
       _isConnecting = false;
       notifyListeners();
@@ -80,6 +107,14 @@ class SpotifyProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  Future<void> _saveSession(SpotifySession session) async {
+    final db = DatabaseService.instance;
+    await db.setSetting('spotify_access_token', session.accessToken);
+    await db.setSetting('spotify_expires_at', session.expiresAtEpoch.toString());
+    await db.setSetting('spotify_username', session.username);
+    await db.setSetting('spotify_client_id', session.clientId);
   }
 
   Future<void> _saveMatches() async {
@@ -112,6 +147,10 @@ class SpotifyProvider extends ChangeNotifier {
     final db = DatabaseService.instance;
     await db.setSetting('spotify_sp_dc', '');
     await db.setSetting('spotify_matches', '');
+    await db.setSetting('spotify_access_token', '');
+    await db.setSetting('spotify_expires_at', '');
+    await db.setSetting('spotify_username', '');
+    await db.setSetting('spotify_client_id', '');
 
     notifyListeners();
   }
@@ -165,6 +204,7 @@ class SpotifyProvider extends ChangeNotifier {
         final session = await _service.getAccessToken(_spDc!);
         if (session != null) {
           _username = session.username;
+          await _saveSession(session);
         }
       }
 
@@ -174,6 +214,7 @@ class SpotifyProvider extends ChangeNotifier {
       }
 
       _playlists = await _service.getUserPlaylists();
+      await _savePlaylists();
       notifyListeners();
       return _playlists;
     } catch (e) {
@@ -183,6 +224,41 @@ class SpotifyProvider extends ChangeNotifier {
     } finally {
       _isImportingPlaylists = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> _savePlaylists() async {
+    try {
+      final db = DatabaseService.instance;
+      final encoded = jsonEncode(_playlists.map((p) => {
+        'id': p.id,
+        'name': p.name,
+        'ownerId': p.ownerId,
+        'imageUrl': p.imageUrl,
+        'trackCount': p.trackCount,
+      }).toList());
+      await db.setSetting('spotify_playlists', encoded);
+    } catch (e) {
+      debugPrint('Spotify _savePlaylists error: $e');
+    }
+  }
+
+  Future<void> _loadPlaylists() async {
+    try {
+      final db = DatabaseService.instance;
+      final saved = await db.getSetting('spotify_playlists');
+      if (saved != null && saved.isNotEmpty) {
+        final List<dynamic> decoded = jsonDecode(saved);
+        _playlists = decoded.map((e) => SpotifyPlaylistItem(
+          id: e['id'] as String,
+          name: e['name'] as String,
+          ownerId: e['ownerId'] as String? ?? '',
+          imageUrl: e['imageUrl'] as String?,
+          trackCount: e['trackCount'] as int? ?? 0,
+        )).toList();
+      }
+    } catch (e) {
+      debugPrint('Spotify _loadPlaylists error: $e');
     }
   }
 
@@ -202,6 +278,7 @@ class SpotifyProvider extends ChangeNotifier {
         final session = await _service.getAccessToken(_spDc!);
         if (session != null) {
           _username = session.username;
+          await _saveSession(session);
         }
       }
 

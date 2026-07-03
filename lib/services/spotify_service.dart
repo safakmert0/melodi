@@ -167,6 +167,21 @@ class SpotifyService {
   String? get refreshToken => _refreshToken;
   String? get clientToken => _clientToken;
 
+  /// Restore a previously saved session without network calls.
+  void restoreSession({
+    required String accessToken,
+    String? refreshToken,
+    required int expiresAtEpoch,
+    String? username,
+    String? clientId,
+  }) {
+    _accessToken = accessToken;
+    _refreshToken = refreshToken;
+    _expiresAtEpoch = expiresAtEpoch;
+    _username = username;
+    _clientId = clientId;
+  }
+
   bool get isExpiringSoon =>
       DateTime.now().millisecondsSinceEpoch ~/ 1000 >= _expiresAtEpoch - 300;
 
