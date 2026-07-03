@@ -419,7 +419,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: _dynamicColor,
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
