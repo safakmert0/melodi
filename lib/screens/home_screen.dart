@@ -304,7 +304,7 @@ class HomeScreen extends StatelessWidget {
               style: const TextStyle(fontFamily: AppConstants.fontFamily,
                 color: MelodiTheme.onSurfaceVariant, fontSize: 14)),
             trailing: Text(
-              _formatDuration(song.duration),
+              _formatDuration(song.duration.inSeconds),
               style: const TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
             ),
             onTap: () {
