@@ -38,10 +38,15 @@ class _SearchScreenState extends State<SearchScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Row(
                   children: [
-                    Container(
-                      width: 36, height: 36,
-                      decoration: BoxDecoration(shape: BoxShape.circle, color: MelodiTheme.containerHigh),
-                      child: const Icon(Icons.person, size: 20, color: MelodiTheme.onSurfaceVariant),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                      ),
+                      child: Container(
+                        width: 36, height: 36,
+                        decoration: BoxDecoration(shape: BoxShape.circle, color: MelodiTheme.containerHigh),
+                        child: const Icon(Icons.person, size: 20, color: MelodiTheme.onSurfaceVariant),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Text('Melodi', style: MelodiTheme.heading(size: 20)),
@@ -79,7 +84,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     },
                     style: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurface, fontSize: 15),
                     decoration: InputDecoration(
-                      hintText: 'Songs, Artists, or Albums',
+                      hintText: AppLocale.tr('what_to_listen'),
                       hintStyle: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurfaceVariant, fontSize: 15),
                       prefixIcon: const Icon(Icons.search_rounded, color: MelodiTheme.onSurfaceVariant, size: 22),
                       suffixIcon: _isSearching

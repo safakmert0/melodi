@@ -9,6 +9,7 @@ import '../providers/theme_provider.dart';
 import '../services/database_service.dart';
 import '../widgets/splash_screen.dart';
 import '../widgets/main_shell.dart';
+import 'settings_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -504,6 +505,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             iconColor: const Color(0xFF1DB954),
             title: 'Spotify',
             subtitle: AppLocale.tr('spotify_subtitle'),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
           ),
           const SizedBox(height: 14),
           _ServiceCard(
@@ -511,6 +517,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             iconColor: const Color(0xFFFF0000),
             title: 'YouTube Music',
             subtitle: AppLocale.tr('youtube_subtitle'),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
           ),
           const SizedBox(height: 14),
           _ServiceCard(
@@ -518,6 +529,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             iconColor: const Color(0xFFD51007),
             title: 'Last.fm',
             subtitle: AppLocale.tr('lastfm_subtitle'),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
           ),
         ],
       ),
@@ -682,7 +698,14 @@ class _FeatureRow extends StatelessWidget {
   }
 }
 
-class _LanguageSelector extends StatelessWidget {
+class _LanguageSelector extends StatefulWidget {
+  @override
+  State<_LanguageSelector> createState() => _LanguageSelectorState();
+}
+
+class _LanguageSelectorState extends State<_LanguageSelector> {
+  String _selectedLocale = AppLocale.currentLocale;
+
   @override
   Widget build(BuildContext context) {
     final languages = [
@@ -693,13 +716,14 @@ class _LanguageSelector extends StatelessWidget {
 
     return Column(
       children: languages.map((lang) {
-        final isSelected = AppLocale.currentLocale == lang.$2;
+        final isSelected = _selectedLocale == lang.$2;
         return GestureDetector(
           onTap: () {
             HapticFeedback.selectionClick();
+            setState(() => _selectedLocale = lang.$2);
             AppLocale.currentLocale = lang.$2;
+            context.read<LocaleNotifier>().change(lang.$2);
             DatabaseService.instance.setSetting('app_locale', lang.$2);
-            context.read<LocaleNotifier>().notifyListeners();
           },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 300),
@@ -885,17 +909,21 @@ class _ServiceCard extends StatelessWidget {
   final Color iconColor;
   final String title;
   final String subtitle;
+  final VoidCallback? onTap;
 
   const _ServiceCard({
     required this.icon,
     required this.iconColor,
     required this.title,
     required this.subtitle,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
       decoration: BoxDecoration(
         gradient: LinearGradient(

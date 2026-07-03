@@ -20,12 +20,17 @@ class MelodiSeekBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final safeDuration = duration.inMilliseconds > 0 ? duration : Duration.zero;
+    final safePosition = safeDuration.inMilliseconds > 0
+        ? Duration(milliseconds: position.inMilliseconds.clamp(0, safeDuration.inMilliseconds))
+        : position;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         ProgressBar(
-          progress: position,
-          total: duration,
+          progress: safePosition,
+          total: safeDuration,
           buffered: bufferedPosition,
           progressBarColor: activeColor,
           thumbColor: Colors.white,
@@ -38,7 +43,12 @@ class MelodiSeekBar extends StatelessWidget {
             fontSize: 15,
             fontFeatures: [FontFeature.tabularFigures()],
           ),
-          onSeek: onSeek ?? (_) {},
+          onSeek: (pos) {
+            if (onSeek != null && safeDuration.inMilliseconds > 0) {
+              final clampedPos = Duration(milliseconds: pos.inMilliseconds.clamp(0, safeDuration.inMilliseconds));
+              onSeek!(clampedPos);
+            }
+          },
         ),
       ],
     );

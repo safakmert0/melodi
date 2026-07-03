@@ -48,7 +48,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     });
 
     _player.durationStream.listen((duration) {
-      if (duration != null && _currentIndex >= 0 && _currentIndex < _queue.length) {
+      if (duration != null && duration.inMilliseconds > 0 && _currentIndex >= 0 && _currentIndex < _queue.length) {
         mediaItem.add(mediaItem.value?.copyWith(duration: duration));
       }
     });
@@ -95,7 +95,14 @@ class AudioPlayerHandler extends BaseAudioHandler
   bool get isShuffled => _isShuffled;
   LoopStyle get repeatMode => _repeatMode;
   bool get isPlaying => _player.playing;
-  Duration get position => _player.position;
+  Duration get position {
+    final pos = _player.position;
+    final dur = _player.duration;
+    if (dur != null && dur.inMilliseconds > 0 && pos.inMilliseconds > dur.inMilliseconds) {
+      return dur;
+    }
+    return pos;
+  }
   Duration get bufferedPosition => _player.bufferedPosition;
   Duration get duration => _player.duration ?? Duration.zero;
   Stream<Duration> get positionStream => _player.positionStream;
@@ -285,6 +292,10 @@ class AudioPlayerHandler extends BaseAudioHandler
         initialPosition: Duration.zero,
       );
 
+      // Wait for duration to be available
+      await Future.delayed(const Duration(milliseconds: 100));
+      final actualDuration = _player.duration ?? song.duration;
+
       if (_playbackSpeedOverride != null) {
         await _player.setSpeed(_playbackSpeedOverride!);
       }
@@ -329,7 +340,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         album: song.album,
         title: song.title,
         artist: song.artist,
-        duration: song.duration,
+        duration: actualDuration,
         artUri: artUri,
       );
 

@@ -444,6 +444,11 @@ class AppLocale {
         'spotify_subtitle': 'Import playlists & liked songs',
         'youtube_subtitle': 'Sync your music library',
         'lastfm_subtitle': 'Scrobble & discover new music',
+        // Greetings
+        'good_morning': 'Good Morning',
+        'good_afternoon': 'Good Afternoon',
+        'good_evening': 'Good Evening',
+        'general': 'General',
         // Splash
         'signal_path_preparing': 'Preparing your experience...',
         'scanning_library': 'Scanning library...',
@@ -870,6 +875,11 @@ class AppLocale {
         'spotify_subtitle': 'Çalma listeleri ve beğenilen şarkılar',
         'youtube_subtitle': 'Müzik kütüphanenizi senkronize edin',
         'lastfm_subtitle': 'Scrobble ve yeni müzik keşfedin',
+        // Greetings
+        'good_morning': 'Günaydın',
+        'good_afternoon': 'İyi Günler',
+        'good_evening': 'İyi Akşamlar',
+        'general': 'Genel',
         // Splash
         'signal_path_preparing': 'Deneyiminiz hazırlanıyor...',
         'scanning_library': 'Kitaplık taranıyor...',
@@ -1296,6 +1306,11 @@ class AppLocale {
         'spotify_subtitle': 'Playlists & Lieder importieren',
         'youtube_subtitle': 'Musikbibliothek synchronisieren',
         'lastfm_subtitle': 'Scrobble & neue Musik entdecken',
+        // Greetings
+        'good_morning': 'Guten Morgen',
+        'good_afternoon': 'Guten Tag',
+        'good_evening': 'Guten Abend',
+        'general': 'Allgemein',
         // Splash
         'signal_path_preparing': 'Dein Erlebnis wird vorbereitet...',
         'scanning_library': 'Bibliothek wird gescannt...',

@@ -283,7 +283,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                           child: Column(
                             children: [
                               Text(
-                                'NOW PLAYING',
+                                AppLocale.tr('now_playing').toUpperCase(),
                                 style: TextStyle(
                                   color: Colors.white.withOpacity(0.6),
                                   fontSize: 15,
@@ -318,12 +318,12 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               SafeArea(
                 child: Column(
                   children: [
-                    const Spacer(flex: 2),
-                    // Album Art with green glow
+                    const Spacer(flex: 1),
+                    // Album Art (smaller, moved up)
                     Center(
                       child: SizedBox(
-                        width: 340,
-                        height: 340,
+                        width: 280,
+                        height: 280,
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
@@ -335,8 +335,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                     boxShadow: [
                                       BoxShadow(
                                         color: const Color(0xFF53e076).withOpacity(0.2),
-                                        blurRadius: 80,
-                                        spreadRadius: 10,
+                                        blurRadius: 60,
+                                        spreadRadius: 8,
                                       ),
                                     ],
                                   ),
@@ -346,17 +346,17 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               aspectRatio: 1,
                               child: Container(
                                 decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(20),
+                                  borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withOpacity(0.4),
-                                      blurRadius: 40,
-                                      offset: const Offset(0, 12),
+                                      blurRadius: 30,
+                                      offset: const Offset(0, 10),
                                     ),
                                   ],
                                 ),
                                 child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(20),
+                                  borderRadius: BorderRadius.circular(16),
                                   child: hasArt
                                       ? Image.memory(
                                           song.albumArt!,
@@ -371,8 +371,11 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         ),
                       ),
                     ),
-                    const Spacer(flex: 1),
-                    // Song Title + Artist (Stitch style: centered, title 28px bold, artist in green)
+                    const SizedBox(height: 12),
+                    // Single-line synced lyrics under album art
+                    _buildSingleLineLyrics(),
+                    const SizedBox(height: 8),
+                    // Song Title + Artist
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32),
                       child: Column(
@@ -384,11 +387,11 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               color: Color(0xFFe5e2e1),
-                              fontSize: 28,
+                              fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 4),
                           Text(
                             song.artist,
                             maxLines: 1,
@@ -396,26 +399,28 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               color: Color(0xFF53e076),
-                              fontSize: 16,
+                              fontSize: 15,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    // Progress bar (4px, green active)
+                    const SizedBox(height: 12),
+                    // Progress bar with clamped position
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32),
                       child: MelodiSeekBar(
-                        position: player.position,
+                        position: player.duration.inMilliseconds > 0
+                            ? Duration(milliseconds: player.position.inMilliseconds.clamp(0, player.duration.inMilliseconds))
+                            : player.position,
                         duration: player.duration,
                         bufferedPosition: player.handler.bufferedPosition,
                         onSeek: player.seek,
                         activeColor: const Color(0xFF53e076),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     // Main controls (shuffle, prev, play/pause 72px green glow, next, repeat)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,

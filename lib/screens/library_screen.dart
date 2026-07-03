@@ -10,6 +10,7 @@ import '../models/artist_model.dart';
 import '../models/album_model.dart';
 import 'playlist_detail_screen.dart';
 import 'create_playlist_screen.dart';
+import 'settings_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -33,13 +34,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Row(
                 children: [
-                  Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(shape: BoxShape.circle, color: MelodiTheme.containerHigh),
-                    child: const Icon(Icons.person, size: 20, color: MelodiTheme.onSurfaceVariant),
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    ),
+                    child: Container(
+                      width: 36, height: 36,
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: MelodiTheme.containerHigh),
+                      child: const Icon(Icons.person, size: 20, color: MelodiTheme.onSurfaceVariant),
+                    ),
                   ),
                   const SizedBox(width: 12),
-                  Text('Your Library', style: MelodiTheme.heading(size: 20)),
+                  Text(AppLocale.tr('library'), style: MelodiTheme.heading(size: 20)),
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.add_rounded, color: MelodiTheme.onSurfaceVariant, size: 24),

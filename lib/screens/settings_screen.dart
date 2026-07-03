@@ -223,20 +223,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           _showCrossfadeSlider(context, player);
                         },
                       ),
-                      const SizedBox(height: 8),
-                      _PlaybackTile(
-                        icon: Icons.tune_rounded,
-                        iconColor: Colors.purple,
-                        title: AppLocale.tr('equalizer'),
-                        subtitleBuilder: () => AppLocale.tr('adjust_sound_frequencies'),
-                        onTap: () {
-                          showModalBottomSheet(
-                            context: context,
-                            backgroundColor: Colors.transparent,
-                            builder: (_) => const EqualizerSheet(),
-                          );
-                        },
-                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -869,18 +855,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icons.folder_rounded,
                         iconColor: Colors.orange,
                         title: AppLocale.tr('download_location'),
-                        subtitle: 'Documents/downloads',
+                        subtitle: FutureBuilder<String?>(
+                          future: DatabaseService.instance.getSetting('download_path'),
+                          builder: (_, snap) => Text(
+                            snap.data ?? 'Documents/downloads',
+                            style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 12),
+                          ),
+                        ),
                         trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () async {
-                          final db = DatabaseService.instance;
-                          final dir = await db.getSetting('download_path');
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(dir ?? 'Documents/downloads'),
-                                backgroundColor: MelodiTheme.primaryGreen,
-                              ),
-                            );
+                          try {
+                            final result = await FilePicker.platform.getDirectoryPath();
+                            if (result != null && context.mounted) {
+                              await DatabaseService.instance.setSetting('download_path', result);
+                              setState(() {});
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('${AppLocale.tr('download_location')}: $result'),
+                                  backgroundColor: MelodiTheme.primaryGreen,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              final db = DatabaseService.instance;
+                              final dir = await db.getSetting('download_path');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(dir ?? 'Documents/downloads'),
+                                  backgroundColor: MelodiTheme.primaryGreen,
+                                ),
+                              );
+                            }
                           }
                         },
                       ),
@@ -1478,54 +1484,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Melodi, aşağıdaki açık kaynak projeler sayesinde hayata geçti:',
+                  'Melodi, açık kaynak projelerin katkılarıyla hayata geçti.',
                   style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
                 ),
-                const SizedBox(height: 20),
-                _ackItem(
-                  'yt-dlp',
-                  'https://github.com/yt-dlp/yt-dlp',
-                  'YouTube metadata ve ses çekme mimarisinin ilham kaynağı',
-                ),
-                _ackItem(
-                  'Media3 / ExoPlayer',
-                  'https://github.com/androidx/media',
-                  'Ses oynatma altyapısı (just_audio üzerinden)',
-                ),
-                _ackItem(
-                  'ytmusicapi',
-                  'https://github.com/sigma67/ytmusicapi',
-                  'YouTube Music API tersine mühendislik referansı',
-                ),
-                _ackItem(
-                  'youtube_explode_dart',
-                  'https://github.com/hexrcs/youtube_explode_dart',
-                  'YouTube video/metadata çekme kütüphanesi',
-                ),
-                _ackItem(
-                  'LRCLIB',
-                  'https://lrclib.net',
-                  'Senkronize şarkı sözü sağlayıcısı',
-                ),
-                _ackItem(
-                  'just_audio',
-                  'https://github.com/ryanheise/just_audio',
-                  'Platformlar arası ses oynatma',
-                ),
-                _ackItem(
-                  'flutter_secure_storage',
-                  'https://github.com/mogol/flutter_secure_storage',
-                  'Güvenli kimlik bilgisi saklama',
-                ),
-                _ackItem(
-                  'sqflite',
-                  'https://github.com/tekartik/sqflite',
-                  'Yerel veritabanı',
-                ),
-                _ackItem(
-                  'palette_generator',
-                  'https://github.com/flutter/packages',
-                  'Dinamik renk paleti çıkarma',
+                const SizedBox(height: 16),
+                Text(
+                  'Teşekkürler: yt-dlp, Media3, ytmusicapi, youtube_explode_dart, LRCLIB, just_audio, flutter_secure_storage, sqflite, palette_generator',
+                  style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
                 ),
               ],
             ),
@@ -1537,46 +1502,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Text('Kapat', style: TextStyle(color: MelodiTheme.primaryGreen)),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _ackItem(String name, String url, String description) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: InkWell(
-        onTap: () => _openUrl(url),
-        borderRadius: BorderRadius.circular(8),
-        child: Row(
-          children: [
-            Container(
-              width: 36, height: 36,
-              decoration: BoxDecoration(
-                color: MelodiTheme.primaryGreen.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(Icons.code_rounded, color: MelodiTheme.primaryGreen, size: 18),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    description,
-                    style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.open_in_new_rounded, color: MelodiTheme.textMuted, size: 16),
-          ],
-        ),
       ),
     );
   }
@@ -1684,11 +1609,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _formatDateTime(DateTime dt) {
     final now = DateTime.now();
     final diff = now.difference(dt);
-    if (diff.inMinutes < 1) return 'just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    return '${dt.month}/${dt.day}';
+    if (diff.inMinutes < 1) return 'az önce';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}dk önce';
+    if (diff.inHours < 24) return '${diff.inHours}sa önce';
+    if (diff.inDays < 7) return '${diff.inDays}g önce';
+    return '${dt.day}/${dt.month}';
   }
 
   void _confirmClearLibrary(BuildContext context) {
