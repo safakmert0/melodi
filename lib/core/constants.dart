@@ -7,8 +7,8 @@ export 'localization.dart' show AppLocale;
 
 class AppConstants {
   static const String appName = 'Melodi';
-  static const String appVersion = '3.1.1';
-  static const String buildNumber = '2';
+  static const String appVersion = '3.1.2';
+  static const String buildNumber = '3';
 
   static const List<String> supportedAudioExtensions = [
     'mp3', 'm4a', 'flac', 'wav', 'aac', 'ogg', 'wma',

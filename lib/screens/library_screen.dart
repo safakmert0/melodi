@@ -21,7 +21,7 @@ class LibraryScreen extends StatefulWidget {
 
 class _LibraryScreenState extends State<LibraryScreen> {
   bool _isGridView = false;
-  String _sortBy = 'Recently Played';
+  String _sortBy = 'recently_played';
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +65,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 children: [
                   Icon(Icons.swap_vert_rounded, size: 18, color: MelodiTheme.onSurfaceVariant),
                   const SizedBox(width: 4),
-                  Text(_sortBy, style: const TextStyle(
+                  Text(AppLocale.tr(_sortBy), style: const TextStyle(
                     fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurfaceVariant,
                     fontSize: 15, fontWeight: FontWeight.w500)),
                   const Spacer(),
@@ -223,8 +223,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final items = <_LibraryItem>[];
 
     items.add(_LibraryItem(
-      title: 'Liked Songs',
-      subtitle: 'Playlist • ${lib.favorites.length} songs',
+      title: AppLocale.tr('liked_songs'),
+      subtitle: '${AppLocale.tr('playlist_count').replaceAll('{count}', '${lib.favorites.length}')}',
       gradient: const LinearGradient(colors: [Color(0xFF450AF5), Color(0xFFC4EFD9)]),
       icon: Icons.favorite_rounded,
       type: _LibraryItemType.likedSongs,
@@ -233,7 +233,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     for (final p in pp.playlists) {
       items.add(_LibraryItem(
         title: p.name,
-        subtitle: 'Playlist • ${p.songIds.length} songs',
+        subtitle: '${AppLocale.tr('playlist_count').replaceAll('{count}', '${p.songIds.length}')}',
         icon: Icons.queue_music_rounded,
         type: _LibraryItemType.playlist,
         playlist: p,
@@ -243,7 +243,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     for (final a in lib.artists) {
       items.add(_LibraryItem(
         title: a.name,
-        subtitle: 'Artist • ${a.songCount} songs',
+        subtitle: '${AppLocale.tr('artist_count').replaceAll('{count}', '${a.songCount}')}',
         icon: Icons.person_rounded,
         type: _LibraryItemType.artist,
         artist: a,
@@ -253,7 +253,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     for (final a in lib.albums) {
       items.add(_LibraryItem(
         title: a.name,
-        subtitle: 'Album • ${a.artist}',
+        subtitle: '${AppLocale.tr('album_count').replaceAll('{count}', '${a.artist}')}',
         icon: Icons.album_rounded,
         type: _LibraryItemType.album,
         album: a,

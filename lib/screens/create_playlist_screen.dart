@@ -37,9 +37,9 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen> {
         actions: [
           TextButton(
             onPressed: _createPlaylist,
-            child: const Text(
-              'Create',
-              style: TextStyle(
+            child: Text(
+              AppLocale.tr('create'),
+              style: const TextStyle(
                 fontFamily: AppConstants.fontFamily,
                 color: MelodiTheme.primaryGreen,
                 fontWeight: FontWeight.w600,
@@ -131,19 +131,19 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen> {
                 color: MelodiTheme.surfaceMid2,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.bar_chart_rounded, size: 18, color: MelodiTheme.primaryGreen),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'High fidelity experience active',
-                    style: TextStyle(
-                      fontFamily: AppConstants.fontFamily,
-                      color: MelodiTheme.onSurfaceVariant,
-                      fontSize: 13,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.bar_chart_rounded, size: 18, color: MelodiTheme.primaryGreen),
+                    const SizedBox(width: 8),
+                    Text(
+                      AppLocale.tr('high_fidelity_active'),
+                      style: const TextStyle(
+                        fontFamily: AppConstants.fontFamily,
+                        color: MelodiTheme.onSurfaceVariant,
+                        fontSize: 13,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -162,9 +162,9 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen> {
                   elevation: 8,
                   shadowColor: MelodiTheme.primaryGreen.withOpacity(0.3),
                 ),
-                child: const Text(
-                  'Create Playlist',
-                  style: TextStyle(
+                child: Text(
+                  AppLocale.tr('create_playlist_button'),
+                  style: const TextStyle(
                     fontFamily: AppConstants.fontFamily,
                     fontSize: 16,
                     fontWeight: FontWeight.w700,

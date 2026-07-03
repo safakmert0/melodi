@@ -644,8 +644,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _SettingsTile(
                         icon: Icons.equalizer,
                         iconColor: const Color(0xFF53e076),
-                        title: 'Audio Effects',
-                        subtitle: 'Spatial audio, reverb, bass boost',
+                        title: AppLocale.tr('audio_effects'),
+                        subtitle: AppLocale.tr('audio_effects_desc'),
                         trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const _AudioEffectsPage()),
@@ -655,8 +655,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _SettingsTile(
                         icon: Icons.tune,
                         iconColor: Colors.teal,
-                        title: 'EQ Presets',
-                        subtitle: 'Choose from preset equalizer profiles',
+                        title: AppLocale.tr('eq_presets'),
+                        subtitle: AppLocale.tr('eq_presets_desc'),
                         trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => _showEqPresetsDialog(context),
                       ),
@@ -664,8 +664,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _SettingsTile(
                         icon: Icons.queue_music,
                         iconColor: Colors.cyan,
-                        title: 'Gapless Playback',
-                        subtitle: 'Seamless transitions between tracks',
+                        title: AppLocale.tr('gapless_playback_setting'),
+                        subtitle: AppLocale.tr('gapless_playback_desc'),
                         trailing: Switch(
                           value: _gaplessPlayback,
                           onChanged: (v) {
@@ -697,8 +697,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _SettingsTile(
                         icon: Icons.bluetooth,
                         iconColor: Colors.blue,
-                        title: 'Bluetooth Auto-EQ',
-                        subtitle: 'Automatically adjust EQ for Bluetooth devices',
+                        title: AppLocale.tr('bluetooth_auto_eq'),
+                        subtitle: AppLocale.tr('bluetooth_auto_eq_desc'),
                         trailing: Switch(
                           value: _bluetoothAutoEq,
                           onChanged: (v) {
@@ -716,8 +716,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _SettingsTile(
                         icon: Icons.mic,
                         iconColor: Colors.orange,
-                        title: 'Siri Shortcuts',
-                        subtitle: 'Configure voice control shortcuts',
+                        title: AppLocale.tr('siri_shortcuts'),
+                        subtitle: AppLocale.tr('siri_shortcuts_desc'),
                         trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const _VoiceControlPage()),
@@ -727,8 +727,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _SettingsTile(
                         icon: Icons.cast,
                         iconColor: Colors.deepPurple,
-                        title: 'AirPlay',
-                        subtitle: 'Stream to available AirPlay devices',
+                        title: AppLocale.tr('airplay'),
+                        subtitle: AppLocale.tr('airplay_desc'),
                         trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => _showAirPlayDevicesDialog(context),
                       ),
@@ -736,8 +736,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _SettingsTile(
                         icon: Icons.headphones,
                         iconColor: Colors.pink,
-                        title: 'Podcast',
-                        subtitle: 'Manage podcast subscriptions',
+                        title: AppLocale.tr('podcast'),
+                        subtitle: AppLocale.tr('podcast_desc'),
                         trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const _PodcastSubscriptionsPage()),
@@ -747,8 +747,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _SettingsTile(
                         icon: Icons.menu_book,
                         iconColor: Colors.brown,
-                        title: 'Audiobook',
-                        subtitle: 'Browse audiobook library',
+                        title: AppLocale.tr('audiobook'),
+                        subtitle: AppLocale.tr('audiobook_desc'),
                         trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const _AudiobookLibraryPage()),
@@ -758,8 +758,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _SettingsTile(
                         icon: Icons.widgets,
                         iconColor: Colors.amber,
-                        title: 'Widget',
-                        subtitle: 'Configure home screen widgets',
+                        title: AppLocale.tr('widget'),
+                        subtitle: AppLocale.tr('widget_desc'),
                         trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () => _showWidgetConfigDialog(context),
                       ),
@@ -1609,10 +1609,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _formatDateTime(DateTime dt) {
     final now = DateTime.now();
     final diff = now.difference(dt);
-    if (diff.inMinutes < 1) return 'az önce';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}dk önce';
-    if (diff.inHours < 24) return '${diff.inHours}sa önce';
-    if (diff.inDays < 7) return '${diff.inDays}g önce';
+    if (diff.inMinutes < 1) return AppLocale.currentLocale == 'tr' ? 'az önce' : 'just now';
+    if (diff.inMinutes < 60) return AppLocale.currentLocale == 'tr' ? '${diff.inMinutes}dk önce' : '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return AppLocale.currentLocale == 'tr' ? '${diff.inHours}sa önce' : '${diff.inHours}h ago';
+    if (diff.inDays < 7) return AppLocale.currentLocale == 'tr' ? '${diff.inDays}g önce' : '${diff.inDays}d ago';
     return '${dt.day}/${dt.month}';
   }
 
@@ -1900,29 +1900,30 @@ class _AppearanceSettingsPage extends StatelessWidget {
   }
 
   String _accentColorName(Color c) {
-    const names = {
-      0xFF1DB954: 'Spotify Green',
-      0xFF1ED760: 'Green',
-      0xFFFA233B: 'Red',
-      0xFFFF2D55: 'Pink',
-      0xFF007AFF: 'Blue',
-      0xFF5856D6: 'Indigo',
-      0xFFAF52DE: 'Purple',
-      0xFFFF9500: 'Orange',
-      0xFFFFCC02: 'Yellow',
-      0xFF34C759: 'Mint',
-      0xFF00C7BE: 'Teal',
-      0xFFFFFFFF: 'White',
-      0xFFE91E63: 'Rose',
-      0xFF9C27B0: 'Deep Purple',
-      0xFF2196F3: 'Light Blue',
-      0xFF00BCD4: 'Cyan',
-      0xFF4CAF50: 'Material Green',
-      0xFFFF5722: 'Deep Orange',
-      0xFF795548: 'Brown',
-      0xFF607D8B: 'Blue Grey',
+    const nameKeys = {
+      0xFF1ED760: 'color_green',
+      0xFFFA233B: 'color_red',
+      0xFFFF2D55: 'color_pink',
+      0xFF007AFF: 'color_blue',
+      0xFF5856D6: 'color_indigo',
+      0xFFAF52DE: 'color_purple',
+      0xFFFF9500: 'color_orange',
+      0xFFFFCC02: 'color_yellow',
+      0xFF34C759: 'color_mint',
+      0xFF00C7BE: 'color_teal',
+      0xFFFFFFFF: 'color_white',
+      0xFFE91E63: 'color_rose',
+      0xFF9C27B0: 'color_deep_purple',
+      0xFF2196F3: 'color_light_blue',
+      0xFF00BCD4: 'color_cyan',
+      0xFF4CAF50: 'color_material_green',
+      0xFFFF5722: 'color_deep_orange',
+      0xFF795548: 'color_brown',
+      0xFF607D8B: 'color_blue_grey',
     };
-    return names[c.value] ?? '#${c.value.toRadixString(16).substring(2).toUpperCase()}';
+    final key = nameKeys[c.value];
+    if (key != null) return AppLocale.tr(key);
+    return '#${c.value.toRadixString(16).substring(2).toUpperCase()}';
   }
 
   void _showThemePicker(BuildContext context, ThemeProvider themeProvider) {
@@ -2694,19 +2695,19 @@ class _EqualizerPageState extends State<_EqualizerPage> {
   static const _bandFreqs = ['60', '230', '910', '3.6k', '14k'];
   static const _bandLabels = ['60 Hz', '230 Hz', '910 Hz', '3.6 kHz', '14 kHz'];
 
-  static const _presets = {
-    'flat': 'Flat',
-    'classical': 'Classical',
-    'dance': 'Dance',
-    'acoustic': 'Acoustic',
-    'bass_boost': 'Bass Boost',
-    'treble_boost': 'Treble Boost',
-    'loudness': 'Loudness',
-    'rock': 'Rock',
-    'pop': 'Pop',
-    'jazz': 'Jazz',
-    'voice': 'Voice',
-    'custom': 'Custom',
+  static const _presetKeys = {
+    'flat': 'preset_flat',
+    'classical': 'preset_classical',
+    'dance': 'preset_dance',
+    'acoustic': 'preset_acoustic',
+    'bass_boost': 'preset_bass_boost',
+    'treble_boost': 'preset_treble_boost',
+    'loudness': 'preset_loudness',
+    'rock': 'preset_rock',
+    'pop': 'preset_pop',
+    'jazz': 'preset_jazz',
+    'voice': 'preset_voice',
+    'custom': 'preset_custom',
   };
 
   static const _presetValues = {
@@ -2861,15 +2862,15 @@ class _EqualizerPageState extends State<_EqualizerPage> {
           const SizedBox(height: 8),
           SizedBox(
             height: 40,
-            child: ListView(
+              child: ListView(
               scrollDirection: Axis.horizontal,
-              children: _presets.entries.map((e) {
+              children: _presetKeys.entries.map((e) {
                 final selected = _activePreset == e.key;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: FilterChip(
                     selected: selected,
-                    label: Text(e.value, style: TextStyle(fontSize: 12)),
+                    label: Text(AppLocale.tr(e.value), style: TextStyle(fontSize: 12)),
                     onSelected: _enabled ? (v) => _applyPreset(e.key) : null,
                     selectedColor: MelodiTheme.primaryGreen.withOpacity(0.3),
                     checkmarkColor: MelodiTheme.primaryGreen,
@@ -3684,7 +3685,6 @@ class _InfoRow extends StatelessWidget {
 }
 
 const List<Color> _accentColors = [
-  Color(0xFF1DB954),
   Color(0xFF1ED760),
   Color(0xFFFA233B),
   Color(0xFFFF2D55),
