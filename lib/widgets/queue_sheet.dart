@@ -145,7 +145,7 @@ class QueueSheet extends StatelessWidget {
                                 song.artist,
                                 style: TextStyle(
                                   color: MelodiTheme.onSurfaceVariant,
-                                  fontSize: 12,
+                                  fontSize: 14,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,

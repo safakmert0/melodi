@@ -111,7 +111,7 @@ class PlaylistCard extends StatelessWidget {
                     '${playlist.songCount} songs',
                     style: TextStyle(
                       color: MelodiTheme.onSurfaceVariant,
-                      fontSize: 12,
+                      fontSize: 14,
                     ),
                   ),
                 ],

@@ -217,7 +217,7 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
                     style: const TextStyle(
                       fontFamily: AppConstants.fontFamily,
                       color: MelodiTheme.onSurfaceVariant,
-                      fontSize: 12,
+                      fontSize: 14,
                     ),
                   ),
                   trailing: IconButton(

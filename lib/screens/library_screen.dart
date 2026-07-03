@@ -6,6 +6,8 @@ import '../providers/library_provider.dart';
 import '../providers/playlist_provider.dart';
 import '../providers/player_provider.dart';
 import '../models/playlist_model.dart';
+import '../models/artist_model.dart';
+import '../models/album_model.dart';
 import 'playlist_detail_screen.dart';
 import 'create_playlist_screen.dart';
 
@@ -46,7 +48,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.search_rounded, color: MelodiTheme.onSurfaceVariant, size: 22),
-                    onPressed: () {},
+                    onPressed: () => _showSearchDialog(context),
                   ),
                 ],
               ),
@@ -59,7 +61,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   const SizedBox(width: 4),
                   Text(_sortBy, style: const TextStyle(
                     fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurfaceVariant,
-                    fontSize: 13, fontWeight: FontWeight.w500)),
+                    fontSize: 15, fontWeight: FontWeight.w500)),
                   const Spacer(),
                   GestureDetector(
                     onTap: () => setState(() => _isGridView = !_isGridView),
@@ -100,6 +102,117 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
+  void _showSearchDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: MelodiTheme.containerLow,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Padding(
+            padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(color: MelodiTheme.outlineVariant, borderRadius: BorderRadius.circular(2)),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  style: const TextStyle(color: MelodiTheme.onSurface, fontFamily: AppConstants.fontFamily, fontSize: 17),
+                  decoration: InputDecoration(
+                    hintText: AppLocale.tr('search'),
+                    hintStyle: TextStyle(color: MelodiTheme.onSurfaceVariant.withOpacity(0.5)),
+                    prefixIcon: const Icon(Icons.search_rounded, color: MelodiTheme.onSurfaceVariant),
+                    filled: true,
+                    fillColor: MelodiTheme.containerHigh,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                  onChanged: (_) => setModalState(() {}),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 300,
+                  child: Builder(
+                    builder: (_) {
+                      final query = controller.text.toLowerCase();
+                      final library = context.read<LibraryProvider>();
+                      final playlistProvider = context.read<PlaylistProvider>();
+                      final allItems = _buildLibraryItems(playlistProvider, library);
+                      final filtered = query.isEmpty
+                          ? allItems
+                          : allItems.where((i) => i.title.toLowerCase().contains(query)).toList();
+                      if (filtered.isEmpty) {
+                        return Center(child: Text(AppLocale.tr('no_results'), style: const TextStyle(color: MelodiTheme.onSurfaceVariant)));
+                      }
+                      return ListView.builder(
+                        itemCount: filtered.length,
+                        itemBuilder: (ctx, i) => ListTile(
+                          leading: Icon(filtered[i].icon, color: MelodiTheme.primaryGreen, size: 22),
+                          title: Text(filtered[i].title, style: const TextStyle(color: MelodiTheme.onSurface, fontSize: 16)),
+                          subtitle: Text(filtered[i].subtitle, style: const TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13)),
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            _handleItemTap(context, filtered[i]);
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _handleItemTap(BuildContext context, _LibraryItem item) {
+    if (item.type == _LibraryItemType.playlist && item.playlist != null) {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => PlaylistDetailScreen(playlist: item.playlist!)));
+    } else if (item.type == _LibraryItemType.likedSongs) {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => PlaylistDetailScreen(
+          playlist: PlaylistModel(
+            id: 'favorites',
+            name: 'Liked Songs',
+            songIds: context.read<LibraryProvider>().favorites.map((s) => s.id).toList(),
+          ),
+        ),
+      ));
+    } else if (item.type == _LibraryItemType.artist && item.artist != null) {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => PlaylistDetailScreen(
+          playlist: PlaylistModel(
+            id: 'artist_${item.artist!.id}',
+            name: item.artist!.name,
+            songIds: item.artist!.songIds,
+          ),
+        ),
+      ));
+    } else if (item.type == _LibraryItemType.album && item.album != null) {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => PlaylistDetailScreen(
+          playlist: PlaylistModel(
+            id: 'album_${item.album!.id}',
+            name: item.album!.name,
+            songIds: item.album!.songIds,
+          ),
+        ),
+      ));
+    }
+  }
+
   List<_LibraryItem> _buildLibraryItems(PlaylistProvider pp, LibraryProvider lib) {
     final items = <_LibraryItem>[];
 
@@ -124,18 +237,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
     for (final a in lib.artists) {
       items.add(_LibraryItem(
         title: a.name,
-        subtitle: 'Artist',
+        subtitle: 'Artist • ${a.songCount} songs',
         icon: Icons.person_rounded,
         type: _LibraryItemType.artist,
+        artist: a,
       ));
     }
 
     for (final a in lib.albums) {
       items.add(_LibraryItem(
         title: a.name,
-        subtitle: 'Album • ${a.artist ?? ''}',
+        subtitle: 'Album • ${a.artist}',
         icon: Icons.album_rounded,
         type: _LibraryItemType.album,
+        album: a,
       ));
     }
 
@@ -162,43 +277,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
       subtitle: Text(item.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
         style: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurfaceVariant, fontSize: 13)),
       trailing: const Icon(Icons.chevron_right_rounded, color: MelodiTheme.onSurfaceVariant, size: 20),
-      onTap: () {
-        if (item.type == _LibraryItemType.playlist && item.playlist != null) {
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => PlaylistDetailScreen(playlist: item.playlist!)));
-        } else if (item.type == _LibraryItemType.likedSongs) {
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => PlaylistDetailScreen(
-              playlist: PlaylistModel(
-                id: 'favorites',
-                name: 'Liked Songs',
-                songIds: context.read<LibraryProvider>().favorites.map((s) => s.id).toList(),
-              ),
-            ),
-          ));
-        }
-      },
+      onTap: () => _handleItemTap(context, item),
     );
   }
 
   Widget _buildGridItem(BuildContext context, _LibraryItem item) {
     return GestureDetector(
-      onTap: () {
-        if (item.type == _LibraryItemType.playlist && item.playlist != null) {
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => PlaylistDetailScreen(playlist: item.playlist!)));
-        } else if (item.type == _LibraryItemType.likedSongs) {
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => PlaylistDetailScreen(
-              playlist: PlaylistModel(
-                id: 'favorites',
-                name: 'Liked Songs',
-                songIds: context.read<LibraryProvider>().favorites.map((s) => s.id).toList(),
-              ),
-            ),
-          ));
-        }
-      },
+      onTap: () => _handleItemTap(context, item),
       child: Container(
         decoration: BoxDecoration(
           color: MelodiTheme.containerLow,
@@ -228,7 +313,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 children: [
                   Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurface,
-                      fontSize: 13, fontWeight: FontWeight.w600)),
+                      fontSize: 15, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 2),
                   Text(item.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontFamily: AppConstants.fontFamily,
@@ -252,6 +337,8 @@ class _LibraryItem {
   final IconData icon;
   final _LibraryItemType type;
   final PlaylistModel? playlist;
+  final ArtistModel? artist;
+  final AlbumModel? album;
 
   _LibraryItem({
     required this.title,
@@ -260,5 +347,7 @@ class _LibraryItem {
     required this.icon,
     required this.type,
     this.playlist,
+    this.artist,
+    this.album,
   });
 }

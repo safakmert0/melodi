@@ -220,7 +220,7 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                   ].where((s) => s.isNotEmpty).join(' · '),
                   style: TextStyle(
                     color: MelodiTheme.textMuted,
-                    fontSize: 13,
+                    fontSize: 15,
                   ),
                 ),
               ],
@@ -238,7 +238,17 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
   }
 
   void _playTrack(BuildContext context, int index) {
-    final songs = _tracks.map((t) => _toSongModel(t)).toList();
+    final library = context.read<LibraryProvider>();
+    // Try to find local matches for each track
+    final songs = _tracks.map((t) {
+      // Search local library by title + artist
+      final localMatch = library.songs.firstWhere(
+        (s) => s.title.toLowerCase() == t.name.toLowerCase() &&
+               s.artist.toLowerCase().contains(t.artist.toLowerCase()),
+        orElse: () => _toSongModel(t),
+      );
+      return localMatch;
+    }).toList();
     context.read<PlayerProvider>().playFromQueue(songs, index);
   }
 
@@ -342,7 +352,7 @@ class _TrackListTile extends StatelessWidget {
           '${track.trackNumber}',
           style: TextStyle(
             color: MelodiTheme.textMuted,
-            fontSize: 13,
+            fontSize: 15,
           ),
         ),
       ),
@@ -361,7 +371,7 @@ class _TrackListTile extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
           color: MelodiTheme.onSurfaceVariant,
-          fontSize: 13,
+          fontSize: 15,
         ),
       ),
       trailing: durationStr.isNotEmpty
@@ -369,7 +379,7 @@ class _TrackListTile extends StatelessWidget {
               durationStr,
               style: TextStyle(
                 color: MelodiTheme.textMuted,
-                fontSize: 12,
+                fontSize: 14,
               ),
             )
           : null,

@@ -101,8 +101,8 @@ class MelodiTheme {
     'indie': Color(0xFFE91429),
   };
 
-  // Typography - Be Vietnam Pro
-  static TextStyle display({double size = 48, FontWeight weight = FontWeight.w800}) {
+  // Typography - Be Vietnam Pro (Profesyonel boyutlar)
+  static TextStyle display({double size = 52, FontWeight weight = FontWeight.w800}) {
     return TextStyle(
       fontFamily: AppConstants.fontFamily,
       fontSize: size,
@@ -112,7 +112,7 @@ class MelodiTheme {
     );
   }
 
-  static TextStyle heading({double size = 28, FontWeight weight = FontWeight.w700}) {
+  static TextStyle heading({double size = 32, FontWeight weight = FontWeight.w700}) {
     return TextStyle(
       fontFamily: AppConstants.fontFamily,
       fontSize: size,
@@ -122,7 +122,7 @@ class MelodiTheme {
     );
   }
 
-  static TextStyle title({double size = 20, FontWeight weight = FontWeight.w600}) {
+  static TextStyle title({double size = 22, FontWeight weight = FontWeight.w600}) {
     return TextStyle(
       fontFamily: AppConstants.fontFamily,
       fontSize: size,
@@ -131,7 +131,7 @@ class MelodiTheme {
     );
   }
 
-  static TextStyle body({double size = 16, FontWeight weight = FontWeight.w400, Color? color}) {
+  static TextStyle body({double size = 17, FontWeight weight = FontWeight.w400, Color? color}) {
     return TextStyle(
       fontFamily: AppConstants.fontFamily,
       fontSize: size,
@@ -141,7 +141,7 @@ class MelodiTheme {
     );
   }
 
-  static TextStyle bodySm({double size = 14, FontWeight weight = FontWeight.w400, Color? color}) {
+  static TextStyle bodySm({double size = 15, FontWeight weight = FontWeight.w400, Color? color}) {
     return TextStyle(
       fontFamily: AppConstants.fontFamily,
       fontSize: size,
@@ -151,7 +151,7 @@ class MelodiTheme {
     );
   }
 
-  static TextStyle label({double size = 12, FontWeight weight = FontWeight.w700, Color? color, double letterSpacing = 0.05}) {
+  static TextStyle label({double size = 13, FontWeight weight = FontWeight.w700, Color? color, double letterSpacing = 0.04}) {
     return TextStyle(
       fontFamily: AppConstants.fontFamily,
       fontSize: size,
@@ -162,7 +162,7 @@ class MelodiTheme {
     );
   }
 
-  static TextStyle labelSm({double size = 13, FontWeight weight = FontWeight.w500, Color? color}) {
+  static TextStyle labelSm({double size = 14, FontWeight weight = FontWeight.w500, Color? color}) {
     return TextStyle(
       fontFamily: AppConstants.fontFamily,
       fontSize: size,
@@ -231,10 +231,10 @@ class MelodiTheme {
         centerTitle: false,
         titleTextStyle: TextStyle(
           fontFamily: AppConstants.fontFamily,
-          fontSize: 22,
+          fontSize: 24,
           fontWeight: FontWeight.w700,
           color: onSurface,
-          letterSpacing: -0.22,
+          letterSpacing: -0.24,
         ),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
@@ -243,8 +243,8 @@ class MelodiTheme {
         selectedItemColor: primaryGreen,
         unselectedItemColor: onSurfaceVariant,
         type: BottomNavigationBarType.fixed,
-        selectedLabelStyle: TextStyle(fontFamily: AppConstants.fontFamily, fontSize: 11, fontWeight: FontWeight.w500),
-        unselectedLabelStyle: TextStyle(fontFamily: AppConstants.fontFamily, fontSize: 11),
+        selectedLabelStyle: TextStyle(fontFamily: AppConstants.fontFamily, fontSize: 13, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: TextStyle(fontFamily: AppConstants.fontFamily, fontSize: 12),
       ),
       sliderTheme: const SliderThemeData(
         activeTrackColor: primaryGreen,

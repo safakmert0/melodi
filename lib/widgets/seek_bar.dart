@@ -35,7 +35,7 @@ class MelodiSeekBar extends StatelessWidget {
           barHeight: 4,
           timeLabelTextStyle: const TextStyle(
             color: Color(0xFFB3B3B3),
-            fontSize: 11,
+            fontSize: 15,
             fontFeatures: [FontFeature.tabularFigures()],
           ),
           onSeek: onSeek ?? (_) {},

@@ -189,7 +189,7 @@ class QueueScreen extends StatelessWidget {
                             Text('Shuffle', style: TextStyle(
                               fontFamily: AppConstants.fontFamily,
                               color: player.isShuffled ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant,
-                              fontSize: 13, fontWeight: FontWeight.w500)),
+                              fontSize: 15, fontWeight: FontWeight.w500)),
                           ],
                         ),
                       ),
@@ -205,7 +205,7 @@ class QueueScreen extends StatelessWidget {
                             Text('Repeat', style: TextStyle(
                               fontFamily: AppConstants.fontFamily,
                               color: player.repeatMode != LoopStyle.off ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant,
-                              fontSize: 13, fontWeight: FontWeight.w500)),
+                              fontSize: 15, fontWeight: FontWeight.w500)),
                           ],
                         ),
                       ),

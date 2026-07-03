@@ -186,7 +186,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                       '#${_errors.length - i}',
                                       style: TextStyle(
                                         color: MelodiTheme.errorRed,
-                                        fontSize: 10,
+                                        fontSize: 14,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -197,7 +197,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                       error['context'] as String? ?? '',
                                       style: TextStyle(
                                         color: MelodiTheme.onSurface,
-                                        fontSize: 13,
+                                        fontSize: 15,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -206,7 +206,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                     _formatTimestamp(error['createdAt'] as String? ?? ''),
                                     style: TextStyle(
                                       color: MelodiTheme.textMuted,
-                                      fontSize: 11,
+                                      fontSize: 15,
                                     ),
                                   ),
                                 ],
@@ -216,7 +216,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                 error['message'] as String? ?? '',
                                 style: TextStyle(
                                   color: MelodiTheme.onSurfaceVariant,
-                                  fontSize: 12,
+                                  fontSize: 14,
                                 ),
                                 maxLines: 3,
                                 overflow: TextOverflow.ellipsis,
@@ -230,7 +230,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                     'View stack trace',
                                     style: TextStyle(
                                       color: MelodiTheme.primaryGreen,
-                                      fontSize: 11,
+                                      fontSize: 15,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -326,7 +326,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                     trace,
                     style: TextStyle(
                       color: MelodiTheme.onSurfaceVariant,
-                      fontSize: 11,
+                      fontSize: 15,
                       fontFamily: 'monospace',
                       height: 1.5,
                     ),
@@ -375,7 +375,7 @@ class _SectionTitle extends StatelessWidget {
         title.toUpperCase(),
         style: TextStyle(
           color: MelodiTheme.textMuted,
-          fontSize: 12,
+          fontSize: 14,
           fontWeight: FontWeight.w600,
           letterSpacing: 1.5,
         ),

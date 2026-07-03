@@ -130,7 +130,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
                                     style: const TextStyle(
                                       fontFamily: AppConstants.fontFamily,
                                       color: MelodiTheme.onSurface,
-                                      fontSize: 13,
+                                      fontSize: 15,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -220,7 +220,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
                                 style: const TextStyle(
                                   fontFamily: AppConstants.fontFamily,
                                   color: MelodiTheme.onSurfaceVariant,
-                                  fontSize: 12,
+                                  fontSize: 14,
                                 ),
                               ),
                               Expanded(
@@ -251,7 +251,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
                                 style: const TextStyle(
                                   fontFamily: AppConstants.fontFamily,
                                   color: MelodiTheme.onSurfaceVariant,
-                                  fontSize: 12,
+                                  fontSize: 14,
                                 ),
                               ),
                             ],

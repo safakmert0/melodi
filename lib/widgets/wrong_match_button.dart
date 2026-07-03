@@ -140,7 +140,7 @@ class WrongMatchButton extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: MelodiTheme.onSurfaceVariant,
-                            fontSize: 12,
+                            fontSize: 14,
                           ),
                         ),
                         onTap: () async {

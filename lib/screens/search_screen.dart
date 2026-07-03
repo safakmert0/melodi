@@ -4,6 +4,7 @@ import '../core/constants.dart';
 import '../core/localization.dart';
 import '../providers/search_provider.dart';
 import '../providers/player_provider.dart';
+import '../providers/library_provider.dart';
 import '../models/song_model.dart';
 import 'settings_screen.dart';
 
@@ -109,50 +110,63 @@ class _SearchScreenState extends State<SearchScreen> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Trending Artists', style: MelodiTheme.heading(size: 20)),
-                      Text('See all', style: MelodiTheme.label(color: MelodiTheme.primaryGreen)),
-                    ],
-                  ),
+                  child: Text(AppLocale.tr('artists'), style: MelodiTheme.heading(size: 20)),
                 ),
               ),
               SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 130,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.only(left: 16),
-                    itemCount: 5,
-                    itemBuilder: (context, index) {
-                      final artists = ['Luna Ray', 'Drove', 'Mira Sol', 'Soma Silence', 'Neon Architect'];
-                      return Container(
-                        width: 100,
-                        margin: const EdgeInsets.only(right: 16),
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 90, height: 90,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft, end: Alignment.bottomRight,
-                                  colors: [MelodiTheme.containerHigh, MelodiTheme.containerLow],
-                                ),
+                child: Consumer<LibraryProvider>(
+                  builder: (context, library, _) {
+                    final artists = library.artists.take(10).toList();
+                    if (artists.isEmpty) return const SizedBox.shrink();
+                    return SizedBox(
+                      height: 130,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.only(left: 16),
+                        itemCount: artists.length,
+                        itemBuilder: (context, index) {
+                          final artist = artists[index];
+                          return GestureDetector(
+                            onTap: () {
+                              // Play all songs by this artist
+                              final artistSongs = library.songs
+                                  .where((s) => s.artist == artist.name)
+                                  .toList();
+                              if (artistSongs.isNotEmpty) {
+                                context.read<PlayerProvider>().playFromQueue(artistSongs, 0);
+                              }
+                            },
+                            child: Container(
+                              width: 100,
+                              margin: const EdgeInsets.only(right: 16),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    width: 90, height: 90,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft, end: Alignment.bottomRight,
+                                        colors: [MelodiTheme.primaryGreen.withOpacity(0.3), MelodiTheme.containerHigh],
+                                      ),
+                                    ),
+                                    child: artist.image != null
+                                        ? ClipOval(child: Image.memory(artist.image!, width: 90, height: 90, fit: BoxFit.cover))
+                                        : const Icon(Icons.person_rounded, size: 40, color: MelodiTheme.onSurfaceVariant),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(artist.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontFamily: AppConstants.fontFamily,
+                                      color: MelodiTheme.onSurface, fontSize: 14, fontWeight: FontWeight.w500),
+                                    textAlign: TextAlign.center),
+                                ],
                               ),
-                              child: const Icon(Icons.person_rounded, size: 40, color: MelodiTheme.onSurfaceVariant),
                             ),
-                            const SizedBox(height: 8),
-                            Text(artists[index], maxLines: 1, overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontFamily: AppConstants.fontFamily,
-                                color: MelodiTheme.onSurface, fontSize: 12, fontWeight: FontWeight.w500),
-                              textAlign: TextAlign.center),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                          );
+                        },
+                      ),
+                    );
+                  },
                 ),
               ),
               SliverToBoxAdapter(
@@ -176,8 +190,8 @@ class _SearchScreenState extends State<SearchScreen> {
       ('Rock', const Color(0xFFE8115B)),
       ('Hip-Hop', const Color(0xFFBC462B)),
       ('Electronic', const Color(0xFF1DB954)),
-      ('Podcast', const Color(0xFF7358FF)),
-      ('Chill', const Color(0xFF006450)),
+      ('Jazz', const Color(0xFF1E3264)),
+      ('Classical', const Color(0xFF7358FF)),
     ];
 
     return Padding(
@@ -190,28 +204,55 @@ class _SearchScreenState extends State<SearchScreen> {
         itemCount: genres.length,
         itemBuilder: (context, index) {
           final g = genres[index];
-          return Container(
-            decoration: BoxDecoration(
-              color: g.$2,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Stack(
-              children: [
-                Positioned(
-                  right: -8, bottom: -8,
-                  child: Transform.rotate(
-                    angle: 0.3,
-                    child: Container(width: 56, height: 24,
-                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(4))),
+          return GestureDetector(
+            onTap: () {
+              // Search library for songs matching this genre
+              final library = context.read<LibraryProvider>();
+              final genreSongs = library.songs
+                  .where((s) => s.genre.toLowerCase().contains(g.$1.toLowerCase()))
+                  .toList();
+              if (genreSongs.isNotEmpty) {
+                context.read<PlayerProvider>().playFromQueue(genreSongs, 0);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Playing ${genreSongs.length} ${g.$1} songs'),
+                    backgroundColor: MelodiTheme.primaryGreen,
+                    duration: const Duration(seconds: 1),
                   ),
-                ),
-                Positioned(
-                  left: 14, bottom: 14,
-                  child: Text(g.$1, style: const TextStyle(
-                    fontFamily: AppConstants.fontFamily, color: Colors.white,
-                    fontSize: 15, fontWeight: FontWeight.w700)),
-                ),
-              ],
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('No ${g.$1} songs in your library'),
+                    backgroundColor: MelodiTheme.containerHigh,
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              }
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: g.$2,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    right: -8, bottom: -8,
+                    child: Transform.rotate(
+                      angle: 0.3,
+                      child: Container(width: 56, height: 24,
+                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(4))),
+                    ),
+                  ),
+                  Positioned(
+                    left: 14, bottom: 14,
+                    child: Text(g.$1, style: const TextStyle(
+                      fontFamily: AppConstants.fontFamily, color: Colors.white,
+                      fontSize: 15, fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ),
             ),
           );
         },

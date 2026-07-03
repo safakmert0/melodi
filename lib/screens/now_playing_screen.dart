@@ -198,7 +198,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                 AppLocale.tr('now_playing'),
                 style: const TextStyle(
                   color: Color(0xFFe5e2e1),
-                  fontSize: 12,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 1.5,
                 ),
@@ -286,7 +286,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                 'NOW PLAYING',
                                 style: TextStyle(
                                   color: Colors.white.withOpacity(0.6),
-                                  fontSize: 11,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 2,
                                 ),
@@ -298,7 +298,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 13,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -1157,7 +1157,7 @@ class _SpeedButton extends StatelessWidget {
               '${currentSpeed.toStringAsFixed(2)}x'.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), ''),
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 13,
+                fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -1207,7 +1207,7 @@ class _VolumeBoostButton extends StatelessWidget {
               '${(player.volumeBoost * 100).round()}%',
               style: TextStyle(
                 color: showSlider ? accentColor : Colors.white,
-                fontSize: 13,
+                fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
             ),

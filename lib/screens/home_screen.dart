@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
@@ -7,11 +8,9 @@ import '../providers/library_provider.dart';
 import '../providers/playlist_provider.dart';
 import '../providers/connection_provider.dart';
 import '../models/song_model.dart';
-import '../widgets/equalizer_sheet.dart';
 import 'settings_screen.dart';
 import 'playlist_detail_screen.dart';
 import 'mixes_screen.dart';
-import 'album_discovery_screen.dart';
 import 'downloads_screen.dart';
 import 'library_health_screen.dart';
 
@@ -82,11 +81,11 @@ class HomeScreen extends StatelessWidget {
               ),
               if (library.songs.isNotEmpty)
                 SliverToBoxAdapter(
-                  child: _buildTopMixes(context),
+                  child: _buildTopMixes(context, library),
                 ),
               if (library.songs.isNotEmpty)
                 SliverToBoxAdapter(
-                  child: _buildMadeForYou(context),
+                  child: _buildRecentlyAdded(context, library),
                 ),
               const SliverPadding(padding: EdgeInsets.only(bottom: 140)),
             ],
@@ -97,7 +96,13 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildQuickPicks(BuildContext context, LibraryProvider library) {
-    final picks = library.recent.take(6).toList();
+    // Use recent, or fallback to most played, or fallback to first songs
+    final picks = library.recent.isNotEmpty
+        ? library.recent.take(6).toList()
+        : library.mostPlayed.isNotEmpty
+            ? library.mostPlayed.take(6).toList()
+            : library.songs.take(6).toList();
+
     if (picks.isEmpty) return const SizedBox.shrink();
 
     return Padding(
@@ -115,7 +120,9 @@ class HomeScreen extends StatelessWidget {
         itemBuilder: (context, index) {
           final song = picks[index];
           return GestureDetector(
-            onTap: () => context.read<PlayerProvider>().playSong(song),
+            onTap: () {
+              context.read<PlayerProvider>().playFromQueue(picks, index);
+            },
             child: Container(
               decoration: BoxDecoration(
                 color: MelodiTheme.containerLow,
@@ -137,7 +144,7 @@ class HomeScreen extends StatelessWidget {
                   Expanded(
                     child: Text(song.title, maxLines: 2, overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurface,
-                        fontSize: 13, fontWeight: FontWeight.w600)),
+                        fontSize: 15, fontWeight: FontWeight.w600)),
                   ),
                 ],
               ),
@@ -148,7 +155,10 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTopMixes(BuildContext context) {
+  Widget _buildTopMixes(BuildContext context, LibraryProvider library) {
+    // Generate mixes from library songs grouped by artist
+    final mixes = _generateMixesFromLibrary(library);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -157,8 +167,13 @@ class HomeScreen extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Your Top Mixes', style: MelodiTheme.heading(size: 20)),
-              Text('SEE ALL', style: MelodiTheme.label(color: MelodiTheme.primaryGreen, letterSpacing: 0.08)),
+              Text(AppLocale.tr('your_top_mixes'), style: MelodiTheme.heading(size: 20)),
+              GestureDetector(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MixesScreen()),
+                ),
+                child: Text(AppLocale.tr('see_all'), style: MelodiTheme.label(color: MelodiTheme.primaryGreen, letterSpacing: 0.08)),
+              ),
             ],
           ),
         ),
@@ -167,69 +182,83 @@ class HomeScreen extends StatelessWidget {
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.only(left: 16),
-            itemCount: 4,
+            itemCount: mixes.length,
             itemBuilder: (context, index) {
-              final mixes = [
-                ('Daily Mix 1', 'The Weeknd, Daft Punk, Arctic Monkeys and more'),
-                ('Chill Mix', 'Lofi Girl, Tycho, Bonobo and more'),
-                ('Focus Mix', 'Brian Eno, Nils Frahm, Ólafur Arnalds and more'),
-                ('Workout Mix', 'Dua Lipa, Doja Cat, Megan Thee Stallion and more'),
-              ];
-              return Container(
-                width: 160,
-                margin: const EdgeInsets.only(right: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 160,
-                      height: 160,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            MelodiTheme.primaryGreen.withOpacity( 0.3 + index * 0.1),
-                            MelodiTheme.containerHigh,
+              final mix = mixes[index];
+              return GestureDetector(
+                onTap: () {
+                  if (mix.songs.isNotEmpty) {
+                    context.read<PlayerProvider>().playFromQueue(mix.songs, 0);
+                  }
+                },
+                child: Container(
+                  width: 160,
+                  margin: const EdgeInsets.only(right: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 160,
+                        height: 160,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              mix.color.withOpacity(0.3),
+                              MelodiTheme.containerHigh,
+                            ],
+                          ),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
                           ],
                         ),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
-                        ],
-                      ),
-                      child: Stack(
-                        children: [
-                          Positioned(
-                            bottom: 8,
-                            left: 8,
-                            child: Text(
-                              mixes[index].$1.toUpperCase(),
-                              style: TextStyle(
-                                fontFamily: AppConstants.fontFamily,
-                                color: MelodiTheme.primaryGreen,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.05,
+                        child: Stack(
+                          children: [
+                            if (mix.songs.isNotEmpty && mix.songs.first.albumArt != null)
+                              Positioned.fill(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.memory(
+                                    mix.songs.first.albumArt!,
+                                    fit: BoxFit.cover,
+                                    gaplessPlayback: true,
+                                    opacity: const AlwaysStoppedAnimation(0.4),
+                                  ),
+                                ),
+                              ),
+                            Positioned(
+                              bottom: 8,
+                              left: 8,
+                              child: Text(
+                                mix.name.toUpperCase(),
+                                style: TextStyle(
+                                  fontFamily: AppConstants.fontFamily,
+                                  color: MelodiTheme.primaryGreen,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.05,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      mixes[index].$2,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: AppConstants.fontFamily,
-                        color: MelodiTheme.onSurfaceVariant,
-                        fontSize: 12,
-                        height: 1.3,
+                      const SizedBox(height: 8),
+                      Text(
+                        '${mix.songs.length} ${AppLocale.tr('songs')}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: AppConstants.fontFamily,
+                          color: MelodiTheme.onSurfaceVariant,
+                          fontSize: 14,
+                          height: 1.3,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             },
@@ -239,49 +268,106 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMadeForYou(BuildContext context) {
-    final items = [
-      (Icons.favorite_rounded, 'Discover Weekly', 'Your weekly mixtape of fresh music. Enjoy.'),
-      (Icons.circle_notifications_rounded, 'Release Radar', 'Catch all the latest music from artists you follow.'),
-    ];
+  Widget _buildRecentlyAdded(BuildContext context, LibraryProvider library) {
+    final recentlyAdded = List<SongModel>.from(library.songs)
+      ..sort((a, b) => b.dateAdded.compareTo(a.dateAdded));
+    final items = recentlyAdded.take(10).toList();
+
+    if (items.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-          child: Text('Made For You', style: MelodiTheme.heading(size: 20)),
+          child: Text(AppLocale.tr('recently_added'), style: MelodiTheme.heading(size: 20)),
         ),
-        ...items.map((item) => ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          leading: Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: MelodiTheme.containerHigh,
-              borderRadius: BorderRadius.circular(8),
+        ...items.asMap().entries.map((entry) {
+          final song = entry.value;
+          return ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: song.albumArt != null
+                  ? Image.memory(song.albumArt!, width: 48, height: 48, fit: BoxFit.cover, gaplessPlayback: true)
+                  : Container(
+                      width: 48,
+                      height: 48,
+                      color: MelodiTheme.containerHigh,
+                      child: const Icon(Icons.music_note_rounded, size: 20, color: MelodiTheme.onSurfaceVariant),
+                    ),
             ),
-            child: Icon(item.$1, color: MelodiTheme.primaryGreen, size: 24),
-          ),
-          title: Text(item.$2, style: const TextStyle(
-            fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurface,
-            fontSize: 15, fontWeight: FontWeight.w500)),
-          subtitle: Text(item.$3, maxLines: 2, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontFamily: AppConstants.fontFamily,
-              color: MelodiTheme.onSurfaceVariant, fontSize: 13, height: 1.3)),
-          trailing: const Icon(Icons.chevron_right_rounded, color: MelodiTheme.onSurfaceVariant),
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('${item.$2} coming soon'),
-                backgroundColor: MelodiTheme.primaryGreen,
-                duration: const Duration(seconds: 1),
-              ),
-            );
-          },
-        )),
+            title: Text(song.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurface,
+                fontSize: 15, fontWeight: FontWeight.w500)),
+            subtitle: Text(song.artist, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontFamily: AppConstants.fontFamily,
+                color: MelodiTheme.onSurfaceVariant, fontSize: 14)),
+            trailing: Text(
+              _formatDuration(song.duration),
+              style: const TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
+            ),
+            onTap: () {
+              context.read<PlayerProvider>().playFromQueue(items, entry.key);
+            },
+          );
+        }),
       ],
     );
+  }
+
+  List<_MixData> _generateMixesFromLibrary(LibraryProvider library) {
+    if (library.songs.isEmpty) return [];
+
+    final random = Random(42); // Seed for consistency
+    final allSongs = List<SongModel>.from(library.songs);
+
+    // Group songs by artist
+    final artistMap = <String, List<SongModel>>{};
+    for (final song in allSongs) {
+      final artist = song.artist.isNotEmpty ? song.artist : 'Unknown';
+      artistMap.putIfAbsent(artist, () => []).add(song);
+    }
+
+    final mixes = <_MixData>[];
+    final colors = [
+      MelodiTheme.primaryGreen,
+      const Color(0xFF53E076),
+      const Color(0xFF72FE8F),
+      MelodiTheme.primaryContainer,
+    ];
+
+    // Create mixes from artists with 2+ songs
+    final multiSongArtists = artistMap.entries.where((e) => e.value.length >= 2).toList()
+      ..sort((a, b) => b.value.length.compareTo(a.value.length));
+
+    for (int i = 0; i < min(4, multiSongArtists.length); i++) {
+      final artistSongs = List<SongModel>.from(multiSongArtists[i].value)..shuffle(random);
+      mixes.add(_MixData(
+        name: 'Mix: ${multiSongArtists[i].key}',
+        songs: artistSongs.take(8).toList(),
+        color: colors[i % colors.length],
+      ));
+    }
+
+    // If not enough artist mixes, add random mixes
+    if (mixes.length < 4) {
+      final remaining = allSongs.toList()..shuffle(random);
+      final chunkSize = max(3, remaining.length ~/ (4 - mixes.length));
+      for (int i = mixes.length; i < 4 && remaining.isNotEmpty; i++) {
+        final chunk = remaining.take(chunkSize).toList();
+        remaining.removeRange(0, min(chunkSize, remaining.length));
+        if (chunk.isNotEmpty) {
+          mixes.add(_MixData(
+            name: 'Daily Mix ${i + 1}',
+            songs: chunk,
+            color: colors[i % colors.length],
+          ));
+        }
+      }
+    }
+
+    return mixes;
   }
 
   Widget _buildEmptyState(BuildContext context) {
@@ -323,4 +409,18 @@ class HomeScreen extends StatelessWidget {
     if (hour < 18) return AppLocale.tr('good_afternoon');
     return AppLocale.tr('good_evening');
   }
+
+  String _formatDuration(int seconds) {
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
+}
+
+class _MixData {
+  final String name;
+  final List<SongModel> songs;
+  final Color color;
+
+  const _MixData({required this.name, required this.songs, required this.color});
 }

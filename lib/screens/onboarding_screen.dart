@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
@@ -15,23 +17,73 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends State<OnboardingScreen>
+    with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   bool _showSplash = true;
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _slideController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+  }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
     super.dispose();
   }
 
   Future<void> _complete() async {
+    HapticFeedback.mediumImpact();
     await DatabaseService.instance.setSetting('onboarding_completed', 'true');
-    if (!context.mounted) return;
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MainShell()),
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => const MainShell(),
+        transitionsBuilder: (_, anim, __, child) {
+          return FadeTransition(
+            opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut),
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 600),
+      ),
     );
+  }
+
+  void _nextPage() {
+    HapticFeedback.selectionClick();
+    if (_currentPage < 3) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      _complete();
+    }
+  }
+
+  void _prevPage() {
+    HapticFeedback.selectionClick();
+    if (_currentPage > 0) {
+      _pageController.previousPage(
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOutCubic,
+      );
+    }
   }
 
   @override
@@ -40,122 +92,511 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       return SplashScreen(
         onComplete: () {
           setState(() => _showSplash = false);
+          _fadeController.forward();
+          _slideController.forward();
         },
       );
     }
 
     return Scaffold(
       backgroundColor: MelodiTheme.background,
-      body: SafeArea(
-        child: Column(
+      body: FadeTransition(
+        opacity: _fadeController,
+        child: Stack(
           children: [
-            // Progress bar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
-              child: Row(
-                children: List.generate(4, (i) {
-                  final isActive = i <= _currentPage;
-                  return Expanded(
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      height: 3,
-                      decoration: BoxDecoration(
-                        color: isActive ? MelodiTheme.primaryGreen : MelodiTheme.surfaceBright,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  );
-                }),
+            // Animated background gradient
+            Positioned.fill(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 1000),
+                curve: Curves.easeInOut,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      _getPageColor(_currentPage).withOpacity(0.12),
+                      MelodiTheme.background,
+                      MelodiTheme.background,
+                      _getPageColor(_currentPage).withOpacity(0.06),
+                    ],
+                    stops: const [0.0, 0.3, 0.7, 1.0],
+                  ),
+                ),
               ),
             ),
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: (i) => setState(() => _currentPage = i),
+            // Floating orbs
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _OrbPainter(
+                  color: _getPageColor(_currentPage),
+                  progress: _currentPage / 3,
+                ),
+              ),
+            ),
+            // Content
+            SafeArea(
+              child: Column(
                 children: [
-                  _OnboardingPage(
-                    icon: Icons.library_music_rounded,
-                    title: AppLocale.tr('welcome_to_melodi'),
-                    description: AppLocale.tr('onboarding_welcome_desc'),
-                    child: _LanguageSelector(),
+                  // Top bar
+                  _buildTopBar(),
+                  // Page content
+                  Expanded(
+                    child: PageView(
+                      controller: _pageController,
+                      onPageChanged: (i) => setState(() => _currentPage = i),
+                      physics: const BouncingScrollPhysics(),
+                      children: [
+                        _buildWelcomePage(),
+                        _buildLanguagePage(),
+                        _buildThemePage(),
+                        _buildServicesPage(),
+                      ],
+                    ),
                   ),
-                  _OnboardingPage(
-                    icon: Icons.language_rounded,
-                    title: AppLocale.tr('choose_language'),
-                    description: AppLocale.tr('onboarding_language_desc'),
-                    child: _LanguageSelector(),
-                  ),
-                  _OnboardingPage(
-                    icon: Icons.palette_rounded,
-                    title: AppLocale.tr('choose_theme'),
-                    description: AppLocale.tr('onboarding_theme_desc'),
-                    child: _ThemeSelector(),
-                  ),
-                  _OnboardingPage(
-                    icon: Icons.sync_rounded,
-                    title: AppLocale.tr('connect_services'),
-                    description: AppLocale.tr('onboarding_services_desc'),
-                  ),
+                  // Bottom section
+                  _buildBottomSection(),
                 ],
               ),
             ),
-            _buildBottomNav(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBottomNav() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+  Color _getPageColor(int page) {
+    switch (page) {
+      case 0: return MelodiTheme.primaryGreen;
+      case 1: return const Color(0xFF53E076);
+      case 2: return const Color(0xFF72FE8F);
+      case 3: return MelodiTheme.primaryContainer;
+      default: return MelodiTheme.primaryGreen;
+    }
+  }
+
+  Widget _buildTopBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          TextButton(
-            onPressed: _currentPage < 3 ? _complete : null,
-            child: Text(
-              AppLocale.tr('skip'),
-              style: const TextStyle(
-                fontFamily: AppConstants.fontFamily,
-                color: MelodiTheme.onSurfaceVariant,
-                fontSize: 14,
+          // Back button
+          if (_currentPage > 0)
+            GestureDetector(
+              onTap: _prevPage,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: MelodiTheme.surfaceBright.withOpacity(0.5),
+                ),
+                child: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 18,
+                  color: MelodiTheme.onSurface,
+                ),
+              ),
+            )
+          else
+            const SizedBox(width: 40),
+          const Spacer(),
+          // Skip button
+          if (_currentPage < 3)
+            GestureDetector(
+              onTap: _complete,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: MelodiTheme.outlineVariant.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  AppLocale.tr('skip'),
+                  style: MelodiTheme.bodySm(
+                    color: MelodiTheme.onSurfaceVariant.withOpacity(0.7),
+                  ),
+                ),
+              ),
+            )
+          else
+            const SizedBox(width: 60),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWelcomePage() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 40),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Animated logo with glow
+          SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.3),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: _slideController,
+              curve: Curves.easeOutBack,
+            )),
+            child: FadeTransition(
+              opacity: _slideController,
+              child: Container(
+                width: 160,
+                height: 160,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: MelodiTheme.primaryGreen.withOpacity(0.25),
+                      blurRadius: 60,
+                      spreadRadius: 20,
+                    ),
+                  ],
+                ),
+                child: Container(
+                  width: 160,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        MelodiTheme.primaryGreen.withOpacity(0.15),
+                        MelodiTheme.primaryGreen.withOpacity(0.05),
+                        Colors.transparent,
+                      ],
+                    ),
+                    border: Border.all(
+                      color: MelodiTheme.primaryGreen.withOpacity(0.2),
+                      width: 2,
+                    ),
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            MelodiTheme.primaryGreen.withOpacity(0.2),
+                            MelodiTheme.primaryGreen.withOpacity(0.08),
+                          ],
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.music_note_rounded,
+                        size: 52,
+                        color: MelodiTheme.primaryGreen,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
+          const SizedBox(height: 56),
+          // Title
+          Text(
+            AppLocale.tr('welcome_to_melodi'),
+            style: MelodiTheme.display(size: 44),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          // Subtitle
+          Text(
+            AppLocale.tr('onboarding_welcome_desc'),
+            style: MelodiTheme.body(
+              size: 19,
+              color: MelodiTheme.onSurfaceVariant.withOpacity(0.8),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 40),
+          // Feature highlights
+          _FeatureRow(
+            icon: Icons.bolt_rounded,
+            text: AppLocale.tr('signal_path_preparing'),
+          ),
+          const SizedBox(height: 12),
+          _FeatureRow(
+            icon: Icons.shield_rounded,
+            text: AppLocale.tr('scanning_library'),
+          ),
+          const SizedBox(height: 12),
+          _FeatureRow(
+            icon: Icons.favorite_rounded,
+            text: AppLocale.tr('enjoy_listening'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLanguagePage() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 40),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Icon
+          Container(
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  MelodiTheme.primaryGreen.withOpacity(0.15),
+                  MelodiTheme.primaryGreen.withOpacity(0.05),
+                ],
+              ),
+              border: Border.all(
+                color: MelodiTheme.primaryGreen.withOpacity(0.2),
+                width: 1.5,
+              ),
+            ),
+            child: const Icon(
+              Icons.language_rounded,
+              size: 40,
+              color: MelodiTheme.primaryGreen,
+            ),
+          ),
+          const SizedBox(height: 44),
+          // Title
+          Text(
+            AppLocale.tr('choose_language'),
+            style: MelodiTheme.heading(size: 38),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          // Subtitle
+          Text(
+            AppLocale.tr('onboarding_language_desc'),
+            style: MelodiTheme.body(
+              size: 18,
+              color: MelodiTheme.onSurfaceVariant.withOpacity(0.8),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 44),
+          _LanguageSelector(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildThemePage() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 40),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Icon
+          Container(
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  MelodiTheme.primaryGreen.withOpacity(0.15),
+                  MelodiTheme.primaryGreen.withOpacity(0.05),
+                ],
+              ),
+              border: Border.all(
+                color: MelodiTheme.primaryGreen.withOpacity(0.2),
+                width: 1.5,
+              ),
+            ),
+            child: const Icon(
+              Icons.palette_rounded,
+              size: 40,
+              color: MelodiTheme.primaryGreen,
+            ),
+          ),
+          const SizedBox(height: 44),
+          // Title
+          Text(
+            AppLocale.tr('choose_theme'),
+            style: MelodiTheme.heading(size: 38),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          // Subtitle
+          Text(
+            AppLocale.tr('onboarding_theme_desc'),
+            style: MelodiTheme.body(
+              size: 18,
+              color: MelodiTheme.onSurfaceVariant.withOpacity(0.8),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 44),
+          _ThemeSelector(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildServicesPage() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 40),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Icon
+          Container(
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  MelodiTheme.primaryGreen.withOpacity(0.15),
+                  MelodiTheme.primaryGreen.withOpacity(0.05),
+                ],
+              ),
+              border: Border.all(
+                color: MelodiTheme.primaryGreen.withOpacity(0.2),
+                width: 1.5,
+              ),
+            ),
+            child: const Icon(
+              Icons.sync_rounded,
+              size: 40,
+              color: MelodiTheme.primaryGreen,
+            ),
+          ),
+          const SizedBox(height: 44),
+          // Title
+          Text(
+            AppLocale.tr('connect_services'),
+            style: MelodiTheme.heading(size: 38),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          // Subtitle
+          Text(
+            AppLocale.tr('onboarding_services_desc'),
+            style: MelodiTheme.body(
+              size: 18,
+              color: MelodiTheme.onSurfaceVariant.withOpacity(0.8),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 44),
+          // Service cards
+          _ServiceCard(
+            icon: Icons.music_note_rounded,
+            iconColor: const Color(0xFF1DB954),
+            title: 'Spotify',
+            subtitle: AppLocale.tr('spotify_subtitle'),
+          ),
+          const SizedBox(height: 14),
+          _ServiceCard(
+            icon: Icons.play_circle_rounded,
+            iconColor: const Color(0xFFFF0000),
+            title: 'YouTube Music',
+            subtitle: AppLocale.tr('youtube_subtitle'),
+          ),
+          const SizedBox(height: 14),
+          _ServiceCard(
+            icon: Icons.equalizer_rounded,
+            iconColor: const Color(0xFFD51007),
+            title: 'Last.fm',
+            subtitle: AppLocale.tr('lastfm_subtitle'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomSection() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(40, 16, 40, 40),
+      child: Column(
+        children: [
+          // Progress dots
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(4, (i) {
+              final isActive = i == _currentPage;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 400),
+                margin: const EdgeInsets.symmetric(horizontal: 5),
+                width: isActive ? 28 : 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  gradient: isActive
+                      ? const LinearGradient(
+                          colors: [MelodiTheme.primaryGreen, Color(0xFF53E076)],
+                        )
+                      : null,
+                  color: isActive ? null : MelodiTheme.surfaceBright.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(4),
+                  boxShadow: isActive
+                      ? [
+                          BoxShadow(
+                            color: MelodiTheme.primaryGreen.withOpacity(0.4),
+                            blurRadius: 8,
+                          ),
+                        ]
+                      : null,
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 32),
+          // Next button
           SizedBox(
-            height: 56,
+            width: double.infinity,
+            height: 60,
             child: ElevatedButton(
-              onPressed: () {
-                if (_currentPage < 3) {
-                  _pageController.nextPage(
-                    duration: const Duration(milliseconds: 400),
-                    curve: Curves.easeOutQuart,
-                  );
-                } else {
-                  _complete();
-                }
-              },
+              onPressed: _nextPage,
               style: ElevatedButton.styleFrom(
                 backgroundColor: MelodiTheme.primaryGreen,
                 foregroundColor: MelodiTheme.onPrimary,
-                padding: const EdgeInsets.symmetric(horizontal: 32),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(30),
                 ),
-                elevation: 8,
-                shadowColor: MelodiTheme.primaryGreen.withOpacity(0.3),
+                elevation: 0,
+                shadowColor: Colors.transparent,
               ),
-              child: Text(
-                _currentPage < 3
-                    ? AppLocale.tr('next')
-                    : AppLocale.tr('get_started'),
-                style: const TextStyle(
-                  fontFamily: AppConstants.fontFamily,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _currentPage < 3
+                        ? AppLocale.tr('next')
+                        : AppLocale.tr('get_started'),
+                    style: const TextStyle(
+                      fontFamily: AppConstants.fontFamily,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Icon(
+                    _currentPage < 3
+                        ? Icons.arrow_forward_rounded
+                        : Icons.check_circle_outline_rounded,
+                    size: 22,
+                  ),
+                ],
               ),
             ),
           ),
@@ -165,60 +606,78 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-class _OnboardingPage extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String description;
-  final Widget? child;
+// Floating orb painter
+class _OrbPainter extends CustomPainter {
+  final Color color;
+  final double progress;
 
-  const _OnboardingPage({
-    required this.icon,
-    required this.title,
-    required this.description,
-    this.child,
-  });
+  _OrbPainter({required this.color, required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+
+    final orbs = [
+      Offset(size.width * 0.8, size.height * 0.15),
+      Offset(size.width * 0.15, size.height * 0.75),
+      Offset(size.width * 0.85, size.height * 0.85),
+    ];
+
+    for (int i = 0; i < orbs.length; i++) {
+      final orbProgress = (progress + i * 0.33) % 1.0;
+      final radius = 60.0 + orbProgress * 40.0;
+      final opacity = (0.03 + orbProgress * 0.02).clamp(0.0, 0.05);
+
+      paint.shader = RadialGradient(
+        colors: [
+          color.withOpacity(opacity),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromCircle(center: orbs[i], radius: radius));
+
+      canvas.drawCircle(orbs[i], radius, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _OrbPainter oldDelegate) =>
+      oldDelegate.progress != progress || oldDelegate.color != color;
+}
+
+// Feature row for welcome page
+class _FeatureRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _FeatureRow({required this.icon, required this.text});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: MelodiTheme.containerLow,
-              borderRadius: BorderRadius.circular(32),
-              boxShadow: [
-                BoxShadow(
-                  color: MelodiTheme.primaryGreen.withOpacity(0.1),
-                  blurRadius: 40,
-                  spreadRadius: 5,
-                ),
-              ],
-            ),
-            child: Icon(icon, size: 56, color: MelodiTheme.primaryGreen),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: MelodiTheme.primaryGreen.withOpacity(0.1),
           ),
-          const SizedBox(height: 32),
-          Text(
-            title,
-            style: MelodiTheme.heading(size: 28),
-            textAlign: TextAlign.center,
+          child: Icon(
+            icon,
+            size: 16,
+            color: MelodiTheme.primaryGreen,
           ),
-          const SizedBox(height: 12),
-          Text(
-            description,
-            style: MelodiTheme.body(color: MelodiTheme.onSurfaceVariant),
-            textAlign: TextAlign.center,
+        ),
+        const SizedBox(width: 12),
+        Text(
+          text,
+          style: MelodiTheme.bodySm(
+            size: 15,
+            color: MelodiTheme.onSurfaceVariant.withOpacity(0.7),
           ),
-          if (child != null) ...[
-            const SizedBox(height: 32),
-            child!,
-          ],
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -227,9 +686,9 @@ class _LanguageSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final languages = [
-      ('Türkçe', 'tr'),
-      ('English', 'en'),
-      ('Deutsch', 'de'),
+      ('Türkçe', 'tr', '🇹🇷'),
+      ('English', 'en', '🇬🇧'),
+      ('Deutsch', 'de', '🇩🇪'),
     ];
 
     return Column(
@@ -237,35 +696,72 @@ class _LanguageSelector extends StatelessWidget {
         final isSelected = AppLocale.currentLocale == lang.$2;
         return GestureDetector(
           onTap: () {
+            HapticFeedback.selectionClick();
             AppLocale.currentLocale = lang.$2;
             DatabaseService.instance.setSetting('app_locale', lang.$2);
             context.read<LocaleNotifier>().notifyListeners();
           },
-          child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            margin: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
             decoration: BoxDecoration(
-              color: isSelected
-                  ? MelodiTheme.primaryGreen.withOpacity(0.15)
-                  : MelodiTheme.containerLow,
-              borderRadius: BorderRadius.circular(12),
+              gradient: isSelected
+                  ? LinearGradient(
+                      colors: [
+                        MelodiTheme.primaryGreen.withOpacity(0.12),
+                        MelodiTheme.primaryGreen.withOpacity(0.05),
+                      ],
+                    )
+                  : null,
+              color: isSelected ? null : MelodiTheme.containerLow,
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: isSelected ? MelodiTheme.primaryGreen : MelodiTheme.outlineVariant,
-                width: 1,
+                color: isSelected
+                    ? MelodiTheme.primaryGreen.withOpacity(0.5)
+                    : MelodiTheme.outlineVariant.withOpacity(0.3),
+                width: 1.5,
               ),
             ),
             child: Row(
               children: [
                 Text(
-                  lang.$1,
-                  style: MelodiTheme.body(
-                    color: isSelected ? MelodiTheme.primaryGreen : MelodiTheme.onSurface,
-                    weight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  lang.$3,
+                  style: const TextStyle(fontSize: 24),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        lang.$1,
+                        style: TextStyle(
+                          fontFamily: AppConstants.fontFamily,
+                          fontSize: 19,
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected
+                              ? MelodiTheme.primaryGreen
+                              : MelodiTheme.onSurface,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const Spacer(),
                 if (isSelected)
-                  const Icon(Icons.check_rounded, color: MelodiTheme.primaryGreen, size: 20),
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: MelodiTheme.primaryGreen,
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      size: 18,
+                      color: MelodiTheme.onPrimary,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -285,14 +781,20 @@ class _ThemeSelector extends StatelessWidget {
           label: AppLocale.tr('dark'),
           icon: Icons.dark_mode_rounded,
           isSelected: context.watch<ThemeProvider>().isDark,
-          onTap: () => context.read<ThemeProvider>().setThemeMode(ThemeMode.dark),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            context.read<ThemeProvider>().setThemeMode(ThemeMode.dark);
+          },
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 24),
         _ThemeOption(
           label: AppLocale.tr('light'),
           icon: Icons.light_mode_rounded,
           isSelected: context.watch<ThemeProvider>().isLight,
-          onTap: () => context.read<ThemeProvider>().setThemeMode(ThemeMode.light),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            context.read<ThemeProvider>().setThemeMode(ThemeMode.light);
+          },
         ),
       ],
     );
@@ -316,30 +818,138 @@ class _ThemeOption extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 120,
-        padding: const EdgeInsets.all(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        width: 150,
+        padding: const EdgeInsets.symmetric(vertical: 28),
         decoration: BoxDecoration(
-          color: isSelected ? MelodiTheme.primaryGreen.withOpacity(0.15) : MelodiTheme.containerLow,
-          borderRadius: BorderRadius.circular(16),
+          gradient: isSelected
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    MelodiTheme.primaryGreen.withOpacity(0.12),
+                    MelodiTheme.primaryGreen.withOpacity(0.05),
+                  ],
+                )
+              : null,
+          color: isSelected ? null : MelodiTheme.containerLow,
+          borderRadius: BorderRadius.circular(22),
           border: Border.all(
-            color: isSelected ? MelodiTheme.primaryGreen : MelodiTheme.outlineVariant,
-            width: 1,
+            color: isSelected
+                ? MelodiTheme.primaryGreen.withOpacity(0.5)
+                : MelodiTheme.outlineVariant.withOpacity(0.3),
+            width: 1.5,
           ),
         ),
         child: Column(
           children: [
-            Icon(icon, size: 32, color: isSelected ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant),
-            const SizedBox(height: 8),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isSelected
+                    ? MelodiTheme.primaryGreen.withOpacity(0.15)
+                    : MelodiTheme.containerHigh,
+              ),
+              child: Icon(
+                icon,
+                size: 28,
+                color: isSelected
+                    ? MelodiTheme.primaryGreen
+                    : MelodiTheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 14),
             Text(
               label,
-              style: MelodiTheme.bodySm(
-                color: isSelected ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant,
-                weight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              style: TextStyle(
+                fontFamily: AppConstants.fontFamily,
+                fontSize: 17,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected
+                    ? MelodiTheme.primaryGreen
+                    : MelodiTheme.onSurfaceVariant,
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ServiceCard extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+
+  const _ServiceCard({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            MelodiTheme.containerLow,
+            MelodiTheme.containerLow.withOpacity(0.5),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: MelodiTheme.outlineVariant.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: iconColor.withOpacity(0.12),
+            ),
+            child: Icon(icon, size: 24, color: iconColor),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: MelodiTheme.title(
+                    size: 18,
+                    weight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: MelodiTheme.bodySm(
+                    size: 14,
+                    color: MelodiTheme.onSurfaceVariant.withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            Icons.arrow_forward_ios_rounded,
+            size: 16,
+            color: MelodiTheme.onSurfaceVariant.withOpacity(0.4),
+          ),
+        ],
       ),
     );
   }

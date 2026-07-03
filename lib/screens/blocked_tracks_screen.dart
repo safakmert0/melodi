@@ -183,7 +183,7 @@ class _BlockedTracksScreenState extends State<BlockedTracksScreen> {
             ),
             child: Text(
               AppLocale.tr('unblock'),
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ),
         ),

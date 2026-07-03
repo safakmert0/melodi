@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
+import '../core/localization.dart';
 
 class SplashScreen extends StatefulWidget {
   final VoidCallback onComplete;
@@ -16,6 +17,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   late AnimationController _logoController;
   late AnimationController _waveController;
   late AnimationController _progressController;
+  late AnimationController _pulseController;
   String _statusText = '';
 
   @override
@@ -23,34 +25,40 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     super.initState();
     _logoController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1200),
     );
 
     _waveController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 4000),
+      duration: const Duration(milliseconds: 3000),
     );
 
     _progressController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3000),
+      duration: const Duration(milliseconds: 2500),
+    );
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
     );
 
     _startAnimation();
   }
 
   Future<void> _startAnimation() async {
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future.delayed(const Duration(milliseconds: 400));
     _logoController.forward();
     _waveController.repeat();
+    _pulseController.repeat(reverse: true);
     _progressController.forward();
 
     _progressController.addListener(() {
       final progress = _progressController.value;
       setState(() {
-        if (progress < 0.4) {
+        if (progress < 0.35) {
           _statusText = AppLocale.tr('signal_path_preparing');
-        } else if (progress < 0.8) {
+        } else if (progress < 0.75) {
           _statusText = AppLocale.tr('scanning_library');
         } else {
           _statusText = AppLocale.tr('enjoy_listening');
@@ -59,7 +67,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     });
 
     await _progressController.forward();
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 400));
     widget.onComplete();
   }
 
@@ -68,6 +76,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     _logoController.dispose();
     _waveController.dispose();
     _progressController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -79,26 +88,77 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Logo with waves
             Stack(
               alignment: Alignment.center,
               children: [
-                ...List.generate(3, (i) => _buildWave(i)),
+                ...List.generate(4, (i) => _buildWave(i)),
                 _buildLogo(),
               ],
             ),
-            const SizedBox(height: 48),
+            const SizedBox(height: 56),
+            // App name
+            FadeTransition(
+              opacity: CurvedAnimation(
+                parent: _logoController,
+                curve: const Interval(0.3, 1.0),
+              ),
+              child: Text(
+                'Melodi',
+                style: const TextStyle(
+                  fontFamily: AppConstants.fontFamily,
+                  fontSize: 36,
+                  fontWeight: FontWeight.w800,
+                  color: MelodiTheme.onSurface,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            FadeTransition(
+              opacity: CurvedAnimation(
+                parent: _logoController,
+                curve: const Interval(0.5, 1.0),
+              ),
+              child: Text(
+                'Your Music. Your Way.',
+                style: TextStyle(
+                  fontFamily: AppConstants.fontFamily,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w400,
+                  color: MelodiTheme.onSurfaceVariant.withOpacity(0.6),
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            const SizedBox(height: 56),
+            // Progress bar
             _buildProgressBar(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
+            // Status text
             AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
+              duration: const Duration(milliseconds: 400),
+              transitionBuilder: (child, anim) {
+                return FadeTransition(
+                  opacity: anim,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.1),
+                      end: Offset.zero,
+                    ).animate(anim),
+                    child: child,
+                  ),
+                );
+              },
               child: Text(
                 _statusText,
                 key: ValueKey(_statusText),
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: AppConstants.fontFamily,
-                  color: MelodiTheme.onSurfaceVariant,
-                  fontSize: 13,
+                  color: MelodiTheme.onSurfaceVariant.withOpacity(0.7),
+                  fontSize: 14,
                   fontWeight: FontWeight.w400,
+                  letterSpacing: 0.3,
                 ),
               ),
             ),
@@ -112,27 +172,21 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     return AnimatedBuilder(
       animation: _waveController,
       builder: (context, child) {
-        final delay = index * 0.3;
+        final delay = index * 0.25;
         final progress = (_waveController.value + delay) % 1.0;
-        final scale = 1.0 + progress * 2.0;
+        final scale = 1.0 + progress * 2.5;
         final opacity = (1.0 - progress).clamp(0.0, 1.0);
 
         return Transform.scale(
           scale: scale,
           child: Container(
-            width: 100,
-            height: 100,
+            width: 80,
+            height: 80,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: MelodiTheme.primaryGreen.withOpacity( opacity * 0.3),
-                width: 2,
-              ),
-              gradient: RadialGradient(
-                colors: [
-                  MelodiTheme.primaryGreen.withOpacity( opacity * 0.1),
-                  Colors.transparent,
-                ],
+                color: MelodiTheme.primaryGreen.withOpacity(opacity * 0.25),
+                width: 1.5,
               ),
             ),
           ),
@@ -146,21 +200,44 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       opacity: _logoController,
       child: SlideTransition(
         position: Tween<Offset>(
-          begin: const Offset(0, 0.2),
+          begin: const Offset(0, 0.15),
           end: Offset.zero,
         ).animate(CurvedAnimation(
           parent: _logoController,
           curve: Curves.easeOutBack,
         )),
-        child: const Text(
-          'Melodi',
-          style: TextStyle(
-            fontFamily: AppConstants.fontFamily,
-            fontSize: 48,
-            fontWeight: FontWeight.w800,
-            color: MelodiTheme.onSurface,
-            letterSpacing: -1,
-          ),
+        child: AnimatedBuilder(
+          animation: _pulseController,
+          builder: (context, child) {
+            final scale = 1.0 + _pulseController.value * 0.03;
+            return Transform.scale(
+              scale: scale,
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      MelodiTheme.primaryGreen.withOpacity(0.15),
+                      MelodiTheme.primaryGreen.withOpacity(0.05),
+                    ],
+                  ),
+                  border: Border.all(
+                    color: MelodiTheme.primaryGreen.withOpacity(0.3),
+                    width: 2,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.music_note_rounded,
+                  size: 36,
+                  color: MelodiTheme.primaryGreen,
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -171,10 +248,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       animation: _progressController,
       builder: (context, child) {
         return Container(
-          width: 200,
-          height: 4,
+          width: 180,
+          height: 3,
           decoration: BoxDecoration(
-            color: MelodiTheme.surfaceBright,
+            color: MelodiTheme.surfaceBright.withOpacity(0.5),
             borderRadius: BorderRadius.circular(2),
           ),
           child: FractionallySizedBox(
@@ -183,13 +260,14 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
             child: Container(
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Colors.transparent, MelodiTheme.primaryGreen],
+                  colors: [MelodiTheme.primaryGreen, Color(0xFF53E076)],
                 ),
                 borderRadius: BorderRadius.circular(2),
                 boxShadow: [
                   BoxShadow(
-                    color: MelodiTheme.primaryGreen.withOpacity(0.5),
-                    blurRadius: 10,
+                    color: MelodiTheme.primaryGreen.withOpacity(0.6),
+                    blurRadius: 12,
+                    spreadRadius: 2,
                   ),
                 ],
               ),

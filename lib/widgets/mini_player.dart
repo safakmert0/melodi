@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../providers/player_provider.dart';
 import '../screens/now_playing_screen.dart';
+import '../screens/queue_screen.dart';
 import 'image_with_fallback.dart';
 
 class MiniPlayer extends StatelessWidget {
@@ -72,9 +73,11 @@ class MiniPlayer extends StatelessWidget {
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.cast_rounded, size: 20),
+                                icon: const Icon(Icons.queue_music_rounded, size: 20),
                                 color: MelodiTheme.onSurfaceVariant,
-                                onPressed: () {}),
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const QueueScreen()),
+                                )),
                               IconButton(
                                 icon: Icon(
                                   player.isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,

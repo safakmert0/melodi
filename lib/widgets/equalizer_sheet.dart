@@ -182,7 +182,7 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
               AppLocale.tr('presets').toUpperCase(),
               style: TextStyle(
                 color: MelodiTheme.textMuted,
-                fontSize: 11,
+                fontSize: 15,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1.2,
               ),
@@ -208,7 +208,7 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
                       backgroundColor: MelodiTheme.containerLow,
                       labelStyle: TextStyle(
                         color: selected ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant,
-                        fontSize: 12,
+                        fontSize: 14,
                       ),
                     ),
                   );
@@ -232,7 +232,7 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
                             '${_currentBands[index] >= 0 ? '+' : ''}${_currentBands[index].toInt()}',
                             style: TextStyle(
                               color: MelodiTheme.primaryGreen,
-                              fontSize: 10,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

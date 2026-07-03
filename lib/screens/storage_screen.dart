@@ -130,7 +130,7 @@ class _StorageScreenState extends State<StorageScreen> {
             AppLocale.tr('library_size'),
             style: TextStyle(
               color: MelodiTheme.onSurfaceVariant,
-              fontSize: 13,
+              fontSize: 15,
             ),
           ),
           const SizedBox(height: 8),
@@ -203,7 +203,7 @@ class _StorageScreenState extends State<StorageScreen> {
           size,
           style: TextStyle(
             color: MelodiTheme.onSurface,
-            fontSize: 13,
+            fontSize: 15,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -272,7 +272,7 @@ class _StorageScreenState extends State<StorageScreen> {
             AppLocale.tr('format_breakdown'),
             style: TextStyle(
               color: MelodiTheme.onSurfaceVariant,
-              fontSize: 13,
+              fontSize: 15,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -298,7 +298,7 @@ class _StorageScreenState extends State<StorageScreen> {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: MelodiTheme.primaryGreen,
-                        fontSize: 11,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -316,7 +316,7 @@ class _StorageScreenState extends State<StorageScreen> {
                     _formatBytes(size),
                     style: TextStyle(
                       color: MelodiTheme.onSurfaceVariant,
-                      fontSize: 13,
+                      fontSize: 15,
                     ),
                   ),
                 ],

@@ -73,7 +73,7 @@ class _MixesScreenState extends State<MixesScreen> {
                         '${AppLocale.tr('generated_at')}: ${_formatDate(mixProvider.lastGenerated!)}',
                         style: TextStyle(
                           color: MelodiTheme.textMuted,
-                          fontSize: 12,
+                          fontSize: 14,
                         ),
                       ),
                     ),
@@ -371,7 +371,7 @@ class _SectionHeader extends StatelessWidget {
                     subtitle!,
                     style: TextStyle(
                       color: MelodiTheme.textMuted,
-                      fontSize: 13,
+                      fontSize: 15,
                     ),
                   ),
                 ],
@@ -398,7 +398,7 @@ class _SectionHeader extends StatelessWidget {
                       AppLocale.tr('regenerate'),
                       style: TextStyle(
                         color: MelodiTheme.primaryGreen,
-                        fontSize: 12,
+                        fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -468,7 +468,7 @@ class _TrackCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: MelodiTheme.onSurface,
-                fontSize: 13,
+                fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -479,7 +479,7 @@ class _TrackCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: MelodiTheme.onSurfaceVariant,
-                fontSize: 11,
+                fontSize: 15,
               ),
             ),
           ],
@@ -565,7 +565,7 @@ class _TrackListTile extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: MelodiTheme.onSurfaceVariant,
-                      fontSize: 12,
+                      fontSize: 14,
                     ),
                   ),
                 ],
@@ -576,7 +576,7 @@ class _TrackListTile extends StatelessWidget {
               durationStr,
               style: TextStyle(
                 color: MelodiTheme.textMuted,
-                fontSize: 12,
+                fontSize: 14,
               ),
             ),
           ],
@@ -635,7 +635,7 @@ class _GridTrackCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: MelodiTheme.onSurface,
-              fontSize: 13,
+              fontSize: 15,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -646,7 +646,7 @@ class _GridTrackCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: MelodiTheme.onSurfaceVariant,
-              fontSize: 11,
+              fontSize: 15,
             ),
           ),
         ],

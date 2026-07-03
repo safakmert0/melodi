@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
 import '../providers/download_provider.dart';
+import '../providers/library_provider.dart';
 import '../services/download_manager.dart';
 import 'settings_screen.dart';
 
@@ -44,7 +45,7 @@ class DownloadsScreen extends StatelessWidget {
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              SliverToBoxAdapter(child: _buildStorageCard()),
+              SliverToBoxAdapter(child: _buildStorageCard(context)),
               if (active.isNotEmpty) ...[
                 SliverToBoxAdapter(
                   child: Padding(
@@ -62,7 +63,7 @@ class DownloadsScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(20)),
                             child: Text('Pause All', style: const TextStyle(
                               fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurface,
-                              fontSize: 12, fontWeight: FontWeight.w500)),
+                              fontSize: 14, fontWeight: FontWeight.w500)),
                           ),
                         ),
                       ],
@@ -110,7 +111,13 @@ class DownloadsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStorageCard() {
+  Widget _buildStorageCard(BuildContext context) {
+    final library = context.watch<LibraryProvider>();
+    final musicSizeBytes = library.totalSongSizeBytes;
+    final musicSizeGB = (musicSizeBytes / (1024 * 1024 * 1024)).toStringAsFixed(1);
+    final musicSizeMB = (musicSizeBytes / (1024 * 1024)).toStringAsFixed(0);
+    final displaySize = musicSizeBytes > 1024 * 1024 * 1024 ? '$musicSizeGB GB' : '$musicSizeMB MB';
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       padding: const EdgeInsets.all(20),
@@ -127,9 +134,9 @@ class DownloadsScreen extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('12.4 GB used', style: MelodiTheme.heading(size: 24)),
+              Text('$displaySize used', style: MelodiTheme.heading(size: 24)),
               const Spacer(),
-              Text('of 128 GB', style: const TextStyle(
+              Text('${library.songCount} songs', style: const TextStyle(
                 fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurfaceVariant, fontSize: 13)),
             ],
           ),
@@ -137,7 +144,8 @@ class DownloadsScreen extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(3),
             child: LinearProgressIndicator(
-              value: 0.1, minHeight: 6,
+              value: musicSizeBytes > 0 ? (musicSizeBytes / (10 * 1024 * 1024 * 1024)).clamp(0.0, 1.0) : 0.0,
+              minHeight: 6,
               backgroundColor: MelodiTheme.surfaceBright,
               valueColor: const AlwaysStoppedAnimation<Color>(MelodiTheme.primaryGreen)),
           ),
@@ -147,13 +155,7 @@ class DownloadsScreen extends StatelessWidget {
               Container(width: 8, height: 8, decoration: const BoxDecoration(
                 shape: BoxShape.circle, color: MelodiTheme.primaryGreen)),
               const SizedBox(width: 6),
-              Text('Music (4.2 GB)', style: const TextStyle(
-                fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurfaceVariant, fontSize: 12)),
-              const SizedBox(width: 16),
-              Container(width: 8, height: 8, decoration: BoxDecoration(
-                shape: BoxShape.circle, color: MelodiTheme.surfaceBright)),
-              const SizedBox(width: 6),
-              const Text('Other', style: TextStyle(
+              Text('Music ($displaySize)', style: const TextStyle(
                 fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurfaceVariant, fontSize: 12)),
             ],
           ),
@@ -215,7 +217,7 @@ class _ActiveDownloadTile extends StatelessWidget {
                         color: MelodiTheme.onSurface, fontSize: 15, fontWeight: FontWeight.w500))),
                     Text('${(task.progress * 100).toInt()}%', style: const TextStyle(
                       fontFamily: AppConstants.fontFamily, color: MelodiTheme.primaryGreen,
-                      fontSize: 13, fontWeight: FontWeight.w600)),
+                      fontSize: 15, fontWeight: FontWeight.w600)),
                   ],
                 ),
                 Text(task.artist, maxLines: 1, overflow: TextOverflow.ellipsis,

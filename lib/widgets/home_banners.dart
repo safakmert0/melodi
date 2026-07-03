@@ -325,7 +325,7 @@ class _BannerCard extends StatelessWidget {
                   ),
                   child: Text(
                     actionLabel!,
-                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),

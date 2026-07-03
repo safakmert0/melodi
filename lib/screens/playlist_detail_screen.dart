@@ -351,7 +351,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                   AppLocale.tr('match_progress'),
                                   style: TextStyle(
                                     color: MelodiTheme.onSurfaceVariant,
-                                    fontSize: 13,
+                                    fontSize: 15,
                                   ),
                                 ),
                                 const Spacer(),
@@ -359,7 +359,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                   '${(_rematchProgress * 100).toInt()}%',
                                   style: TextStyle(
                                     color: MelodiTheme.onSurfaceVariant,
-                                    fontSize: 13,
+                                    fontSize: 15,
                                   ),
                                 ),
                               ],
@@ -559,7 +559,9 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       spotifyTrackId: entries.first.key,
       title: song.title,
       artist: song.artist,
-      onResolved: () {},
+      onResolved: () {
+        if (mounted) setState(() {});
+      },
     );
   }
 

@@ -56,7 +56,7 @@ class ArtistCard extends StatelessWidget {
               '${artist.songCount} songs',
               style: TextStyle(
                 color: MelodiTheme.onSurfaceVariant,
-                fontSize: 12,
+                fontSize: 14,
               ),
             ),
           ],

@@ -78,7 +78,7 @@ class AlbumCard extends StatelessWidget {
                               '${album.songCount} songs',
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 11,
+                                fontSize: 15,
                               ),
                             ),
                           ),
@@ -106,7 +106,7 @@ class AlbumCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: MelodiTheme.onSurfaceVariant,
-                fontSize: 12,
+                fontSize: 14,
               ),
             ),
           ],

@@ -160,7 +160,7 @@ class _PlaylistSyncSettingsState extends State<PlaylistSyncSettings> {
                       AppLocale.tr('sync_direction'),
                       style: TextStyle(
                         color: MelodiTheme.textMuted,
-                        fontSize: 12,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 1.5,
                       ),

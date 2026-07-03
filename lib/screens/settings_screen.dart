@@ -430,7 +430,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                               child: Text(
                                 count > 0 ? '$count' : '0',
-                                style: TextStyle(color: MelodiTheme.errorRed, fontSize: 12, fontWeight: FontWeight.bold),
+                                style: TextStyle(color: MelodiTheme.errorRed, fontSize: 14, fontWeight: FontWeight.bold),
                               ),
                             );
                           },
@@ -855,7 +855,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                               child: Text(
                                 '${dp.failedCount}',
-                                style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
                               ),
                             ),
                             onTap: () => Navigator.of(context).push(
@@ -1806,7 +1806,7 @@ class _CollapsibleSectionState extends State<_CollapsibleSection> {
                     widget.title.toUpperCase(),
                     style: const TextStyle(
                       color: Color(0xFF53e076),
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 1.5,
                     ),
@@ -1846,7 +1846,7 @@ class _SectionTitle extends StatelessWidget {
         title.toUpperCase(),
         style: const TextStyle(
           color: Color(0xFF53e076),
-          fontSize: 12,
+          fontSize: 14,
           fontWeight: FontWeight.w600,
           letterSpacing: 1.5,
         ),
@@ -2900,7 +2900,7 @@ class _EqualizerPageState extends State<_EqualizerPage> {
                 child: Column(
                   children: [
                     Text('${_gains[i].isNegative ? '' : '+'}${_gains[i].toInt()}',
-                        style: TextStyle(color: MelodiTheme.primaryGreen, fontSize: 11, fontWeight: FontWeight.bold)),
+                        style: TextStyle(color: MelodiTheme.primaryGreen, fontSize: 15, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
                     SizedBox(
                       height: 140,
@@ -2932,7 +2932,7 @@ class _EqualizerPageState extends State<_EqualizerPage> {
 
           // Presets
           Text(AppLocale.tr('presets').toUpperCase(),
-              style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1.5)),
+              style: TextStyle(color: MelodiTheme.textMuted, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 1.5)),
           const SizedBox(height: 8),
           SizedBox(
             height: 40,
@@ -2951,7 +2951,7 @@ class _EqualizerPageState extends State<_EqualizerPage> {
                     backgroundColor: MelodiTheme.containerLow,
                     labelStyle: TextStyle(
                       color: selected ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant,
-                      fontSize: 12,
+                      fontSize: 14,
                     ),
                   ),
                 );
@@ -2989,7 +2989,7 @@ class _EqualizerPageState extends State<_EqualizerPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label.toUpperCase(),
-            style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1.5)),
+            style: TextStyle(color: MelodiTheme.textMuted, fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 1.5)),
         const SizedBox(height: 4),
         Row(
           children: [
@@ -3337,7 +3337,7 @@ class _SyncSettingsPageState extends State<_SyncSettingsPage> {
                     backgroundColor: MelodiTheme.containerLow,
                     labelStyle: TextStyle(
                       color: selected ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant,
-                      fontSize: 13,
+                      fontSize: 15,
                     ),
                   );
                 }).toList(),
@@ -4277,8 +4277,31 @@ class _AudioEffectsPage extends StatelessWidget {
   }
 }
 
-class _VoiceControlPage extends StatelessWidget {
+class _VoiceControlPage extends StatefulWidget {
   const _VoiceControlPage();
+
+  @override
+  State<_VoiceControlPage> createState() => _VoiceControlPageState();
+}
+
+class _VoiceControlPageState extends State<_VoiceControlPage> {
+  bool _siriEnabled = false;
+  bool _voiceFeedbackEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final siri = await DatabaseService.instance.getSetting('siri_integration');
+    final feedback = await DatabaseService.instance.getSetting('voice_feedback');
+    setState(() {
+      _siriEnabled = siri == 'true';
+      _voiceFeedbackEnabled = feedback == 'true';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -4299,8 +4322,11 @@ class _VoiceControlPage extends StatelessWidget {
             title: 'Siri Integration',
             subtitle: 'Control playback with Siri commands',
             trailing: Switch(
-              value: false,
-              onChanged: (v) {},
+              value: _siriEnabled,
+              onChanged: (v) {
+                setState(() => _siriEnabled = v);
+                DatabaseService.instance.setSetting('siri_integration', v.toString());
+              },
               activeColor: const Color(0xFF53e076),
             ),
           ),
@@ -4313,9 +4339,10 @@ class _VoiceControlPage extends StatelessWidget {
             trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Custom Shortcuts coming soon'),
-                  duration: Duration(seconds: 1),
+                SnackBar(
+                  content: const Text('Siri Shortcuts are managed in iOS Settings > Siri & Search'),
+                  backgroundColor: MelodiTheme.primaryGreen,
+                  duration: const Duration(seconds: 3),
                 ),
               );
             },
@@ -4327,8 +4354,11 @@ class _VoiceControlPage extends StatelessWidget {
             title: 'Voice Feedback',
             subtitle: 'Announce track changes and status',
             trailing: Switch(
-              value: false,
-              onChanged: (v) {},
+              value: _voiceFeedbackEnabled,
+              onChanged: (v) {
+                setState(() => _voiceFeedbackEnabled = v);
+                DatabaseService.instance.setSetting('voice_feedback', v.toString());
+              },
               activeColor: const Color(0xFF53e076),
             ),
           ),

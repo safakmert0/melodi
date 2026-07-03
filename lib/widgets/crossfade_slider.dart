@@ -81,7 +81,7 @@ class _CrossfadeSliderState extends State<CrossfadeSlider> {
               : '${_crossfade.toInt()} ${AppLocale.tr('seconds')}',
           style: TextStyle(
             color: MelodiTheme.primaryGreen,
-            fontSize: 13,
+            fontSize: 15,
             fontWeight: FontWeight.w500,
           ),
         ),

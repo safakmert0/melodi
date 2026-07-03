@@ -234,7 +234,7 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
               ),
               child: Text(
                 '${issues.length}',
-                style: TextStyle(color: MelodiTheme.primaryGreen, fontSize: 12, fontWeight: FontWeight.bold),
+                style: TextStyle(color: MelodiTheme.primaryGreen, fontSize: 14, fontWeight: FontWeight.bold),
               ),
             ),
           ],

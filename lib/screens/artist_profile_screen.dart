@@ -5,6 +5,7 @@ import '../core/constants.dart';
 import '../core/localization.dart';
 import '../models/song_model.dart';
 import '../providers/player_provider.dart';
+import '../providers/library_provider.dart';
 import '../providers/spotify_provider.dart';
 import '../services/album_discovery_service.dart';
 import 'album_detail_screen.dart';
@@ -110,7 +111,7 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                               '${index + 1}',
                               style: TextStyle(
                                 color: MelodiTheme.textMuted,
-                                fontSize: 13,
+                                fontSize: 15,
                               ),
                             ),
                           ),
@@ -129,7 +130,7 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: MelodiTheme.onSurfaceVariant,
-                              fontSize: 13,
+                              fontSize: 15,
                             ),
                           ),
                           trailing: durationStr.isNotEmpty
@@ -139,9 +140,16 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                                       fontSize: 12))
                               : null,
                           onTap: () {
-                            final songs = _topTracks
-                                .map((t) => DiscoveredTrackToSongModel(t))
-                                .toList();
+                            final library = context.read<LibraryProvider>();
+                            final songs = _topTracks.map((t) {
+                              // Search local library by title + artist
+                              final localMatch = library.songs.firstWhere(
+                                (s) => s.title.toLowerCase() == t.name.toLowerCase() &&
+                                       s.artist.toLowerCase().contains(t.artist.toLowerCase()),
+                                orElse: () => DiscoveredTrackToSongModel(t),
+                              );
+                              return localMatch;
+                            }).toList();
                             context
                                 .read<PlayerProvider>()
                                 .playFromQueue(songs, index);
@@ -366,9 +374,15 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
               if (_topTracks.isNotEmpty)
                 OutlinedButton.icon(
                   onPressed: () {
-                    final songs = _topTracks
-                        .map((t) => DiscoveredTrackToSongModel(t))
-                        .toList();
+                    final library = context.read<LibraryProvider>();
+                    final songs = _topTracks.map((t) {
+                      final localMatch = library.songs.firstWhere(
+                        (s) => s.title.toLowerCase() == t.name.toLowerCase() &&
+                               s.artist.toLowerCase().contains(t.artist.toLowerCase()),
+                        orElse: () => DiscoveredTrackToSongModel(t),
+                      );
+                      return localMatch;
+                    }).toList();
                     context
                         .read<PlayerProvider>()
                         .playFromQueue(songs, 0);
@@ -488,7 +502,7 @@ class _RelatedArtistCard extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: MelodiTheme.onSurface,
-                fontSize: 13,
+                fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -547,7 +561,7 @@ class _AlbumGridCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: MelodiTheme.onSurface,
-              fontSize: 13,
+              fontSize: 15,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -557,7 +571,7 @@ class _AlbumGridCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: MelodiTheme.onSurfaceVariant,
-              fontSize: 11,
+              fontSize: 15,
             ),
           ),
         ],

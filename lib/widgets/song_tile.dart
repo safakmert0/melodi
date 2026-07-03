@@ -117,7 +117,7 @@ class SongTile extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: MelodiTheme.onSurfaceVariant,
-                fontSize: 13,
+                fontSize: 15,
               ),
             ),
           ),
@@ -130,7 +130,7 @@ class SongTile extends StatelessWidget {
               '${song.bitrate} kbps',
               style: TextStyle(
                 color: MelodiTheme.textMuted,
-                fontSize: 11,
+                fontSize: 15,
               ),
             ),
           ],

@@ -87,7 +87,7 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                       AppLocale.tr('timer_active'),
                       style: TextStyle(
                         color: MelodiTheme.primaryGreen,
-                        fontSize: 13,
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
