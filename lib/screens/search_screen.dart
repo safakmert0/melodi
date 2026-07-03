@@ -209,7 +209,7 @@ class _SearchScreenState extends State<SearchScreen> {
               // Search library for songs matching this genre
               final library = context.read<LibraryProvider>();
               final genreSongs = library.songs
-                  .where((s) => s.genre.toLowerCase().contains(g.$1.toLowerCase()))
+                  .where((s) => s.genre != null && s.genre!.toLowerCase().contains(g.$1.toLowerCase()))
                   .toList();
               if (genreSongs.isNotEmpty) {
                 context.read<PlayerProvider>().playFromQueue(genreSongs, 0);
