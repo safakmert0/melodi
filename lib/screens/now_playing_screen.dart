@@ -72,11 +72,17 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   }
 
   void _startLyricsTimer() {
-    _lyricsTimer = Timer.periodic(const Duration(milliseconds: 250), (_) {
+    _lyricsTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
       if (!mounted) return;
       final player = context.read<PlayerProvider>();
+      final pos = player.position;
+      final dur = player.duration;
+      // Clamp position to duration for accurate sync
+      final clampedMs = dur.inMilliseconds > 0
+          ? pos.inMilliseconds.clamp(0, dur.inMilliseconds)
+          : pos.inMilliseconds;
       if (_lyricsLines.isNotEmpty) {
-        _updateCurrentLine(player.position.inMilliseconds);
+        _updateCurrentLine(clampedMs);
       }
     });
   }
@@ -88,6 +94,14 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
         idx = i;
       } else {
         break;
+      }
+    }
+    // If at end of song and no line matched, show last line
+    if (idx == -1 && _lyricsLines.isNotEmpty) {
+      final player = context.read<PlayerProvider>();
+      if (player.duration.inMilliseconds > 0 &&
+          positionMs >= player.duration.inMilliseconds - 1000) {
+        idx = _lyricsLines.length - 1;
       }
     }
     if (idx != _currentLineIndex) {
@@ -124,29 +138,36 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     _lyricsLines = [];
     _currentLineIndex = -1;
     _extractColor(song.albumArt);
-    if (song.lyrics == null || song.lyrics!.isEmpty) {
-      Future.microtask(() => _fetchLyrics(song));
-    } else {
-      final text = song.lyrics!;
-      final parsed = LrcParser.parse(text);
-      if (parsed.isNotEmpty) {
-        _lyricsLines = parsed;
-        _lyricsResult = LyricsResult(syncedLrc: text);
-      } else {
-        _lyricsResult = LyricsResult(plainText: text);
+    // Delay lyrics fetch to ensure player has loaded the song duration
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted && (song.lyrics == null || song.lyrics!.isEmpty)) {
+        _fetchLyrics(song);
+      } else if (mounted) {
+        final text = song.lyrics!;
+        final parsed = LrcParser.parse(text);
+        if (parsed.isNotEmpty) {
+          _lyricsLines = parsed;
+          _lyricsResult = LyricsResult(syncedLrc: text);
+        } else {
+          _lyricsResult = LyricsResult(plainText: text);
+        }
+        if (mounted) setState(() {});
       }
-    }
+    });
     if (song.albumArt == null) {
       Future.microtask(() => _fetchArtwork(song));
     }
   }
 
   Future<void> _fetchLyrics(SongModel song) async {
+    // Use player's actual duration for accurate lyrics sync
+    final actualDurationMs = context.read<PlayerProvider>().duration.inMilliseconds;
+    final durationMs = actualDurationMs > 0 ? actualDurationMs : song.duration.inMilliseconds;
     final result = await LyricsService.fetchLyrics(
       artist: song.artist,
       track: song.title,
       album: song.album,
-      durationMs: song.duration.inMilliseconds,
+      durationMs: durationMs,
       filePath: song.filePath,
     );
     if (result != null && mounted) {
@@ -251,18 +272,19 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                 Positioned.fill(child: Container(color: const Color(0xFF131313))),
               Positioned.fill(
                 child: Container(
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     gradient: RadialGradient(
                       center: Alignment.topCenter,
                       radius: 1.2,
                       colors: [
-                        Color(0xFF53e076),
-                        Color(0xFF5203d5),
+                        _dynamicColor,
+                        _dynamicColor.withOpacity(0.5),
+                        const Color(0xFF121414),
                       ],
                     ),
                   ),
                   child: Container(
-                    color: Colors.black.withOpacity(0.45),
+                    color: Colors.black.withOpacity(0.4),
                   ),
                 ),
               ),
@@ -319,11 +341,11 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                 child: Column(
                   children: [
                     const Spacer(flex: 1),
-                    // Album Art (smaller, moved up)
+                    // Album Art (bigger, moved to top)
                     Center(
                       child: SizedBox(
-                        width: 280,
-                        height: 280,
+                        width: 320,
+                        height: 320,
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
@@ -334,7 +356,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFF53e076).withOpacity(0.2),
+                                        color: _dynamicColor.withOpacity(0.3),
                                         blurRadius: 60,
                                         spreadRadius: 8,
                                       ),
@@ -398,7 +420,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
                             style: const TextStyle(
-                              color: Color(0xFF53e076),
+                              color: _dynamicColor,
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
                             ),
@@ -417,7 +439,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         duration: player.duration,
                         bufferedPosition: player.handler.bufferedPosition,
                         onSeek: player.seek,
-                        activeColor: const Color(0xFF53e076),
+                        activeColor: _dynamicColor,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -428,7 +450,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         IconButton(
                           icon: Icon(
                             Icons.shuffle_rounded,
-                            color: player.isShuffled ? const Color(0xFF53e076) : Colors.white54,
+                            color: player.isShuffled ? _dynamicColor : Colors.white54,
                             size: 24,
                           ),
                           onPressed: player.toggleShuffle,
@@ -445,10 +467,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                           height: 72,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: const Color(0xFF53e076),
+                            color: _dynamicColor,
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF53e076).withOpacity(0.5),
+                                color: _dynamicColor.withOpacity(0.5),
                                 blurRadius: 24,
                                 spreadRadius: 2,
                               ),
@@ -474,7 +496,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         IconButton(
                           icon: Icon(
                             Icons.repeat_rounded,
-                            color: player.repeatMode != LoopStyle.off ? const Color(0xFF53e076) : Colors.white54,
+                            color: player.repeatMode != LoopStyle.off ? _dynamicColor : Colors.white54,
                             size: 24,
                           ),
                           onPressed: player.cycleRepeatMode,
@@ -489,7 +511,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _SpeedButton(
-                              player: player, speedOptions: _speedOptions, accentColor: const Color(0xFF53e076)),
+                              player: player, speedOptions: _speedOptions, accentColor: _dynamicColor),
                           const SizedBox(width: 8),
                           Consumer<LibraryProvider>(
                             builder: (context, lib, _) {
@@ -497,7 +519,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               return IconButton(
                                 icon: Icon(
                                   isFav ? Icons.favorite : Icons.favorite_border,
-                                  color: isFav ? const Color(0xFF53e076) : Colors.white54,
+                                  color: isFav ? _dynamicColor : Colors.white54,
                                   size: 22,
                                 ),
                                 onPressed: () => lib.toggleFavorite(song),
@@ -519,7 +541,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                       : isDownloading
                                           ? Icons.hourglass_top_rounded
                                           : Icons.download_outlined,
-                                  color: isDownloaded ? const Color(0xFF53e076) : Colors.white54,
+                                  color: isDownloaded ? _dynamicColor : Colors.white54,
                                   size: 22,
                                 ),
                                 onPressed: isDownloaded || isDownloading
@@ -535,7 +557,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                           ScaffoldMessenger.of(context).showSnackBar(
                                             SnackBar(
                                               content: Text('${song.title} indiriliyor...'),
-                                              backgroundColor: const Color(0xFF53e076),
+                                              backgroundColor: _dynamicColor,
                                               duration: const Duration(seconds: 2),
                                             ),
                                           );
@@ -570,7 +592,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             player: player,
                             showSlider: _showVolumeSlider,
                             onToggle: () => setState(() => _showVolumeSlider = !_showVolumeSlider),
-                            accentColor: const Color(0xFF53e076),
+                            accentColor: _dynamicColor,
                           ),
                         ],
                       ),
@@ -587,7 +609,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                 min: 0.5,
                                 max: 2.0,
                                 onChanged: (v) => player.setVolume(v),
-                                activeColor: const Color(0xFF53e076),
+                        activeColor: _dynamicColor,
                                 inactiveColor: Colors.white24,
                               ),
                             ),

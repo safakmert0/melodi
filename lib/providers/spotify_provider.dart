@@ -17,7 +17,7 @@ class SpotifyProvider extends ChangeNotifier {
   final Map<String, String> _matchedTrackIds = {};
 
   SpotifyService get service => _service;
-  bool get isConnected => _service.isConnected;
+  bool get isConnected => _service.isConnected || (_spDc != null && _spDc!.isNotEmpty);
   bool get isConnecting => _isConnecting;
   String? get username => _username;
   List<SpotifyPlaylistItem> get playlists => _playlists;
@@ -32,13 +32,20 @@ class SpotifyProvider extends ChangeNotifier {
     final spDc = await db.getSetting('spotify_sp_dc');
     if (spDc != null && spDc.isNotEmpty) {
       _spDc = spDc;
-      final session = await _service.getAccessToken(spDc);
-      if (session != null) {
-        _username = session.username;
-        notifyListeners();
-      } else {
-        _spDc = null;
-        await db.setSetting('spotify_sp_dc', '');
+      try {
+        final session = await _service.getAccessToken(spDc);
+        if (session != null) {
+          _username = session.username;
+          notifyListeners();
+        } else {
+          // Token failed but keep sp_dc for retry - user may need to re-login
+          debugPrint('Spotify: Token refresh failed, keeping sp_dc for retry');
+          _username = null;
+          notifyListeners();
+        }
+      } catch (e) {
+        // Network error - keep sp_dc and username for retry
+        debugPrint('Spotify: Init error, keeping session for retry: $e');
       }
     }
     await _loadMatches();
@@ -148,8 +155,22 @@ class SpotifyProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      if (_service.isExpiringSoon) {
+      // Try to refresh token if needed
+      if (_service.isExpiringSoon && _spDc != null) {
         await _service.refreshAccessToken();
+      }
+
+      // If still not connected, try with saved sp_dc
+      if (!_service.isConnected && _spDc != null) {
+        final session = await _service.getAccessToken(_spDc!);
+        if (session != null) {
+          _username = session.username;
+        }
+      }
+
+      if (!_service.isConnected) {
+        _error = 'Not connected. Please login again.';
+        return [];
       }
 
       _playlists = await _service.getUserPlaylists();
@@ -171,8 +192,22 @@ class SpotifyProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      if (_service.isExpiringSoon) {
+      // Try to refresh token if needed
+      if (_service.isExpiringSoon && _spDc != null) {
         await _service.refreshAccessToken();
+      }
+
+      // If still not connected, try with saved sp_dc
+      if (!_service.isConnected && _spDc != null) {
+        final session = await _service.getAccessToken(_spDc!);
+        if (session != null) {
+          _username = session.username;
+        }
+      }
+
+      if (!_service.isConnected) {
+        _error = 'Not connected. Please login again.';
+        return [];
       }
 
       _likedSongs = await _service.getLikedSongs();

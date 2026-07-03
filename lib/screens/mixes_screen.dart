@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
@@ -164,6 +165,7 @@ class _MixesScreenState extends State<MixesScreen> {
                   title: track['title'] as String? ?? '',
                   artist: track['artist'] as String? ?? '',
                   imageUrl: track['imageUrl'] as String?,
+                  albumArt: track['albumArt'] as Uint8List?,
                   onTap: () => _showTrackInfo(track),
                 );
               },
@@ -190,17 +192,18 @@ class _MixesScreenState extends State<MixesScreen> {
             physics: const NeverScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: mixProvider.releaseRadar.length,
-            itemBuilder: (context, index) {
-              final track = mixProvider.releaseRadar[index];
-              return _TrackListTile(
-                title: track['title'] as String? ?? '',
-                artist: track['artist'] as String? ?? '',
-                album: track['album'] as String? ?? '',
-                imageUrl: track['imageUrl'] as String?,
-                durationMs: track['durationMs'] as int? ?? 0,
-                onTap: () => _showTrackInfo(track),
-              );
-            },
+              itemBuilder: (context, index) {
+                final track = mixProvider.releaseRadar[index];
+                return _TrackListTile(
+                  title: track['title'] as String? ?? '',
+                  artist: track['artist'] as String? ?? '',
+                  album: track['album'] as String? ?? '',
+                  imageUrl: track['imageUrl'] as String?,
+                  albumArt: track['albumArt'] as Uint8List?,
+                  durationMs: track['durationMs'] as int? ?? 0,
+                  onTap: () => _showTrackInfo(track),
+                );
+              },
           ),
         ],
       ),
@@ -236,6 +239,7 @@ class _MixesScreenState extends State<MixesScreen> {
                   title: track['title'] as String? ?? '',
                   artist: track['artist'] as String? ?? '',
                   imageUrl: track['imageUrl'] as String?,
+                  albumArt: track['albumArt'] as Uint8List?,
                   onTap: () => _showTrackInfo(track),
                 );
               },
@@ -416,12 +420,14 @@ class _TrackCard extends StatelessWidget {
   final String title;
   final String artist;
   final String? imageUrl;
+  final Uint8List? albumArt;
   final VoidCallback onTap;
 
   const _TrackCard({
     required this.title,
     required this.artist,
     this.imageUrl,
+    this.albumArt,
     required this.onTap,
   });
 
@@ -444,21 +450,7 @@ class _TrackCard extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: imageUrl != null
-                    ? Image.network(
-                        imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: MelodiTheme.containerLow,
-                          child: Icon(Icons.music_note_rounded,
-                              size: 48, color: MelodiTheme.textMuted),
-                        ),
-                      )
-                    : Container(
-                        color: MelodiTheme.containerLow,
-                        child: Icon(Icons.music_note_rounded,
-                            size: 48, color: MelodiTheme.textMuted),
-                      ),
+                child: _buildArtwork(),
               ),
             ),
             const SizedBox(height: 8),
@@ -487,6 +479,33 @@ class _TrackCard extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildArtwork() {
+    if (albumArt != null && albumArt!.isNotEmpty) {
+      return Image.memory(
+        albumArt!,
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        errorBuilder: (_, __, ___) => _buildFallback(),
+      );
+    }
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      return Image.network(
+        imageUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _buildFallback(),
+      );
+    }
+    return _buildFallback();
+  }
+
+  Widget _buildFallback() {
+    return Container(
+      color: MelodiTheme.containerLow,
+      child: Icon(Icons.music_note_rounded,
+          size: 48, color: MelodiTheme.textMuted),
+    );
+  }
 }
 
 class _TrackListTile extends StatelessWidget {
@@ -494,6 +513,7 @@ class _TrackListTile extends StatelessWidget {
   final String artist;
   final String album;
   final String? imageUrl;
+  final Uint8List? albumArt;
   final int durationMs;
   final VoidCallback onTap;
 
@@ -502,6 +522,7 @@ class _TrackListTile extends StatelessWidget {
     required this.artist,
     required this.album,
     this.imageUrl,
+    this.albumArt,
     required this.durationMs,
     required this.onTap,
   });
@@ -521,27 +542,7 @@ class _TrackListTile extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
-              child: imageUrl != null
-                  ? Image.network(
-                      imageUrl!,
-                      width: 48,
-                      height: 48,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        width: 48,
-                        height: 48,
-                        color: MelodiTheme.containerLow,
-                        child: Icon(Icons.music_note_rounded,
-                            size: 24, color: MelodiTheme.textMuted),
-                      ),
-                    )
-                  : Container(
-                      width: 48,
-                      height: 48,
-                      color: MelodiTheme.containerLow,
-                      child: Icon(Icons.music_note_rounded,
-                          size: 24, color: MelodiTheme.textMuted),
-                    ),
+              child: _buildArtwork(),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -585,18 +586,53 @@ class _TrackListTile extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildArtwork() {
+    if (albumArt != null && albumArt!.isNotEmpty) {
+      return Image.memory(
+        albumArt!,
+        width: 48,
+        height: 48,
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        errorBuilder: (_, __, ___) => _buildFallback(),
+      );
+    }
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      return Image.network(
+        imageUrl!,
+        width: 48,
+        height: 48,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _buildFallback(),
+      );
+    }
+    return _buildFallback();
+  }
+
+  Widget _buildFallback() {
+    return Container(
+      width: 48,
+      height: 48,
+      color: MelodiTheme.containerLow,
+      child: Icon(Icons.music_note_rounded,
+          size: 24, color: MelodiTheme.textMuted),
+    );
+  }
 }
 
 class _GridTrackCard extends StatelessWidget {
   final String title;
   final String artist;
   final String? imageUrl;
+  final Uint8List? albumArt;
   final VoidCallback onTap;
 
   const _GridTrackCard({
     required this.title,
     required this.artist,
     this.imageUrl,
+    this.albumArt,
     required this.onTap,
   });
 
@@ -610,22 +646,7 @@ class _GridTrackCard extends StatelessWidget {
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: imageUrl != null
-                  ? Image.network(
-                      imageUrl!,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        color: MelodiTheme.containerLow,
-                        child: Icon(Icons.music_note_rounded,
-                            size: 48, color: MelodiTheme.textMuted),
-                      ),
-                    )
-                  : Container(
-                      color: MelodiTheme.containerLow,
-                      child: Icon(Icons.music_note_rounded,
-                          size: 48, color: MelodiTheme.textMuted),
-                    ),
+              child: _buildArtwork(),
             ),
           ),
           const SizedBox(height: 8),
@@ -651,6 +672,35 @@ class _GridTrackCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildArtwork() {
+    if (albumArt != null && albumArt!.isNotEmpty) {
+      return Image.memory(
+        albumArt!,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        errorBuilder: (_, __, ___) => _buildFallback(),
+      );
+    }
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      return Image.network(
+        imageUrl!,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _buildFallback(),
+      );
+    }
+    return _buildFallback();
+  }
+
+  Widget _buildFallback() {
+    return Container(
+      color: MelodiTheme.containerLow,
+      child: Icon(Icons.music_note_rounded,
+          size: 48, color: MelodiTheme.textMuted),
     );
   }
 }

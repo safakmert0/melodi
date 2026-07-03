@@ -36,7 +36,7 @@ class DatabaseService {
     final path = p.join(dir.path, 'melodi.db');
       return await openDatabase(
         path,
-        version: 18,
+        version: 19,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
       );
@@ -253,6 +253,14 @@ class DatabaseService {
           processed INTEGER DEFAULT 0
         )
       ''');
+    }
+    if (oldVersion < 19) {
+      try {
+        await db.execute('ALTER TABLE playlist_sync_state ADD COLUMN remotePlaylistId TEXT');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE playlist_sync_state ADD COLUMN remoteService TEXT');
+      } catch (_) {}
     }
   }
 
@@ -861,6 +869,15 @@ class DatabaseService {
     await db.insert('playlist_sync_state', {
       'playlistId': playlistId,
       'syncDirection': direction,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> setRemotePlaylistId(String playlistId, String remoteId, String service) async {
+    final db = await database;
+    await db.insert('playlist_sync_state', {
+      'playlistId': playlistId,
+      'remotePlaylistId': remoteId,
+      'remoteService': service,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 

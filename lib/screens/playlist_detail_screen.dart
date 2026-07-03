@@ -15,6 +15,7 @@ import '../widgets/image_with_fallback.dart';
 import '../widgets/wrong_match_button.dart';
 import '../providers/spotify_provider.dart';
 import '../providers/ytmusic_provider.dart';
+import '../providers/sync_provider.dart';
 import '../services/track_matcher.dart';
 import '../services/ytmusic_service.dart';
 import '../widgets/playlist_sync_settings.dart';
@@ -415,6 +416,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                   .read<PlaylistProvider>()
                                   .removeSongFromPlaylist(playlist.id, song.id);
                               setState(() => _songs.removeAt(index));
+                              _pushToRemote(removedSongIds: [song.id]);
                             },
                             child: SongTile(
                               song: song,
@@ -565,6 +567,115 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     );
   }
 
+  void _pushToRemote({List<String>? addedSongIds, List<String>? removedSongIds}) async {
+    if (!mounted) return;
+    try {
+      final syncState = await DatabaseService.instance.getPlaylistSyncState(widget.playlist.id);
+      if (syncState == null || syncState['syncEnabled'] != 1) return;
+
+      final remoteService = syncState['remoteService'] as String?;
+      final remotePlaylistId = syncState['remotePlaylistId'] as String?;
+      if (remoteService == null || remotePlaylistId == null) return;
+
+      final direction = syncState['syncDirection'] as String? ?? 'bidirectional';
+
+      if (remoteService == 'spotify' && direction != 'yt_to_spotify') {
+        final spotify = context.read<SpotifyProvider>();
+        if (!spotify.isConnected) return;
+
+        final db = DatabaseService.instance;
+        final allSongs = await db.getAllSongs();
+
+        if (addedSongIds != null && addedSongIds.isNotEmpty) {
+          final uris = <String>[];
+          for (final songId in addedSongIds) {
+            final spotifyEntry = spotify.matchedTrackIds.entries
+                .where((e) => e.value == songId)
+                .firstOrNull;
+            if (spotifyEntry != null) {
+              uris.add('spotify:track:${spotifyEntry.key}');
+            } else {
+              final song = allSongs.firstWhere((s) => s.id == songId, orElse: () => allSongs.first);
+              final results = await spotify.service.searchTracks('${song.title} ${song.artist}', limit: 1);
+              if (results.isNotEmpty) uris.add(results.first.uri);
+            }
+          }
+          if (uris.isNotEmpty) {
+            await context.read<SyncProvider>().service.pushPlaylistToSpotify(
+              localPlaylistId: widget.playlist.id,
+              addedTrackUris: uris,
+              removedTrackUris: [],
+            );
+          }
+        }
+
+        if (removedSongIds != null && removedSongIds.isNotEmpty) {
+          final uris = <String>[];
+          for (final songId in removedSongIds) {
+            final spotifyEntry = spotify.matchedTrackIds.entries
+                .where((e) => e.value == songId)
+                .firstOrNull;
+            if (spotifyEntry != null) {
+              uris.add('spotify:track:${spotifyEntry.key}');
+            }
+          }
+          if (uris.isNotEmpty) {
+            await context.read<SyncProvider>().service.pushPlaylistToSpotify(
+              localPlaylistId: widget.playlist.id,
+              addedTrackUris: [],
+              removedTrackUris: uris,
+            );
+          }
+        }
+      }
+
+      if (remoteService == 'ytmusic' && direction != 'spotify_to_yt') {
+        final ytmusic = context.read<YTMusicProvider>();
+        if (!ytmusic.isConnected) return;
+
+        if (addedSongIds != null && addedSongIds.isNotEmpty) {
+          final videoIds = <String>[];
+          for (final songId in addedSongIds) {
+            final db = DatabaseService.instance;
+            final song = await db.getSongById(songId);
+            if (song != null) {
+              final results = await ytmusic.service.search('${song.title} ${song.artist}');
+              if (results.isNotEmpty) videoIds.add(results.first.videoId);
+            }
+          }
+          if (videoIds.isNotEmpty) {
+            await context.read<SyncProvider>().service.pushPlaylistToYTMusic(
+              localPlaylistId: widget.playlist.id,
+              addedVideoIds: videoIds,
+              removedVideoIds: [],
+            );
+          }
+        }
+
+        if (removedSongIds != null && removedSongIds.isNotEmpty) {
+          final videoIds = <String>[];
+          for (final songId in removedSongIds) {
+            final db = DatabaseService.instance;
+            final song = await db.getSongById(songId);
+            if (song != null) {
+              final results = await ytmusic.service.search('${song.title} ${song.artist}');
+              if (results.isNotEmpty) videoIds.add(results.first.videoId);
+            }
+          }
+          if (videoIds.isNotEmpty) {
+            await context.read<SyncProvider>().service.pushPlaylistToYTMusic(
+              localPlaylistId: widget.playlist.id,
+              addedVideoIds: [],
+              removedVideoIds: videoIds,
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('_pushToRemote failed: $e');
+    }
+  }
+
   void _showAddSongsSheet(BuildContext context) {
     final library = context.read<LibraryProvider>();
     final playlistProvider = context.read<PlaylistProvider>();
@@ -612,6 +723,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                   widget.playlist.id, songIds);
                               setState(() => _songs.addAll(
                                   available.where((s) => selected.contains(s.id))));
+                              _pushToRemote(addedSongIds: songIds);
                               Navigator.pop(ctx);
                             },
                             child: Text(

@@ -23,7 +23,10 @@ class MelodiSeekBar extends StatelessWidget {
     final safeDuration = duration.inMilliseconds > 0 ? duration : Duration.zero;
     final safePosition = safeDuration.inMilliseconds > 0
         ? Duration(milliseconds: position.inMilliseconds.clamp(0, safeDuration.inMilliseconds))
-        : position;
+        : Duration.zero;
+    final safeBuffered = safeDuration.inMilliseconds > 0
+        ? Duration(milliseconds: bufferedPosition.inMilliseconds.clamp(0, safeDuration.inMilliseconds))
+        : bufferedPosition;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -31,7 +34,7 @@ class MelodiSeekBar extends StatelessWidget {
         ProgressBar(
           progress: safePosition,
           total: safeDuration,
-          buffered: bufferedPosition,
+          buffered: safeBuffered,
           progressBarColor: activeColor,
           thumbColor: Colors.white,
           thumbRadius: 6,

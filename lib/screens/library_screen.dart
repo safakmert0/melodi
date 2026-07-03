@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
@@ -10,6 +11,7 @@ import '../models/artist_model.dart';
 import '../models/album_model.dart';
 import 'playlist_detail_screen.dart';
 import 'create_playlist_screen.dart';
+import 'profile_screen.dart';
 import 'settings_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
@@ -36,7 +38,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 children: [
                   GestureDetector(
                     onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
                     ),
                     child: Container(
                       width: 36, height: 36,
@@ -222,39 +224,70 @@ class _LibraryScreenState extends State<LibraryScreen> {
   List<_LibraryItem> _buildLibraryItems(PlaylistProvider pp, LibraryProvider lib) {
     final items = <_LibraryItem>[];
 
+    // Get first song's album art for liked songs
+    final firstFav = lib.favorites.isNotEmpty ? lib.favorites.first : null;
+
     items.add(_LibraryItem(
       title: AppLocale.tr('liked_songs'),
       subtitle: '${AppLocale.tr('playlist_count').replaceAll('{count}', '${lib.favorites.length}')}',
       gradient: const LinearGradient(colors: [Color(0xFF450AF5), Color(0xFFC4EFD9)]),
       icon: Icons.favorite_rounded,
+      albumArt: firstFav?.albumArt,
       type: _LibraryItemType.likedSongs,
     ));
 
     for (final p in pp.playlists) {
+      // Try to get first song's album art for playlist
+      Uint8List? playlistArt;
+      if (p.songIds.isNotEmpty) {
+        final firstSongId = p.songIds.first;
+        final firstSong = lib.songs.where((s) => s.id == firstSongId).firstOrNull;
+        playlistArt = firstSong?.albumArt;
+      }
+
       items.add(_LibraryItem(
         title: p.name,
         subtitle: '${AppLocale.tr('playlist_count').replaceAll('{count}', '${p.songIds.length}')}',
         icon: Icons.queue_music_rounded,
+        albumArt: playlistArt,
         type: _LibraryItemType.playlist,
         playlist: p,
       ));
     }
 
     for (final a in lib.artists) {
+      // Try to get artist's first song album art
+      Uint8List? artistArt;
+      if (a.songIds.isNotEmpty) {
+        final firstSongId = a.songIds.first;
+        final firstSong = lib.songs.where((s) => s.id == firstSongId).firstOrNull;
+        artistArt = firstSong?.albumArt;
+      }
+
       items.add(_LibraryItem(
         title: a.name,
         subtitle: '${AppLocale.tr('artist_count').replaceAll('{count}', '${a.songCount}')}',
         icon: Icons.person_rounded,
+        albumArt: artistArt,
         type: _LibraryItemType.artist,
         artist: a,
       ));
     }
 
     for (final a in lib.albums) {
+      // Try to get album's first song album art
+      Uint8List? albumArt;
+      if (a.songIds.isNotEmpty) {
+        final firstSongId = a.songIds.first;
+        final firstSong = lib.songs.where((s) => s.id == firstSongId).firstOrNull;
+        albumArt = firstSong?.albumArt;
+      }
+
       items.add(_LibraryItem(
         title: a.name,
         subtitle: '${AppLocale.tr('album_count').replaceAll('{count}', '${a.artist}')}',
         icon: Icons.album_rounded,
+        albumArt: albumArt,
         type: _LibraryItemType.album,
         album: a,
       ));
@@ -266,16 +299,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Widget _buildListItem(BuildContext context, _LibraryItem item) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: Container(
-        width: 56, height: 56,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(4),
-          gradient: item.gradient,
-          color: item.gradient == null ? MelodiTheme.containerHigh : null,
-        ),
-        child: item.gradient != null
-            ? Icon(item.icon, color: Colors.white, size: 24)
-            : Icon(item.icon, color: MelodiTheme.onSurfaceVariant, size: 24),
+      leading: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: item.albumArt != null && item.albumArt!.isNotEmpty
+            ? Image.memory(
+                item.albumArt!,
+                width: 56,
+                height: 56,
+                fit: BoxFit.cover,
+                gaplessPlayback: true,
+                errorBuilder: (_, __, ___) => _buildIconFallback(item),
+              )
+            : _buildIconFallback(item),
       ),
       title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
         style: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurface,
@@ -284,6 +319,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
         style: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurfaceVariant, fontSize: 13)),
       trailing: const Icon(Icons.chevron_right_rounded, color: MelodiTheme.onSurfaceVariant, size: 20),
       onTap: () => _handleItemTap(context, item),
+    );
+  }
+
+  Widget _buildIconFallback(_LibraryItem item) {
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(4),
+        gradient: item.gradient,
+        color: item.gradient == null ? MelodiTheme.containerHigh : null,
+      ),
+      child: item.gradient != null
+          ? Icon(item.icon, color: Colors.white, size: 24)
+          : Icon(item.icon, color: MelodiTheme.onSurfaceVariant, size: 24),
     );
   }
 
@@ -299,17 +349,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-                  gradient: item.gradient,
-                  color: item.gradient == null ? MelodiTheme.containerHigh : null,
-                ),
-                child: Center(
-                  child: Icon(item.icon, size: 40,
-                    color: item.gradient != null ? Colors.white : MelodiTheme.onSurfaceVariant),
-                ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                child: item.albumArt != null && item.albumArt!.isNotEmpty
+                    ? Image.memory(
+                        item.albumArt!,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        gaplessPlayback: true,
+                        errorBuilder: (_, __, ___) => _buildGridIconFallback(item),
+                      )
+                    : _buildGridIconFallback(item),
               ),
             ),
             Padding(
@@ -332,6 +382,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
       ),
     );
   }
+
+  Widget _buildGridIconFallback(_LibraryItem item) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+        gradient: item.gradient,
+        color: item.gradient == null ? MelodiTheme.containerHigh : null,
+      ),
+      child: Center(
+        child: Icon(item.icon, size: 40,
+          color: item.gradient != null ? Colors.white : MelodiTheme.onSurfaceVariant),
+      ),
+    );
+  }
 }
 
 enum _LibraryItemType { likedSongs, playlist, artist, album }
@@ -341,6 +406,7 @@ class _LibraryItem {
   final String subtitle;
   final Gradient? gradient;
   final IconData icon;
+  final Uint8List? albumArt;
   final _LibraryItemType type;
   final PlaylistModel? playlist;
   final ArtistModel? artist;
@@ -351,6 +417,7 @@ class _LibraryItem {
     required this.subtitle,
     this.gradient,
     required this.icon,
+    this.albumArt,
     required this.type,
     this.playlist,
     this.artist,

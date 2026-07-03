@@ -1059,6 +1059,75 @@ class SpotifyService {
     }
   }
 
+  Future<bool> addTracksToPlaylist(String playlistId, List<String> trackUris) async {
+    if (_accessToken == null) return false;
+    try {
+      final url = '${SpotifyAuthConfig.webApiBase}/playlists/$playlistId/tracks';
+      var response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $_accessToken',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'uris': trackUris}),
+      );
+      if (response.statusCode == 401) {
+        final refreshed = await refreshAccessToken();
+        if (refreshed != null) {
+          response = await http.post(
+            Uri.parse(url),
+            headers: {
+              'Authorization': 'Bearer ${refreshed.accessToken}',
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({'uris': trackUris}),
+          );
+        }
+      }
+      return response.statusCode == 201;
+    } catch (e) {
+      debugPrint('addTracksToPlaylist failed: $e');
+      return false;
+    }
+  }
+
+  Future<bool> removeTracksFromPlaylist(String playlistId, List<String> trackUris) async {
+    if (_accessToken == null) return false;
+    try {
+      final url = '${SpotifyAuthConfig.webApiBase}/playlists/$playlistId/tracks';
+      final tracks = trackUris.map((uri) => {'uri': uri}).toList();
+      var response = await http.delete(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $_accessToken',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'tracks': tracks}),
+      );
+      if (response.statusCode == 401) {
+        final refreshed = await refreshAccessToken();
+        if (refreshed != null) {
+          response = await http.delete(
+            Uri.parse(url),
+            headers: {
+              'Authorization': 'Bearer ${refreshed.accessToken}',
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({'tracks': tracks}),
+          );
+        }
+      }
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('removeTracksFromPlaylist failed: $e');
+      return false;
+    }
+  }
+
   Future<List<SpotifyTrackItem>> syncPlaylist(String playlistId, {String? direction}) async {
     debugPrint('SpotifyService.syncPlaylist: $playlistId direction=$direction');
     return getPlaylistTracks(playlistId);

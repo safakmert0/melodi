@@ -19,7 +19,6 @@ import 'providers/playlist_provider.dart';
 import 'providers/search_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/youtube_provider.dart';
-import 'providers/lastfm_provider.dart';
 import 'services/ytmusic_service.dart';
 import 'providers/ytmusic_provider.dart';
 import 'providers/spotify_provider.dart';
@@ -227,22 +226,11 @@ class MelodiApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => YouTubeProvider()),
         ChangeNotifierProvider(create: (_) => LocaleNotifier()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()..loadSettings()),
-        ChangeNotifierProvider(
-          create: (_) {
-            final provider = LastFmProvider();
-            provider.loadSession();
-            return provider;
-          },
-        ),
-        ChangeNotifierProvider(
-          create: (_) {
-            final service = YTMusicService();
-            final provider = YTMusicProvider(service);
-            provider.loadSession();
-            return provider;
-          },
-        ),
         ChangeNotifierProvider(create: (_) => SpotifyProvider()..init()),
+        ChangeNotifierProvider(create: (_) {
+          final service = YTMusicService();
+          return YTMusicProvider(service)..loadSession();
+        }),
         ChangeNotifierProvider(
           create: (ctx) {
             final spotify = ctx.read<SpotifyProvider>();
@@ -256,7 +244,12 @@ class MelodiApp extends StatelessWidget {
             final spotify = ctx.read<SpotifyProvider>();
             final ytmusic = ctx.read<YTMusicProvider>();
             sync.setServices(spotify: spotify.service, ytmusic: ytmusic.service);
-            sync.init();
+            // Delay sync init to allow SpotifyProvider/YTMusicProvider to finish loading
+            Future.delayed(const Duration(seconds: 5), () {
+              if (spotify.isConnected || ytmusic.isConnected) {
+                sync.triggerSync();
+              }
+            });
             return sync;
           },
         ),
@@ -315,25 +308,14 @@ class MelodiApp extends StatelessWidget {
           },
         ),
       ],
-      child: Builder(
-        builder: (context) {
-          final player = context.read<PlayerProvider>();
-          final lastfm = context.read<LastFmProvider>();
-          player.onNowPlaying = () {
-            final song = player.currentSong;
-            if (song != null) {
-              lastfm.updateNowPlaying(artist: song.artist, track: song.title, album: song.album);
-            }
-          };
-          player.onScrobble = (song, timestamp) {
-            lastfm.scrobble(artist: song.artist, track: song.title, timestamp: timestamp, album: song.album);
-          };
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
           return MaterialApp(
             title: 'Melodi',
             debugShowCheckedModeBanner: false,
-            theme: MelodiTheme.darkTheme(),
-            darkTheme: MelodiTheme.darkTheme(),
-            themeMode: ThemeMode.dark,
+            theme: themeProvider.lightTheme,
+            darkTheme: themeProvider.darkTheme,
+            themeMode: themeProvider.themeMode,
             home: const _AppEntry(),
             localizationsDelegates: const [
               GlobalMaterialLocalizations.delegate,

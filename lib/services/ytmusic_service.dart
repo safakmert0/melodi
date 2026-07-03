@@ -266,6 +266,21 @@ class InnerTubeClient {
       useMusicBase: false,
     );
   }
+
+  Future<Map<String, dynamic>?> editPlaylist({
+    required String playlistId,
+    required List<Map<String, dynamic>> actions,
+  }) async {
+    return _executeRequest(
+      url: 'browse/edit_playlist',
+      body: {
+        'context': _buildContext(),
+        'playlistId': playlistId,
+        'actions': actions,
+      },
+      authenticated: true,
+    );
+  }
 }
 
 class YTMusicService {
@@ -720,6 +735,44 @@ class YTMusicService {
       return client.likeVideo(videoId, like: false);
     }
     return false;
+  }
+
+  Future<bool> addToPlaylist(String playlistId, List<String> videoIds) async {
+    if (!client.isAuthenticated) return false;
+    try {
+      final actions = videoIds.map((id) => {
+        'action': 'ACTION_ADD_VIDEO',
+        'addedVideoId': id,
+      }).toList();
+
+      final result = await client.editPlaylist(
+        playlistId: playlistId,
+        actions: actions,
+      );
+      return result != null;
+    } catch (e) {
+      debugPrint('YTMusic addToPlaylist failed: $e');
+      return false;
+    }
+  }
+
+  Future<bool> removeFromPlaylist(String playlistId, List<String> videoIds) async {
+    if (!client.isAuthenticated) return false;
+    try {
+      final actions = videoIds.map((id) => {
+        'action': 'ACTION_REMOVE_VIDEO',
+        'removedVideoId': id,
+      }).toList();
+
+      final result = await client.editPlaylist(
+        playlistId: playlistId,
+        actions: actions,
+      );
+      return result != null;
+    } catch (e) {
+      debugPrint('YTMusic removeFromPlaylist failed: $e');
+      return false;
+    }
   }
 
   Future<List<YTMusicTrack>> search(String query) async {

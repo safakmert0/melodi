@@ -523,18 +523,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               );
             },
           ),
-          const SizedBox(height: 14),
-          _ServiceCard(
-            icon: Icons.equalizer_rounded,
-            iconColor: const Color(0xFFD51007),
-            title: 'Last.fm',
-            subtitle: AppLocale.tr('lastfm_subtitle'),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              );
-            },
-          ),
         ],
       ),
     );
@@ -709,9 +697,9 @@ class _LanguageSelectorState extends State<_LanguageSelector> {
   @override
   Widget build(BuildContext context) {
     final languages = [
-      ('Türkçe', 'tr', '🇹🇷'),
-      ('English', 'en', '🇬🇧'),
-      ('Deutsch', 'de', '🇩🇪'),
+      ('TÜRKÇE', 'tr', '\u{1F1F9}\u{1F1F7}'),
+      ('English', 'en', '\u{1F1EC}\u{1F1E7}'),
+      ('Deutsch', 'de', '\u{1F1E9}\u{1F1EA}'),
     ];
 
     return Column(

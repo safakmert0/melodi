@@ -272,6 +272,10 @@ class AudioPlayerHandler extends BaseAudioHandler
     } else if (_repeatMode == LoopStyle.all) {
       _currentIndex = 0;
       _playCurrent();
+    } else {
+      // No next track and repeat off - stop playback
+      _player.stop();
+      _broadcastState();
     }
   }
 
@@ -292,8 +296,11 @@ class AudioPlayerHandler extends BaseAudioHandler
         initialPosition: Duration.zero,
       );
 
-      // Wait for duration to be available
-      await Future.delayed(const Duration(milliseconds: 100));
+      // Wait for duration to be available with retry
+      for (int i = 0; i < 10; i++) {
+        await Future.delayed(const Duration(milliseconds: 50));
+        if (_player.duration != null && _player.duration!.inMilliseconds > 0) break;
+      }
       final actualDuration = _player.duration ?? song.duration;
 
       if (_playbackSpeedOverride != null) {

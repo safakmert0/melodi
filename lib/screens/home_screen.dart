@@ -9,6 +9,7 @@ import '../providers/playlist_provider.dart';
 import '../providers/connection_provider.dart';
 import '../models/song_model.dart';
 import 'settings_screen.dart';
+import 'profile_screen.dart';
 import 'playlist_detail_screen.dart';
 import 'mixes_screen.dart';
 import 'downloads_screen.dart';
@@ -37,7 +38,7 @@ class HomeScreen extends StatelessWidget {
                       children: [
                         GestureDetector(
                           onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                            MaterialPageRoute(builder: (_) => const ProfileScreen()),
                           ),
                           child: Container(
                             width: 36,

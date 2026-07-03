@@ -81,9 +81,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   String _localeName(String code) {
     switch (code) {
-      case 'tr': return AppLocale.tr('turkish');
-      case 'de': return AppLocale.tr('german');
-      default: return AppLocale.tr('english');
+      case 'tr': return 'TÜRKÇE';
+      case 'de': return 'Deutsch';
+      default: return 'English';
     }
   }
   double _crossfadeSeconds = 0;
@@ -442,38 +442,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _CollapsibleSection(
                     title: AppLocale.tr('accounts'),
                     children: [
-                  // Last.fm
-                  Consumer<LastFmProvider>(
-                    builder: (context, lastfm, _) {
-                      if (lastfm.isConnected) {
-                        return _SettingsTile(
-                          icon: Icons.radio_rounded,
-                          iconColor: Colors.red,
-                          title: AppLocale.tr('lastfm'),
-                          subtitle: '${AppLocale.tr('connected_as')} ${lastfm.username}',
-                          trailing: TextButton(
-                            onPressed: () => lastfm.disconnect(),
-                            child: Text(AppLocale.tr('disconnect'),
-                                style: TextStyle(color: MelodiTheme.errorRed, fontSize: 13)),
-                          ),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const _LastFmSettingsPage()),
-                          ),
-                        );
-                      }
-                      return _SettingsTile(
-                        icon: Icons.radio_rounded,
-                        iconColor: Colors.red,
-                        title: AppLocale.tr('lastfm'),
-                        subtitle: AppLocale.tr('lastfm_connect'),
-                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const _LastFmSettingsPage()),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 8),
                   Consumer<SpotifyProvider>(
                     builder: (context, spotify, _) {
                       if (spotify.isConnected) {
@@ -784,18 +752,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      _SettingsTile(
-                        icon: Icons.sync_rounded,
-                        iconColor: Colors.teal,
-                        title: AppLocale.tr('auto_sync'),
-                        subtitle: AppLocale.tr('sync_schedule'),
-                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const _SyncSettingsPage()),
-                        ),
-                      ),
-                    ],
+                        ],
                   ),
                   const SizedBox(height: 24),
                   Divider(color: MelodiTheme.outlineVariant, height: 1),
@@ -959,11 +916,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: AppLocale.tr('developer'),
                     children: [
                       _SettingsTile(
-                        icon: Icons.code_rounded,
-                        iconColor: Colors.grey,
-                        title: 'GitHub',
+                        icon: Icons.camera_alt_rounded,
+                        iconColor: const Color(0xFFE1306C),
+                        title: 'Instagram',
                         subtitle: 'safakmert0',
-                        onTap: () => _openUrl('https://github.com/safakmert0'),
+                        onTap: () => _openUrl('https://instagram.com/safakmert0'),
                       ),
                       const SizedBox(height: 8),
                       _SettingsTile(
@@ -1253,9 +1210,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             ...[
-              (AppLocale.tr('english'), 'en'),
-              (AppLocale.tr('turkish'), 'tr'),
-              (AppLocale.tr('german'), 'de'),
+              ('TÜRKÇE', 'tr'),
+              ('English', 'en'),
+              ('Deutsch', 'de'),
             ].map((entry) {
               return ListTile(
                 title: Text(entry.$1,
@@ -2392,7 +2349,7 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                       }
                     },
                     icon: const Icon(Icons.playlist_play_rounded),
-                    label: Text(AppLocale.tr('playlists')),
+                    label: Text(AppLocale.tr('import_playlists')),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: MelodiTheme.primaryGreen,
                       foregroundColor: Colors.black,
@@ -2430,6 +2387,58 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                     ),
                   ),
                 ),
+                // Show saved playlists
+                if (ytmusic.playlists.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  Text(
+                    AppLocale.tr('playlists').toUpperCase(),
+                    style: TextStyle(
+                      color: MelodiTheme.onSurfaceVariant,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ...ytmusic.playlists.map((playlist) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: MelodiTheme.containerHigh,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: playlist.thumbnailUrl != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                playlist.thumbnailUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Icon(
+                                  Icons.queue_music_rounded,
+                                  color: MelodiTheme.onSurfaceVariant,
+                                ),
+                              ),
+                            )
+                          : Icon(
+                              Icons.queue_music_rounded,
+                              color: MelodiTheme.onSurfaceVariant,
+                            ),
+                    ),
+                    title: Text(
+                      playlist.title,
+                      style: TextStyle(color: MelodiTheme.onSurface),
+                    ),
+                    subtitle: playlist.trackCount != null
+                        ? Text(
+                            '${playlist.trackCount} ${AppLocale.tr('songs')}',
+                            style: TextStyle(color: MelodiTheme.onSurfaceVariant),
+                          )
+                        : null,
+                    trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
+                  )),
+                ],
               ],
             );
           }
@@ -2609,6 +2618,82 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                     ),
                   ),
                 ),
+                // Show imported playlists
+                if (spotify.playlists.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  Text(
+                    AppLocale.tr('playlists').toUpperCase(),
+                    style: TextStyle(
+                      color: MelodiTheme.onSurfaceVariant,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ...spotify.playlists.map((playlist) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: MelodiTheme.containerHigh,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: playlist.imageUrl != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                playlist.imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Icon(
+                                  Icons.queue_music_rounded,
+                                  color: MelodiTheme.onSurfaceVariant,
+                                ),
+                              ),
+                            )
+                          : Icon(
+                              Icons.queue_music_rounded,
+                              color: MelodiTheme.onSurfaceVariant,
+                            ),
+                    ),
+                    title: Text(
+                      playlist.name,
+                      style: TextStyle(color: MelodiTheme.onSurface),
+                    ),
+                    subtitle: Text(
+                      '${playlist.trackCount} ${AppLocale.tr('songs')}',
+                      style: TextStyle(color: MelodiTheme.onSurfaceVariant),
+                    ),
+                    trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
+                  )),
+                ],
+                // Show liked songs count
+                if (spotify.likedSongs.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF450AF5), Color(0xFFC4EFD9)],
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.favorite, color: Colors.white),
+                    ),
+                    title: Text(
+                      AppLocale.tr('liked_songs'),
+                      style: TextStyle(color: MelodiTheme.onSurface),
+                    ),
+                    subtitle: Text(
+                      '${spotify.likedSongs.length} ${AppLocale.tr('songs')}',
+                      style: TextStyle(color: MelodiTheme.onSurfaceVariant),
+                    ),
+                  ),
+                ],
               ],
             );
           }

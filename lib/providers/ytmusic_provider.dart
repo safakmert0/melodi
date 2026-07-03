@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../services/database_service.dart';
 import '../services/track_matcher.dart';
@@ -7,6 +8,7 @@ class YTMusicProvider extends ChangeNotifier {
   final YTMusicService _service;
   bool _isConnecting = false;
   String? _error;
+  List<YTMusicPlaylist> _playlists = [];
 
   YTMusicProvider(this._service);
 
@@ -15,13 +17,39 @@ class YTMusicProvider extends ChangeNotifier {
   bool get isConnected => _service.isConnected;
   bool get isConnecting => _isConnecting;
   String? get error => _error;
+  List<YTMusicPlaylist> get playlists => _playlists;
 
   Future<void> loadSession() async {
     final db = DatabaseService.instance;
     final savedCookie = await db.getSetting('ytmusic_cookie');
     if (savedCookie != null && savedCookie.isNotEmpty) {
       _service.connectWithCookie(savedCookie);
+      // Load saved playlists
+      await _loadPlaylists();
       notifyListeners();
+    }
+  }
+
+  Future<void> _loadPlaylists() async {
+    try {
+      final db = DatabaseService.instance;
+      final saved = await db.getSetting('ytmusic_playlists');
+      if (saved != null && saved.isNotEmpty) {
+        final List<dynamic> decoded = jsonDecode(saved);
+        _playlists = decoded.map((e) => YTMusicPlaylist.fromJson(e as Map<String, dynamic>)).toList();
+      }
+    } catch (e) {
+      debugPrint('YTMusic _loadPlaylists error: $e');
+    }
+  }
+
+  Future<void> _savePlaylists() async {
+    try {
+      final db = DatabaseService.instance;
+      final encoded = jsonEncode(_playlists.map((p) => p.toJson()).toList());
+      await db.setSetting('ytmusic_playlists', encoded);
+    } catch (e) {
+      debugPrint('YTMusic _savePlaylists error: $e');
     }
   }
 
@@ -49,6 +77,8 @@ class YTMusicProvider extends ChangeNotifier {
     _service.disconnect();
     final db = DatabaseService.instance;
     await db.setSetting('ytmusic_cookie', '');
+    await db.setSetting('ytmusic_playlists', '');
+    _playlists = [];
     _error = null;
     notifyListeners();
   }
@@ -56,6 +86,9 @@ class YTMusicProvider extends ChangeNotifier {
   Future<List<YTMusicPlaylist>> importPlaylists() async {
     try {
       final playlists = await _service.getLibraryPlaylists();
+      _playlists = playlists;
+      await _savePlaylists();
+      notifyListeners();
       return playlists;
     } catch (e) {
       debugPrint('YTMusic importPlaylists error: $e');

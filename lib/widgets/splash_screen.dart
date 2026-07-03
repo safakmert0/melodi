@@ -18,6 +18,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   late AnimationController _waveController;
   late AnimationController _progressController;
   late AnimationController _pulseController;
+  late AnimationController _noteController1;
+  late AnimationController _noteController2;
+  late AnimationController _noteController3;
+  late AnimationController _noteController4;
   String _statusText = '';
 
   @override
@@ -43,6 +47,26 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       duration: const Duration(milliseconds: 2000),
     );
 
+    _noteController1 = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3000),
+    );
+
+    _noteController2 = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3500),
+    );
+
+    _noteController3 = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2800),
+    );
+
+    _noteController4 = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3200),
+    );
+
     _startAnimation();
   }
 
@@ -52,6 +76,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     _waveController.repeat();
     _pulseController.repeat(reverse: true);
     _progressController.forward();
+    _noteController1.repeat();
+    _noteController2.repeat();
+    _noteController3.repeat();
+    _noteController4.repeat();
 
     _progressController.addListener(() {
       final progress = _progressController.value;
@@ -77,6 +105,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     _waveController.dispose();
     _progressController.dispose();
     _pulseController.dispose();
+    _noteController1.dispose();
+    _noteController2.dispose();
+    _noteController3.dispose();
+    _noteController4.dispose();
     super.dispose();
   }
 
@@ -84,87 +116,139 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: MelodiTheme.background,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Logo with waves
-            Stack(
-              alignment: Alignment.center,
+      body: Stack(
+        children: [
+          // Floating music notes
+          ...List.generate(4, (i) => _buildFloatingNote(i)),
+          // Main content
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                ...List.generate(4, (i) => _buildWave(i)),
-                _buildLogo(),
+                // Logo with waves
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    ...List.generate(4, (i) => _buildWave(i)),
+                    _buildLogo(),
+                  ],
+                ),
+                const SizedBox(height: 56),
+                // App name
+                FadeTransition(
+                  opacity: CurvedAnimation(
+                    parent: _logoController,
+                    curve: const Interval(0.3, 1.0),
+                  ),
+                  child: Text(
+                    'Melodi',
+                    style: const TextStyle(
+                      fontFamily: AppConstants.fontFamily,
+                      fontSize: 36,
+                      fontWeight: FontWeight.w800,
+                      color: MelodiTheme.onSurface,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                FadeTransition(
+                  opacity: CurvedAnimation(
+                    parent: _logoController,
+                    curve: const Interval(0.5, 1.0),
+                  ),
+                  child: Text(
+                    'Your Music. Your Way.',
+                    style: TextStyle(
+                      fontFamily: AppConstants.fontFamily,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                      color: MelodiTheme.onSurfaceVariant.withOpacity(0.6),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 56),
+                // Progress bar
+                _buildProgressBar(),
+                const SizedBox(height: 20),
+                // Status text
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  transitionBuilder: (child, anim) {
+                    return FadeTransition(
+                      opacity: anim,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.1),
+                          end: Offset.zero,
+                        ).animate(anim),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Text(
+                    _statusText,
+                    key: ValueKey(_statusText),
+                    style: TextStyle(
+                      fontFamily: AppConstants.fontFamily,
+                      color: MelodiTheme.onSurfaceVariant.withOpacity(0.7),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 56),
-            // App name
-            FadeTransition(
-              opacity: CurvedAnimation(
-                parent: _logoController,
-                curve: const Interval(0.3, 1.0),
-              ),
-              child: Text(
-                'Melodi',
-                style: const TextStyle(
-                  fontFamily: AppConstants.fontFamily,
-                  fontSize: 36,
-                  fontWeight: FontWeight.w800,
-                  color: MelodiTheme.onSurface,
-                  letterSpacing: -0.5,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            FadeTransition(
-              opacity: CurvedAnimation(
-                parent: _logoController,
-                curve: const Interval(0.5, 1.0),
-              ),
-              child: Text(
-                'Your Music. Your Way.',
-                style: TextStyle(
-                  fontFamily: AppConstants.fontFamily,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                  color: MelodiTheme.onSurfaceVariant.withOpacity(0.6),
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ),
-            const SizedBox(height: 56),
-            // Progress bar
-            _buildProgressBar(),
-            const SizedBox(height: 20),
-            // Status text
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 400),
-              transitionBuilder: (child, anim) {
-                return FadeTransition(
-                  opacity: anim,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.1),
-                      end: Offset.zero,
-                    ).animate(anim),
-                    child: child,
-                  ),
-                );
-              },
-              child: Text(
-                _statusText,
-                key: ValueKey(_statusText),
-                style: TextStyle(
-                  fontFamily: AppConstants.fontFamily,
-                  color: MelodiTheme.onSurfaceVariant.withOpacity(0.7),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildFloatingNote(int index) {
+    final controllers = [_noteController1, _noteController2, _noteController3, _noteController4];
+    final icons = [
+      Icons.music_note_rounded,
+      Icons.queue_music_rounded,
+      Icons.library_music_rounded,
+      Icons.album_rounded,
+    ];
+    
+    final positions = [
+      const Offset(0.15, 0.2),
+      const Offset(0.85, 0.3),
+      const Offset(0.2, 0.7),
+      const Offset(0.8, 0.75),
+    ];
+
+    return AnimatedBuilder(
+      animation: controllers[index],
+      builder: (context, child) {
+        final progress = controllers[index].value;
+        final yOffset = sin(progress * pi * 2) * 30;
+        final xOffset = cos(progress * pi * 2) * 20;
+        final opacity = (0.2 + sin(progress * pi * 2) * 0.15).clamp(0.0, 0.35);
+        final scale = 0.8 + sin(progress * pi * 2) * 0.2;
+        final rotation = sin(progress * pi * 2) * 0.3;
+
+        return Positioned(
+          left: MediaQuery.of(context).size.width * positions[index].dx + xOffset,
+          top: MediaQuery.of(context).size.height * positions[index].dy + yOffset,
+          child: Transform.rotate(
+            angle: rotation,
+            child: Transform.scale(
+              scale: scale,
+              child: Icon(
+                icons[index],
+                size: 28,
+                color: MelodiTheme.primaryGreen.withOpacity(opacity),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
