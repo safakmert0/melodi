@@ -945,7 +945,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icons.auto_awesome_rounded,
                         iconColor: MelodiTheme.primaryGreen,
                         title: AppLocale.tr('acknowledgments'),
-                        subtitle: 'yt-dlp, Media3, ytmusicapi ve diğerleri',
+                        subtitle: 'yt-dlp, Media3, ytmusicapi, JioSaavn, Deezer, Last.fm ve diğerleri',
                         onTap: () => _showAcknowledgments(context),
                       ),
                       const SizedBox(height: 8),
@@ -1443,7 +1443,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Teşekkürler: yt-dlp, Media3, ytmusicapi, youtube_explode_dart, LRCLIB, just_audio, flutter_secure_storage, sqflite, palette_generator',
+                  'Teşekkürler: yt-dlp, Media3, ytmusicapi, youtube_explode_dart, LRCLIB, JioSaavn, Deezer, Last.fm, just_audio, flutter_secure_storage, sqflite, palette_generator',
                   style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
                 ),
               ],

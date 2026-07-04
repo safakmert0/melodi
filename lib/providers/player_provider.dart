@@ -55,6 +55,11 @@ class PlayerProvider extends ChangeNotifier {
 
   bool _isDownloaded(SongModel song) {
     try {
+      // YouTube streaming tracks are not local files
+      if (song.filePath.startsWith('youtube://') ||
+          song.filePath.startsWith('http')) {
+        return false;
+      }
       return File(song.filePath).existsSync();
     } catch (_) {
       return false;

@@ -262,6 +262,19 @@ class SongTile extends StatelessWidget {
   }
 
   Future<void> _shareSong(BuildContext context, SongModel song) async {
+    // YouTube streaming tracks can't be shared as files
+    if (song.filePath.startsWith('youtube://') ||
+        song.filePath.startsWith('http')) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocale.tr('share')),
+            backgroundColor: MelodiTheme.errorRed,
+          ),
+        );
+      }
+      return;
+    }
     final file = File(song.filePath);
     if (await file.exists()) {
       try {

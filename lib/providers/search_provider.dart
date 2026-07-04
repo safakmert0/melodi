@@ -2,22 +2,24 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/song_model.dart';
 import '../services/database_service.dart';
-import '../services/youtube_service.dart';
+import '../services/multi_source_search.dart';
+import '../services/music_source.dart';
 
 class SearchProvider extends ChangeNotifier {
   final DatabaseService _db = DatabaseService.instance;
-  final YouTubeService _youtubeService = YouTubeService();
+  final MultiSourceSearch _multiSource = MultiSourceSearch();
 
   List<SongModel> _results = [];
-  List<YouTubeVideo> _onlineResults = [];
+  List<OnlineTrack> _onlineResults = [];
   List<String> _recentSearches = [];
   bool _isSearching = false;
   bool _isSearchingOnline = false;
   String _query = '';
   Timer? _debounce;
+  StreamSubscription<List<OnlineTrack>>? _onlineSub;
 
   List<SongModel> get results => _results;
-  List<YouTubeVideo> get onlineResults => _onlineResults;
+  List<OnlineTrack> get onlineResults => _onlineResults;
   List<String> get recentSearches => _recentSearches;
   bool get isSearching => _isSearching;
   bool get isSearchingOnline => _isSearchingOnline;
@@ -49,15 +51,34 @@ class SearchProvider extends ChangeNotifier {
       _isSearching = false;
       notifyListeners();
 
-      // Search online after local results
-      try {
-        _onlineResults = await _youtubeService.search(query);
-      } catch (_) {
-        _onlineResults = [];
-      }
-      _isSearchingOnline = false;
-      notifyListeners();
+      // Search online across all sources
+      _onlineSub?.cancel();
+      _onlineResults = [];
+      _onlineSub = _multiSource.searchAll(query).listen(
+        (tracks) {
+          _onlineResults = tracks;
+          _isSearchingOnline = false;
+          notifyListeners();
+        },
+        onDone: () {
+          _isSearchingOnline = false;
+          notifyListeners();
+        },
+        onError: (_) {
+          _onlineResults = [];
+          _isSearchingOnline = false;
+          notifyListeners();
+        },
+      );
     });
+  }
+
+  Future<String?> getStreamUrl(OnlineTrack track) async {
+    return await _multiSource.getStreamUrl(track);
+  }
+
+  Future<String?> getStreamUrlWithFallback(OnlineTrack track) async {
+    return await _multiSource.getStreamUrlWithFallback(track, query: _query);
   }
 
   void addRecentSearch(String query) {
@@ -79,12 +100,15 @@ class SearchProvider extends ChangeNotifier {
     _onlineResults = [];
     _query = '';
     _debounce?.cancel();
+    _onlineSub?.cancel();
     notifyListeners();
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _onlineSub?.cancel();
+    _multiSource.dispose();
     super.dispose();
   }
 }

@@ -412,6 +412,13 @@ class LibraryProvider extends ChangeNotifier {
       _songs[index] = song;
       await _db.insertSong(song);
     }
+    // Also update in other lists so home screen reflects artwork changes
+    final favIdx = _favorites.indexWhere((s) => s.id == song.id);
+    if (favIdx != -1) _favorites[favIdx] = song;
+    final recIdx = _recent.indexWhere((s) => s.id == song.id);
+    if (recIdx != -1) _recent[recIdx] = song;
+    final mpIdx = _mostPlayed.indexWhere((s) => s.id == song.id);
+    if (mpIdx != -1) _mostPlayed[mpIdx] = song;
     notifyListeners();
   }
 
@@ -439,6 +446,10 @@ class LibraryProvider extends ChangeNotifier {
 
   Future<void> refresh() async {
     await loadAll();
+  }
+
+  Future<void> cacheArtwork(String songId, Uint8List artwork) async {
+    await _db.cacheAlbumArt(songId, artwork);
   }
 
   Future<void> clearLibrary() async {

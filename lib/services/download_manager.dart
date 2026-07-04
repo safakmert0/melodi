@@ -6,6 +6,8 @@ import '../models/song_model.dart';
 import 'database_service.dart';
 import 'youtube_service.dart';
 import 'metadata_service.dart';
+import 'multi_source_search.dart';
+import 'music_source.dart';
 
 enum DownloadState { pending, downloading, completed, failed }
 
@@ -47,6 +49,7 @@ class DownloadManager {
   static const int _maxParallel = 8;
   final StreamController<List<DownloadTask>> _controller = StreamController<List<DownloadTask>>.broadcast();
   final YouTubeService _youtubeService = YouTubeService();
+  final MultiSourceSearch _multiSource = MultiSourceSearch();
 
   Stream<List<DownloadTask>> get taskStream => _controller.stream;
   List<DownloadTask> get tasks => List.unmodifiable(_tasks);
@@ -103,26 +106,68 @@ class DownloadManager {
       final downloadDir = Directory('${dir.path}/downloads');
       await downloadDir.create(recursive: true);
 
-      // YouTube is the primary and most reliable download source
-      task.progress = 0.1;
-      task.error = 'YouTube aranıyor...';
+      // Try multi-source search first (JioSaavn, Deezer, etc.)
+      task.progress = 0.05;
+      task.error = 'Kaynaklar aranıyor...';
       _notify();
 
       final query = '${task.artist} - ${task.title}';
-      final videos = await _youtubeService.search(query);
+      OnlineTrack? bestTrack;
+      String? streamUrl;
 
-      String? videoId;
-      if (videos.isNotEmpty) {
-        final exactMatch = videos.where((v) =>
-            v.title.toLowerCase().contains(task.title.toLowerCase()) &&
-            v.author.toLowerCase().contains(task.artist.toLowerCase().split(',').first.trim().toLowerCase())
-        ).toList();
-        videoId = (exactMatch.isNotEmpty ? exactMatch.first : videos.first).id;
+      // Search all sources in parallel
+      final allTracks = await _multiSource.searchAllSync(query, limitPerSource: 3);
+      if (allTracks.isNotEmpty) {
+        // Prioritize: YouTube > JioSaavn > Deezer > Last.fm
+        final priorityOrder = [
+          MusicSourceType.youtube,
+          MusicSourceType.jiosaavn,
+          MusicSourceType.deezer,
+        ];
+        for (final sourceType in priorityOrder) {
+          final sourceTracks = allTracks.where((t) => t.source == sourceType).toList();
+          if (sourceTracks.isEmpty) continue;
+          // Try to get stream URL from each track
+          for (final track in sourceTracks.take(2)) {
+            if (task.cancelled) break;
+            try {
+              task.progress = 0.1;
+              task.error = '${track.sourceLabel} deneniyor...';
+              _notify();
+              final url = await _multiSource.getStreamUrl(track);
+              if (url != null && url.isNotEmpty) {
+                bestTrack = track;
+                streamUrl = url;
+                break;
+              }
+            } catch (_) {}
+          }
+          if (streamUrl != null) break;
+        }
       }
 
-      if (videoId == null || task.cancelled) {
+      // Fallback to YouTube search
+      if (streamUrl == null && !task.cancelled) {
+        task.progress = 0.1;
+        task.error = 'YouTube aranıyor...';
+        _notify();
+        final videos = await _youtubeService.search(query);
+        String? videoId;
+        if (videos.isNotEmpty) {
+          final exactMatch = videos.where((v) =>
+              v.title.toLowerCase().contains(task.title.toLowerCase()) &&
+              v.author.toLowerCase().contains(task.artist.toLowerCase().split(',').first.trim().toLowerCase())
+          ).toList();
+          videoId = (exactMatch.isNotEmpty ? exactMatch.first : videos.first).id;
+        }
+        if (videoId != null) {
+          streamUrl = await _youtubeService.getAudioUrl(videoId);
+        }
+      }
+
+      if (streamUrl == null || task.cancelled) {
         task.state = DownloadState.failed;
-        task.error = 'YouTube\'da eşleşen video bulunamadı';
+        task.error = 'Eşleşen şarkı bulunamadı';
         _notify();
         _activeDownloads--;
         _processQueue();
@@ -132,7 +177,8 @@ class DownloadManager {
       task.progress = 0.3;
       _notify();
 
-      final resultPath = await _youtubeService.downloadAudio(videoId, task.title);
+      // Download from stream URL
+      final resultPath = await _downloadFromUrl(streamUrl, task.title, downloadDir);
 
       if (resultPath == null || task.cancelled) {
         if (task.cancelled) {
@@ -140,7 +186,7 @@ class DownloadManager {
           task.error = 'İptal edildi';
         } else {
           task.state = DownloadState.failed;
-          task.error = 'YouTube indirme başarısız';
+          task.error = 'İndirme başarısız';
         }
         _notify();
         _activeDownloads--;
@@ -175,6 +221,42 @@ class DownloadManager {
     _notify();
     _activeDownloads--;
     _processQueue();
+  }
+
+  Future<String?> _downloadFromUrl(String url, String title, Directory dir) async {
+    try {
+      final sanitized = title.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
+      String safeTitle = sanitized.isEmpty ? 'download' : sanitized;
+      final filePath = '${dir.path}/${safeTitle}_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      final file = File(filePath);
+      if (await file.exists()) return filePath;
+
+      final client = HttpClient()
+        ..userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)'
+        ..connectionTimeout = const Duration(seconds: 120);
+      try {
+        final request = await client.getUrl(Uri.parse(url));
+        request.headers.set('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
+        final response = await request.close();
+        if (response.statusCode != 200) {
+          return null;
+        }
+        final sink = file.openWrite();
+        await response.pipe(sink);
+        await sink.close();
+        final len = await file.length();
+        if (len < 1000) {
+          await file.delete();
+          return null;
+        }
+        return filePath;
+      } finally {
+        client.close();
+      }
+    } catch (e) {
+      debugPrint('Download from URL error: $e');
+      return null;
+    }
   }
 
   Future<String?> _importDownloadedFile(String filePath, DownloadTask task) async {
@@ -272,5 +354,6 @@ class DownloadManager {
   void dispose() {
     _controller.close();
     _youtubeService.dispose();
+    _multiSource.dispose();
   }
 }

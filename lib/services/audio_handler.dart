@@ -7,6 +7,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
 import 'database_service.dart';
+import 'youtube_audio_source.dart';
 
 class AudioPlayerHandler extends BaseAudioHandler
     with SeekHandler, QueueHandler {
@@ -74,6 +75,32 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
   Future<void> setEqualizerBand(int index, double gain) async {}
 
+  bool _isYouTubeUrl(String url) {
+    return url.contains('youtube.com') ||
+        url.contains('youtu.be') ||
+        url.contains('googlevideo.com') ||
+        url.contains('youtube-nocookie.com');
+  }
+
+  String? _extractYouTubeVideoId(String url) {
+    // Handle youtu.be short URLs
+    if (url.contains('youtu.be/')) {
+      final id = url.split('youtu.be/').last.split('?').first;
+      return id.isNotEmpty ? id : null;
+    }
+    // Handle youtube.com/watch?v= URLs
+    if (url.contains('v=')) {
+      final id = url.split('v=').last.split('&').first;
+      return id.isNotEmpty ? id : null;
+    }
+    // Handle youtube.com/embed/ URLs
+    if (url.contains('/embed/')) {
+      final id = url.split('/embed/').last.split('?').first;
+      return id.isNotEmpty ? id : null;
+    }
+    return null;
+  }
+
   void _startAutoSave() {
     _saveStateTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       savePlayerState();
@@ -135,9 +162,62 @@ class AudioPlayerHandler extends BaseAudioHandler
                 break;
             }
 
-            // Play the song at saved position
-            await _playCurrent();
-            await _player.seek(Duration(milliseconds: positionMs));
+            // Load the song but don't play - just prepare for playback
+            final song = _queue[_currentIndex];
+            try {
+              AudioSource audioSource;
+              if (song.filePath.startsWith('youtube://')) {
+                final videoId = song.filePath.replaceFirst('youtube://', '');
+                audioSource = YouTubeAudioSource(videoId: videoId, quality: 'high');
+              } else if (song.filePath.startsWith('http')) {
+                audioSource = AudioSource.uri(Uri.parse(song.filePath));
+              } else {
+                audioSource = AudioSource.file(song.filePath);
+              }
+              await _player.setAudioSource(
+                audioSource,
+                preload: true,
+                initialPosition: Duration(milliseconds: positionMs),
+              );
+              // Wait for duration to be available
+              for (int i = 0; i < 10; i++) {
+                await Future.delayed(const Duration(milliseconds: 50));
+                if (_player.duration != null && _player.duration!.inMilliseconds > 0) break;
+              }
+              // Apply speed/volume overrides
+              if (_playbackSpeedOverride != null) {
+                await _player.setSpeed(_playbackSpeedOverride!);
+              }
+              if (_volumeOverride != null) {
+                await _player.setVolume(_volumeOverride!.clamp(0.5, 2.0));
+              }
+              _isInitialized = true;
+              _broadcastState();
+
+              // Broadcast mediaItem for lock screen / control center
+              Uri? artUri;
+              if (song.albumArt != null) {
+                try {
+                  final dir = await getTemporaryDirectory();
+                  final artFile = File('${dir.path}/nowplaying_art.jpg');
+                  await artFile.writeAsBytes(song.albumArt!);
+                  artUri = Uri.file(artFile.path);
+                } catch (e) { debugPrint('Album art write failed: $e'); }
+              }
+              final media = MediaItem(
+                id: song.id,
+                album: song.album,
+                title: song.title,
+                artist: song.artist,
+                duration: _player.duration,
+                artUri: artUri,
+              );
+              this.mediaItem.add(media);
+              super.mediaItem.add(media);
+            } catch (e) {
+              debugPrint('Restore prepare failed: $e');
+              _isInitialized = true;
+            }
           }
         } catch (_) {}
       }
@@ -234,6 +314,21 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (origIdx != -1) _originalQueue[origIdx] = song;
     final idx = _queue.indexWhere((s) => s.id == song.id);
     if (idx != -1) _queue[idx] = song;
+    // Update MediaItem if this is the currently playing song
+    if (idx == _currentIndex && mediaItem.value != null) {
+      Uri? artUri;
+      if (song.albumArt != null) {
+        try {
+          final dir = _player.sequenceState?.currentSource?.tag;
+          // Defer artUri update to next play cycle
+        } catch (_) {}
+      }
+      mediaItem.add(mediaItem.value!.copyWith(
+        album: song.album,
+        title: song.title,
+        artist: song.artist,
+      ));
+    }
   }
 
   Future<void> addToQueue(SongModel song) async {
@@ -388,9 +483,27 @@ class AudioPlayerHandler extends BaseAudioHandler
     final song = _queue[_currentIndex];
 
     try {
-      final audioSource = song.filePath.startsWith('http')
-          ? AudioSource.uri(Uri.parse(song.filePath))
-          : AudioSource.file(song.filePath);
+      // Determine audio source based on file path type
+      AudioSource audioSource;
+      if (song.filePath.startsWith('youtube://')) {
+        // YouTube video ID format - use custom streaming source
+        final videoId = song.filePath.replaceFirst('youtube://', '');
+        audioSource = YouTubeAudioSource(videoId: videoId, quality: 'high');
+      } else if (song.filePath.startsWith('http') || song.filePath.startsWith('https')) {
+        // Check if this is a YouTube URL - use custom streaming source
+        if (_isYouTubeUrl(song.filePath)) {
+          final videoId = _extractYouTubeVideoId(song.filePath);
+          if (videoId != null) {
+            audioSource = YouTubeAudioSource(videoId: videoId, quality: 'high');
+          } else {
+            audioSource = AudioSource.uri(Uri.parse(song.filePath));
+          }
+        } else {
+          audioSource = AudioSource.uri(Uri.parse(song.filePath));
+        }
+      } else {
+        audioSource = AudioSource.file(song.filePath);
+      }
       await _player.setAudioSource(
         audioSource,
         preload: true,

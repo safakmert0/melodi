@@ -7,6 +7,7 @@ import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/download_provider.dart';
 import '../models/song_model.dart';
+import '../services/music_source.dart';
 import '../services/youtube_service.dart';
 import 'settings_screen.dart';
 
@@ -20,6 +21,7 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final _searchController = TextEditingController();
   bool _isSearching = false;
+  MusicSourceType? _selectedSource;
 
   @override
   void dispose() {
@@ -113,7 +115,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       ),
                       ...provider.results.map((song) => _SearchResultTile(song: song)),
                     ],
-                    // Online results header
+                    // Online results header with source filter
                     if (provider.isSearchingOnline)
                       const Padding(
                         padding: EdgeInsets.all(24),
@@ -130,7 +132,17 @@ class _SearchScreenState extends State<SearchScreen> {
                           ],
                         ),
                       ),
-                      ...provider.onlineResults.map((video) => _OnlineResultTile(video: video)),
+                      // Source filter chips
+                      _SourceFilterChips(
+                        tracks: provider.onlineResults,
+                        selectedSource: _selectedSource,
+                        onFilterChanged: (source) {
+                          setState(() => _selectedSource = source);
+                        },
+                      ),
+                      ...provider.onlineResults
+                          .where((t) => _selectedSource == null || t.source == _selectedSource)
+                          .map((track) => _OnlineResultTile(track: track)),
                     ],
                     // No results
                     if (!provider.isSearching && !provider.isSearchingOnline &&
@@ -322,9 +334,17 @@ class _SearchResultTile extends StatelessWidget {
   }
 }
 
-class _OnlineResultTile extends StatelessWidget {
-  final YouTubeVideo video;
-  const _OnlineResultTile({required this.video});
+class _OnlineResultTile extends StatefulWidget {
+  final OnlineTrack track;
+  const _OnlineResultTile({required this.track});
+
+  @override
+  State<_OnlineResultTile> createState() => _OnlineResultTileState();
+}
+
+class _OnlineResultTileState extends State<_OnlineResultTile> {
+  bool _isLoadingPlay = false;
+  bool _isLoadingDownload = false;
 
   String _formatDuration(Duration d) {
     final m = d.inMinutes;
@@ -332,73 +352,257 @@ class _OnlineResultTile extends StatelessWidget {
     return '$m:${s.toString().padLeft(2, '0')}';
   }
 
+  Color _sourceColor(MusicSourceType source) {
+    switch (source) {
+      case MusicSourceType.youtube:
+        return const Color(0xFFFF0000);
+      case MusicSourceType.jiosaavn:
+        return const Color(0xFF2BC5F4);
+      case MusicSourceType.deezer:
+        return const Color(0xFFA238FF);
+      case MusicSourceType.lastfm:
+        return const Color(0xFFD51007);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final track = widget.track;
     return ListTile(
       leading: Container(
         width: 48, height: 48,
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(4), color: MelodiTheme.containerHigh),
-        child: video.thumbnailUrl != null
+        child: track.thumbnailUrl != null
             ? ClipRRect(borderRadius: BorderRadius.circular(4),
-                child: Image.network(video.thumbnailUrl!, fit: BoxFit.cover,
+                child: Image.network(track.thumbnailUrl!, fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => const Icon(Icons.music_note_rounded, color: MelodiTheme.onSurfaceVariant)))
             : const Icon(Icons.music_note_rounded, color: MelodiTheme.onSurfaceVariant),
       ),
-      title: Text(video.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+      title: Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis,
         style: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurface, fontSize: 15)),
       subtitle: Row(
         children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: _sourceColor(track.source).withOpacity(0.15),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(track.sourceLabel, style: TextStyle(
+              color: _sourceColor(track.source), fontSize: 10, fontWeight: FontWeight.w600)),
+          ),
+          const SizedBox(width: 6),
           Expanded(
-            child: Text(video.author, maxLines: 1, overflow: TextOverflow.ellipsis,
+            child: Text(track.artist, maxLines: 1, overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurfaceVariant, fontSize: 13)),
           ),
-          const SizedBox(width: 8),
-          Text(_formatDuration(video.duration), style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
+          if (track.duration.inSeconds > 0) ...[
+            const SizedBox(width: 8),
+            Text(_formatDuration(track.duration), style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
+          ],
         ],
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
-            icon: const Icon(Icons.play_circle_outline_rounded, color: MelodiTheme.primaryGreen),
-            onPressed: () async {
-              // Stream and play
-              final ytService = YouTubeService();
-              final url = await ytService.getAudioUrl(video.id);
-              if (url != null && context.mounted) {
-                final song = SongModel(
-                  id: 'yt_${video.id}',
-                  title: video.title,
-                  artist: video.author,
-                  album: 'YouTube',
-                  duration: video.duration,
-                  filePath: url,
-                  fileSize: 0,
-                );
-                context.read<PlayerProvider>().playSong(song);
-              }
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.download_rounded, color: MelodiTheme.onSurfaceVariant),
-            onPressed: () {
-              context.read<DownloadProvider>().enqueueTrack(
-                spotifyTrackId: 'youtube_${video.id}',
-                title: video.title,
-                artist: video.author,
-                album: 'YouTube',
-              );
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${video.title} indiriliyor...'),
-                  backgroundColor: MelodiTheme.primaryGreen,
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-          ),
+          if (_isLoadingPlay)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: MelodiTheme.primaryGreen)),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.play_circle_outline_rounded, color: MelodiTheme.primaryGreen),
+              onPressed: () async {
+                if (_isLoadingPlay) return;
+                setState(() => _isLoadingPlay = true);
+                try {
+                  final searchProv = context.read<SearchProvider>();
+                  // Try with fallback across all sources
+                  final url = await searchProv.getStreamUrlWithFallback(track);
+                  if (url != null && url.isNotEmpty && context.mounted) {
+                    // For YouTube tracks, use video ID for reliable streaming
+                    final filePath = track.source == MusicSourceType.youtube
+                        ? 'youtube://${track.id}'
+                        : url;
+                    final song = SongModel(
+                      id: track.id,
+                      title: track.title,
+                      artist: track.artist,
+                      album: track.album ?? track.sourceLabel,
+                      duration: track.duration,
+                      filePath: url,
+                      fileSize: 0,
+                    );
+                    await context.read<PlayerProvider>().playSong(song);
+                  } else if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${track.title} oynatılamadı - tüm kaynaklar başarısız'),
+                        backgroundColor: MelodiTheme.errorRed,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Oynatma hatası: $e'),
+                        backgroundColor: MelodiTheme.errorRed,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                } finally {
+                  if (mounted) setState(() => _isLoadingPlay = false);
+                }
+              },
+            ),
+          if (_isLoadingDownload)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: MelodiTheme.onSurfaceVariant)),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.download_rounded, color: MelodiTheme.onSurfaceVariant),
+              onPressed: () async {
+                if (_isLoadingDownload) return;
+                setState(() => _isLoadingDownload = true);
+                try {
+                  final searchProv = context.read<SearchProvider>();
+                  // Resolve URL first to verify availability
+                  final url = await searchProv.getStreamUrlWithFallback(track);
+                  if (url != null && url.isNotEmpty && context.mounted) {
+                    context.read<DownloadProvider>().enqueueTrack(
+                      spotifyTrackId: track.id,
+                      title: track.title,
+                      artist: track.artist,
+                      album: track.album ?? track.sourceLabel,
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${track.title} indiriliyor...'),
+                        backgroundColor: MelodiTheme.primaryGreen,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  } else if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${track.title} indirilemedi - kaynak bulunamadı'),
+                        backgroundColor: MelodiTheme.errorRed,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('İndirme hatası: $e'),
+                        backgroundColor: MelodiTheme.errorRed,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                } finally {
+                  if (mounted) setState(() => _isLoadingDownload = false);
+                }
+              },
+            ),
         ],
       ),
     );
+  }
+}
+
+class _SourceFilterChips extends StatelessWidget {
+  final List<OnlineTrack> tracks;
+  final MusicSourceType? selectedSource;
+  final Function(MusicSourceType?) onFilterChanged;
+
+  const _SourceFilterChips({
+    required this.tracks,
+    this.selectedSource,
+    required this.onFilterChanged,
+  });
+
+  Color _sourceColor(MusicSourceType source) {
+    switch (source) {
+      case MusicSourceType.youtube:
+        return const Color(0xFFFF0000);
+      case MusicSourceType.jiosaavn:
+        return const Color(0xFF2BC5F4);
+      case MusicSourceType.deezer:
+        return const Color(0xFFA238FF);
+      case MusicSourceType.lastfm:
+        return const Color(0xFFD51007);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sourceCounts = <MusicSourceType, int>{};
+    for (final track in tracks) {
+      sourceCounts[track.source] = (sourceCounts[track.source] ?? 0) + 1;
+    }
+    return SizedBox(
+      height: 40,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: [
+          GestureDetector(
+            onTap: () => onFilterChanged(null),
+            child: _buildChip('Tümü', tracks.length, MelodiTheme.primaryGreen, selectedSource == null),
+          ),
+          ...sourceCounts.entries.map((e) => GestureDetector(
+            onTap: () => onFilterChanged(e.key),
+            child: _buildChip(_sourceName(e.key), e.value, _sourceColor(e.key), selectedSource == e.key),
+          )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChip(String label, int count, Color color, bool isSelected) {
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: isSelected ? color.withOpacity(0.2) : color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isSelected ? color : color.withOpacity(0.3),
+          width: isSelected ? 1.5 : 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: TextStyle(
+            color: isSelected ? color : color.withOpacity(0.8),
+            fontSize: 12, fontWeight: FontWeight.w600)),
+          const SizedBox(width: 4),
+          Text('($count)', style: TextStyle(
+            color: color.withOpacity(0.6), fontSize: 10)),
+        ],
+      ),
+    );
+  }
+
+  String _sourceName(MusicSourceType source) {
+    switch (source) {
+      case MusicSourceType.youtube:
+        return 'YouTube';
+      case MusicSourceType.jiosaavn:
+        return 'JioSaavn';
+      case MusicSourceType.deezer:
+        return 'Deezer';
+      case MusicSourceType.lastfm:
+        return 'Last.fm';
+    }
   }
 }

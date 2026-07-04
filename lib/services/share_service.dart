@@ -14,6 +14,11 @@ class ShareService {
   final DatabaseService _db = DatabaseService.instance;
 
   Future<void> shareSong(SongModel song) async {
+    // YouTube streaming tracks can't be shared as files
+    if (song.filePath.startsWith('youtube://') ||
+        song.filePath.startsWith('http')) {
+      return;
+    }
     final file = File(song.filePath);
     if (!await file.exists()) return;
 
@@ -47,6 +52,11 @@ class ShareService {
         final song = await _db.getSongById(songId);
         if (song == null) continue;
 
+        // Skip YouTube streaming tracks
+        if (song.filePath.startsWith('youtube://') ||
+            song.filePath.startsWith('http')) {
+          continue;
+        }
         final file = File(song.filePath);
         if (!await file.exists()) continue;
 
