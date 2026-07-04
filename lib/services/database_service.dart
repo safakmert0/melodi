@@ -1131,7 +1131,7 @@ class DatabaseService {
     return results;
   }
 
-  Future<List<Map<String, dynamic>>> getListeningHistoryDates({int limitDays = 365}) async {
+  Future<List<String>> getListeningHistoryDates({int limitDays = 365}) async {
     final db = await database;
     final startDate = DateTime.now().subtract(Duration(days: limitDays));
     final results = await db.rawQuery('''
