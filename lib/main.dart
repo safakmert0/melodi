@@ -292,7 +292,13 @@ class MelodiApp extends StatelessWidget {
             return provider;
           },
         ),
-        ChangeNotifierProvider(create: (_) => DownloadProvider()),
+        ChangeNotifierProvider(
+          create: (ctx) {
+            final dp = DownloadProvider();
+            dp.setLibraryProvider(ctx.read<LibraryProvider>());
+            return dp;
+          },
+        ),
         ChangeNotifierProvider(
           create: (_) {
             final qm = QueueManager();

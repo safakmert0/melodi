@@ -52,6 +52,9 @@ class DownloadManager {
   final YouTubeService _youtubeService = YouTubeService();
   final MultiSourceSearch _multiSource = MultiSourceSearch();
 
+  /// Callback when a download completes - triggers library refresh
+  VoidCallback? onDownloadComplete;
+
   Stream<List<DownloadTask>> get taskStream => _controller.stream;
   List<DownloadTask> get tasks => List.unmodifiable(_tasks);
 
@@ -186,9 +189,11 @@ class DownloadManager {
                 task.progress = 1.0;
                 task.error = null;
                 await db.insertFailedMatch(task.spotifyTrackId, importedPath);
+                onDownloadComplete?.call();
               } else {
                 task.state = DownloadState.completed;
                 task.progress = 1.0;
+                onDownloadComplete?.call();
               }
             }
             _notify();
@@ -240,9 +245,11 @@ class DownloadManager {
           task.progress = 1.0;
           task.error = null;
           await db.insertFailedMatch(task.spotifyTrackId, importedPath);
+          onDownloadComplete?.call();
         } else {
           task.state = DownloadState.completed;
           task.progress = 1.0;
+          onDownloadComplete?.call();
         }
       } else {
         task.state = DownloadState.failed;

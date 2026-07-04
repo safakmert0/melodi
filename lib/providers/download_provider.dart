@@ -2,10 +2,13 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../services/download_manager.dart';
 import '../services/notification_service.dart';
+import '../services/library_health_service.dart';
+import '../providers/library_provider.dart';
 
 class DownloadProvider extends ChangeNotifier {
   final DownloadManager _manager = DownloadManager();
   StreamSubscription<List<DownloadTask>>? _subscription;
+  LibraryProvider? _libraryProvider;
 
   List<DownloadTask> _tasks = [];
   List<DownloadTask> get tasks => _tasks;
@@ -28,6 +31,7 @@ class DownloadProvider extends ChangeNotifier {
   int get failedCount => failedDownloads.length;
 
   DownloadProvider() {
+    _manager.onDownloadComplete = _onDownloadComplete;
     _subscription = _manager.taskStream.listen((tasks) {
       final prevCompleted = completedCount;
       final prevFailed = failedCount;
@@ -45,6 +49,14 @@ class DownloadProvider extends ChangeNotifier {
       }
     });
     _tasks = _manager.tasks;
+  }
+
+  void setLibraryProvider(LibraryProvider provider) {
+    _libraryProvider = provider;
+  }
+
+  void _onDownloadComplete() {
+    _libraryProvider?.refresh();
   }
 
   DownloadState? getStatusForSong(String title, String artist) {
