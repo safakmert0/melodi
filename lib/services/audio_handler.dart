@@ -7,16 +7,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
 import 'database_service.dart';
-
-// Equalizer is only available on Android
-AndroidEqualizer? _getAndroidEqualizer(AudioPlayer player) {
-  try {
-    if (Platform.isAndroid) {
-      return player.androidEqualizer;
-    }
-  } catch (_) {}
-  return null;
-}
+import 'equalizer_helper.dart';
 
 class AudioPlayerHandler extends BaseAudioHandler
     with SeekHandler, QueueHandler {
@@ -77,7 +68,7 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   Future<void> _initEqualizer() async {
     try {
-      _equalizer = _getAndroidEqualizer(_player);
+      _equalizer = getAndroidEqualizer(_player);
       await _restoreEqualizerSettings();
     } catch (_) {}
   }
