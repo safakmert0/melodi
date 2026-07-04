@@ -31,49 +31,42 @@ class YouTubeAudioSource extends StreamAudioSource {
           .where((s) => s.container == StreamContainer.mp4)
           .toList();
 
-      if (supportedStreams.isEmpty) {
+      AudioOnlyStreamInfo audioStream;
+      if (supportedStreams.isNotEmpty) {
+        // Sort by bitrate and pick based on quality
+        final sorted = supportedStreams.toList()
+          ..sort((a, b) => a.bitrate.bitsPerSecond.compareTo(b.bitrate.bitsPerSecond));
+        audioStream = quality == 'high' ? sorted.last : sorted.first;
+      } else {
         // Fallback to any audio stream
         final anyAudio = manifest.audioOnly.toList();
         if (anyAudio.isEmpty) {
           throw Exception('No audio stream available for video $videoId');
         }
-        return _buildResponse(anyAudio, start, end);
+        anyAudio.sort((a, b) => a.bitrate.bitsPerSecond.compareTo(b.bitrate.bitsPerSecond));
+        audioStream = quality == 'high' ? anyAudio.last : anyAudio.first;
       }
 
-      // Sort by bitrate and pick based on quality
-      final sorted = supportedStreams.toList()
-        ..sort((a, b) => a.bitrate.bitsPerSecond.compareTo(b.bitrate.bitsPerSecond));
+      final totalBytes = audioStream.size.totalBytes;
+      start ??= 0;
+      end ??= totalBytes;
+      if (end > totalBytes) end = totalBytes;
+      if (start >= totalBytes) start = totalBytes - 1;
 
-      final audioStream = quality == 'high' ? sorted.last : sorted.first;
-      return _buildResponse([audioStream], start, end);
+      // Get the audio stream - standard youtube_explode_dart API
+      final stream = _yt.videos.streams.get(audioStream);
+
+      return StreamAudioResponse(
+        sourceLength: totalBytes,
+        contentLength: end - start,
+        offset: start,
+        stream: stream,
+        contentType: audioStream.codec.mimeType,
+      );
     } catch (e) {
       debugPrint('YouTubeAudioSource request error: $e');
       rethrow;
     }
-  }
-
-  StreamAudioResponse _buildResponse(
-    List<AudioOnlyStreamInfo> streams,
-    int? start,
-    int? end,
-  ) {
-    final streamInfo = streams.first;
-    final totalBytes = streamInfo.size.totalBytes;
-
-    start ??= 0;
-    end ??= totalBytes;
-    if (end > totalBytes) end = totalBytes;
-    if (start >= totalBytes) start = totalBytes - 1;
-
-    final stream = _yt.videos.streams.get(streamInfo, start, end);
-
-    return StreamAudioResponse(
-      sourceLength: totalBytes,
-      contentLength: end - start,
-      offset: start,
-      stream: stream,
-      contentType: streamInfo.codec.mimeType,
-    );
   }
 
   void dispose() {
