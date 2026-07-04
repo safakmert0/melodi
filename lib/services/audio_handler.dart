@@ -7,7 +7,6 @@ import 'package:audio_service/audio_service.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
 import 'database_service.dart';
-import 'equalizer_helper.dart';
 
 class AudioPlayerHandler extends BaseAudioHandler
     with SeekHandler, QueueHandler {
@@ -26,12 +25,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   Timer? _sleepTimer;
   DateTime? _sleepTimerEnd;
   Timer? _saveStateTimer;
-  AndroidEqualizer? _equalizer;
 
   AudioPlayerHandler() {
     _initPlayer();
     _startAutoSave();
-    _initEqualizer();
   }
 
   int? get sleepTimerMinutes {
@@ -66,115 +63,16 @@ class AudioPlayerHandler extends BaseAudioHandler
     });
   }
 
-  Future<void> _initEqualizer() async {
-    try {
-      _equalizer = getAndroidEqualizer(_player);
-      await _restoreEqualizerSettings();
-    } catch (_) {}
-  }
-
-  Future<void> _restoreEqualizerSettings() async {
-    if (_equalizer == null) return;
-
-    try {
-      final enabledStr = await _db.getSetting('eq_enabled');
-      final enabled = enabledStr == 'true';
-
-      final params = await _equalizer!.parameters;
-      await _equalizer!.setEnabled(enabled);
-
-      if (enabled) {
-        final presetName = await _db.getSetting('eq_preset');
-        final preset = presetName ?? 'normal';
-
-        List<double> bands;
-        if (preset == 'custom') {
-          bands = await _getCustomEQBands();
-        } else {
-          bands = _getPresetBands(preset);
-        }
-
-        if (bands.length == params.numBands) {
-          for (int i = 0; i < params.numBands; i++) {
-            final bandParams = params.bandParameters(i);
-            final gain = bands[i].clamp(bandParams.minGain, bandParams.maxGain);
-            await _equalizer!.setGain(i, gain);
-          }
-        }
-      }
-    } catch (_) {}
-  }
-
-  List<double> _getPresetBands(String name) {
-    const presets = {
-      'normal': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      'pop': [2, 3, 5, 4, 2, 0, -1, -1, 0, 1],
-      'rock': [5, 4, 2, -1, -2, -1, 1, 3, 4, 4],
-      'jazz': [3, 2, 1, 1, 2, 3, 2, 1, 1, 2],
-      'classical': [4, 3, 2, 1, 0, 0, 1, 2, 3, 4],
-      'bass_boost': [6, 5, 4, 2, 0, -1, -2, -2, -1, 0],
-      'vocal': [-2, -1, 1, 3, 5, 5, 3, 1, -1, -2],
-    };
-    return presets[name] ?? presets['normal']!;
-  }
-
-  Future<List<double>> _getCustomEQBands() async {
-    final raw = await _db.getSetting('eq_custom_bands');
-    if (raw != null && raw.isNotEmpty) {
-      final parts = raw.split(',');
-      if (parts.length == 10) {
-        return parts.map((p) => double.tryParse(p) ?? 0).toList();
-      }
-    }
-    return List.filled(10, 0);
-  }
-
+  // Equalizer stubs - actual equalizer is handled by playback_service
+  // These methods save settings to database; on Android, playback_service applies them
+  Future<void> _restoreEqualizerSettings() async {}
   Future<void> applyEqualizerPreset(String name) async {
-    if (_equalizer == null) return;
-
-    try {
-      final params = await _equalizer!.parameters;
-      List<double> bands;
-
-      if (name == 'custom') {
-        bands = await _getCustomEQBands();
-      } else {
-        bands = _getPresetBands(name);
-      }
-
-      if (bands.length == params.numBands) {
-        for (int i = 0; i < params.numBands; i++) {
-          final bandParams = params.bandParameters(i);
-          final gain = bands[i].clamp(bandParams.minGain, bandParams.maxGain);
-          await _equalizer!.setGain(i, gain);
-        }
-      }
-
-      await _db.setSetting('eq_preset', name);
-    } catch (_) {}
+    await _db.setSetting('eq_preset', name);
   }
-
   Future<void> setEqualizerEnabled(bool enabled) async {
-    if (_equalizer == null) return;
-
-    try {
-      await _equalizer!.setEnabled(enabled);
-      await _db.setSetting('eq_enabled', enabled.toString());
-    } catch (_) {}
+    await _db.setSetting('eq_enabled', enabled.toString());
   }
-
-  Future<void> setEqualizerBand(int index, double gain) async {
-    if (_equalizer == null) return;
-
-    try {
-      final params = await _equalizer!.parameters;
-      if (index < params.numBands) {
-        final bandParams = params.bandParameters(index);
-        final clampedGain = gain.clamp(bandParams.minGain, bandParams.maxGain);
-        await _equalizer!.setGain(index, clampedGain);
-      }
-    } catch (_) {}
-  }
+  Future<void> setEqualizerBand(int index, double gain) async {}
 
   void _startAutoSave() {
     _saveStateTimer = Timer.periodic(const Duration(seconds: 5), (_) {
