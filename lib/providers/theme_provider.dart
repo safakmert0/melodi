@@ -4,7 +4,7 @@ import '../services/database_service.dart';
 
 class ThemeProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.dark;
-  Color _accentColor = const Color(0xFF1DB954);
+  Color _accentColor = const Color(0xFF2196F3);
   Color? _customBackground;
   Color? _customSurface;
   Color? _customCard;

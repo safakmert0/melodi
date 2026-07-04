@@ -344,7 +344,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
             child: Container(
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [MelodiTheme.primaryGreen, Color(0xFF53E076)],
+                  colors: [MelodiTheme.primaryGreen, Color(0xFF42A5F5)],
                 ),
                 borderRadius: BorderRadius.circular(2),
                 boxShadow: [

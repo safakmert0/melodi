@@ -241,7 +241,7 @@ class HomeScreen extends StatelessWidget {
                                 mix.name.toUpperCase(),
                                 style: TextStyle(
                                   fontFamily: AppConstants.fontFamily,
-                                  color: MelodiTheme.primaryGreen,
+                                  color: Colors.white,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 0.05,
@@ -338,8 +338,8 @@ class HomeScreen extends StatelessWidget {
     final mixes = <_MixData>[];
     final colors = [
       MelodiTheme.primaryGreen,
-      const Color(0xFF53E076),
-      const Color(0xFF72FE8F),
+      const Color(0xFF42A5F5),
+      const Color(0xFF64B5F6),
       MelodiTheme.primaryContainer,
     ];
 
@@ -350,7 +350,7 @@ class HomeScreen extends StatelessWidget {
     for (int i = 0; i < min(4, multiSongArtists.length); i++) {
       final artistSongs = List<SongModel>.from(multiSongArtists[i].value)..shuffle(random);
       mixes.add(_MixData(
-        name: 'Mix: ${multiSongArtists[i].key}',
+        name: AppLocale.tr('mix_artist').replaceAll('{artist}', multiSongArtists[i].key),
         songs: artistSongs.take(8).toList(),
         color: colors[i % colors.length],
       ));
@@ -365,7 +365,7 @@ class HomeScreen extends StatelessWidget {
         remaining.removeRange(0, min(chunkSize, remaining.length));
         if (chunk.isNotEmpty) {
           mixes.add(_MixData(
-            name: 'Daily Mix ${i + 1}',
+            name: AppLocale.tr('daily_mix').replaceAll('{number}', '${i + 1}'),
             songs: chunk,
             color: colors[i % colors.length],
           ));

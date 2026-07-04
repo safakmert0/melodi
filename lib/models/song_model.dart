@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 class SongModel {
@@ -168,4 +169,21 @@ class SongModel {
 
   @override
   int get hashCode => id.hashCode;
+
+  String toJson() => jsonEncode(toMap());
+
+  factory SongModel.fromJson(String json) => SongModel.fromMap(jsonDecode(json) as Map<String, dynamic>);
+
+  static List<SongModel> listFromJson(String jsonStr) {
+    try {
+      final list = jsonDecode(jsonStr) as List;
+      return list.map((e) => SongModel.fromMap(e as Map<String, dynamic>)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static String listToJson(List<SongModel> songs) {
+    return jsonEncode(songs.map((s) => s.toMap()).toList());
+  }
 }

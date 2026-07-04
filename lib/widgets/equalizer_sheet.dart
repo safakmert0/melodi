@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
 import '../services/playback_service.dart';
+import '../providers/player_provider.dart';
 
 class EqualizerSheet extends StatefulWidget {
   const EqualizerSheet({super.key});
@@ -56,12 +58,20 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
   }
 
   Future<void> _saveAndApply() async {
+    final handler = context.read<PlayerProvider>().handler;
+
     if (_activePreset == 'custom') {
       await _service.setCustomEQ(_currentBands);
+      // Apply custom bands to actual equalizer
+      for (int i = 0; i < _currentBands.length && i < 10; i++) {
+        await handler.setEqualizerBand(i, _currentBands[i]);
+      }
     } else {
       await _service.setEqualizerPreset(_activePreset);
+      await handler.applyEqualizerPreset(_activePreset);
     }
     await _service.setEQEnabled(_enabled);
+    await handler.setEqualizerEnabled(_enabled);
   }
 
   void _resetToFlat() {

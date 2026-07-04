@@ -74,4 +74,30 @@ class ListeningRecorder {
     final db = DatabaseService.instance;
     return db.getListeningHistoryByDate(date);
   }
+
+  Future<List<Map<String, dynamic>>> getListeningHistoryGroupedByDate(
+      {int limitDays = 30}) async {
+    final db = DatabaseService.instance;
+    return db.getListeningHistoryGroupedByDate(limitDays: limitDays);
+  }
+
+  Future<List<Map<String, dynamic>>> getTopTracksByPeriod(int limit, String period) async {
+    final db = DatabaseService.instance;
+    return db.getTopTracksByPeriod(limit, period);
+  }
+
+  Future<List<Map<String, dynamic>>> getTopArtistsByPeriod(int limit, String period) async {
+    final db = DatabaseService.instance;
+    return db.getTopArtistsByPeriod(limit, period);
+  }
+
+  Future<List<Map<String, dynamic>>> getRecentlyPlayedUnique({int limit = 20}) async {
+    final db = DatabaseService.instance;
+    return db.getRecentlyPlayedUnique(limit: limit);
+  }
+
+  Future<List<Map<String, dynamic>>> getTracksByTimeOfDay(String timeOfDay) async {
+    final db = DatabaseService.instance;
+    return db.getTracksByTimeOfDay(timeOfDay);
+  }
 }

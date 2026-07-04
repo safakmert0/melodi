@@ -1,12 +1,9 @@
 import 'dart:async';
-import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/share_service.dart';
-import '../services/color_extractor.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
 import 'queue_screen.dart';
@@ -22,7 +19,6 @@ import '../services/artwork_service.dart';
 import '../services/download_manager.dart';
 import '../services/playback_service.dart';
 import '../widgets/seek_bar.dart';
-import '../widgets/image_with_fallback.dart';
 import '../widgets/queue_sheet.dart';
 import '../widgets/lyrics_sheet.dart';
 import '../widgets/sleep_timer_sheet.dart';
@@ -40,7 +36,6 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   bool _showVolumeSlider = false;
   bool _showLyrics = true;
   String? _lastSongId;
-  Color _dynamicColor = MelodiTheme.primaryGreen;
 
   LyricsResult? _lyricsResult;
   List<LrcLine> _lyricsLines = [];
@@ -121,23 +116,12 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     );
   }
 
-  Future<void> _extractColor(Uint8List? bytes) async {
-    if (bytes == null) return;
-    try {
-      final palette = await ColorExtractor.extractColors(bytes);
-      if (mounted) {
-        setState(() => _dynamicColor = palette.dominant);
-      }
-    } catch (_) {}
-  }
-
   void _autoFetch(SongModel song) {
     if (song.id == _lastSongId) return;
     _lastSongId = song.id;
     _lyricsResult = null;
     _lyricsLines = [];
     _currentLineIndex = -1;
-    _extractColor(song.albumArt);
     // Delay lyrics fetch to ensure player has loaded the song duration
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted && (song.lyrics == null || song.lyrics!.isEmpty)) {
@@ -257,16 +241,16 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
             children: [
               if (hasArt) ...[
                 Positioned.fill(
-                  child: Image.memory(
-                    song.albumArt!,
-                    fit: BoxFit.cover,
+                  child: ImageFiltered(
+                    imageFilter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                    child: Image.memory(
+                      song.albumArt!,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
                 Positioned.fill(
-                  child: BackdropFilter(
-                    filter: ui.ImageFilter.blur(sigmaX: 60, sigmaY: 60),
-                    child: Container(color: Colors.black.withOpacity(0.5)),
-                  ),
+                  child: Container(color: Colors.black.withOpacity(0.6)),
                 ),
               ] else
                 Positioned.fill(child: Container(color: const Color(0xFF131313))),
@@ -277,14 +261,11 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                       center: Alignment.topCenter,
                       radius: 1.2,
                       colors: [
-                        _dynamicColor,
-                        _dynamicColor.withOpacity(0.5),
+                        MelodiTheme.primaryGreen,
+                        MelodiTheme.primaryGreen.withOpacity(0.3),
                         const Color(0xFF121414),
                       ],
                     ),
-                  ),
-                  child: Container(
-                    color: Colors.black.withOpacity(0.4),
                   ),
                 ),
               ),
@@ -340,12 +321,12 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               SafeArea(
                 child: Column(
                   children: [
-                    const Spacer(flex: 1),
-                    // Album Art (bigger, moved to top)
+                    const SizedBox(height: 20),
+                    // Album Art
                     Center(
                       child: SizedBox(
-                        width: 320,
-                        height: 320,
+                        width: 280,
+                        height: 280,
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
@@ -356,7 +337,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                     shape: BoxShape.circle,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: _dynamicColor.withOpacity(0.3),
+                                        color: MelodiTheme.primaryGreen.withOpacity(0.3),
                                         blurRadius: 60,
                                         spreadRadius: 8,
                                       ),
@@ -393,10 +374,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     // Single-line synced lyrics under album art
                     _buildSingleLineLyrics(),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     // Song Title + Artist
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -420,7 +401,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: _dynamicColor,
+                              color: MelodiTheme.primaryGreen,
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
                             ),
@@ -428,7 +409,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     // Progress bar with clamped position
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -439,18 +420,18 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         duration: player.duration,
                         bufferedPosition: player.handler.bufferedPosition,
                         onSeek: player.seek,
-                        activeColor: _dynamicColor,
+                        activeColor: MelodiTheme.primaryGreen,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    // Main controls (shuffle, prev, play/pause 72px green glow, next, repeat)
+                    const SizedBox(height: 8),
+                    // Main controls (shuffle, prev, play/pause 72px blue glow, next, repeat)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         IconButton(
                           icon: Icon(
                             Icons.shuffle_rounded,
-                            color: player.isShuffled ? _dynamicColor : Colors.white54,
+                            color: player.isShuffled ? MelodiTheme.primaryGreen : Colors.white54,
                             size: 24,
                           ),
                           onPressed: player.toggleShuffle,
@@ -467,10 +448,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                           height: 72,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: _dynamicColor,
+                            color: MelodiTheme.primaryGreen,
                             boxShadow: [
                               BoxShadow(
-                                color: _dynamicColor.withOpacity(0.5),
+                                color: MelodiTheme.primaryGreen.withOpacity(0.5),
                                 blurRadius: 24,
                                 spreadRadius: 2,
                               ),
@@ -496,14 +477,14 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         IconButton(
                           icon: Icon(
                             Icons.repeat_rounded,
-                            color: player.repeatMode != LoopStyle.off ? _dynamicColor : Colors.white54,
+                            color: player.repeatMode != LoopStyle.off ? MelodiTheme.primaryGreen : Colors.white54,
                             size: 24,
                           ),
                           onPressed: player.cycleRepeatMode,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     // Supplementary actions row
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -511,7 +492,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _SpeedButton(
-                              player: player, speedOptions: _speedOptions, accentColor: _dynamicColor),
+                              player: player, speedOptions: _speedOptions, accentColor: MelodiTheme.primaryGreen),
                           const SizedBox(width: 8),
                           Consumer<LibraryProvider>(
                             builder: (context, lib, _) {
@@ -519,7 +500,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               return IconButton(
                                 icon: Icon(
                                   isFav ? Icons.favorite : Icons.favorite_border,
-                                  color: isFav ? _dynamicColor : Colors.white54,
+                                  color: isFav ? MelodiTheme.primaryGreen : Colors.white54,
                                   size: 22,
                                 ),
                                 onPressed: () => lib.toggleFavorite(song),
@@ -541,7 +522,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                       : isDownloading
                                           ? Icons.hourglass_top_rounded
                                           : Icons.download_outlined,
-                                  color: isDownloaded ? _dynamicColor : Colors.white54,
+                                  color: isDownloaded ? MelodiTheme.primaryGreen : Colors.white54,
                                   size: 22,
                                 ),
                                 onPressed: isDownloaded || isDownloading
@@ -557,7 +538,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                           ScaffoldMessenger.of(context).showSnackBar(
                                             SnackBar(
                                               content: Text('${song.title} indiriliyor...'),
-                                              backgroundColor: _dynamicColor,
+                                              backgroundColor: MelodiTheme.primaryGreen,
                                               duration: const Duration(seconds: 2),
                                             ),
                                           );
@@ -592,7 +573,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             player: player,
                             showSlider: _showVolumeSlider,
                             onToggle: () => setState(() => _showVolumeSlider = !_showVolumeSlider),
-                            accentColor: _dynamicColor,
+                            accentColor: MelodiTheme.primaryGreen,
                           ),
                         ],
                       ),
@@ -609,7 +590,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                 min: 0.5,
                                 max: 2.0,
                                 onChanged: (v) => player.setVolume(v),
-                        activeColor: _dynamicColor,
+                        activeColor: MelodiTheme.primaryGreen,
                                 inactiveColor: Colors.white24,
                               ),
                             ),
@@ -617,7 +598,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                           ],
                         ),
                       ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),

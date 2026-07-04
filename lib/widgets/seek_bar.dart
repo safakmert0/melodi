@@ -15,7 +15,7 @@ class MelodiSeekBar extends StatelessWidget {
     required this.duration,
     required this.bufferedPosition,
     this.onSeek,
-    this.activeColor = const Color(0xFF1DB954),
+    this.activeColor = const Color(0xFF2196F3),
   });
 
   @override
@@ -69,7 +69,7 @@ class CompactSeekBar extends StatelessWidget {
     required this.position,
     required this.duration,
     this.onChanged,
-    this.activeColor = const Color(0xFF1DB954),
+    this.activeColor = const Color(0xFF2196F3),
   });
 
   @override

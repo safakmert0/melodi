@@ -741,7 +741,20 @@ class DatabaseService {
             'title LIKE ? OR artist LIKE ? OR album LIKE ?',
         whereArgs: [searchTerm, searchTerm, searchTerm],
         orderBy: 'title ASC');
-    return maps.map((m) => SongModel.fromMap(m)).toList();
+
+    final songs = <SongModel>[];
+    for (final map in maps) {
+      final song = SongModel.fromMap(map);
+      // Load album art from cache
+      final artMaps = await db.query('album_art_cache',
+          where: 'songId = ?', whereArgs: [song.id], limit: 1);
+      if (artMaps.isNotEmpty && artMaps.first['artwork'] != null) {
+        songs.add(song.copyWith(albumArt: artMaps.first['artwork'] as Uint8List?));
+      } else {
+        songs.add(song);
+      }
+    }
+    return songs;
   }
 
   Future<Map<String, List<SongModel>>> getSongsGroupedByAlbum() async {
@@ -1099,6 +1112,104 @@ class DatabaseService {
         where: 'playedAt >= ? AND playedAt < ?',
         whereArgs: [startOfDay.toIso8601String(), endOfDay.toIso8601String()],
         orderBy: 'playedAt ASC');
+  }
+
+  Future<List<Map<String, dynamic>>> getListeningHistoryGroupedByDate({int limitDays = 30}) async {
+    final db = await database;
+    final startDate = DateTime.now().subtract(Duration(days: limitDays));
+    final results = await db.rawQuery('''
+      SELECT
+        DATE(playedAt) as date,
+        COUNT(*) as totalPlays,
+        COUNT(DISTINCT trackId) as uniqueTracks,
+        COUNT(DISTINCT artist) as uniqueArtists
+      FROM listening_events
+      WHERE isSkip = 0 AND playedAt >= ?
+      GROUP BY DATE(playedAt)
+      ORDER BY date DESC
+    ''', [startDate.toIso8601String()]);
+    return results;
+  }
+
+  Future<List<Map<String, dynamic>>> getListeningHistoryDates({int limitDays = 365}) async {
+    final db = await database;
+    final startDate = DateTime.now().subtract(Duration(days: limitDays));
+    final results = await db.rawQuery('''
+      SELECT DISTINCT DATE(playedAt) as date
+      FROM listening_events
+      WHERE isSkip = 0 AND playedAt >= ?
+      ORDER BY date DESC
+    ''', [startDate.toIso8601String()]);
+    return results.map((r) => r['date'] as String).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getTopTracksByPeriod(int limit, String period) async {
+    final db = await database;
+    final where = _periodWhereClause(period);
+    final whereStr = where.isNotEmpty ? 'WHERE isSkip = 0 AND $where' : 'WHERE isSkip = 0';
+    return db.rawQuery('''
+      SELECT trackId, title, artist, COUNT(*) as playCount
+      FROM listening_events
+      $whereStr
+      GROUP BY trackId
+      ORDER BY playCount DESC
+      LIMIT ?
+    ''', [limit]);
+  }
+
+  Future<List<Map<String, dynamic>>> getTopArtistsByPeriod(int limit, String period) async {
+    final db = await database;
+    final where = _periodWhereClause(period);
+    final whereStr = where.isNotEmpty ? 'WHERE isSkip = 0 AND $where' : 'WHERE isSkip = 0';
+    return db.rawQuery('''
+      SELECT artist, COUNT(*) as playCount
+      FROM listening_events
+      $whereStr
+      GROUP BY artist
+      ORDER BY playCount DESC
+      LIMIT ?
+    ''', [limit]);
+  }
+
+  Future<List<Map<String, dynamic>>> getRecentlyPlayedUnique({int limit = 20}) async {
+    final db = await database;
+    return db.rawQuery('''
+      SELECT trackId, title, artist, MAX(playedAt) as lastPlayed
+      FROM listening_events
+      WHERE isSkip = 0
+      GROUP BY trackId
+      ORDER BY lastPlayed DESC
+      LIMIT ?
+    ''', [limit]);
+  }
+
+  Future<List<Map<String, dynamic>>> getTracksByTimeOfDay(String timeOfDay) async {
+    final db = await database;
+    String hourCondition;
+    switch (timeOfDay) {
+      case 'morning':
+        hourCondition = "CAST(strftime('%H', playedAt) AS INTEGER) BETWEEN 6 AND 11";
+        break;
+      case 'afternoon':
+        hourCondition = "CAST(strftime('%H', playedAt) AS INTEGER) BETWEEN 12 AND 17";
+        break;
+      case 'evening':
+        hourCondition = "CAST(strftime('%H', playedAt) AS INTEGER) BETWEEN 18 AND 23";
+        break;
+      case 'night':
+        hourCondition = "CAST(strftime('%H', playedAt) AS INTEGER) BETWEEN 0 AND 5";
+        break;
+      default:
+        hourCondition = '1=1';
+    }
+    return db.rawQuery('''
+      SELECT trackId, title, artist, COUNT(*) as playCount
+      FROM listening_events
+      WHERE isSkip = 0 AND $hourCondition
+      GROUP BY trackId
+      ORDER BY playCount DESC
+      LIMIT 10
+    ''');
   }
 
   Future<void> insertFileRecord(Map<String, dynamic> record) async {

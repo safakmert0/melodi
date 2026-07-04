@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
-import 'dart:math';
 import 'package:intl/intl.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
@@ -14,9 +13,9 @@ import '../providers/theme_provider.dart';
 import '../providers/lastfm_provider.dart';
 import '../providers/ytmusic_provider.dart';
 import '../providers/spotify_provider.dart';
+import '../providers/playlist_provider.dart';
 import '../providers/like_mirror_provider.dart';
 import '../providers/scrobble_provider.dart';
-import '../services/scrobble_service.dart';
 import '../services/podcast_service.dart';
 import '../services/audiobook_service.dart';
 import '../models/song_model.dart';
@@ -29,7 +28,6 @@ import '../services/library_health_service.dart';
 import '../services/playback_service.dart';
 import '../services/file_organizer.dart';
 import '../services/stream_cache.dart';
-import '../services/audiobook_service.dart';
 import 'audio_quality_screen.dart';
 import '../widgets/sleep_timer_sheet.dart';
 import '../widgets/equalizer_sheet.dart';
@@ -54,6 +52,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late String _selectedLanguage;
+  String _downloadPath = '';
 
   @override
   void initState() {
@@ -61,6 +60,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _selectedLanguage = _localeName(AppLocale.currentLocale);
     _loadWatchedFolder();
     _loadPlaybackSettings();
+    _loadDownloadPath();
   }
 
   Future<void> _loadPlaybackSettings() async {
@@ -75,6 +75,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _autoShuffle = shuffle == 'true';
         _gaplessPlayback = gapless != 'false';
         _bluetoothAutoEq = btAutoEq == 'true';
+      });
+    }
+  }
+
+  Future<void> _loadDownloadPath() async {
+    final path = await DatabaseService.instance.getSetting('download_path');
+    if (mounted) {
+      setState(() {
+        _downloadPath = path ?? '';
       });
     }
   }
@@ -429,7 +438,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _SettingsTile(
                         icon: Icons.link_rounded,
                         iconColor: Colors.blue,
-                        title: 'Shared Links',
+                        title: AppLocale.tr('shared_links'),
                         subtitle: AppLocale.tr('no_shared_links'),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const SharedUrlsScreen()),
@@ -652,17 +661,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 8),
                       _SettingsTile(
-                        icon: Icons.swap_horiz,
-                        iconColor: Colors.indigo,
-                        title: 'Crossfade',
-                        subtitle: _crossfadeSeconds.toInt() > 0
-                            ? '${_crossfadeSeconds.toInt()} seconds'
-                            : AppLocale.tr('off'),
-                        trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
-                        onTap: () => _showCrossfadeSlider(context, context.read<PlayerProvider>()),
-                      ),
-                      const SizedBox(height: 8),
-                      _SettingsTile(
                         icon: Icons.bluetooth,
                         iconColor: Colors.blue,
                         title: AppLocale.tr('bluetooth_auto_eq'),
@@ -812,12 +810,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icons.folder_rounded,
                         iconColor: Colors.orange,
                         title: AppLocale.tr('download_location'),
-                        subtitle: FutureBuilder<String?>(
-                          future: DatabaseService.instance.getSetting('download_path'),
-                          builder: (_, snap) => Text(
-                            snap.data ?? 'Documents/downloads',
-                            style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 12),
-                          ),
+                        subtitle: Text(
+                          _downloadPath.isNotEmpty ? _downloadPath : 'Documents/downloads',
+                          style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 12),
                         ),
                         trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                         onTap: () async {
@@ -825,7 +820,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             final result = await FilePicker.platform.getDirectoryPath();
                             if (result != null && context.mounted) {
                               await DatabaseService.instance.setSetting('download_path', result);
-                              setState(() {});
+                              setState(() {
+                                _downloadPath = result;
+                              });
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text('${AppLocale.tr('download_location')}: $result'),
@@ -835,11 +832,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             }
                           } catch (e) {
                             if (context.mounted) {
-                              final db = DatabaseService.instance;
-                              final dir = await db.getSetting('download_path');
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text(dir ?? 'Documents/downloads'),
+                                  content: Text(_downloadPath.isNotEmpty ? _downloadPath : 'Documents/downloads'),
                                   backgroundColor: MelodiTheme.primaryGreen,
                                 ),
                               );
@@ -2340,6 +2335,19 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                     onPressed: () async {
                       final playlists = await ytmusic.importPlaylists();
                       if (context.mounted) {
+                        // Add playlists to local library
+                        final playlistProvider = context.read<PlaylistProvider>();
+                        for (final ytPlaylist in playlists) {
+                          final exists = playlistProvider.playlists.any(
+                            (p) => p.name == ytPlaylist.name
+                          );
+                          if (!exists) {
+                            await playlistProvider.createPlaylist(
+                              ytPlaylist.name,
+                              description: 'YouTube Music',
+                            );
+                          }
+                        }
                         // Trigger sync to pull playlist tracks into local library
                         context.read<SyncProvider>().triggerSync();
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -2549,25 +2557,39 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: spotify.isImportingPlaylists
-                        ? null
-                        : () async {
-                            final playlists = await spotify.importPlaylists();
-                            if (context.mounted) {
-                              // Trigger sync to pull playlist tracks into local library
-                              context.read<SyncProvider>().triggerSync();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                      '${playlists.length} ${AppLocale.tr('playlists')} ${AppLocale.tr('import_songs')}'),
-                                  backgroundColor: MelodiTheme.primaryGreen,
-                                ),
-                              );
-                            }
-                          },
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: spotify.isImportingPlaylists
+                          ? null
+                          : () async {
+                              final playlists = await spotify.importPlaylists();
+                              if (context.mounted) {
+                                // Add playlists to local library
+                                final playlistProvider = context.read<PlaylistProvider>();
+                                for (final spPlaylist in playlists) {
+                                  // Check if playlist already exists
+                                  final exists = playlistProvider.playlists.any(
+                                    (p) => p.name == spPlaylist.name
+                                  );
+                                  if (!exists) {
+                                    await playlistProvider.createPlaylist(
+                                      spPlaylist.name,
+                                      description: 'Spotify',
+                                    );
+                                  }
+                                }
+                                // Trigger sync to pull playlist tracks into local library
+                                context.read<SyncProvider>().triggerSync();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        '${playlists.length} ${AppLocale.tr('playlists')} ${AppLocale.tr('import_songs')}'),
+                                    backgroundColor: MelodiTheme.primaryGreen,
+                                  ),
+                                );
+                              }
+                            },
                     icon: spotify.isImportingPlaylists
                         ? const SizedBox(
                             width: 18,
@@ -4222,15 +4244,49 @@ class _LibraryHealthSettingsTileState extends State<_LibraryHealthSettingsTile> 
   }
 }
 
-class _AudioEffectsPage extends StatelessWidget {
+class _AudioEffectsPage extends StatefulWidget {
   const _AudioEffectsPage();
+
+  @override
+  State<_AudioEffectsPage> createState() => _AudioEffectsPageState();
+}
+
+class _AudioEffectsPageState extends State<_AudioEffectsPage> {
+  bool _spatialAudio = false;
+  bool _reverb = false;
+  bool _bassBoost = false;
+  bool _virtualizer = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final db = DatabaseService.instance;
+    final spatial = await db.getSetting('spatial_audio');
+    final reverb = await db.getSetting('reverb');
+    final bass = await db.getSetting('bass_boost');
+    final virt = await db.getSetting('virtualizer');
+    setState(() {
+      _spatialAudio = spatial == 'true';
+      _reverb = reverb == 'true';
+      _bassBoost = bass == 'true';
+      _virtualizer = virt == 'true';
+    });
+  }
+
+  Future<void> _saveSetting(String key, bool value) async {
+    await DatabaseService.instance.setSetting(key, value.toString());
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: MelodiTheme.background,
       appBar: AppBar(
-        title: const Text('Audio Effects'),
+        title: Text(AppLocale.tr('audio_effects')),
         backgroundColor: MelodiTheme.containerLow,
         foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
@@ -4241,48 +4297,60 @@ class _AudioEffectsPage extends StatelessWidget {
           _SettingsTile(
             icon: Icons.spatial_audio_off,
             iconColor: Colors.purple,
-            title: 'Spatial Audio',
-            subtitle: '3D sound positioning',
+            title: AppLocale.tr('spatial_audio'),
+            subtitle: AppLocale.tr('spatial_audio_desc'),
             trailing: Switch(
-              value: false,
-              onChanged: (v) {},
-              activeColor: const Color(0xFF53e076),
+              value: _spatialAudio,
+              onChanged: (v) {
+                setState(() => _spatialAudio = v);
+                _saveSetting('spatial_audio', v);
+              },
+              activeColor: MelodiTheme.primaryGreen,
             ),
           ),
           const SizedBox(height: 8),
           _SettingsTile(
             icon: Icons.waves,
             iconColor: Colors.blue,
-            title: 'Reverb',
-            subtitle: 'Add room ambience effects',
+            title: AppLocale.tr('reverb'),
+            subtitle: AppLocale.tr('reverb_desc'),
             trailing: Switch(
-              value: false,
-              onChanged: (v) {},
-              activeColor: const Color(0xFF53e076),
+              value: _reverb,
+              onChanged: (v) {
+                setState(() => _reverb = v);
+                _saveSetting('reverb', v);
+              },
+              activeColor: MelodiTheme.primaryGreen,
             ),
           ),
           const SizedBox(height: 8),
           _SettingsTile(
             icon: Icons.graphic_eq,
             iconColor: Colors.orange,
-            title: 'Bass Boost',
-            subtitle: 'Enhance low frequency response',
+            title: AppLocale.tr('bass_boost'),
+            subtitle: AppLocale.tr('bass_boost_desc'),
             trailing: Switch(
-              value: false,
-              onChanged: (v) {},
-              activeColor: const Color(0xFF53e076),
+              value: _bassBoost,
+              onChanged: (v) {
+                setState(() => _bassBoost = v);
+                _saveSetting('bass_boost', v);
+              },
+              activeColor: MelodiTheme.primaryGreen,
             ),
           ),
           const SizedBox(height: 8),
           _SettingsTile(
             icon: Icons.hearing,
             iconColor: Colors.teal,
-            title: 'Virtualizer',
-            subtitle: 'Simulate surround sound through headphones',
+            title: AppLocale.tr('virtualizer'),
+            subtitle: AppLocale.tr('virtualizer_desc'),
             trailing: Switch(
-              value: false,
-              onChanged: (v) {},
-              activeColor: const Color(0xFF53e076),
+              value: _virtualizer,
+              onChanged: (v) {
+                setState(() => _virtualizer = v);
+                _saveSetting('virtualizer', v);
+              },
+              activeColor: MelodiTheme.primaryGreen,
             ),
           ),
         ],
@@ -4322,7 +4390,7 @@ class _VoiceControlPageState extends State<_VoiceControlPage> {
     return Scaffold(
       backgroundColor: MelodiTheme.background,
       appBar: AppBar(
-        title: const Text('Voice Control'),
+        title: Text(AppLocale.tr('siri_shortcuts')),
         backgroundColor: MelodiTheme.containerLow,
         foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
@@ -4333,28 +4401,28 @@ class _VoiceControlPageState extends State<_VoiceControlPage> {
           _SettingsTile(
             icon: Icons.mic,
             iconColor: Colors.orange,
-            title: 'Siri Integration',
-            subtitle: 'Control playback with Siri commands',
+            title: AppLocale.tr('siri_integration'),
+            subtitle: AppLocale.tr('siri_integration_desc'),
             trailing: Switch(
               value: _siriEnabled,
               onChanged: (v) {
                 setState(() => _siriEnabled = v);
                 DatabaseService.instance.setSetting('siri_integration', v.toString());
               },
-              activeColor: const Color(0xFF53e076),
+              activeColor: MelodiTheme.primaryGreen,
             ),
           ),
           const SizedBox(height: 8),
           _SettingsTile(
             icon: Icons.shortcut,
             iconColor: Colors.teal,
-            title: 'Custom Shortcuts',
-            subtitle: 'Create custom voice commands',
+            title: AppLocale.tr('custom_shortcuts'),
+            subtitle: AppLocale.tr('custom_shortcuts_desc'),
             trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Text('Siri Shortcuts are managed in iOS Settings > Siri & Search'),
+                  content: Text(AppLocale.tr('siri_shortcuts_info')),
                   backgroundColor: MelodiTheme.primaryGreen,
                   duration: const Duration(seconds: 3),
                 ),
@@ -4365,15 +4433,15 @@ class _VoiceControlPageState extends State<_VoiceControlPage> {
           _SettingsTile(
             icon: Icons.record_voice_over,
             iconColor: Colors.indigo,
-            title: 'Voice Feedback',
-            subtitle: 'Announce track changes and status',
+            title: AppLocale.tr('voice_feedback'),
+            subtitle: AppLocale.tr('voice_feedback_desc'),
             trailing: Switch(
               value: _voiceFeedbackEnabled,
               onChanged: (v) {
                 setState(() => _voiceFeedbackEnabled = v);
                 DatabaseService.instance.setSetting('voice_feedback', v.toString());
               },
-              activeColor: const Color(0xFF53e076),
+              activeColor: MelodiTheme.primaryGreen,
             ),
           ),
         ],
@@ -4483,7 +4551,7 @@ class _PodcastSubscriptionsPageState extends State<_PodcastSubscriptionsPage> {
     return Scaffold(
       backgroundColor: MelodiTheme.background,
       appBar: AppBar(
-        title: const Text('Podcasts'),
+        title: Text(AppLocale.tr('podcast')),
         backgroundColor: MelodiTheme.containerLow,
         foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
@@ -4667,7 +4735,7 @@ class _AudiobookLibraryPageState extends State<_AudiobookLibraryPage> {
     return Scaffold(
       backgroundColor: MelodiTheme.background,
       appBar: AppBar(
-        title: const Text('Audiobooks'),
+        title: Text(AppLocale.tr('audiobook')),
         backgroundColor: MelodiTheme.containerLow,
         foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
@@ -4687,14 +4755,14 @@ class _AudiobookLibraryPageState extends State<_AudiobookLibraryPage> {
                     children: [
                       Icon(Icons.menu_book, size: 64, color: MelodiTheme.textMuted),
                       const SizedBox(height: 16),
-                      Text('Sesli kitap bulunamadı', style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 16)),
+                      Text(AppLocale.tr('no_audiobooks_found'), style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 16)),
                       const SizedBox(height: 8),
-                      Text('Klasör içe aktararak başlayın', style: TextStyle(color: MelodiTheme.textMuted, fontSize: 13)),
+                      Text(AppLocale.tr('import_audiobooks_hint'), style: TextStyle(color: MelodiTheme.textMuted, fontSize: 13)),
                       const SizedBox(height: 24),
                       ElevatedButton.icon(
                         onPressed: _importFolder,
                         icon: const Icon(Icons.folder_open, size: 18),
-                        label: const Text('Klasör İçe Aktar'),
+                        label: Text(AppLocale.tr('import_from_folder')),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: MelodiTheme.primaryGreen,
                           foregroundColor: Colors.black,

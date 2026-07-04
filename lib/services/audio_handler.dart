@@ -6,7 +6,6 @@ import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
-import '../models/playlist_model.dart';
 import 'database_service.dart';
 
 class AudioPlayerHandler extends BaseAudioHandler
@@ -25,9 +24,13 @@ class AudioPlayerHandler extends BaseAudioHandler
   StreamSubscription<Duration>? _crossfadeSubscription;
   Timer? _sleepTimer;
   DateTime? _sleepTimerEnd;
+  Timer? _saveStateTimer;
+  AndroidEqualizer? _equalizer;
 
   AudioPlayerHandler() {
     _initPlayer();
+    _startAutoSave();
+    _initEqualizer();
   }
 
   int? get sleepTimerMinutes {
@@ -60,6 +63,196 @@ class AudioPlayerHandler extends BaseAudioHandler
     _player.processingStateStream.listen((_) {
       _broadcastState();
     });
+  }
+
+  Future<void> _initEqualizer() async {
+    try {
+      _equalizer = _player.androidEqualizer;
+      await _restoreEqualizerSettings();
+    } catch (_) {}
+  }
+
+  Future<void> _restoreEqualizerSettings() async {
+    if (_equalizer == null) return;
+
+    try {
+      final enabledStr = await _db.getSetting('eq_enabled');
+      final enabled = enabledStr == 'true';
+
+      final params = await _equalizer!.parameters;
+      await _equalizer!.setEnabled(enabled);
+
+      if (enabled) {
+        final presetName = await _db.getSetting('eq_preset');
+        final preset = presetName ?? 'normal';
+
+        List<double> bands;
+        if (preset == 'custom') {
+          bands = await _getCustomEQBands();
+        } else {
+          bands = _getPresetBands(preset);
+        }
+
+        if (bands.length == params.numBands) {
+          for (int i = 0; i < params.numBands; i++) {
+            final bandParams = params.bandParameters(i);
+            final gain = bands[i].clamp(bandParams.minGain, bandParams.maxGain);
+            await _equalizer!.setGain(i, gain);
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  List<double> _getPresetBands(String name) {
+    const presets = {
+      'normal': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      'pop': [2, 3, 5, 4, 2, 0, -1, -1, 0, 1],
+      'rock': [5, 4, 2, -1, -2, -1, 1, 3, 4, 4],
+      'jazz': [3, 2, 1, 1, 2, 3, 2, 1, 1, 2],
+      'classical': [4, 3, 2, 1, 0, 0, 1, 2, 3, 4],
+      'bass_boost': [6, 5, 4, 2, 0, -1, -2, -2, -1, 0],
+      'vocal': [-2, -1, 1, 3, 5, 5, 3, 1, -1, -2],
+    };
+    return presets[name] ?? presets['normal']!;
+  }
+
+  Future<List<double>> _getCustomEQBands() async {
+    final raw = await _db.getSetting('eq_custom_bands');
+    if (raw != null && raw.isNotEmpty) {
+      final parts = raw.split(',');
+      if (parts.length == 10) {
+        return parts.map((p) => double.tryParse(p) ?? 0).toList();
+      }
+    }
+    return List.filled(10, 0);
+  }
+
+  Future<void> applyEqualizerPreset(String name) async {
+    if (_equalizer == null) return;
+
+    try {
+      final params = await _equalizer!.parameters;
+      List<double> bands;
+
+      if (name == 'custom') {
+        bands = await _getCustomEQBands();
+      } else {
+        bands = _getPresetBands(name);
+      }
+
+      if (bands.length == params.numBands) {
+        for (int i = 0; i < params.numBands; i++) {
+          final bandParams = params.bandParameters(i);
+          final gain = bands[i].clamp(bandParams.minGain, bandParams.maxGain);
+          await _equalizer!.setGain(i, gain);
+        }
+      }
+
+      await _db.setSetting('eq_preset', name);
+    } catch (_) {}
+  }
+
+  Future<void> setEqualizerEnabled(bool enabled) async {
+    if (_equalizer == null) return;
+
+    try {
+      await _equalizer!.setEnabled(enabled);
+      await _db.setSetting('eq_enabled', enabled.toString());
+    } catch (_) {}
+  }
+
+  Future<void> setEqualizerBand(int index, double gain) async {
+    if (_equalizer == null) return;
+
+    try {
+      final params = await _equalizer!.parameters;
+      if (index < params.numBands) {
+        final bandParams = params.bandParameters(index);
+        final clampedGain = gain.clamp(bandParams.minGain, bandParams.maxGain);
+        await _equalizer!.setGain(index, clampedGain);
+      }
+    } catch (_) {}
+  }
+
+  void _startAutoSave() {
+    _saveStateTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      savePlayerState();
+    });
+  }
+
+  Future<void> savePlayerState() async {
+    if (_currentIndex < 0 || _currentIndex >= _queue.length) return;
+
+    try {
+      final song = _queue[_currentIndex];
+      final positionMs = _player.position.inMilliseconds;
+
+      await _db.setSetting('player_current_song', song.toJson());
+      await _db.setSetting('player_current_index', _currentIndex.toString());
+      await _db.setSetting('player_position_ms', positionMs.toString());
+      await _db.setSetting('player_queue', SongModel.listToJson(_queue));
+      await _db.setSetting('player_is_shuffled', _isShuffled.toString());
+      await _db.setSetting('player_repeat_mode', _repeatMode.index.toString());
+      await _db.setSetting('player_saved_at', DateTime.now().toIso8601String());
+    } catch (_) {}
+  }
+
+  Future<void> restorePlayerState() async {
+    try {
+      final indexStr = await _db.getSetting('player_current_index');
+      if (indexStr == null || indexStr.isEmpty) return;
+      final positionMsStr = await _db.getSetting('player_position_ms');
+      final isShuffledStr = await _db.getSetting('player_is_shuffled');
+      final repeatModeStr = await _db.getSetting('player_repeat_mode');
+
+      final index = int.tryParse(indexStr) ?? -1;
+      final positionMs = int.tryParse(positionMsStr ?? '0') ?? 0;
+      final isShuffled = isShuffledStr == 'true';
+      final repeatMode = LoopStyle.values[int.tryParse(repeatModeStr ?? '0') ?? 0];
+
+      // Restore queue from settings
+      final queueStr = await _db.getSetting('player_queue');
+      if (queueStr != null && queueStr.isNotEmpty) {
+        try {
+          final queueList = SongModel.listFromJson(queueStr);
+          if (queueList.isNotEmpty && index >= 0 && index < queueList.length) {
+            _queue = queueList;
+            _originalQueue = List.from(_queue);
+            _currentIndex = index;
+            _isShuffled = isShuffled;
+            _repeatMode = repeatMode;
+
+            // Set loop mode
+            switch (repeatMode) {
+              case LoopStyle.off:
+                await _player.setLoopMode(LoopMode.off);
+                break;
+              case LoopStyle.all:
+                await _player.setLoopMode(LoopMode.all);
+                break;
+              case LoopStyle.one:
+                await _player.setLoopMode(LoopMode.one);
+                break;
+            }
+
+            // Play the song at saved position
+            await _playCurrent();
+            await _player.seek(Duration(milliseconds: positionMs));
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _clearPlayerState() async {
+    await _db.setSetting('player_current_song', '');
+    await _db.setSetting('player_current_index', '-1');
+    await _db.setSetting('player_position_ms', '0');
+    await _db.setSetting('player_queue', '');
+    await _db.setSetting('player_is_shuffled', 'false');
+    await _db.setSetting('player_repeat_mode', '0');
+    await _db.setSetting('player_saved_at', '');
   }
 
   void _broadcastState() {
@@ -196,6 +389,15 @@ class AudioPlayerHandler extends BaseAudioHandler
     await _updateMediaQueue();
   }
 
+  void replaceQueue(List<SongModel> newQueue) {
+    _queue = List.from(newQueue);
+    _originalQueue = List.from(newQueue);
+    if (_currentIndex >= _queue.length) {
+      _currentIndex = _queue.isNotEmpty ? 0 : -1;
+    }
+    _updateMediaQueue();
+  }
+
   Future<void> toggleShuffle() async {
     _isShuffled = !_isShuffled;
     if (_isShuffled) {
@@ -309,6 +511,9 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (_volumeOverride != null) {
         await _player.setVolume(_volumeOverride!.clamp(0.5, 2.0));
       }
+
+      // Restore equalizer settings for new track
+      await _restoreEqualizerSettings();
 
       await _player.play();
 
@@ -528,6 +733,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   void dispose() {
+    _saveStateTimer?.cancel();
     _crossfadeSubscription?.cancel();
     _player.dispose();
   }

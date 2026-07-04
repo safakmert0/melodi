@@ -8,6 +8,9 @@ import '../providers/playlist_provider.dart';
 import '../services/database_service.dart';
 import '../services/listening_recorder.dart';
 import 'settings_screen.dart';
+import 'downloads_screen.dart';
+import 'library_screen.dart';
+import 'listening_history_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -211,7 +214,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       icon: Icons.queue_music_rounded,
                       label: AppLocale.tr('playlists'),
                       value: '$totalPlaylists',
-                      color: const Color(0xFF53E076),
+                      color: const Color(0xFF42A5F5),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -239,7 +242,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'HIZLI ERİŞİM',
+            AppLocale.tr('quick_access'),
             style: TextStyle(
               color: MelodiTheme.onSurfaceVariant,
               fontSize: 14,
@@ -252,9 +255,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.history_rounded,
             iconColor: Colors.orange,
             title: AppLocale.tr('recently_played'),
-            subtitle: 'Son çalınan şarkılar',
+            subtitle: AppLocale.tr('recently_played_subtitle'),
             onTap: () {
-              // Navigate to recently played
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const LibraryScreen()),
+              );
             },
           ),
           const SizedBox(height: 8),
@@ -262,9 +267,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.favorite_rounded,
             iconColor: const Color(0xFFFF2D55),
             title: AppLocale.tr('liked_songs'),
-            subtitle: 'Beğendiğin şarkılar',
+            subtitle: AppLocale.tr('liked_songs_subtitle'),
             onTap: () {
-              // Navigate to liked songs
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const LibraryScreen()),
+              );
             },
           ),
           const SizedBox(height: 8),
@@ -272,9 +279,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.download_rounded,
             iconColor: Colors.green,
             title: AppLocale.tr('downloads'),
-            subtitle: 'İndirilen şarkılar',
+            subtitle: AppLocale.tr('downloads_subtitle'),
             onTap: () {
-              // Navigate to downloads
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const DownloadsScreen()),
+              );
             },
           ),
           const SizedBox(height: 8),
@@ -282,9 +291,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.history_rounded,
             iconColor: Colors.teal,
             title: AppLocale.tr('scrobbling'),
-            subtitle: 'Dinleme geçmişi',
+            subtitle: AppLocale.tr('scrobbling_subtitle'),
             onTap: () {
-              // Navigate to listening history
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ListeningHistoryScreen()),
+              );
             },
           ),
         ],

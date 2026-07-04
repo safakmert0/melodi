@@ -7,8 +7,8 @@ export 'localization.dart' show AppLocale;
 
 class AppConstants {
   static const String appName = 'Melodi';
-  static const String appVersion = '3.2.0';
-  static const String buildNumber = '4';
+  static const String appVersion = '3.3.0';
+  static const String buildNumber = '5';
 
   static const List<String> supportedAudioExtensions = [
     'mp3', 'm4a', 'flac', 'wav', 'aac', 'ogg', 'wma',
@@ -51,10 +51,10 @@ class MelodiTheme {
   static const Color onSurface = Color(0xFFE2E2E2);
   static const Color onSurfaceVariant = Color(0xFFBCCBB9);
 
-  // Primary - Emerald
-  static const Color primaryGreen = Color(0xFF53E076);
-  static const Color primaryGreenBright = Color(0xFF72FE8F);
-  static const Color primaryContainer = Color(0xFF1DB954);
+  // Primary - Blue
+  static const Color primaryGreen = Color(0xFF2196F3);
+  static const Color primaryGreenBright = Color(0xFF42A5F5);
+  static const Color primaryContainer = Color(0xFF1976D2);
   static const Color onPrimary = Color(0xFF003914);
   static const Color onPrimaryContainer = Color(0xFF004118);
 
@@ -95,7 +95,7 @@ class MelodiTheme {
     'rock': Color(0xFFE8115B),
     'hip_hop': Color(0xFFBC462B),
     'jazz': Color(0xFF1E3264),
-    'electronic': Color(0xFF006450),
+    'electronic': Color(0xFF2196F3),
     'classical': Color(0xFF7358FF),
     'rnb': Color(0xFFD84000),
     'indie': Color(0xFFE91429),

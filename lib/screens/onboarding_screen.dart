@@ -168,8 +168,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Color _getPageColor(int page) {
     switch (page) {
       case 0: return MelodiTheme.primaryGreen;
-      case 1: return const Color(0xFF53E076);
-      case 2: return const Color(0xFF72FE8F);
+      case 1: return const Color(0xFF42A5F5);
+      case 2: return const Color(0xFF64B5F6);
       case 3: return MelodiTheme.primaryContainer;
       default: return MelodiTheme.primaryGreen;
     }
@@ -502,7 +502,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           // Service cards
           _ServiceCard(
             icon: Icons.music_note_rounded,
-            iconColor: const Color(0xFF1DB954),
+            iconColor: const Color(0xFF2196F3),
             title: 'Spotify',
             subtitle: AppLocale.tr('spotify_subtitle'),
             onTap: () {
@@ -546,7 +546,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 decoration: BoxDecoration(
                   gradient: isActive
                       ? const LinearGradient(
-                          colors: [MelodiTheme.primaryGreen, Color(0xFF53E076)],
+                          colors: [MelodiTheme.primaryGreen, Color(0xFF42A5F5)],
                         )
                       : null,
                   color: isActive ? null : MelodiTheme.surfaceBright.withOpacity(0.5),

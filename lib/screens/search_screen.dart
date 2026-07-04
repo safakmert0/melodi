@@ -5,7 +5,9 @@ import '../core/localization.dart';
 import '../providers/search_provider.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
+import '../providers/download_provider.dart';
 import '../models/song_model.dart';
+import '../services/youtube_service.dart';
 import 'settings_screen.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -102,13 +104,43 @@ class _SearchScreenState extends State<SearchScreen> {
             if (_isSearching)
               Consumer<SearchProvider>(
                 builder: (context, provider, _) {
-                  if (provider.results.isEmpty) {
-                    return const SliverFillRemaining(child: Center(
-                      child: Text('No results found', style: TextStyle(color: MelodiTheme.onSurfaceVariant))));
-                  }
-                  return SliverList(delegate: SliverChildBuilderDelegate(
-                    (context, i) => _SearchResultTile(song: provider.results[i]),
-                    childCount: provider.results.length));
+                  return SliverList(delegate: SliverChildListDelegate([
+                    // Local results header
+                    if (provider.results.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+                        child: Text(AppLocale.tr('local_results'), style: MelodiTheme.heading(size: 18)),
+                      ),
+                      ...provider.results.map((song) => _SearchResultTile(song: song)),
+                    ],
+                    // Online results header
+                    if (provider.isSearchingOnline)
+                      const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      ),
+                    if (!provider.isSearchingOnline && provider.onlineResults.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+                        child: Row(
+                          children: [
+                            Icon(Icons.language, color: MelodiTheme.primaryGreen, size: 20),
+                            const SizedBox(width: 8),
+                            Text(AppLocale.tr('online_results'), style: MelodiTheme.heading(size: 18)),
+                          ],
+                        ),
+                      ),
+                      ...provider.onlineResults.map((video) => _OnlineResultTile(video: video)),
+                    ],
+                    // No results
+                    if (!provider.isSearching && !provider.isSearchingOnline &&
+                        provider.results.isEmpty && provider.onlineResults.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(48),
+                        child: Center(
+                          child: Text(AppLocale.tr('no_results'), style: const TextStyle(color: MelodiTheme.onSurfaceVariant))),
+                      ),
+                  ]));
                 },
               )
             else ...[
@@ -133,7 +165,6 @@ class _SearchScreenState extends State<SearchScreen> {
                           final artist = artists[index];
                           return GestureDetector(
                             onTap: () {
-                              // Play all songs by this artist
                               final artistSongs = library.songs
                                   .where((s) => s.artist == artist.name)
                                   .toList();
@@ -177,7 +208,7 @@ class _SearchScreenState extends State<SearchScreen> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                  child: Text('Browse All', style: MelodiTheme.heading(size: 20)),
+                  child: Text(AppLocale.tr('browse_all'), style: MelodiTheme.heading(size: 20)),
                 ),
               ),
               SliverToBoxAdapter(child: _buildGenreGrid()),
@@ -194,7 +225,7 @@ class _SearchScreenState extends State<SearchScreen> {
       ('Pop', const Color(0xFF8D67AB)),
       ('Rock', const Color(0xFFE8115B)),
       ('Hip-Hop', const Color(0xFFBC462B)),
-      ('Electronic', const Color(0xFF1DB954)),
+      ('Electronic', const Color(0xFF2196F3)),
       ('Jazz', const Color(0xFF1E3264)),
       ('Classical', const Color(0xFF7358FF)),
     ];
@@ -211,7 +242,6 @@ class _SearchScreenState extends State<SearchScreen> {
           final g = genres[index];
           return GestureDetector(
             onTap: () {
-              // Search library for songs matching this genre
               final library = context.read<LibraryProvider>();
               final genreSongs = library.songs
                   .where((s) => s.genre != null && s.genre!.toLowerCase().contains(g.$1.toLowerCase()))
@@ -220,7 +250,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 context.read<PlayerProvider>().playFromQueue(genreSongs, 0);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Playing ${genreSongs.length} ${g.$1} songs'),
+                    content: Text(AppLocale.tr('playing_genre').replaceAll('{genre}', g.$1)),
                     backgroundColor: MelodiTheme.primaryGreen,
                     duration: const Duration(seconds: 1),
                   ),
@@ -228,7 +258,7 @@ class _SearchScreenState extends State<SearchScreen> {
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('No ${g.$1} songs in your library'),
+                    content: Text(AppLocale.tr('no_genre_songs').replaceAll('{genre}', g.$1)),
                     backgroundColor: MelodiTheme.containerHigh,
                     duration: const Duration(seconds: 1),
                   ),
@@ -288,6 +318,87 @@ class _SearchResultTile extends StatelessWidget {
       trailing: IconButton(
         icon: const Icon(Icons.play_circle_outline_rounded, color: MelodiTheme.onSurfaceVariant),
         onPressed: () => context.read<PlayerProvider>().playSong(song)),
+    );
+  }
+}
+
+class _OnlineResultTile extends StatelessWidget {
+  final YouTubeVideo video;
+  const _OnlineResultTile({required this.video});
+
+  String _formatDuration(Duration d) {
+    final m = d.inMinutes;
+    final s = d.inSeconds % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Container(
+        width: 48, height: 48,
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(4), color: MelodiTheme.containerHigh),
+        child: video.thumbnailUrl != null
+            ? ClipRRect(borderRadius: BorderRadius.circular(4),
+                child: Image.network(video.thumbnailUrl!, fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(Icons.music_note_rounded, color: MelodiTheme.onSurfaceVariant)))
+            : const Icon(Icons.music_note_rounded, color: MelodiTheme.onSurfaceVariant),
+      ),
+      title: Text(video.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurface, fontSize: 15)),
+      subtitle: Row(
+        children: [
+          Expanded(
+            child: Text(video.author, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurfaceVariant, fontSize: 13)),
+          ),
+          const SizedBox(width: 8),
+          Text(_formatDuration(video.duration), style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
+        ],
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.play_circle_outline_rounded, color: MelodiTheme.primaryGreen),
+            onPressed: () async {
+              // Stream and play
+              final ytService = YouTubeService();
+              final url = await ytService.getAudioUrl(video.id);
+              if (url != null && context.mounted) {
+                final song = SongModel(
+                  id: 'yt_${video.id}',
+                  title: video.title,
+                  artist: video.author,
+                  album: 'YouTube',
+                  duration: video.duration,
+                  filePath: url,
+                  fileSize: 0,
+                );
+                context.read<PlayerProvider>().playSong(song);
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.download_rounded, color: MelodiTheme.onSurfaceVariant),
+            onPressed: () {
+              context.read<DownloadProvider>().enqueueTrack(
+                spotifyTrackId: 'youtube_${video.id}',
+                title: video.title,
+                artist: video.author,
+                album: 'YouTube',
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${video.title} indiriliyor...'),
+                  backgroundColor: MelodiTheme.primaryGreen,
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }

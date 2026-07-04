@@ -29,6 +29,12 @@ class PlayerProvider extends ChangeNotifier {
     _periodicTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (hasListeners) notifyListeners();
     });
+    // Restore playback state on startup
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _handler.restorePlayerState().then((_) {
+        if (hasListeners) notifyListeners();
+      });
+    });
   }
 
   void setStreamingEnabled(bool enabled) {
@@ -43,9 +49,7 @@ class PlayerProvider extends ChangeNotifier {
     if (_handler.songQueue.isEmpty) return;
     final filtered = _handler.songQueue.where((s) => _isDownloaded(s)).toList();
     if (filtered.length < _handler.songQueue.length) {
-      _handler.songQueue
-        ..clear()
-        ..addAll(filtered);
+      _handler.replaceQueue(filtered);
     }
   }
 
@@ -130,6 +134,7 @@ class PlayerProvider extends ChangeNotifier {
     await _handler.playSong(song);
     _playStartTime = DateTime.now();
     _startScrobbleTimer(song);
+    _handler.savePlayerState();
     CarPlayService.updateNowPlaying(song);
     ListeningRecorder.instance.recordPlayback(
       song.id, song.title, song.artist,
@@ -143,6 +148,7 @@ class PlayerProvider extends ChangeNotifier {
 
   Future<void> playFromQueue(List<SongModel> songs, int index) async {
     await _handler.playFromQueue(songs, index);
+    _handler.savePlayerState();
     notifyListeners();
   }
 
@@ -166,16 +172,19 @@ class PlayerProvider extends ChangeNotifier {
 
   Future<void> skipToNext() async {
     await _handler.skipToNext();
+    _handler.savePlayerState();
     notifyListeners();
   }
 
   Future<void> skipToPrevious() async {
     await _handler.skipToPrevious();
+    _handler.savePlayerState();
     notifyListeners();
   }
 
   Future<void> seek(Duration position) async {
     await _handler.seek(position);
+    _handler.savePlayerState();
     notifyListeners();
   }
 
@@ -191,6 +200,7 @@ class PlayerProvider extends ChangeNotifier {
 
   Future<void> toggleShuffle() async {
     await _handler.toggleShuffle();
+    _handler.savePlayerState();
     notifyListeners();
   }
 
@@ -206,6 +216,7 @@ class PlayerProvider extends ChangeNotifier {
         await _handler.setLoopStyle(LoopStyle.off);
         break;
     }
+    _handler.savePlayerState();
     notifyListeners();
   }
 
