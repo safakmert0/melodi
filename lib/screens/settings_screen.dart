@@ -2340,11 +2340,11 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                         final playlistProvider = context.read<PlaylistProvider>();
                         for (final ytPlaylist in playlists) {
                           final exists = playlistProvider.playlists.any(
-                            (p) => p.name == ytPlaylist.name
+                            (p) => p.name == ytPlaylist.title
                           );
                           if (!exists) {
                             await playlistProvider.createPlaylist(
-                              ytPlaylist.name,
+                              ytPlaylist.title,
                               description: 'YouTube Music',
                             );
                           }
