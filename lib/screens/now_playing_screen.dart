@@ -325,13 +325,13 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               SafeArea(
                 child: Column(
                   children: [
-                    const SizedBox(height: 12),
-                    // Album Art - responsive, fills available width
+                    const SizedBox(height: 8),
+                    // Album Art
                     Expanded(
-                      flex: 3,
+                      flex: 4,
                       child: Center(
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
                           child: AspectRatio(
                             aspectRatio: 1,
                             child: Stack(
@@ -382,9 +382,9 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         ),
                       ),
                     ),
-                    // Single-line synced lyrics under album art
+                    // Synced lyrics right under album art
                     _buildSingleLineLyrics(),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 6),
                     // Song Title + Artist
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -401,7 +401,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 4),
                           Text(
                             song.artist,
                             maxLines: 1,
@@ -409,15 +409,15 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: MelodiTheme.primaryGreen,
-                              fontSize: 13,
+                              fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    // Progress bar with clamped position
+                    const SizedBox(height: 8),
+                    // Progress bar
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32),
                       child: MelodiSeekBar(
@@ -430,8 +430,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         activeColor: MelodiTheme.primaryGreen,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    // Main controls (shuffle, prev, play/pause, next, repeat)
+                    const SizedBox(height: 8),
+                    // Main controls - BIG buttons
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -439,20 +439,20 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                           icon: Icon(
                             Icons.shuffle_rounded,
                             color: player.isShuffled ? MelodiTheme.primaryGreen : Colors.white54,
-                            size: 22,
+                            size: 24,
                           ),
                           onPressed: player.toggleShuffle,
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 20),
                         IconButton(
-                          icon: const Icon(Icons.skip_previous_rounded, color: Colors.white, size: 32),
+                          icon: const Icon(Icons.skip_previous_rounded, color: Colors.white, size: 40),
                           onPressed: player.skipToPrevious,
                         ),
-                        const SizedBox(width: 4),
-                        // Play/Pause with green glow
+                        const SizedBox(width: 12),
+                        // Play/Pause - BIG with green glow
                         Container(
-                          width: 62,
-                          height: 62,
+                          width: 76,
+                          height: 76,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: MelodiTheme.primaryGreen,
@@ -470,29 +470,29 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                   ? Icons.pause_rounded
                                   : Icons.play_arrow_rounded,
                               color: const Color(0xFF131313),
-                              size: 34,
+                              size: 42,
                             ),
                             onPressed: player.playPause,
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 12),
                         IconButton(
-                          icon: const Icon(Icons.skip_next_rounded, color: Colors.white, size: 32),
+                          icon: const Icon(Icons.skip_next_rounded, color: Colors.white, size: 40),
                           onPressed: player.skipToNext,
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 20),
                         IconButton(
                           icon: Icon(
                             Icons.repeat_rounded,
                             color: player.repeatMode != LoopStyle.off ? MelodiTheme.primaryGreen : Colors.white54,
-                            size: 22,
+                            size: 24,
                           ),
                           onPressed: player.cycleRepeatMode,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 2),
-                    // Supplementary actions row
+                    const SizedBox(height: 6),
+                    // Supplementary actions row - bigger icons
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Row(
@@ -500,7 +500,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         children: [
                           _SpeedButton(
                               player: player, speedOptions: _speedOptions, accentColor: MelodiTheme.primaryGreen),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 8),
                           Consumer<LibraryProvider>(
                             builder: (context, lib, _) {
                               final isFav = lib.favorites.any((s) => s.id == song.id);
@@ -508,7 +508,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                 icon: Icon(
                                   isFav ? Icons.favorite : Icons.favorite_border,
                                   color: isFav ? MelodiTheme.primaryGreen : Colors.white54,
-                                  size: 20,
+                                  size: 24,
                                 ),
                                 onPressed: () => lib.toggleFavorite(song),
                               );
@@ -530,7 +530,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                           ? Icons.hourglass_top_rounded
                                           : Icons.download_outlined,
                                   color: isDownloaded ? MelodiTheme.primaryGreen : Colors.white54,
-                                  size: 20,
+                                  size: 24,
                                 ),
                                 onPressed: isDownloaded || isDownloading
                                     ? null
@@ -555,14 +555,14 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             },
                           ),
                           IconButton(
-                            icon: const Icon(Icons.queue_music_rounded, color: Colors.white54, size: 20),
+                            icon: const Icon(Icons.queue_music_rounded, color: Colors.white54, size: 24),
                             onPressed: () => _showQueue(context),
                           ),
                           IconButton(
                             icon: Icon(
                               Icons.dark_mode_rounded,
                               color: Colors.white54,
-                              size: 20,
+                              size: 24,
                             ),
                             onPressed: () {
                               showModalBottomSheet(
@@ -575,7 +575,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               );
                             },
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 8),
                           _VolumeBoostButton(
                             player: player,
                             showSlider: _showVolumeSlider,

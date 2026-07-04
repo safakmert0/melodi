@@ -8,6 +8,7 @@ import 'youtube_service.dart';
 import 'metadata_service.dart';
 import 'multi_source_search.dart';
 import 'music_source.dart';
+import 'youtube_audio_source.dart';
 
 enum DownloadState { pending, downloading, completed, failed }
 
@@ -118,16 +119,14 @@ class DownloadManager {
       // Search all sources in parallel
       final allTracks = await _multiSource.searchAllSync(query, limitPerSource: 3);
       if (allTracks.isNotEmpty) {
-        // Prioritize: YouTube > JioSaavn > Deezer > Last.fm
+        // Prioritize: JioSaavn > Deezer > YouTube (direct download)
         final priorityOrder = [
-          MusicSourceType.youtube,
           MusicSourceType.jiosaavn,
           MusicSourceType.deezer,
         ];
         for (final sourceType in priorityOrder) {
           final sourceTracks = allTracks.where((t) => t.source == sourceType).toList();
           if (sourceTracks.isEmpty) continue;
-          // Try to get stream URL from each track
           for (final track in sourceTracks.take(2)) {
             if (task.cancelled) break;
             try {
@@ -146,22 +145,57 @@ class DownloadManager {
         }
       }
 
-      // Fallback to YouTube search
+      // For YouTube tracks, use YouTube service download (handles throttling)
       if (streamUrl == null && !task.cancelled) {
-        task.progress = 0.1;
-        task.error = 'YouTube aranıyor...';
-        _notify();
-        final videos = await _youtubeService.search(query);
+        // Find YouTube track from search results
+        final ytTracks = allTracks.where((t) => t.source == MusicSourceType.youtube).toList();
         String? videoId;
-        if (videos.isNotEmpty) {
-          final exactMatch = videos.where((v) =>
-              v.title.toLowerCase().contains(task.title.toLowerCase()) &&
-              v.author.toLowerCase().contains(task.artist.toLowerCase().split(',').first.trim().toLowerCase())
-          ).toList();
-          videoId = (exactMatch.isNotEmpty ? exactMatch.first : videos.first).id;
+        if (ytTracks.isNotEmpty) {
+          videoId = ytTracks.first.id;
+        } else {
+          // Fallback: search YouTube directly
+          task.progress = 0.1;
+          task.error = 'YouTube aranıyor...';
+          _notify();
+          final videos = await _youtubeService.search(query);
+          if (videos.isNotEmpty) {
+            final exactMatch = videos.where((v) =>
+                v.title.toLowerCase().contains(task.title.toLowerCase()) &&
+                v.author.toLowerCase().contains(task.artist.toLowerCase().split(',').first.trim().toLowerCase())
+            ).toList();
+            videoId = (exactMatch.isNotEmpty ? exactMatch.first : videos.first).id;
+          }
         }
+
         if (videoId != null) {
-          streamUrl = await _youtubeService.getAudioUrl(videoId);
+          task.progress = 0.15;
+          task.error = 'YouTube indiriliyor...';
+          _notify();
+          // Use YouTube service which handles throttling properly
+          final resultPath = await _youtubeService.downloadAudio(videoId, task.title);
+          if (resultPath != null) {
+            task.filePath = resultPath;
+            task.progress = 0.8;
+            _notify();
+
+            if (!task.cancelled) {
+              final importedPath = await _importDownloadedFile(resultPath, task);
+              if (importedPath != null) {
+                task.filePath = importedPath;
+                task.state = DownloadState.completed;
+                task.progress = 1.0;
+                task.error = null;
+                await db.insertFailedMatch(task.spotifyTrackId, importedPath);
+              } else {
+                task.state = DownloadState.completed;
+                task.progress = 1.0;
+              }
+            }
+            _notify();
+            _activeDownloads--;
+            _processQueue();
+            return;
+          }
         }
       }
 

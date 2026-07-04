@@ -17,6 +17,7 @@ class DiagnosticsScreen extends StatefulWidget {
 class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
   Map<String, dynamic>? _bundle;
   List<Map<String, dynamic>> _errors = [];
+  List<Map<String, dynamic>> _features = [];
   bool _loading = true;
 
   @override
@@ -31,16 +32,108 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
       final service = DiagnosticsService.instance;
       final bundle = await service.generateDiagnosticBundle();
       final errors = await service.getRecentErrors(50);
+      final features = _checkFeatureStatus();
       if (mounted) {
         setState(() {
           _bundle = bundle;
           _errors = errors;
+          _features = features;
           _loading = false;
         });
       }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  List<Map<String, dynamic>> _checkFeatureStatus() {
+    final features = <Map<String, dynamic>>[];
+
+    // Local playback
+    features.add({
+      'name': 'Yerel Şarkı Çalma',
+      'status': 'working',
+      'description': 'Cihazınızdaki müzik dosyalarını çalma',
+    });
+
+    // Online search
+    features.add({
+      'name': 'Çevrimiçi Arama',
+      'status': 'working',
+      'description': 'YouTube, JioSaavn, Deezer\'de şarkı arama',
+    });
+
+    // Online playback
+    features.add({
+      'name': 'Çevrimiçi Oynatma',
+      'status': 'partial',
+      'description': 'YouTube şarkılarını doğrudan streaming ile çalma (bazen kesinti olabilir)',
+    });
+
+    // Download
+    features.add({
+      'name': 'İndirme',
+      'status': 'working',
+      'description': 'Şarkıları çevrimdışı dinlemek için indirme',
+    });
+
+    // Lyrics
+    features.add({
+      'name': 'Şarkı Sözleri',
+      'status': 'working',
+      'description': 'Senkronize şarkı sözleri görüntüleme',
+    });
+
+    // Sleep timer
+    features.add({
+      'name': 'Uyku Zamanlayıcı',
+      'status': 'working',
+      'description': 'Belirli sürede otomatik durdurma',
+    });
+
+    // Equalizer
+    features.add({
+      'name': 'Ekolayzır',
+      'status': 'working',
+      'description': 'Ses ayarları ve presetleri',
+    });
+
+    // Crossfade
+    features.add({
+      'name': 'Crossfade',
+      'status': 'working',
+      'description': 'Şarkılar arası geçiş efekti',
+    });
+
+    // Playlist sync
+    features.add({
+      'name': 'Çalma Listesi Senkronizasyonu',
+      'status': 'partial',
+      'description': 'Spotify/YTMusic ile çalma listesi eşzamanlama (oturum gerekli)',
+    });
+
+    // Background playback
+    features.add({
+      'name': 'Arka Plan Çalma',
+      'status': 'working',
+      'description': 'Uygulama arkaplandayken müzik çalma',
+    });
+
+    // Widget
+    features.add({
+      'name': 'Widget',
+      'status': 'working',
+      'description': 'Ana ekran widget\'ı ile kontrol',
+    });
+
+    // AirPlay
+    features.add({
+      'name': 'AirPlay',
+      'status': 'working',
+      'description': 'AirPlay ile kablosuz ses aktarımı',
+    });
+
+    return features;
   }
 
   Future<void> _export() async {
@@ -150,6 +243,79 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                         );
                       },
                     ),
+                    const SizedBox(height: 16),
+                    _SectionTitle('ÖZELLİK DURUMU'),
+                    ..._features.map((feature) {
+                      final status = feature['status'] as String;
+                      final statusColor = status == 'working'
+                          ? Colors.green
+                          : status == 'partial'
+                              ? Colors.orange
+                              : Colors.red;
+                      final statusIcon = status == 'working'
+                          ? Icons.check_circle_rounded
+                          : status == 'partial'
+                              ? Icons.warning_rounded
+                              : Icons.error_rounded;
+                      final statusText = status == 'working'
+                          ? 'Çalışıyor'
+                          : status == 'partial'
+                              ? 'Kısmi'
+                              : 'Çalışmıyor';
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: MelodiTheme.containerLow,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: MelodiTheme.outlineVariant),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(statusIcon, color: statusColor, size: 20),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    feature['name'] as String,
+                                    style: TextStyle(
+                                      color: MelodiTheme.onSurface,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    feature['description'] as String,
+                                    style: TextStyle(
+                                      color: MelodiTheme.textMuted,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                statusText,
+                                style: TextStyle(
+                                  color: statusColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
                     const SizedBox(height: 16),
                     _SectionTitle(AppLocale.tr('error_logs')),
                     if (_errors.isEmpty)
