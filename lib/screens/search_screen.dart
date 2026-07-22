@@ -150,7 +150,32 @@ class _SearchScreenState extends State<SearchScreen> {
                       Padding(
                         padding: const EdgeInsets.all(48),
                         child: Center(
-                          child: Text(AppLocale.tr('no_results'), style: const TextStyle(color: MelodiTheme.onSurfaceVariant))),
+                          child: Column(
+                            children: [
+                              Icon(
+                                provider.error != null
+                                    ? Icons.cloud_off_rounded
+                                    : Icons.search_off_rounded,
+                                color: MelodiTheme.onSurfaceVariant,
+                                size: 38,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                provider.error ?? AppLocale.tr('no_results'),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: MelodiTheme.onSurfaceVariant),
+                              ),
+                              if (provider.error != null) ...[
+                                const SizedBox(height: 12),
+                                OutlinedButton.icon(
+                                  onPressed: () => provider.search(provider.query),
+                                  icon: const Icon(Icons.refresh_rounded),
+                                  label: Text(AppLocale.tr('retry')),
+                                ),
+                              ],
+                            ],
+                          ),
+                        )),
                       ),
                   ]));
                 },

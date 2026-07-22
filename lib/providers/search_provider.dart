@@ -15,6 +15,7 @@ class SearchProvider extends ChangeNotifier {
   bool _isSearching = false;
   bool _isSearchingOnline = false;
   String _query = '';
+  String? _error;
   Timer? _debounce;
   StreamSubscription<List<OnlineTrack>>? _onlineSub;
 
@@ -24,6 +25,7 @@ class SearchProvider extends ChangeNotifier {
   bool get isSearching => _isSearching;
   bool get isSearchingOnline => _isSearchingOnline;
   String get query => _query;
+  String? get error => _error;
 
   void search(String query) {
     _query = query;
@@ -34,19 +36,22 @@ class SearchProvider extends ChangeNotifier {
       _onlineResults = [];
       _isSearching = false;
       _isSearchingOnline = false;
+      _error = null;
       notifyListeners();
       return;
     }
 
     _isSearching = true;
     _isSearchingOnline = true;
+    _error = null;
     notifyListeners();
 
     _debounce = Timer(const Duration(milliseconds: 300), () async {
       try {
         _results = await _db.searchSongs(query);
-      } catch (_) {
+      } catch (e) {
         _results = [];
+        _error = 'Yerel arama kullanılamıyor: $e';
       }
       _isSearching = false;
       notifyListeners();
@@ -67,6 +72,7 @@ class SearchProvider extends ChangeNotifier {
         onError: (_) {
           _onlineResults = [];
           _isSearchingOnline = false;
+          _error ??= 'Çevrim içi arama kullanılamıyor';
           notifyListeners();
         },
       );
@@ -99,6 +105,7 @@ class SearchProvider extends ChangeNotifier {
     _results = [];
     _onlineResults = [];
     _query = '';
+    _error = null;
     _debounce?.cancel();
     _onlineSub?.cancel();
     notifyListeners();
