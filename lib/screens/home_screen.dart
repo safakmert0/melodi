@@ -73,6 +73,8 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              if (library.error != null)
+                SliverToBoxAdapter(child: _buildLibraryError(context, library)),
               if (library.songs.isNotEmpty)
                 SliverToBoxAdapter(
                   child: _buildListeningSummary(context, library),
@@ -102,6 +104,26 @@ class HomeScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildLibraryError(BuildContext context, LibraryProvider library) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: MelodiTheme.errorContainer.withOpacity(0.25),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MelodiTheme.errorRed.withOpacity(0.35)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: MelodiTheme.errorRed, size: 20),
+          const SizedBox(width: 10),
+          Expanded(child: Text('Kütüphane yüklenemedi: ${library.error}', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: MelodiTheme.onSurface, fontSize: 12))),
+          TextButton(onPressed: library.loadAll, child: const Text('Tekrar dene')),
+        ],
+      ),
     );
   }
 
