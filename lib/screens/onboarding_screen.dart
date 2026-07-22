@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
 import '../providers/theme_provider.dart';
@@ -23,6 +24,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   final PageController _pageController = PageController();
   int _currentPage = 0;
   bool _showSplash = true;
+  String _downloadPath = '';
   late AnimationController _fadeController;
   late AnimationController _slideController;
 
@@ -67,7 +69,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   void _nextPage() {
     HapticFeedback.selectionClick();
-    if (_currentPage < 3) {
+    if (_currentPage < 4) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 500),
         curve: Curves.easeOutCubic,
@@ -130,7 +132,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               child: CustomPaint(
                 painter: _OrbPainter(
                   color: _getPageColor(_currentPage),
-                  progress: _currentPage / 3,
+                  progress: _currentPage / 4,
                 ),
               ),
             ),
@@ -151,6 +153,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         _buildLanguagePage(),
                         _buildThemePage(),
                         _buildServicesPage(),
+                        _buildDownloadPage(),
                       ],
                     ),
                   ),
@@ -171,6 +174,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       case 1: return const Color(0xFF42A5F5);
       case 2: return const Color(0xFF64B5F6);
       case 3: return MelodiTheme.primaryContainer;
+      case 4: return const Color(0xFF8D67AB);
       default: return MelodiTheme.primaryGreen;
     }
   }
@@ -202,7 +206,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             const SizedBox(width: 40),
           const Spacer(),
           // Skip button
-          if (_currentPage < 3)
+          if (_currentPage < 4)
             GestureDetector(
               onTap: _complete,
               child: Container(
@@ -528,6 +532,70 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
+  Widget _buildDownloadPage() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: MelodiTheme.primaryGreen.withOpacity(0.12),
+              border: Border.all(color: MelodiTheme.primaryGreen.withOpacity(0.25)),
+            ),
+            child: const Icon(Icons.folder_special_rounded, size: 40, color: MelodiTheme.primaryGreen),
+          ),
+          const SizedBox(height: 36),
+          Text('İndirme konumunu seç', style: MelodiTheme.heading(size: 30), textAlign: TextAlign.center),
+          const SizedBox(height: 14),
+          Text(
+            'Çevrimdışı müziklerin kaydedileceği klasörü şimdi seçebilirsin. Daha sonra Ayarlar bölümünden değiştirebilirsin.',
+            style: MelodiTheme.body(size: 16, color: MelodiTheme.onSurfaceVariant),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 28),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: MelodiTheme.containerLow,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: MelodiTheme.outlineVariant),
+            ),
+            child: Text(
+              _downloadPath.isEmpty ? 'Varsayılan uygulama klasörü kullanılacak' : _downloadPath,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: MelodiTheme.bodySm(color: MelodiTheme.onSurfaceVariant),
+            ),
+          ),
+          const SizedBox(height: 14),
+          FilledButton.icon(
+            onPressed: () async {
+              final path = await FilePicker.platform.getDirectoryPath(dialogTitle: 'İndirme klasörünü seç');
+              if (!mounted || path == null || path.isEmpty) return;
+              await DatabaseService.instance.setSetting('download_path', path);
+              setState(() => _downloadPath = path);
+            },
+            icon: const Icon(Icons.folder_open_rounded),
+            label: const Text('Klasör seç'),
+            style: FilledButton.styleFrom(
+              backgroundColor: MelodiTheme.primaryGreen,
+              foregroundColor: MelodiTheme.onPrimary,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text('Seçmeden devam edersen varsayılan konum kullanılır.', style: MelodiTheme.labelSm(color: MelodiTheme.textMuted), textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBottomSection() {
     return Container(
       padding: const EdgeInsets.fromLTRB(40, 16, 40, 40),
@@ -536,7 +604,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           // Progress dots
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(4, (i) {
+            children: List.generate(5, (i) {
               final isActive = i == _currentPage;
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 400),
@@ -583,7 +651,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    _currentPage < 3
+                    _currentPage < 4
                         ? AppLocale.tr('next')
                         : AppLocale.tr('get_started'),
                     style: const TextStyle(
@@ -595,7 +663,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   ),
                   const SizedBox(width: 10),
                   Icon(
-                    _currentPage < 3
+                    _currentPage < 4
                         ? Icons.arrow_forward_rounded
                         : Icons.check_circle_outline_rounded,
                     size: 22,

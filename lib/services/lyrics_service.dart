@@ -26,7 +26,7 @@ class LrcParser {
     r'^\[(ti|ar|al|length|by|offset|au|re|ve):.*\]\s*$',
     caseSensitive: false,
   );
-  static final RegExp _timestamp = RegExp(r'^(\d{1,2}):(\d{2})\.(\d{2,3})$');
+  static final RegExp _timestamp = RegExp(r'^(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?$');
 
   static List<LrcLine> parse(String body) {
     if (body.trim().isEmpty) return [];
@@ -63,10 +63,12 @@ class LrcParser {
     if (match == null) return null;
     final minutes = int.parse(match.group(1)!);
     final seconds = int.parse(match.group(2)!);
-    final frac = match.group(3)!;
-    final fracMs = frac.length == 2
-        ? int.parse(frac) * 10
-        : int.parse(frac);
+    final frac = match.group(3) ?? '0';
+    final fracMs = frac.length == 1
+        ? int.parse(frac) * 100
+        : frac.length == 2
+            ? int.parse(frac) * 10
+            : int.parse(frac);
     return (minutes * 60000) + (seconds * 1000) + fracMs;
   }
 }

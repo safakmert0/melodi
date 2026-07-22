@@ -39,6 +39,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 
   LyricsResult? _lyricsResult;
   List<LrcLine> _lyricsLines = [];
+  bool _lyricsLoading = false;
   int _currentLineIndex = -1;
   final ScrollController _lyricsScrollController = ScrollController();
   Timer? _lyricsTimer;
@@ -121,6 +122,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     _lastSongId = song.id;
     _lyricsResult = null;
     _lyricsLines = [];
+    _lyricsLoading = true;
     _currentLineIndex = -1;
     // Delay lyrics fetch to ensure player has loaded the song duration
     Future.delayed(const Duration(milliseconds: 500), () {
@@ -135,6 +137,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
         } else {
           _lyricsResult = LyricsResult(plainText: text);
         }
+        _lyricsLoading = false;
         if (mounted) setState(() {});
       }
     });
@@ -166,7 +169,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       final updated = song.copyWith(lyrics: lyricsText);
       context.read<PlayerProvider>().updateCurrentSong(updated);
       context.read<LibraryProvider>().updateSong(updated);
+      _lyricsLoading = false;
       setState(() {});
+    } else if (mounted) {
+      setState(() => _lyricsLoading = false);
     }
   }
 
@@ -189,6 +195,13 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: theme.brightness == Brightness.dark ? Brightness.light : Brightness.dark,
+      systemNavigationBarColor: theme.scaffoldBackgroundColor,
+      systemNavigationBarIconBrightness: theme.brightness == Brightness.dark ? Brightness.light : Brightness.dark,
+    ));
     return Consumer2<PlayerProvider, LocaleNotifier>(
       builder: (context, player, locale, _) {
         final song = player.currentSong;
@@ -395,8 +408,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Color(0xFFe5e2e1),
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurface,
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                             ),
@@ -633,14 +646,16 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     } else if (_lyricsResult?.instrumental == true) {
       line = AppLocale.tr('instrumental');
     } else {
-      return const SizedBox(height: 40, child: Center(
-        child: Text('♪', style: TextStyle(color: Colors.white24, fontSize: 20)),
+      return SizedBox(height: 40, child: Center(
+        child: _lyricsLoading
+            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+            : Text('♪', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 20)),
       ));
     }
 
     if (line.isEmpty) {
-      return const SizedBox(height: 40, child: Center(
-        child: Text('♪', style: TextStyle(color: Colors.white24, fontSize: 20)),
+      return SizedBox(height: 40, child: Center(
+        child: Text('♪', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 20)),
       ));
     }
 
@@ -665,7 +680,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: hasTiming ? Colors.white : Colors.white54,
+              color: hasTiming ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: hasTiming ? 17 : 14,
               fontWeight: hasTiming ? FontWeight.w600 : FontWeight.w400,
               shadows: [
@@ -696,7 +711,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
         child: Text(
           '♪',
           style: TextStyle(
-            color: Colors.white38,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 36,
           ),
         ),
@@ -708,7 +723,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
         child: Text(
           AppLocale.tr('instrumental'),
           style: TextStyle(
-            color: Colors.white54,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 16,
             fontStyle: FontStyle.italic,
           ),
@@ -728,7 +743,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       child: Text(
         AppLocale.tr('no_lyrics'),
         style: TextStyle(
-          color: Colors.white38,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 16,
         ),
       ),
@@ -740,7 +755,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       return Center(
         child: Text(
           '♪',
-          style: TextStyle(color: Colors.white38, fontSize: 36),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 36),
         ),
       );
     }
@@ -839,7 +854,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
             lines[index].trim(),
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white54,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 14,
             ),
           ),
