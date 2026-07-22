@@ -45,7 +45,8 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
   List<double> _getBandsForPreset(String name) {
     if (name == 'custom') return _customBands;
     final presets = PlaybackService.equalizerPresets;
-    final match = presets.firstWhere((p) => p.name == name, orElse: () => presets.first);
+    final match =
+        presets.firstWhere((p) => p.name == name, orElse: () => presets.first);
     return match.bands;
   }
 
@@ -120,7 +121,7 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Equalizer is not available on iOS.\nThis feature is supported on Android only.',
+                'Ekolayzır şu anda iOS ses motoruna uygulanamıyor.\nAyarlar kaydedilir; gerçek iOS ses işleme sonraki sürümde eklenecek.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: MelodiTheme.onSurfaceVariant,
@@ -169,7 +170,8 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
             const SizedBox(height: 16),
             Row(
               children: [
-                Icon(Icons.tune_rounded, color: MelodiTheme.primaryGreen, size: 24),
+                Icon(Icons.tune_rounded,
+                    color: MelodiTheme.primaryGreen, size: 24),
                 const SizedBox(width: 8),
                 Text(
                   AppLocale.tr('equalizer'),
@@ -217,7 +219,9 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
                       checkmarkColor: MelodiTheme.primaryGreen,
                       backgroundColor: MelodiTheme.containerLow,
                       labelStyle: TextStyle(
-                        color: selected ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant,
+                        color: selected
+                            ? MelodiTheme.primaryGreen
+                            : MelodiTheme.onSurfaceVariant,
                         fontSize: 14,
                       ),
                     ),

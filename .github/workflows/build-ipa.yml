@@ -18,7 +18,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
+          flutter-version: '3.44.7'
           channel: 'stable'
           cache: true
 
@@ -80,8 +80,8 @@ jobs:
               print("MelodiPlatformHandlers.swift already in project")
           PYEOF
 
-          # Patch Podfile: set platform to 13.0
-          sed -i '' 's/platform :ios, .*/platform :ios, '\''13.0'\''/' ios/Podfile
+          # iOS 16+ hedefi, yerel proje ve güncel Flutter ile aynı tutulur.
+          sed -i '' 's/platform :ios, .*/platform :ios, '\''16.0'\''/' ios/Podfile
 
           # Set development team
           echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Debug.xcconfig

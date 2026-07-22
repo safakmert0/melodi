@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
@@ -58,7 +59,8 @@ class MelodiCacheImage extends StatelessWidget {
         fit: fit,
         memCacheWidth: width != null ? (width! * 2).toInt() : null,
         memCacheHeight: height != null ? (height! * 2).toInt() : null,
-        placeholder: (_, __) => showShimmer ? _buildShimmer() : _buildPlaceholder(),
+        placeholder: (_, __) =>
+            showShimmer ? _buildShimmer() : _buildPlaceholder(),
         errorWidget: (_, __, ___) => _buildPlaceholder(),
       ),
     );

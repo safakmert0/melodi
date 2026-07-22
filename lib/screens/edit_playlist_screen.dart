@@ -26,7 +26,10 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
     super.initState();
     _nameController = TextEditingController(text: widget.playlist.name);
     _descController = TextEditingController(text: widget.playlist.description ?? '');
-    _songs = List.from(widget.playlist.songs ?? []);
+    final librarySongs = context.read<LibraryProvider>().songs;
+    _songs = librarySongs
+        .where((song) => widget.playlist.songIds.contains(song.id))
+        .toList();
   }
 
   @override

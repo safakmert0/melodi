@@ -34,7 +34,8 @@ class ThemeProvider extends ChangeNotifier {
         AppTheme.isLightMode = false;
         break;
       case ThemeMode.system:
-        final brightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
+        final brightness =
+            WidgetsBinding.instance.platformDispatcher.platformBrightness;
         AppTheme.isLightMode = brightness == Brightness.light;
         break;
     }
@@ -104,20 +105,23 @@ class ThemeProvider extends ChangeNotifier {
   Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
     _syncIsLightMode();
-    await DatabaseService.instance.setSetting('theme_mode', mode.index.toString());
+    await DatabaseService.instance
+        .setSetting('theme_mode', mode.index.toString());
     notifyListeners();
   }
 
   Future<void> setUseDynamicColor(bool value) async {
     _useDynamicColor = value;
-    await DatabaseService.instance.setSetting('use_dynamic_color', value.toString());
+    await DatabaseService.instance
+        .setSetting('use_dynamic_color', value.toString());
     notifyListeners();
   }
 
   Future<void> setAccentColor(Color color) async {
     _accentColor = color;
     AppTheme.accentColor = color;
-    await DatabaseService.instance.setSetting('accent_color', color.value.toString());
+    await DatabaseService.instance
+        .setSetting('accent_color', color.value.toString());
     notifyListeners();
   }
 
@@ -168,7 +172,13 @@ class ThemeProvider extends ChangeNotifier {
     AppTheme.customTextPrimary = null;
     AppTheme.customTextSecondary = null;
     final db = DatabaseService.instance;
-    for (final key in ['custom_bg', 'custom_surface', 'custom_card', 'custom_text_primary', 'custom_text_secondary']) {
+    for (final key in [
+      'custom_bg',
+      'custom_surface',
+      'custom_card',
+      'custom_text_primary',
+      'custom_text_secondary'
+    ]) {
       await db.setSetting(key, '');
     }
     notifyListeners();
@@ -200,7 +210,8 @@ class ThemeProvider extends ChangeNotifier {
       case ThemeMode.dark:
         return darkTheme;
       case ThemeMode.system:
-        return WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.light
+        return WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+                Brightness.light
             ? lightTheme
             : darkTheme;
     }
@@ -252,7 +263,7 @@ class ThemeProvider extends ChangeNotifier {
         type: BottomNavigationBarType.fixed,
         elevation: 8,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: card,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -269,7 +280,8 @@ class ThemeProvider extends ChangeNotifier {
         bodyMedium: TextStyle(color: textSec),
         bodySmall: TextStyle(color: AppTheme.textTertiary),
       ),
-      dividerTheme: const DividerThemeData(color: Color(0xFFD0D0D0), thickness: 0.5),
+      dividerTheme:
+          const DividerThemeData(color: Color(0xFFD0D0D0), thickness: 0.5),
       sliderTheme: SliderThemeData(
         activeTrackColor: _accentColor,
         inactiveTrackColor: const Color(0xFFD0D0D0),
@@ -314,7 +326,7 @@ class ThemeProvider extends ChangeNotifier {
         type: BottomNavigationBarType.fixed,
         elevation: 8,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: card,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -331,7 +343,8 @@ class ThemeProvider extends ChangeNotifier {
         bodyMedium: TextStyle(color: textSec),
         bodySmall: TextStyle(color: AppTheme.textTertiary),
       ),
-      dividerTheme: const DividerThemeData(color: Color(0xFF404040), thickness: 0.5),
+      dividerTheme:
+          const DividerThemeData(color: Color(0xFF404040), thickness: 0.5),
       sliderTheme: SliderThemeData(
         activeTrackColor: _accentColor,
         inactiveTrackColor: const Color(0xFF404040),

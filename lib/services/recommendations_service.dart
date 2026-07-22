@@ -54,7 +54,7 @@ class RecommendationsService {
       }
 
       return MapEntry(song, score);
-    });
+    }).toList();
 
     scored.sort((a, b) => b.value.compareTo(a.value));
     final recommended = scored.map((e) => e.key).take(limit).toList();

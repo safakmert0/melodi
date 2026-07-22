@@ -8,6 +8,8 @@ import '../core/localization.dart';
 import '../providers/player_provider.dart';
 import '../services/lyrics_service.dart';
 import '../widgets/seek_bar.dart';
+import '../core/extensions/duration_ext.dart';
+import '../services/audio_handler.dart';
 
 class LyricsScreen extends StatefulWidget {
   const LyricsScreen({super.key});
@@ -85,7 +87,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
             if (parsed.isNotEmpty) {
               _lyricsLines = parsed;
             } else {
-              _lyricsLines = [LrcLine(timestampMs: 0, text: song.lyrics!)];
+              _lyricsLines = [LrcLine(0, song.lyrics!)];
             }
           }
 
@@ -216,7 +218,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
                           Row(
                             children: [
                               Text(
-                                player.position.formatMmSs,
+                                player.position.toShortString(),
                                 style: const TextStyle(
                                   fontFamily: AppConstants.fontFamily,
                                   color: MelodiTheme.onSurfaceVariant,
@@ -247,7 +249,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
                                 ),
                               ),
                               Text(
-                                player.duration.formatMmSs,
+                                player.duration.toShortString(),
                                 style: const TextStyle(
                                   fontFamily: AppConstants.fontFamily,
                                   color: MelodiTheme.onSurfaceVariant,
@@ -261,8 +263,8 @@ class _LyricsScreenState extends State<LyricsScreen> {
                             children: [
                               IconButton(
                                 icon: Icon(
-                                  player.shuffleMode ? Icons.shuffle : Icons.shuffle,
-                                  color: player.shuffleMode ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant,
+                                  Icons.shuffle,
+                                  color: player.isShuffled ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant,
                                 ),
                                 iconSize: 28,
                                 onPressed: player.toggleShuffle,
@@ -298,12 +300,12 @@ class _LyricsScreenState extends State<LyricsScreen> {
                               IconButton(
                                 icon: Icon(
                                   Icons.repeat,
-                                  color: player.loopMode != LoopMode.off
+                                  color: player.repeatMode != LoopStyle.off
                                       ? MelodiTheme.primaryGreen
                                       : MelodiTheme.onSurfaceVariant,
                                 ),
                                 iconSize: 28,
-                                onPressed: player.toggleLoopMode,
+                                onPressed: player.cycleRepeatMode,
                               ),
                             ],
                           ),

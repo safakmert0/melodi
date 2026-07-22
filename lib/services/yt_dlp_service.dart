@@ -184,7 +184,7 @@ class YtDlpService {
           formats.add(AudioFormat(
             container: stream.container.name,
             bitrate: stream.bitrate.bitsPerSecond,
-            sampleRate: stream.sampleRate,
+            sampleRate: null,
             codec: stream.audioCodec,
             streamInfo: stream,
           ));
@@ -286,7 +286,7 @@ class YtDlpService {
         }
 
         await sink.close();
-        await httpClient.close();
+        httpClient.close();
 
         final len = await file.length();
         debugPrint('YtDlpService: downloaded ${len} bytes');
@@ -299,7 +299,7 @@ class YtDlpService {
 
         return filePath;
       } catch (e) {
-        await httpClient.close();
+        httpClient.close();
         rethrow;
       }
     } catch (e) {
