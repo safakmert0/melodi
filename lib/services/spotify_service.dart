@@ -781,10 +781,64 @@ class SpotifyService {
         } catch (_) {}
       }
 
+      // Spotify occasionally changes the GraphQL wrapper shape. If the
+      // expected itemV2 path produced no tracks, walk the response for track
+      // objects so playlist names do not appear without their contents.
+      if (tracks.isEmpty) {
+        final seen = <String>{};
+        _collectFlexibleTracks(responseJson, tracks, seen);
+      }
       return (tracks, rawItemCount);
     } catch (e) {
       debugPrint('_parsePlaylistTracksGraphQLResponse failed: $e');
       return ([], 0);
+    }
+  }
+
+  void _collectFlexibleTracks(
+    dynamic node,
+    List<SpotifyTrackItem> output,
+    Set<String> seen,
+  ) {
+    if (node is Map) {
+      final uri = node['uri']?.toString();
+      final name = node['name']?.toString();
+      if (uri != null && uri.startsWith('spotify:track:') && name != null && name.isNotEmpty) {
+        final id = uri.substring('spotify:track:'.length);
+        if (seen.add(id)) {
+          final rawArtists = node['artists'] is Map
+              ? (node['artists']['items'] ?? node['artists']['artists'])
+              : node['artists'];
+          final artists = rawArtists is List
+              ? rawArtists.map((artist) {
+                  if (artist is Map) {
+                    return (artist['profile'] is Map ? artist['profile']['name'] : artist['name'])?.toString() ?? '';
+                  }
+                  return '';
+                }).where((artist) => artist.isNotEmpty).toList()
+              : <String>[];
+          final duration = node['trackDuration'] is Map
+              ? node['trackDuration']['totalMilliseconds']
+              : node['duration'] is Map
+                  ? node['duration']['totalMilliseconds']
+                  : node['duration_ms'] ?? node['durationMs'];
+          output.add(SpotifyTrackItem(
+            id: id,
+            name: name,
+            artists: artists,
+            albumName: node['albumOfTrack'] is Map ? node['albumOfTrack']['name']?.toString() : node['album'] is Map ? node['album']['name']?.toString() : null,
+            durationMs: duration is num ? duration.toInt() : 0,
+            uri: uri,
+          ));
+        }
+      }
+      for (final value in node.values) {
+        _collectFlexibleTracks(value, output, seen);
+      }
+    } else if (node is List) {
+      for (final value in node) {
+        _collectFlexibleTracks(value, output, seen);
+      }
     }
   }
 

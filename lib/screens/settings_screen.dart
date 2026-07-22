@@ -2476,7 +2476,7 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                             final success = await ytmusic.connectWithCookie(cookie);
                             if (context.mounted) {
                               if (success) {
-                                context.read<SyncProvider>().triggerSync();
+                                await context.read<SyncProvider>().triggerSync();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(AppLocale.tr('connected_as')),
@@ -2586,7 +2586,7 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                                   }
                                 }
                                 // Trigger sync to pull playlist tracks into local library
-                                context.read<SyncProvider>().triggerSync();
+                                await context.read<SyncProvider>().triggerSync();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
@@ -2750,7 +2750,7 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                             final success = await spotify.connectWithCookie(spDc);
                             if (context.mounted) {
                               if (success) {
-                                context.read<SyncProvider>().triggerSync();
+                                await context.read<SyncProvider>().triggerSync();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(AppLocale.tr('connected_as')),
