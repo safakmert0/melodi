@@ -1,14 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
-import '../models/song_model.dart';
 import 'database_service.dart';
 import 'youtube_service.dart';
 import 'metadata_service.dart';
 import 'multi_source_search.dart';
 import 'music_source.dart';
-import 'youtube_audio_source.dart';
+import 'storage_manager.dart';
 
 enum DownloadState { pending, downloading, completed, failed }
 
@@ -106,8 +104,7 @@ class DownloadManager {
     _notify();
     try {
       final db = DatabaseService.instance;
-      final dir = await getApplicationDocumentsDirectory();
-      final downloadDir = Directory('${dir.path}/downloads');
+      final downloadDir = Directory(await StorageManager.instance.getStorageLocation());
       await downloadDir.create(recursive: true);
 
       // Try multi-source search first (JioSaavn, Deezer, etc.)
@@ -303,8 +300,7 @@ class DownloadManager {
   Future<String?> _importDownloadedFile(String filePath, DownloadTask task) async {
     try {
       final db = DatabaseService.instance;
-      final dir = await getApplicationDocumentsDirectory();
-      final musicDir = Directory('${dir.path}/music');
+      final musicDir = Directory(await StorageManager.instance.getStorageLocation());
       await musicDir.create(recursive: true);
 
       final ext = filePath.split('.').last;
