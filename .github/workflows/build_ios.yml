@@ -1,0 +1,46 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Derlenecek dal veya etiket'
+        required: false
+        default: 'main'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install dependencies
+        run: |
+          flutter pub get
+          cd ios && pod install && cd ..
+
+      - name: Build unsigned .ipa
+        run: |
+          flutter build ios --release --no-codesign
+          mkdir -p build/unsigned_ipa/Payload
+          cp -r build/ios/iphoneos/Runner.app build/unsigned_ipa/Payload/
+          cd build/unsigned_ipa
+          zip -r ../Melodi-unsigned.ipa Payload/
+
+      - name: Upload IPA as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Melodi-unsigned-ipa
+          path: build/Melodi-unsigned.ipa
+          compression-level: 0
+

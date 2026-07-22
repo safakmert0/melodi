@@ -4921,7 +4921,7 @@ void _showAirPlayDevicesDialog(BuildContext context) {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx),
-          child: Text('Close', style: TextStyle(color: MelodiTheme.primaryGreen)),
+          child: Text('Kapat', style: TextStyle(color: MelodiTheme.primaryGreen)),
         ),
       ],
     ),
@@ -4933,25 +4933,25 @@ void _showWidgetConfigDialog(BuildContext context) {
     context: context,
     builder: (ctx) => AlertDialog(
       backgroundColor: const Color(0xFF201f1f),
-      title: Text('Widget Configuration',
+      title: Text('Araç Takımı Yapılandırması',
           style: TextStyle(color: MelodiTheme.onSurface, fontSize: 20, fontWeight: FontWeight.bold)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Choose which widgets to display on your home screen:',
+          Text('Ana ekranda gösterilecek araç takımlarını seçin:',
               style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14)),
           const SizedBox(height: 16),
-          _widgetOption(ctx, 'Now Playing', Icons.music_note, true),
-          _widgetOption(ctx, 'Quick Play', Icons.play_arrow, false),
-          _widgetOption(ctx, 'Favorites', Icons.favorite, false),
-          _widgetOption(ctx, 'Recently Played', Icons.history, false),
+          _widgetOption(ctx, 'Şimdi Çalıyor', Icons.music_note, true),
+          _widgetOption(ctx, 'Hızlı Çalma', Icons.play_arrow, false),
+          _widgetOption(ctx, 'Favoriler', Icons.favorite, false),
+          _widgetOption(ctx, 'Son Çalınanlar', Icons.history, false),
         ],
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx),
-          child: Text('Done', style: TextStyle(color: MelodiTheme.primaryGreen)),
+          child: Text('Tamam', style: TextStyle(color: MelodiTheme.primaryGreen)),
         ),
       ],
     ),

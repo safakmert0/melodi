@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class LocaleNotifier extends ChangeNotifier {
-  String _locale = 'tr';
+  String _locale = AppLocale.currentLocale;
   String get locale => _locale;
 
   void change(String locale) {

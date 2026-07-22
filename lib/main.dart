@@ -314,14 +314,15 @@ class MelodiApp extends StatelessWidget {
           },
         ),
       ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, _) {
+      child: Consumer2<ThemeProvider, LocaleNotifier>(
+        builder: (context, themeProvider, localeNotifier, _) {
           return MaterialApp(
             title: 'Melodi',
             debugShowCheckedModeBanner: false,
             theme: themeProvider.lightTheme,
             darkTheme: themeProvider.darkTheme,
             themeMode: themeProvider.themeMode,
+            locale: Locale(localeNotifier.locale),
             home: const _AppEntry(),
             localizationsDelegates: const [
               GlobalMaterialLocalizations.delegate,

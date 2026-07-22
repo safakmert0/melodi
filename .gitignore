@@ -1,3 +1,16 @@
 # workflows are tracked in repo
 
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
 build/
+*.iml
+.idea/
+.vscode/
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+*.ipa
+*.apk

@@ -709,7 +709,6 @@ class _LanguageSelectorState extends State<_LanguageSelector> {
           onTap: () {
             HapticFeedback.selectionClick();
             setState(() => _selectedLocale = lang.$2);
-            AppLocale.currentLocale = lang.$2;
             context.read<LocaleNotifier>().change(lang.$2);
             DatabaseService.instance.setSetting('app_locale', lang.$2);
           },
