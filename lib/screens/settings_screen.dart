@@ -120,12 +120,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Consumer3<LibraryProvider, PlayerProvider, LocaleNotifier>(
       builder: (context, library, player, locale, _) {
         return Scaffold(
-          backgroundColor: MelodiTheme.background,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
             SliverAppBar(
-              backgroundColor: const Color(0xFF131313),
+              backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
               surfaceTintColor: Colors.transparent,
               title: Text(
                 AppLocale.tr('settings'),
@@ -1654,7 +1654,7 @@ class _CollapsibleSection extends StatefulWidget {
   const _CollapsibleSection({
     required this.title,
     required this.children,
-    this.startExpanded = true,
+    this.startExpanded = false,
   });
 
   @override
@@ -1740,10 +1740,10 @@ class _AppearanceSettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: MelodiTheme.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(AppLocale.tr('appearance')),
-        backgroundColor: MelodiTheme.containerLow,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
       ),
@@ -2540,6 +2540,9 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
       ),
       body: Consumer<SpotifyProvider>(
         builder: (context, spotify, _) {
+          if (!spotify.isInitialized) {
+            return const Center(child: CircularProgressIndicator());
+          }
           if (spotify.isConnected) {
             return ListView(
               padding: const EdgeInsets.all(16),
@@ -4161,11 +4164,11 @@ class _SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     Widget? subtitleWidget;
     if (subtitle is String) {
       subtitleWidget = Text(subtitle as String,
-          style: const TextStyle(
-              color: Color(0xFFbccbb9), fontSize: 12));
+          style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 12));
     } else if (subtitle is Widget) {
       subtitleWidget = subtitle as Widget;
     }
@@ -4173,7 +4176,7 @@ class _SettingsTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF201f1f),
+        color: theme.cardTheme.color ?? theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
@@ -4185,9 +4188,7 @@ class _SettingsTile extends StatelessWidget {
           ),
           child: Icon(icon, color: iconColor, size: 20),
         ),
-        title: Text(title,
-            style: const TextStyle(
-                color: Color(0xFFe5e2e1), fontSize: 15)),
+        title: Text(title, style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 15)),
         subtitle: subtitleWidget,
         trailing: trailing,
         onTap: onTap,

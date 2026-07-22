@@ -1,6 +1,7 @@
 import Flutter
 import UIKit
 import AVFAudio
+import WebKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -21,6 +22,16 @@ import AVFAudio
     // Register platform channel handlers
     let controller = window?.rootViewController as! FlutterViewController
     let messenger = controller.binaryMessenger
+    let spotifyAuthChannel = FlutterMethodChannel(name: "com.melodi/spotify_auth", binaryMessenger: messenger)
+    spotifyAuthChannel.setMethodCallHandler { call, result in
+      guard call.method == "getCookies" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      WKWebsiteDataStore.default().httpCookieStore.getAllCookies { cookies in
+        result(cookies.map { ["name": $0.name, "value": $0.value, "domain": $0.domain] })
+      }
+    }
     airPlayHandler = AirPlayHandler(messenger: messenger)
     carPlayHandler = CarPlayHandler(messenger: messenger)
     voiceControlHandler = VoiceControlHandler(messenger: messenger)

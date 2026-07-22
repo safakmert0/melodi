@@ -184,7 +184,7 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void toggleTheme() {
+  Future<void> toggleTheme() async {
     switch (_themeMode) {
       case ThemeMode.dark:
         _themeMode = ThemeMode.light;
@@ -197,6 +197,7 @@ class ThemeProvider extends ChangeNotifier {
         break;
     }
     _syncIsLightMode();
+    await DatabaseService.instance.setSetting('theme_mode', _themeMode.index.toString());
     notifyListeners();
   }
 

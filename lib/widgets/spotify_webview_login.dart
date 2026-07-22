@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 class SpotifyWebViewLogin extends StatefulWidget {
@@ -15,6 +16,7 @@ class _SpotifyWebViewLoginState extends State<SpotifyWebViewLogin> {
   late WebViewController _controller;
   Timer? _pollTimer;
   bool _found = false;
+  static const _cookieChannel = MethodChannel('com.melodi/spotify_auth');
 
   @override
   void initState() {
@@ -41,6 +43,18 @@ class _SpotifyWebViewLoginState extends State<SpotifyWebViewLogin> {
   Future<void> _checkCookies() async {
     if (_found) return;
     try {
+      final nativeCookies = await _cookieChannel.invokeMethod<List<dynamic>>('getCookies');
+      for (final item in nativeCookies ?? const []) {
+        if (item is Map && item['name'] == 'sp_dc') {
+          final value = item['value'] as String? ?? '';
+          if (value.length > 10) {
+            _found = true;
+            _pollTimer?.cancel();
+            widget.onCookieObtained(value);
+            return;
+          }
+        }
+      }
       final cookieString = await _controller.runJavaScriptReturningResult(
         'document.cookie',
       );

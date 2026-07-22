@@ -14,21 +14,24 @@ class SpotifyProvider extends ChangeNotifier {
   List<SpotifyTrackItem> _likedSongs = [];
   bool _isImportingPlaylists = false;
   bool _isImportingLikedSongs = false;
+  bool _isInitialized = false;
   String? _error;
   final Map<String, String> _matchedTrackIds = {};
 
   SpotifyService get service => _service;
-  bool get isConnected => _service.isConnected || (_spDc != null && _spDc!.isNotEmpty);
+  bool get isConnected => _service.isConnected;
   bool get isConnecting => _isConnecting;
   String? get username => _username;
   List<SpotifyPlaylistItem> get playlists => _playlists;
   List<SpotifyTrackItem> get likedSongs => _likedSongs;
   bool get isImportingPlaylists => _isImportingPlaylists;
   bool get isImportingLikedSongs => _isImportingLikedSongs;
+  bool get isInitialized => _isInitialized;
   String? get error => _error;
   Map<String, String> get matchedTrackIds => Map.unmodifiable(_matchedTrackIds);
 
   Future<void> init() async {
+    try {
     final db = DatabaseService.instance;
     final spDc = await db.getSetting('spotify_sp_dc');
     if (spDc != null && spDc.isNotEmpty) {
@@ -75,6 +78,10 @@ class SpotifyProvider extends ChangeNotifier {
     }
     await _loadMatches();
     await _loadPlaylists();
+    } finally {
+      _isInitialized = true;
+      notifyListeners();
+    }
   }
 
   Future<bool> connectWithCookie(String spDc) async {
