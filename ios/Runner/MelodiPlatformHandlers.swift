@@ -29,6 +29,22 @@ class AirPlayHandler: NSObject {
             }
             result(["devices": devices])
 
+        case "showRoutePicker":
+            DispatchQueue.main.async {
+                let volumeView = MPVolumeView(frame: CGRect(x: -100, y: -100, width: 1, height: 1))
+                volumeView.showsVolumeSlider = false
+                if let routeButton = volumeView.subviews.compactMap({ $0 as? UIButton }).first {
+                    routeButton.sendActions(for: .touchUpInside)
+                }
+                if let window = UIApplication.shared.windows.first {
+                    window.rootViewController?.view.addSubview(volumeView)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        volumeView.removeFromSuperview()
+                    }
+                }
+            }
+            result(true)
+
         case "streamToDevice":
             guard let args = call.arguments as? [String: Any],
                   let deviceId = args["deviceId"] as? String else {

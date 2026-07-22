@@ -28,6 +28,7 @@ import '../providers/download_provider.dart';
 import '../services/database_service.dart';
 import '../services/library_health_service.dart';
 import '../services/playback_service.dart';
+import '../services/airplay_service.dart';
 import '../services/file_organizer.dart';
 import '../services/stream_cache.dart';
 import 'audio_quality_screen.dart';
@@ -4913,9 +4914,13 @@ void _showAirPlayDevicesDialog(BuildContext context) {
         children: [
           ListTile(
             leading: Icon(Icons.speaker, color: const Color(0xFF53e076), size: 20),
-            title: Text('No devices found', style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 15)),
-            subtitle: Text('Make sure AirPlay devices are on the same network',
+            title: Text('AirPlay cihazlarını seç', style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 15)),
+            subtitle: Text('iOS ses çıkışı menüsünü açarak hoparlör veya Apple TV seçebilirsin.',
                 style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
+            onTap: () async {
+              await AirPlayService.instance.showRoutePicker();
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
           ),
         ],
       ),

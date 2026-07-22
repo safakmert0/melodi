@@ -70,6 +70,14 @@ class AirPlayService {
     }
   }
 
+  Future<bool> showRoutePicker() async {
+    try {
+      return await _channel.invokeMethod<bool>('showRoutePicker') ?? false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
   Future<void> stopStreaming() async {
     try {
       await _channel.invokeMethod('stopStreaming');
