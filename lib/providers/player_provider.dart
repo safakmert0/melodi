@@ -7,6 +7,7 @@ import '../services/database_service.dart';
 import '../services/carplay_service.dart';
 import '../services/listening_recorder.dart';
 import '../services/widget_service.dart';
+import '../services/ytmusic_service.dart';
 
 typedef ScrobbleCallback = void Function(SongModel song, int timestamp);
 
@@ -152,7 +153,19 @@ class PlayerProvider extends ChangeNotifier {
   }
 
   Future<void> playFromQueue(List<SongModel> songs, int index) async {
-    await _handler.playFromQueue(songs, index);
+    final queue = List<SongModel>.from(songs);
+    if (index >= 0 && index < queue.length && queue[index].filePath.startsWith('spotify://')) {
+      final target = queue[index];
+      try {
+        final results = await YTMusicService().search('${target.artist} ${target.title}');
+        if (results.isNotEmpty) {
+          final resolved = target.copyWith(filePath: 'youtube://${results.first.videoId}');
+          queue[index] = resolved;
+          await _db.insertSong(resolved);
+        }
+      } catch (_) {}
+    }
+    await _handler.playFromQueue(queue, index);
     _handler.savePlayerState();
     notifyListeners();
   }

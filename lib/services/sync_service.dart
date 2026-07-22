@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import '../models/playlist_model.dart';
+import '../models/song_model.dart';
 import '../services/database_service.dart';
 import '../services/spotify_service.dart';
 import '../services/ytmusic_service.dart';
@@ -140,7 +141,24 @@ class SyncService {
             bestId = ls.id;
           }
         }
-        if (bestId != null) matchedIds.add(bestId);
+        if (bestId != null) {
+          matchedIds.add(bestId);
+        } else {
+          // Keep unmatched Spotify entries visible in the local playlist.
+          // They can be resolved/downloaded later instead of disappearing.
+          final placeholder = SongModel(
+            id: 'spotify:${track.id}',
+            title: track.name,
+            artist: track.artists.join(', '),
+            album: track.albumName ?? '',
+            duration: Duration(milliseconds: track.durationMs),
+            filePath: 'spotify://${track.id}',
+            fileSize: 0,
+          );
+          await _db.insertSong(placeholder);
+          localSongs.add(placeholder);
+          matchedIds.add(placeholder.id);
+        }
       }
 
       // Create or update playlist even if no tracks matched locally
