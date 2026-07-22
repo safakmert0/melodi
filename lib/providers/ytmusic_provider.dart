@@ -7,6 +7,7 @@ import '../services/ytmusic_service.dart';
 class YTMusicProvider extends ChangeNotifier {
   final YTMusicService _service;
   bool _isConnecting = false;
+  bool _isInitialized = false;
   String? _error;
   List<YTMusicPlaylist> _playlists = [];
 
@@ -16,16 +17,22 @@ class YTMusicProvider extends ChangeNotifier {
   String? get cookie => _service.cookie;
   bool get isConnected => _service.isConnected;
   bool get isConnecting => _isConnecting;
+  bool get isInitialized => _isInitialized;
   String? get error => _error;
   List<YTMusicPlaylist> get playlists => _playlists;
 
   Future<void> loadSession() async {
-    final db = DatabaseService.instance;
-    final savedCookie = await db.getSetting('ytmusic_cookie');
-    if (savedCookie != null && savedCookie.isNotEmpty) {
-      _service.connectWithCookie(savedCookie);
-      // Load saved playlists
-      await _loadPlaylists();
+    try {
+      final db = DatabaseService.instance;
+      final savedCookie = await db.getSetting('ytmusic_cookie');
+      if (savedCookie != null && savedCookie.isNotEmpty) {
+        _service.connectWithCookie(savedCookie);
+        await _loadPlaylists();
+      }
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isInitialized = true;
       notifyListeners();
     }
   }

@@ -2313,6 +2313,9 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
       ),
       body: Consumer<YTMusicProvider>(
         builder: (context, ytmusic, _) {
+          if (!ytmusic.isInitialized) {
+            return const Center(child: CircularProgressIndicator());
+          }
           if (ytmusic.isConnected) {
             return ListView(
               padding: const EdgeInsets.all(16),
