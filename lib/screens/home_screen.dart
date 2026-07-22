@@ -10,10 +10,10 @@ import '../providers/connection_provider.dart';
 import '../models/song_model.dart';
 import 'settings_screen.dart';
 import 'profile_screen.dart';
-import 'playlist_detail_screen.dart';
 import 'mixes_screen.dart';
 import 'downloads_screen.dart';
 import 'library_health_screen.dart';
+import 'listening_history_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -73,6 +73,10 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              if (library.songs.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: _buildListeningSummary(context, library),
+                ),
               SliverToBoxAdapter(
                 child: library.isLoading
                     ? const Center(
@@ -98,6 +102,91 @@ class HomeScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildListeningSummary(BuildContext context, LibraryProvider library) {
+    final totalDuration = library.songs.fold<Duration>(
+      Duration.zero,
+      (total, song) => total + song.duration,
+    );
+    final hours = totalDuration.inHours;
+    final minutes = totalDuration.inMinutes.remainder(60);
+    final durationLabel = hours > 0 ? '${hours}s ${minutes}dk' : '${minutes}dk';
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1C4A3B), Color(0xFF102B25)],
+        ),
+        border: Border.all(color: MelodiTheme.primaryGreen.withOpacity(0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome_rounded, color: MelodiTheme.primaryGreen, size: 20),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('Dinleme Özeti', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700)),
+              ),
+              Text('${library.favorites.length} favori', style: const TextStyle(color: Color(0xFFB8D8CC), fontSize: 12)),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              _summaryMetric(Icons.music_note_rounded, '${library.songs.length}', 'şarkı'),
+              _summaryMetric(Icons.album_rounded, '${library.albums.length}', 'albüm'),
+              _summaryMetric(Icons.people_alt_rounded, '${library.artists.length}', 'sanatçı'),
+              _summaryMetric(Icons.schedule_rounded, durationLabel, 'müzik'),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(child: _summaryAction(context, Icons.history_rounded, 'Geçmiş', const ListeningHistoryScreen())),
+              const SizedBox(width: 8),
+              Expanded(child: _summaryAction(context, Icons.health_and_safety_rounded, 'Kütüphane', const LibraryHealthScreen())),
+              const SizedBox(width: 8),
+              Expanded(child: _summaryAction(context, Icons.download_rounded, 'İndirmeler', const DownloadsScreen())),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryMetric(IconData icon, String value, String label) {
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, color: const Color(0xFFB8D8CC), size: 17),
+          const SizedBox(height: 4),
+          Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+          Text(label, style: const TextStyle(color: Color(0xFF9FC2B5), fontSize: 11)),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryAction(BuildContext context, IconData icon, String label, Widget screen) {
+    return OutlinedButton.icon(
+      onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen)),
+      icon: Icon(icon, size: 15),
+      label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.white,
+        side: BorderSide(color: Colors.white.withOpacity(0.24)),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 9),
+        textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+      ),
     );
   }
 
