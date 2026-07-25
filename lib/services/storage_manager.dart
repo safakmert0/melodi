@@ -1,5 +1,8 @@
 import 'dart:io';
+import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import '../models/song_model.dart';
 import 'database_service.dart';
 
 class StorageManager {
@@ -9,6 +12,8 @@ class StorageManager {
   StorageManager._();
 
   final DatabaseService _db = DatabaseService.instance;
+  static const MethodChannel _storageChannel =
+      MethodChannel('com.melodi/storage');
 
   static const _audioExtensions = [
     'flac',
@@ -34,13 +39,118 @@ class StorageManager {
   ];
 
   Future<String> getStorageLocation() async {
-    final customPath = await _db.getSetting('download_path');
-    if (customPath != null && customPath.isNotEmpty) {
-      return customPath;
+    if (!Platform.isIOS) {
+      final customPath = await _db.getSetting('download_path');
+      if (customPath != null && customPath.isNotEmpty) return customPath;
+      final documents = await getApplicationDocumentsDirectory();
+      return p.join(documents.path, 'downloads');
     }
-    final dir = await getApplicationDocumentsDirectory();
-    return '${dir.path}/downloads';
+    return (await _privateOfflineDirectory()).path;
   }
+
+  Future<Directory> _privateOfflineDirectory() async {
+    final support = await getApplicationSupportDirectory();
+    final directory = Directory(p.join(support.path, 'Melodi', 'Offline'));
+    await directory.create(recursive: true);
+    if (Platform.isIOS) {
+      try {
+        await _storageChannel.invokeMethod<void>(
+          'excludeFromBackup',
+          {'path': directory.path},
+        );
+      } catch (_) {}
+    }
+    return directory;
+  }
+
+  /// Moves v4.1-and-older downloads out of Documents and repairs Spotify
+  /// placeholders so a downloaded row opens the local file immediately.
+  Future<({int moved, int relinked})> migrateLegacyDownloads() async {
+    if (!Platform.isIOS) return (moved: 0, relinked: 0);
+    final destination = await _privateOfflineDirectory();
+    final documents = await getApplicationDocumentsDirectory();
+    final legacy = Directory(p.join(documents.path, 'downloads'));
+    var moved = 0;
+
+    if (await legacy.exists()) {
+      await for (final entity in legacy.list()) {
+        if (entity is! File) continue;
+        final extension =
+            p.extension(entity.path).replaceFirst('.', '').toLowerCase();
+        if (!_audioExtensions.contains(extension)) continue;
+        final oldPath = entity.path;
+        final newPath =
+            await _uniquePath(destination.path, p.basename(oldPath));
+        try {
+          await entity.rename(newPath);
+        } catch (_) {
+          await entity.copy(newPath);
+          await entity.delete();
+        }
+        await _db.rawUpdate(
+          'UPDATE songs SET filePath = ? WHERE filePath = ?',
+          [newPath, oldPath],
+        );
+        moved++;
+      }
+      try {
+        if (await legacy.list().isEmpty) await legacy.delete();
+      } catch (_) {}
+    }
+
+    final songs = await _db.getAllSongs();
+    final localSongs = songs.where((song) {
+      if (song.filePath.startsWith('spotify://') ||
+          song.filePath.startsWith('youtube://') ||
+          song.filePath.startsWith('http')) {
+        return false;
+      }
+      return File(song.filePath).existsSync();
+    }).toList();
+    var relinked = 0;
+    for (final placeholder
+        in songs.where((song) => song.filePath.startsWith('spotify://'))) {
+      final titleKey = _matchKey(placeholder.title);
+      final artistKey = _matchKey(placeholder.artist.split(',').first);
+      SongModel? match;
+      for (final local in localSongs) {
+        final pathKey = _matchKey(p.basenameWithoutExtension(local.filePath));
+        final sameMetadata = _matchKey(local.title) == titleKey &&
+            (_matchKey(local.artist).contains(artistKey) || artistKey.isEmpty);
+        final fileNameMatch = titleKey.isNotEmpty &&
+            pathKey.contains(titleKey) &&
+            (artistKey.isEmpty || pathKey.contains(artistKey));
+        if (sameMetadata || fileNameMatch) {
+          match = local;
+          break;
+        }
+      }
+      if (match == null) continue;
+      await _db.updateTrackMetadata(placeholder.id, {
+        'filePath': match.filePath,
+        'fileSize': File(match.filePath).lengthSync(),
+      });
+      relinked++;
+    }
+    await _db.setSetting('private_download_migration', 'completed');
+    return (moved: moved, relinked: relinked);
+  }
+
+  Future<String> _uniquePath(String directory, String fileName) async {
+    var candidate = p.join(directory, fileName);
+    var suffix = 1;
+    while (await File(candidate).exists()) {
+      candidate = p.join(
+        directory,
+        '${p.basenameWithoutExtension(fileName)} ($suffix)${p.extension(fileName)}',
+      );
+      suffix++;
+    }
+    return candidate;
+  }
+
+  String _matchKey(String value) =>
+      value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
 
   Future<int> getLibrarySize() async {
     final dir = Directory(await getStorageLocation());
@@ -99,6 +209,9 @@ class StorageManager {
 
   Future<void> moveLibrary(String newPath,
       {void Function(double progress)? onProgress}) async {
+    if (Platform.isIOS) {
+      throw UnsupportedError('iOS downloads stay inside Melodi');
+    }
     final source = Directory(await getStorageLocation());
     if (!await source.exists()) return;
     final dest = Directory(newPath);

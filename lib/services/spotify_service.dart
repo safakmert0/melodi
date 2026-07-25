@@ -555,29 +555,124 @@ class SpotifyService {
     String? folderUri,
   }) async {
     try {
-      final variables = jsonEncode({
-        'filters': ['Playlists'],
-        'order': null,
-        'textFilter': '',
-        'features': ['LIKED_SONGS', 'YOUR_EPISODES'],
-        'limit': limit,
-        'offset': offset,
-        if (folderUri != null) 'folderUri': folderUri,
-      });
+      if (_accessToken != null && _accessToken!.isNotEmpty) {
+        final webApi = await _tryGetUserPlaylistsViaWebApi(_accessToken!);
+        if (webApi != null) return webApi;
+      }
 
-      final responseJson = await _executeGraphQL(
-        operationName: 'libraryV3',
-        variables: variables,
-        hash: SpotifyAuthConfig.hashLibraryV3,
-      );
+      final pageSize = limit.clamp(1, 50);
+      final playlists = <SpotifyPlaylistItem>[];
+      final seenPlaylists = <String>{};
+      final pendingFolders = <String?>[folderUri];
+      final seenFolders = <String>{};
 
-      if (responseJson == null) return [];
+      while (pendingFolders.isNotEmpty) {
+        final currentFolder = pendingFolders.removeAt(0);
+        if (currentFolder != null && !seenFolders.add(currentFolder)) continue;
+        var pageOffset = currentFolder == folderUri ? offset : 0;
 
-      return _parseLibraryPage(responseJson);
+        while (true) {
+          final variables = jsonEncode({
+            'filters': ['Playlists'],
+            'order': null,
+            'textFilter': '',
+            'features': ['LIKED_SONGS', 'YOUR_EPISODES'],
+            'limit': pageSize,
+            'offset': pageOffset,
+            if (currentFolder != null) 'folderUri': currentFolder,
+          });
+          final responseJson = await _executeGraphQL(
+            operationName: 'libraryV3',
+            variables: variables,
+            hash: SpotifyAuthConfig.hashLibraryV3,
+          );
+          if (responseJson == null) break;
+
+          final rawItems = responseJson['data']?['me']?['libraryV3']?['items']
+              as List<dynamic>?;
+          if (rawItems == null || rawItems.isEmpty) break;
+          for (final playlist in _parseLibraryPage(responseJson)) {
+            if (seenPlaylists.add(playlist.id)) playlists.add(playlist);
+          }
+          for (final folder in _parseLibraryFolderUris(responseJson)) {
+            if (!seenFolders.contains(folder)) pendingFolders.add(folder);
+          }
+          if (rawItems.length < pageSize) break;
+          pageOffset += rawItems.length;
+        }
+      }
+      return playlists;
     } catch (e) {
       debugPrint('getUserPlaylists failed: $e');
       return [];
     }
+  }
+
+  Future<List<SpotifyPlaylistItem>?> _tryGetUserPlaylistsViaWebApi(
+      String token) async {
+    try {
+      final playlists = <SpotifyPlaylistItem>[];
+      final seen = <String>{};
+      String? url = '${SpotifyAuthConfig.webApiBase}/me/playlists?limit=50';
+      while (url != null) {
+        final response = await http.get(Uri.parse(url), headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        });
+        if (response.statusCode != 200) return null;
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final items = body['items'] as List<dynamic>? ?? const [];
+        for (final element in items) {
+          try {
+            final data = element as Map<String, dynamic>;
+            final id = data['id']?.toString();
+            final name = data['name']?.toString();
+            if (id == null || id.isEmpty || name == null || !seen.add(id)) {
+              continue;
+            }
+            final owner = data['owner'] as Map<String, dynamic>?;
+            final images = data['images'] as List<dynamic>?;
+            final imageUrl = images != null && images.isNotEmpty
+                ? (images.first as Map<String, dynamic>)['url']?.toString()
+                : null;
+            final tracks = data['tracks'] as Map<String, dynamic>?;
+            final currentItems = data['items'] as Map<String, dynamic>?;
+            playlists.add(SpotifyPlaylistItem(
+              id: id,
+              name: name,
+              ownerId: owner?['id']?.toString() ?? '',
+              imageUrl: imageUrl,
+              trackCount:
+                  (currentItems?['total'] ?? tracks?['total'] ?? 0) as int,
+            ));
+          } catch (_) {}
+        }
+        url = body['next']?.toString();
+      }
+      return playlists;
+    } catch (e) {
+      debugPrint('tryGetUserPlaylistsViaWebApi failed: $e');
+      return null;
+    }
+  }
+
+  List<String> _parseLibraryFolderUris(Map<String, dynamic> responseJson) {
+    final items =
+        responseJson['data']?['me']?['libraryV3']?['items'] as List<dynamic>? ??
+            const [];
+    final folders = <String>[];
+    for (final element in items) {
+      try {
+        final data = (element as Map<String, dynamic>)['item']?['data']
+            as Map<String, dynamic>?;
+        final uri = data?['uri']?.toString();
+        if (uri != null &&
+            (data?['__typename'] == 'Folder' || uri.contains(':folder:'))) {
+          folders.add(uri);
+        }
+      } catch (_) {}
+    }
+    return folders;
   }
 
   List<SpotifyPlaylistItem> _parseLibraryPage(
@@ -648,10 +743,17 @@ class SpotifyService {
 
   Future<List<SpotifyTrackItem>> getPlaylistTracks(String playlistId) async {
     try {
-      final token = await getClientCredentialsToken();
-      if (token != null) {
+      final userToken = _accessToken;
+      if (userToken != null && userToken.isNotEmpty) {
         final webApiTracks =
-            await _tryGetPlaylistTracksViaWebApi(playlistId, token);
+            await _tryGetPlaylistTracksViaWebApi(playlistId, userToken);
+        if (webApiTracks != null) return webApiTracks;
+      }
+
+      final clientToken = await getClientCredentialsToken();
+      if (clientToken != null) {
+        final webApiTracks =
+            await _tryGetPlaylistTracksViaWebApi(playlistId, clientToken);
         if (webApiTracks != null) return webApiTracks;
       }
 
@@ -667,10 +769,8 @@ class SpotifyService {
     try {
       final allTracks = <SpotifyTrackItem>[];
       String? url =
-          '${SpotifyAuthConfig.webApiBase}/playlists/$playlistId/tracks'
-          '?limit=50&offset=0'
-          '&fields=items(track(id,name,uri,duration_ms,explicit,external_ids,'
-          'artists(id,name),album(id,name,images))),next';
+          '${SpotifyAuthConfig.webApiBase}/playlists/$playlistId/items'
+          '?limit=50&offset=0&additional_types=track';
 
       while (url != null) {
         final response = await http.get(
@@ -691,7 +791,8 @@ class SpotifyService {
         for (final element in items) {
           try {
             final wrapper = element as Map<String, dynamic>;
-            final trackObj = wrapper['track'] as Map<String, dynamic>?;
+            final trackObj =
+                (wrapper['item'] ?? wrapper['track']) as Map<String, dynamic>?;
             if (trackObj == null) continue;
 
             final id = trackObj['id'] as String?;
@@ -919,24 +1020,100 @@ class SpotifyService {
     int offset = 0,
   }) async {
     try {
-      final variables = jsonEncode({
-        'offset': offset,
-        'limit': limit,
-      });
+      if (_accessToken != null && _accessToken!.isNotEmpty) {
+        final webApi = await _tryGetLikedSongsViaWebApi(_accessToken!);
+        if (webApi != null) return webApi;
+      }
 
-      final responseJson = await _executeGraphQL(
-        operationName: 'fetchLibraryTracks',
-        variables: variables,
-        hash: SpotifyAuthConfig.hashFetchLibraryTracks,
-      );
-
-      if (responseJson == null) return [];
-
-      return _parseLibraryTracksResponse(responseJson);
+      final pageSize = limit.clamp(1, 50);
+      final tracks = <SpotifyTrackItem>[];
+      final seen = <String>{};
+      var pageOffset = offset;
+      while (true) {
+        final variables = jsonEncode({
+          'offset': pageOffset,
+          'limit': pageSize,
+        });
+        final responseJson = await _executeGraphQL(
+          operationName: 'fetchLibraryTracks',
+          variables: variables,
+          hash: SpotifyAuthConfig.hashFetchLibraryTracks,
+        );
+        if (responseJson == null) break;
+        final rawItems = responseJson['data']?['me']?['library']?['tracks']
+            ?['items'] as List<dynamic>?;
+        if (rawItems == null || rawItems.isEmpty) break;
+        for (final track in _parseLibraryTracksResponse(responseJson)) {
+          if (seen.add(track.id)) tracks.add(track);
+        }
+        if (rawItems.length < pageSize) break;
+        pageOffset += rawItems.length;
+      }
+      return tracks;
     } catch (e) {
       debugPrint('getLikedSongs failed: $e');
       return [];
     }
+  }
+
+  Future<List<SpotifyTrackItem>?> _tryGetLikedSongsViaWebApi(
+      String token) async {
+    try {
+      final tracks = <SpotifyTrackItem>[];
+      final seen = <String>{};
+      String? url = '${SpotifyAuthConfig.webApiBase}/me/tracks?limit=50';
+      while (url != null) {
+        final response = await http.get(Uri.parse(url), headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        });
+        if (response.statusCode != 200) return null;
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final items = body['items'] as List<dynamic>? ?? const [];
+        for (final element in items) {
+          try {
+            final wrapper = element as Map<String, dynamic>;
+            final trackObj =
+                (wrapper['item'] ?? wrapper['track']) as Map<String, dynamic>?;
+            if (trackObj == null) continue;
+            final parsed = _parseWebApiTrack(trackObj);
+            if (parsed != null && seen.add(parsed.id)) tracks.add(parsed);
+          } catch (_) {}
+        }
+        url = body['next']?.toString();
+      }
+      return tracks;
+    } catch (e) {
+      debugPrint('tryGetLikedSongsViaWebApi failed: $e');
+      return null;
+    }
+  }
+
+  SpotifyTrackItem? _parseWebApiTrack(Map<String, dynamic> trackObj) {
+    final id = trackObj['id']?.toString();
+    final name = trackObj['name']?.toString();
+    if (id == null || id.isEmpty || name == null || name.isEmpty) return null;
+    final artists = (trackObj['artists'] as List<dynamic>?)
+            ?.map((artist) =>
+                (artist as Map<String, dynamic>)['name']?.toString() ?? '')
+            .where((artist) => artist.isNotEmpty)
+            .toList() ??
+        const <String>[];
+    final albumObj = trackObj['album'] as Map<String, dynamic>?;
+    final images = albumObj?['images'] as List<dynamic>?;
+    final imageUrl = images != null && images.isNotEmpty
+        ? (images.first as Map<String, dynamic>)['url']?.toString()
+        : null;
+    return SpotifyTrackItem(
+      id: id,
+      name: name,
+      artists: artists,
+      albumName: albumObj?['name']?.toString(),
+      albumId: albumObj?['id']?.toString(),
+      albumImageUrl: imageUrl,
+      durationMs: (trackObj['duration_ms'] as num?)?.toInt() ?? 0,
+      uri: trackObj['uri']?.toString() ?? 'spotify:track:$id',
+    );
   }
 
   List<SpotifyTrackItem> _parseLibraryTracksResponse(

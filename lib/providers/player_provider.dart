@@ -7,7 +7,6 @@ import '../services/database_service.dart';
 import '../services/carplay_service.dart';
 import '../services/listening_recorder.dart';
 import '../services/widget_service.dart';
-import '../services/ytmusic_service.dart';
 
 typedef ScrobbleCallback = void Function(SongModel song, int timestamp);
 
@@ -138,7 +137,29 @@ class PlayerProvider extends ChangeNotifier {
   }
 
   Future<void> playSong(SongModel song) async {
-    await _handler.playSong(song);
+    final isRemote = song.filePath.startsWith('youtube://') ||
+        song.filePath.startsWith('spotify://') ||
+        song.filePath.startsWith('http://') ||
+        song.filePath.startsWith('https://');
+    if (!isRemote) {
+      final storedSongs = await _db.getAllSongs();
+      final index = storedSongs.indexWhere((item) => item.id == song.id);
+      if (index >= 0 && storedSongs.length > 1) {
+        final artwork = await _db.getAllCachedAlbumArts();
+        final queue = storedSongs
+            .map((item) => item.id == song.id
+                ? song
+                : artwork[item.id] == null
+                    ? item
+                    : item.copyWith(albumArt: artwork[item.id]))
+            .toList();
+        await _handler.playFromQueue(queue, index);
+      } else {
+        await _handler.playSong(song);
+      }
+    } else {
+      await _handler.playSong(song);
+    }
     _playStartTime = DateTime.now();
     _startScrobbleTimer(song);
     _handler.savePlayerState();
@@ -159,23 +180,7 @@ class PlayerProvider extends ChangeNotifier {
   }
 
   Future<void> playFromQueue(List<SongModel> songs, int index) async {
-    final queue = List<SongModel>.from(songs);
-    if (index >= 0 &&
-        index < queue.length &&
-        queue[index].filePath.startsWith('spotify://')) {
-      final target = queue[index];
-      try {
-        final results =
-            await YTMusicService().search('${target.artist} ${target.title}');
-        if (results.isNotEmpty) {
-          final resolved =
-              target.copyWith(filePath: 'youtube://${results.first.videoId}');
-          queue[index] = resolved;
-          await _db.insertSong(resolved);
-        }
-      } catch (_) {}
-    }
-    await _handler.playFromQueue(queue, index);
+    await _handler.playFromQueue(List<SongModel>.from(songs), index);
     _handler.savePlayerState();
     notifyListeners();
   }

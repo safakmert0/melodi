@@ -37,6 +37,7 @@ import 'services/notification_service.dart';
 import 'services/bluetooth_service.dart';
 import 'services/audio_effects_service.dart';
 import 'services/voice_control_service.dart';
+import 'services/storage_manager.dart';
 import 'screens/onboarding_screen.dart';
 import 'widgets/main_shell.dart';
 
@@ -73,6 +74,17 @@ Future<void> main() async {
       await db.database;
     } catch (e) {
       AppLogger.e('Database init failed: $e');
+    }
+    try {
+      final migration = await StorageManager.instance.migrateLegacyDownloads();
+      if (migration.moved > 0 || migration.relinked > 0) {
+        AppLogger.i(
+          'Private downloads migrated: ${migration.moved}, '
+          'relinked: ${migration.relinked}',
+        );
+      }
+    } catch (e) {
+      AppLogger.e('Private download migration failed: $e');
     }
 
     try {

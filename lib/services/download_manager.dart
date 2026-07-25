@@ -14,6 +14,7 @@ enum DownloadState { pending, downloading, completed, failed }
 class DownloadTask {
   final String id;
   final String spotifyTrackId;
+  final String? sourceVideoId;
   final String title;
   final String artist;
   final String? album;
@@ -28,6 +29,7 @@ class DownloadTask {
   DownloadTask({
     required this.id,
     required this.spotifyTrackId,
+    this.sourceVideoId,
     required this.title,
     required this.artist,
     this.album,
@@ -69,10 +71,12 @@ class DownloadManager {
     required String artist,
     String? album,
     String? imageUrl,
+    String? sourceVideoId,
   }) {
     final task = DownloadTask(
       id: _taskId(),
       spotifyTrackId: spotifyTrackId,
+      sourceVideoId: sourceVideoId,
       title: title,
       artist: artist,
       album: album,
@@ -160,10 +164,10 @@ class DownloadManager {
         final ytTracks = allTracks
             .where((t) => t.source == MusicSourceType.youtube)
             .toList();
-        String? videoId;
-        if (ytTracks.isNotEmpty) {
+        String? videoId = task.sourceVideoId;
+        if (videoId == null && ytTracks.isNotEmpty) {
           videoId = ytTracks.first.id;
-        } else {
+        } else if (videoId == null) {
           // Fallback: search YouTube directly
           task.progress = 0.1;
           task.error = 'YouTube aranıyor...';
@@ -194,6 +198,7 @@ class DownloadManager {
             videoId,
             task.title,
             quality: task.requestedQuality,
+            destinationDirectory: downloadDir.path,
           );
           if (resultPath != null) {
             task.filePath = resultPath;
@@ -304,7 +309,8 @@ class DownloadManager {
       final ytTracks = searchResults
           .where((track) => track.source == MusicSourceType.youtube)
           .toList();
-      String? videoId = ytTracks.isEmpty ? null : ytTracks.first.id;
+      String? videoId = task.sourceVideoId;
+      videoId ??= ytTracks.isEmpty ? null : ytTracks.first.id;
       if (videoId == null) {
         task.progress = 0.15;
         task.error = 'YouTube yedek kaynağı aranıyor...';
@@ -332,6 +338,8 @@ class DownloadManager {
         videoId,
         task.title,
         quality: task.requestedQuality,
+        destinationDirectory:
+            await StorageManager.instance.getStorageLocation(),
       );
     } catch (error) {
       debugPrint('YouTube fallback download error: $error');
@@ -401,7 +409,19 @@ class DownloadManager {
 
       final metadata = await MetadataService.extractMetadata(destPath);
       if (metadata != null) {
-        await db.insertSong(metadata);
+        final placeholderId = 'spotify:${task.spotifyTrackId}';
+        final placeholder = await db.getSongById(placeholderId);
+        final normalized = metadata.copyWith(
+          id: placeholder?.id ?? metadata.id,
+          title: task.title,
+          artist: task.artist,
+          album:
+              (task.album?.isNotEmpty ?? false) ? task.album : metadata.album,
+          filePath: destPath,
+          albumArt: placeholder?.albumArt ?? metadata.albumArt,
+          fileSize: await File(destPath).length(),
+        );
+        await db.insertSong(normalized);
       }
 
       return destPath;

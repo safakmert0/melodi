@@ -1245,7 +1245,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         subtitle: 'Gelişmiş seçeneklerin tamamı',
         icon: Icons.tune_rounded,
         color: theme.colorScheme.onSurfaceVariant,
-        onTap: () => setState(() => _showAllSettings = true),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => _AllSettingsPage(
+              entries: _buildAllSettingsEntries(context),
+            ),
+          ),
+        ),
       ),
     ];
 
@@ -1336,6 +1342,321 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  List<_SettingsHubEntry> _buildAllSettingsEntries(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    void open(Widget page) => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => page),
+        );
+    void message(String text) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+    }
+
+    return [
+      _SettingsHubEntry(
+        section: 'Kişiselleştirme',
+        title: 'Görünüm ve tema',
+        subtitle: 'Tema, renkler ve uygulama görünümü',
+        icon: Icons.palette_outlined,
+        color: colors.primary,
+        onTap: () => open(const _AppearanceSettingsPage()),
+      ),
+      _SettingsHubEntry(
+        section: 'Kişiselleştirme',
+        title: 'Dil',
+        subtitle: _selectedLanguage,
+        icon: Icons.language_rounded,
+        color: const Color(0xFF00A896),
+        onTap: () => _showLanguagePicker(context),
+      ),
+      _SettingsHubEntry(
+        section: 'Oynatma ve ses',
+        title: 'Oynatma',
+        subtitle: 'Geçiş, kesintisiz oynatma ve karıştırma',
+        icon: Icons.play_circle_outline_rounded,
+        color: const Color(0xFF8C72FF),
+        onTap: () => open(_PlaybackSettingsPage(
+          crossfadeSeconds: _crossfadeSeconds,
+          autoShuffle: _autoShuffle,
+          gaplessPlayback: _gaplessPlayback,
+          onCrossfadeChanged: (value) =>
+              setState(() => _crossfadeSeconds = value),
+          onAutoShuffleChanged: (value) => setState(() => _autoShuffle = value),
+          onGaplessChanged: (value) => setState(() => _gaplessPlayback = value),
+        )),
+      ),
+      _SettingsHubEntry(
+        section: 'Oynatma ve ses',
+        title: 'Ses kalitesi',
+        subtitle: 'Akış ve indirme kalite tercihleri',
+        icon: Icons.high_quality_rounded,
+        color: const Color(0xFFFF9F43),
+        onTap: () => open(const AudioQualityScreen()),
+      ),
+      _SettingsHubEntry(
+        section: 'Oynatma ve ses',
+        title: 'Ekolayzır',
+        subtitle: 'Frekansları ve hazır profilleri ayarla',
+        icon: Icons.tune_rounded,
+        color: const Color(0xFF9B5DE5),
+        onTap: () => open(const _EqualizerPage()),
+      ),
+      _SettingsHubEntry(
+        section: 'Oynatma ve ses',
+        title: 'Ses efektleri',
+        subtitle: 'Ses işleme ve çıkış seçenekleri',
+        icon: Icons.equalizer_rounded,
+        color: const Color(0xFF2BB673),
+        onTap: () => open(const _AudioEffectsPage()),
+      ),
+      _SettingsHubEntry(
+        section: 'Kaynaklar ve hesaplar',
+        title: 'Müzik kaynakları',
+        subtitle: 'Tüm katalogları ve yeteneklerini gör',
+        icon: Icons.hub_outlined,
+        color: const Color(0xFF2EC4B6),
+        onTap: () => open(const SourceHubScreen()),
+      ),
+      _SettingsHubEntry(
+        section: 'Kaynaklar ve hesaplar',
+        title: 'Spotify',
+        subtitle: context.read<SpotifyProvider>().isConnected
+            ? 'Bağlı · listeler, beğeniler ve eşzamanlama'
+            : 'Hesabını bağla ve kitaplığını içe aktar',
+        icon: Icons.graphic_eq_rounded,
+        color: const Color(0xFF1ED760),
+        onTap: () => open(const _SpotifySettingsPage()),
+      ),
+      _SettingsHubEntry(
+        section: 'Kaynaklar ve hesaplar',
+        title: 'YouTube Music',
+        subtitle: context.read<YTMusicProvider>().isConnected
+            ? 'Bağlı · kitaplık ve geçmiş'
+            : 'Hesabını bağla',
+        icon: Icons.play_circle_fill_rounded,
+        color: const Color(0xFFFF3D5A),
+        onTap: () => open(const _YtMusicSettingsPage()),
+      ),
+      _SettingsHubEntry(
+        section: 'Kaynaklar ve hesaplar',
+        title: 'Last.fm',
+        subtitle: 'Scrobble ve dinleme geçmişi',
+        icon: Icons.insights_rounded,
+        color: const Color(0xFFD51007),
+        onTap: () => open(const _LastFmSettingsPage()),
+      ),
+      _SettingsHubEntry(
+        section: 'Kaynaklar ve hesaplar',
+        title: 'Akış motoru',
+        subtitle: 'Çevrim içi oynatma davranışı',
+        icon: Icons.cloud_outlined,
+        color: const Color(0xFF4D96FF),
+        onTap: () => open(const _StreamingSettingsPage()),
+      ),
+      _SettingsHubEntry(
+        section: 'Kaynaklar ve hesaplar',
+        title: 'YT-DLP backend',
+        subtitle: 'İsteğe bağlı uzak indirme motoru',
+        icon: Icons.dns_outlined,
+        color: colors.primary,
+        onTap: () => open(const BackendSettingsScreen()),
+      ),
+      _SettingsHubEntry(
+        section: 'Eşzamanlama',
+        title: 'Zamanlanmış eşzamanlama',
+        subtitle: 'Gün, saat ve ağ koşulları',
+        icon: Icons.schedule_rounded,
+        color: const Color(0xFF00A896),
+        onTap: () => open(const _SyncSettingsPage()),
+      ),
+      _SettingsHubEntry(
+        section: 'Eşzamanlama',
+        title: 'Varsayılan eşzamanlama',
+        subtitle: 'Spotify ve YouTube Music yönü',
+        icon: Icons.sync_alt_rounded,
+        color: const Color(0xFF2EC4B6),
+        onTap: () => open(const _DefaultSyncSettingsPage()),
+      ),
+      _SettingsHubEntry(
+        section: 'Eşzamanlama',
+        title: 'Beğenileri aynala',
+        subtitle: 'Kaynaklar arasında beğenileri eşleştir',
+        icon: Icons.favorite_border_rounded,
+        color: const Color(0xFFFF6B81),
+        onTap: () => open(const _LikeMirrorSettingsPage()),
+      ),
+      _SettingsHubEntry(
+        section: 'Eşzamanlama',
+        title: 'Geçmiş ve scrobble',
+        subtitle: 'Dinleme geçmişini diğer servislere gönder',
+        icon: Icons.history_rounded,
+        color: const Color(0xFFFF9F43),
+        onTap: () => open(const _ScrobbleSettingsPage()),
+      ),
+      _SettingsHubEntry(
+        section: 'Kitaplık',
+        title: 'Kitaplığı yeniden tara',
+        subtitle: 'Aygıttaki müzik dosyalarını bul',
+        icon: Icons.refresh_rounded,
+        color: const Color(0xFF2BB673),
+        onTap: () async {
+          await context.read<LibraryProvider>().scanMusic();
+          message('Kitaplık taraması tamamlandı');
+        },
+      ),
+      _SettingsHubEntry(
+        section: 'Kitaplık',
+        title: 'Dosyalardan içe aktar',
+        subtitle: 'Bir veya daha fazla ses dosyası seç',
+        icon: Icons.file_open_rounded,
+        color: const Color(0xFFFF9F43),
+        onTap: () => context.read<LibraryProvider>().importFromFiles(),
+      ),
+      _SettingsHubEntry(
+        section: 'Kitaplık',
+        title: 'Klasörden içe aktar',
+        subtitle: 'Seçilen klasördeki müzikleri tara',
+        icon: Icons.folder_copy_outlined,
+        color: const Color(0xFF9B5DE5),
+        onTap: () => context.read<LibraryProvider>().importFromDirectory(),
+      ),
+      _SettingsHubEntry(
+        section: 'Kitaplık',
+        title: 'İzlenen klasör',
+        subtitle: _watchedFolderPath.isEmpty
+            ? 'Otomatik taranacak klasörü seç'
+            : _watchedFolderPath,
+        icon: Icons.folder_special_outlined,
+        color: const Color(0xFF7C6EE6),
+        onTap: () => _pickWatchedFolder(context),
+      ),
+      _SettingsHubEntry(
+        section: 'Kitaplık',
+        title: 'Kitaplık sağlığı',
+        subtitle: 'Eksik dosyalar ve bozuk eşleşmeler',
+        icon: Icons.health_and_safety_outlined,
+        color: const Color(0xFF2BB673),
+        onTap: () => open(const LibraryHealthScreen()),
+      ),
+      _SettingsHubEntry(
+        section: 'Kitaplık',
+        title: 'Kapakları ve sözleri tamamla',
+        subtitle: 'Eksik metadata alanlarını topluca getir',
+        icon: Icons.auto_fix_high_rounded,
+        color: const Color(0xFF8C72FF),
+        onTap: () async {
+          final count =
+              await context.read<MetadataProvider>().startBackfillAll();
+          message('$count parça güncellendi');
+        },
+      ),
+      _SettingsHubEntry(
+        section: 'İndirmeler ve depolama',
+        title: 'İndirmeler',
+        subtitle: 'Kuyruk ve tamamlanan görevler',
+        icon: Icons.download_for_offline_outlined,
+        color: const Color(0xFF4D96FF),
+        onTap: () => open(const DownloadsScreen()),
+      ),
+      _SettingsHubEntry(
+        section: 'İndirmeler ve depolama',
+        title: 'Başarısız indirmeler',
+        subtitle: 'Hatalı görevleri incele ve yeniden dene',
+        icon: Icons.error_outline_rounded,
+        color: colors.error,
+        onTap: () => open(const FailedDownloadsScreen()),
+      ),
+      _SettingsHubEntry(
+        section: 'İndirmeler ve depolama',
+        title: 'Depolama',
+        subtitle: 'Kullanılan alan, konum ve yedekler',
+        icon: Icons.storage_rounded,
+        color: const Color(0xFF9B5DE5),
+        onTap: () => open(const StorageScreen()),
+      ),
+      _SettingsHubEntry(
+        section: 'İndirmeler ve depolama',
+        title: 'Dosya düzeni',
+        subtitle: 'Sanatçı ve albüme göre düzenleme',
+        icon: Icons.account_tree_outlined,
+        color: const Color(0xFFFFB020),
+        onTap: () => _showFileOrganizationDialog(context),
+      ),
+      _SettingsHubEntry(
+        section: 'İndirmeler ve depolama',
+        title: 'Engellenen parçalar',
+        subtitle: 'İndirmede atlanan eşleşmeler',
+        icon: Icons.block_rounded,
+        color: colors.error,
+        onTap: () => open(const BlockedTracksScreen()),
+      ),
+      _SettingsHubEntry(
+        section: 'İndirmeler ve depolama',
+        title: 'Paylaşılan bağlantılar',
+        subtitle: 'Uygulamaya gönderilen müzik bağlantıları',
+        icon: Icons.link_rounded,
+        color: const Color(0xFF4D96FF),
+        onTap: () => open(const SharedUrlsScreen()),
+      ),
+      _SettingsHubEntry(
+        section: 'Diğer',
+        title: 'Podcast',
+        subtitle: 'Abonelikler ve bölümler',
+        icon: Icons.podcasts_rounded,
+        color: const Color(0xFFFF6B81),
+        onTap: () => open(const _PodcastSubscriptionsPage()),
+      ),
+      _SettingsHubEntry(
+        section: 'Diğer',
+        title: 'Sesli kitaplar',
+        subtitle: 'Kitaplığı ve ilerlemeyi yönet',
+        icon: Icons.menu_book_rounded,
+        color: const Color(0xFF9A6B4F),
+        onTap: () => open(const _AudiobookLibraryPage()),
+      ),
+      _SettingsHubEntry(
+        section: 'Diğer',
+        title: 'Siri ve sesli kontrol',
+        subtitle: 'Kısayollar ve ses komutları',
+        icon: Icons.mic_none_rounded,
+        color: const Color(0xFFFF9F43),
+        onTap: () => open(const _VoiceControlPage()),
+      ),
+      _SettingsHubEntry(
+        section: 'Diğer',
+        title: 'AirPlay',
+        subtitle: 'Uygun ses çıkışlarını göster',
+        icon: Icons.airplay_rounded,
+        color: const Color(0xFF8C72FF),
+        onTap: () => _showAirPlayDevicesDialog(context),
+      ),
+      _SettingsHubEntry(
+        section: 'Destek ve hakkında',
+        title: 'Tanılama',
+        subtitle: 'Hata kayıtları ve sistem raporu',
+        icon: Icons.monitor_heart_outlined,
+        color: colors.error,
+        onTap: () => open(const DiagnosticsScreen()),
+      ),
+      _SettingsHubEntry(
+        section: 'Destek ve hakkında',
+        title: 'Açık kaynak ve teşekkürler',
+        subtitle: 'Kullanılan projeleri ve bağlantılarını gör',
+        icon: Icons.auto_awesome_rounded,
+        color: colors.primary,
+        onTap: () => _showAcknowledgments(context),
+      ),
+      _SettingsHubEntry(
+        section: 'Destek ve hakkında',
+        title: 'Lisanslar',
+        subtitle: 'Açık kaynak paket lisansları',
+        icon: Icons.description_outlined,
+        color: colors.onSurfaceVariant,
+        onTap: () => _showCredits(context),
+      ),
+    ];
   }
 
   void _showStreamCacheDialog(BuildContext context) {
@@ -1813,6 +2134,68 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showAcknowledgments(BuildContext context) {
+    const projects = <({String name, String role, String url})>[
+      (
+        name: 'yt-dlp',
+        role: 'Medya çözümleme ve indirme ilhamı',
+        url: 'https://github.com/yt-dlp/yt-dlp'
+      ),
+      (
+        name: 'Media3',
+        role: 'Android medya altyapısı',
+        url: 'https://github.com/androidx/media'
+      ),
+      (
+        name: 'ytmusicapi',
+        role: 'YouTube Music API araştırması',
+        url: 'https://github.com/sigma67/ytmusicapi'
+      ),
+      (
+        name: 'youtube_explode_dart',
+        role: 'YouTube akış çözümleme',
+        url: 'https://github.com/Hexer10/youtube_explode_dart'
+      ),
+      (
+        name: 'LRCLIB',
+        role: 'Senkronize şarkı sözleri',
+        url: 'https://github.com/tranxuanthang/lrclib'
+      ),
+      (
+        name: 'JioSaavn',
+        role: 'Çevrim içi müzik kataloğu',
+        url: 'https://www.jiosaavn.com'
+      ),
+      (
+        name: 'Deezer',
+        role: 'Katalog ve metadata',
+        url: 'https://developers.deezer.com'
+      ),
+      (
+        name: 'Last.fm',
+        role: 'Scrobble ve müzik verisi',
+        url: 'https://www.last.fm/api'
+      ),
+      (
+        name: 'just_audio',
+        role: 'Çapraz platform oynatıcı',
+        url: 'https://github.com/ryanheise/just_audio'
+      ),
+      (
+        name: 'flutter_secure_storage',
+        role: 'Güvenli hesap saklama',
+        url: 'https://github.com/mogol/flutter_secure_storage'
+      ),
+      (
+        name: 'sqflite',
+        role: 'Yerel kitaplık veritabanı',
+        url: 'https://github.com/tekartik/sqflite'
+      ),
+      (
+        name: 'palette_generator',
+        role: 'Kapaktan dinamik renk üretimi',
+        url: 'https://pub.dev/packages/palette_generator'
+      ),
+    ];
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1834,23 +2217,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         content: SizedBox(
           width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Melodi, açık kaynak projelerin katkılarıyla hayata geçti.',
-                  style: TextStyle(
-                      color: MelodiTheme.onSurfaceVariant, fontSize: 14),
+          height: min(MediaQuery.sizeOf(ctx).height * 0.58, 520),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Melodi, açık kaynak topluluğunun emeğiyle gelişiyor. Projeyi açmak için dokun.',
+                style: TextStyle(
+                    color: MelodiTheme.onSurfaceVariant, fontSize: 14),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: projects.length,
+                  separatorBuilder: (_, __) => Divider(
+                    color: MelodiTheme.outlineVariant,
+                    height: 1,
+                  ),
+                  itemBuilder: (_, index) {
+                    final project = projects[index];
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(project.name,
+                          style: TextStyle(color: MelodiTheme.onSurface)),
+                      subtitle: Text(project.role,
+                          style: TextStyle(
+                              color: MelodiTheme.onSurfaceVariant,
+                              fontSize: 12)),
+                      trailing: Icon(Icons.open_in_new_rounded,
+                          color: MelodiTheme.primaryGreen, size: 18),
+                      onTap: () => _openUrl(project.url),
+                    );
+                  },
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  'Teşekkürler: yt-dlp, Media3, ytmusicapi, youtube_explode_dart, LRCLIB, JioSaavn, Deezer, Last.fm, just_audio, flutter_secure_storage, sqflite, palette_generator',
-                  style: TextStyle(
-                      color: MelodiTheme.onSurfaceVariant, fontSize: 13),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
         actions: [
@@ -2112,6 +2513,113 @@ class _SettingsHubTile extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AllSettingsPage extends StatefulWidget {
+  const _AllSettingsPage({required this.entries});
+
+  final List<_SettingsHubEntry> entries;
+
+  @override
+  State<_AllSettingsPage> createState() => _AllSettingsPageState();
+}
+
+class _AllSettingsPageState extends State<_AllSettingsPage> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final needle = _query.trim().toLowerCase();
+    final entries = needle.isEmpty
+        ? widget.entries
+        : widget.entries
+            .where((entry) =>
+                '${entry.section} ${entry.title} ${entry.subtitle}'
+                    .toLowerCase()
+                    .contains(needle))
+            .toList();
+    final sections = <String>[];
+    for (final entry in entries) {
+      if (!sections.contains(entry.section)) sections.add(entry.section);
+    }
+
+    return Scaffold(
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverAppBar.large(
+            pinned: true,
+            title: const Text('Tüm ayarlar'),
+            flexibleSpace: FlexibleSpaceBar(
+              background: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      theme.colorScheme.primary.withValues(alpha: 0.2),
+                      theme.scaffoldBackgroundColor,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+              child: TextField(
+                onChanged: (value) => setState(() => _query = value),
+                decoration: const InputDecoration(
+                  hintText: 'Tüm ayarlarda ara',
+                  prefixIcon: Icon(Icons.search_rounded),
+                ),
+              ),
+            ),
+          ),
+          if (entries.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Text(
+                  'Eşleşen ayar bulunamadı',
+                  style: theme.textTheme.bodyLarge,
+                ),
+              ),
+            )
+          else
+            for (final section in sections) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+                  child: Text(
+                    section.toUpperCase(),
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+              SliverList.separated(
+                itemCount:
+                    entries.where((entry) => entry.section == section).length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final sectionEntries = entries
+                      .where((entry) => entry.section == section)
+                      .toList();
+                  return _SettingsHubTile(entry: sectionEntries[index]);
+                },
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 14)),
+            ],
+          const SliverToBoxAdapter(child: SizedBox(height: 36)),
+        ],
       ),
     );
   }
@@ -3153,20 +3661,12 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                             final syncProvider = context.read<SyncProvider>();
                             final playlists = await spotify.importPlaylists();
                             if (!mounted) return;
-                            // Add playlists to local library
-                            for (final spPlaylist in playlists) {
-                              final exists = playlistProvider.playlists
-                                  .any((p) => p.name == spPlaylist.name);
-                              if (!exists) {
-                                await playlistProvider.createPlaylist(
-                                  spPlaylist.name,
-                                  description: 'Spotify',
-                                );
-                                if (!mounted) return;
-                              }
-                            }
-                            // Trigger sync to pull playlist tracks into local library.
+                            // The sync service creates/updates the real lists
+                            // with all paged tracks; no empty shell lists.
                             await syncProvider.triggerSync();
+                            await playlistProvider.loadPlaylists();
+                            if (!mounted) return;
+                            await context.read<LibraryProvider>().loadAll();
                             if (!mounted ||
                                 messenger == null ||
                                 !messenger.mounted) {

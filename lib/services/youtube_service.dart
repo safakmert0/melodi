@@ -165,9 +165,12 @@ class YouTubeService {
   }
 
   Future<String?> downloadAudio(String videoId, String title,
-      {String quality = 'high'}) async {
+      {String quality = 'high', String? destinationDirectory}) async {
     try {
-      final dir = await getApplicationDocumentsDirectory();
+      final dir = destinationDirectory == null
+          ? await getApplicationSupportDirectory()
+          : Directory(destinationDirectory);
+      await dir.create(recursive: true);
       return await _downloadAudio(videoId, title, dir, quality: quality);
     } catch (e) {
       debugPrint('YouTube downloadAudio error: $e');

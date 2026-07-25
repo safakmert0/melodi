@@ -169,9 +169,10 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
         artist: track.artist,
         album: track.album ?? track.sourceLabel,
         duration: track.duration,
-        filePath: track.source == MusicSourceType.youtube
-            ? 'youtube://${track.id}'
-            : url,
+        // The resolver already returned a signed, playable media URL. Feeding
+        // that URL directly to just_audio lets AVPlayer perform native range
+        // requests instead of resolving the YouTube manifest a second time.
+        filePath: url,
         fileSize: 0,
       );
       await context.read<PlayerProvider>().playSong(song);
@@ -201,6 +202,9 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
             title: track.title,
             artist: track.artist,
             album: track.album ?? track.sourceLabel,
+            imageUrl: track.thumbnailUrl,
+            sourceVideoId:
+                track.source == MusicSourceType.youtube ? track.id : null,
           );
       _message('${track.title} indirme kuyruğuna eklendi');
     } catch (error) {

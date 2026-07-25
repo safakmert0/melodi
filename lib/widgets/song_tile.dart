@@ -1,9 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
 import '../core/constants.dart';
 import '../providers/player_provider.dart';
@@ -11,6 +8,7 @@ import '../providers/library_provider.dart';
 import '../providers/playlist_provider.dart';
 import '../providers/download_provider.dart';
 import '../services/download_manager.dart';
+import '../services/share_service.dart';
 import 'image_with_fallback.dart';
 import 'queue_sheet.dart';
 
@@ -259,43 +257,17 @@ class SongTile extends StatelessWidget {
   }
 
   Future<void> _shareSong(BuildContext context, SongModel song) async {
-    // YouTube streaming tracks can't be shared as files
-    if (song.filePath.startsWith('youtube://') ||
-        song.filePath.startsWith('http')) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocale.tr('share')),
-            backgroundColor: MelodiTheme.errorRed,
-          ),
-        );
-      }
-      return;
-    }
-    final file = File(song.filePath);
-    if (await file.exists()) {
-      try {
-        final dir = await getTemporaryDirectory();
-        final shareDir = Directory('${dir.path}/share');
-        if (!await shareDir.exists()) await shareDir.create();
-        final ext = song.filePath.split('.').last;
-        final shareFile = File('${shareDir.path}/${song.title}.$ext');
-        await file.copy(shareFile.path);
-        await Share.shareXFiles(
-          [XFile(shareFile.path)],
-          subject: '${song.title} - ${song.artist}',
-        );
-      } catch (e) {
-        debugPrint('Share error: $e');
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppLocale.tr('share')),
-              backgroundColor: MelodiTheme.errorRed,
-            ),
-          );
-        }
-      }
+    try {
+      await ShareService.instance.shareSong(song);
+    } catch (error) {
+      debugPrint('Share error: $error');
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocale.tr('share')),
+          backgroundColor: MelodiTheme.errorRed,
+        ),
+      );
     }
   }
 }

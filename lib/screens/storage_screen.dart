@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../core/constants.dart';
@@ -93,7 +94,9 @@ class _StorageScreenState extends State<StorageScreen> {
                   const SizedBox(height: 8),
                   _buildInfoRow(
                     AppLocale.tr('storage_location'),
-                    _location,
+                    Platform.isIOS
+                        ? 'Melodi · Özel çevrimdışı alan'
+                        : _location,
                     Icons.folder_rounded,
                     Colors.orange,
                   ),
@@ -340,34 +343,26 @@ class _StorageScreenState extends State<StorageScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: _isMoving ? null : _moveLibrary,
-            icon: _isMoving
-                ? SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.black,
-                    ),
-                  )
-                : Icon(Icons.drive_folder_upload_rounded, size: 18),
-            label: Text(_isMoving
-                ? AppLocale.tr('move_library')
-                : AppLocale.tr('move_library')),
-            style: FilledButton.styleFrom(
-              backgroundColor: MelodiTheme.primaryGreen,
-              foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+        if (!Platform.isIOS) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _isMoving ? null : _moveLibrary,
+              icon: _isMoving
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.black,
+                      ),
+                    )
+                  : Icon(Icons.drive_folder_upload_rounded, size: 18),
+              label: Text(AppLocale.tr('move_library')),
             ),
           ),
-        ),
+        ],
         const SizedBox(height: 12),
         SizedBox(
           width: double.infinity,

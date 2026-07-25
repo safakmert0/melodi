@@ -7,12 +7,15 @@ import 'package:audio_service/audio_service.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
 import 'database_service.dart';
+import 'track_matcher.dart';
 import 'youtube_audio_source.dart';
+import 'ytmusic_service.dart';
 
 class AudioPlayerHandler extends BaseAudioHandler
     with SeekHandler, QueueHandler {
   final AudioPlayer _player = AudioPlayer();
   final DatabaseService _db = DatabaseService.instance;
+  late final TrackMatcher _trackMatcher = TrackMatcher(YTMusicService().search);
 
   List<SongModel> _queue = [];
   List<SongModel> _originalQueue = [];
@@ -26,6 +29,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   Timer? _sleepTimer;
   DateTime? _sleepTimerEnd;
   Timer? _saveStateTimer;
+  bool _handlingCompletion = false;
 
   AudioPlayerHandler() {
     _initPlayer();
@@ -40,7 +44,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   void _initPlayer() {
     _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
-        _onTrackComplete();
+        unawaited(_onTrackComplete());
       }
       _broadcastState();
     });
@@ -155,21 +159,12 @@ class AudioPlayerHandler extends BaseAudioHandler
             _isShuffled = isShuffled;
             _repeatMode = repeatMode;
 
-            // Set loop mode
-            switch (repeatMode) {
-              case LoopStyle.off:
-                await _player.setLoopMode(LoopMode.off);
-                break;
-              case LoopStyle.all:
-                await _player.setLoopMode(LoopMode.all);
-                break;
-              case LoopStyle.one:
-                await _player.setLoopMode(LoopMode.one);
-                break;
-            }
+            // The handler owns repeat/queue transitions. just_audio only sees
+            // one source at a time, so its native loop mode must remain off.
+            await _player.setLoopMode(LoopMode.off);
 
             // Load the song but don't play - just prepare for playback
-            final song = _queue[_currentIndex];
+            final song = await _resolvePlayableSong(_queue[_currentIndex]);
             try {
               AudioSource audioSource;
               if (song.filePath.startsWith('youtube://')) {
@@ -250,8 +245,14 @@ class AudioPlayerHandler extends BaseAudioHandler
         MediaAction.seekForward,
         MediaAction.seekBackward,
       },
-      androidCompactActionIndices: const [0, 1, 3],
-      processingState: AudioProcessingState.ready,
+      androidCompactActionIndices: const [0, 1, 2],
+      processingState: switch (_player.processingState) {
+        ProcessingState.idle => AudioProcessingState.idle,
+        ProcessingState.loading => AudioProcessingState.loading,
+        ProcessingState.buffering => AudioProcessingState.buffering,
+        ProcessingState.ready => AudioProcessingState.ready,
+        ProcessingState.completed => AudioProcessingState.completed,
+      },
       playing: isPlaying,
       queueIndex: index,
     ));
@@ -416,17 +417,7 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   Future<void> setLoopStyle(LoopStyle mode) async {
     _repeatMode = mode;
-    switch (mode) {
-      case LoopStyle.off:
-        _player.setLoopMode(LoopMode.off);
-        break;
-      case LoopStyle.all:
-        _player.setLoopMode(LoopMode.all);
-        break;
-      case LoopStyle.one:
-        _player.setLoopMode(LoopMode.one);
-        break;
-    }
+    await _player.setLoopMode(LoopMode.off);
   }
 
   @override
@@ -449,24 +440,33 @@ class AudioPlayerHandler extends BaseAudioHandler
     await _player.seek(newPos < Duration.zero ? Duration.zero : newPos);
   }
 
-  void _onTrackComplete() {
-    if (_repeatMode == LoopStyle.one) {
-      _player.seek(Duration.zero);
-      _player.play();
-      return;
-    }
-
-    final nextIndex = _currentIndex + 1;
-    if (nextIndex < _queue.length) {
-      _currentIndex = nextIndex;
-      _playCurrent();
-    } else if (_repeatMode == LoopStyle.all) {
-      _currentIndex = 0;
-      _playCurrent();
-    } else {
-      // No next track and repeat off - stop playback
-      _player.stop();
-      _broadcastState();
+  Future<void> _onTrackComplete() async {
+    if (_handlingCompletion || _queue.isEmpty) return;
+    _handlingCompletion = true;
+    try {
+      final decision = PlaybackCompletionDecision.decide(
+        currentIndex: _currentIndex,
+        queueLength: _queue.length,
+        repeatMode: _repeatMode,
+      );
+      switch (decision.action) {
+        case PlaybackCompletionAction.replayCurrent:
+          await _player.seek(Duration.zero);
+          await _player.play();
+          break;
+        case PlaybackCompletionAction.playIndex:
+          _currentIndex = decision.nextIndex!;
+          await _playCurrent();
+          break;
+        case PlaybackCompletionAction.rewindAndPause:
+          await _player.pause();
+          await _player.seek(Duration.zero);
+          await savePlayerState();
+          _broadcastState();
+          break;
+      }
+    } finally {
+      _handlingCompletion = false;
     }
   }
 
@@ -475,9 +475,10 @@ class AudioPlayerHandler extends BaseAudioHandler
 
     _isInitialized = false;
     _crossfadeSubscription?.cancel();
-    final song = _queue[_currentIndex];
+    var song = _queue[_currentIndex];
 
     try {
+      song = await _resolvePlayableSong(song);
       // Determine audio source based on file path type
       AudioSource audioSource;
       if (song.filePath.startsWith('youtube://')) {
@@ -535,7 +536,7 @@ class AudioPlayerHandler extends BaseAudioHandler
           if (remaining <= _crossfadeDuration && remaining > Duration.zero) {
             _crossfadeSubscription?.cancel();
             _crossfadeSubscription = null;
-            _onTrackComplete();
+            unawaited(_onTrackComplete());
           }
         });
       }
@@ -573,10 +574,54 @@ class AudioPlayerHandler extends BaseAudioHandler
       await _db.updatePlayCount(song.id);
       _isInitialized = true;
       _broadcastState();
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Playback failed for ${song.title}: $e\n$stackTrace');
+      await _db.insertErrorLog('playback', e.toString(), stackTrace.toString());
       _isInitialized = true;
-      _onTrackComplete();
+      final surfaceError = _queue.length <= 1;
+      // A failed next item occurs while completion handling is active. Release
+      // the guard so another queue item can be attempted instead of stalling.
+      if (_handlingCompletion) _handlingCompletion = false;
+      await _onTrackComplete();
+      if (surfaceError) rethrow;
     }
+  }
+
+  Future<SongModel> _resolvePlayableSong(SongModel song) async {
+    if (!song.filePath.startsWith('spotify://')) return song;
+
+    final stored = await _db.getSongById(song.id);
+    if (stored != null &&
+        !stored.filePath.startsWith('spotify://') &&
+        File(stored.filePath).existsSync()) {
+      _queue[_currentIndex] = stored;
+      return stored;
+    }
+
+    final spotifyId = song.filePath.replaceFirst('spotify://', '');
+    final cached = await _db.getCachedMatch(spotifyId);
+    var videoId = cached?['ytVideoId']?.toString();
+    if (videoId == null || videoId.isEmpty) {
+      final match = await _trackMatcher.matchSpotifyTrackToYT(
+        song.title,
+        song.artist,
+        album: song.album,
+        durationMs: song.duration.inMilliseconds,
+      );
+      if (match == null || match.confidence < 0.45) {
+        throw StateError(
+            'Spotify parçası için oynatılabilir kaynak bulunamadı');
+      }
+      videoId = match.ytVideoId;
+      await _db.cacheMatch(spotifyId, videoId, match.confidence);
+    }
+
+    final resolved = song.copyWith(filePath: 'youtube://$videoId');
+    _queue[_currentIndex] = resolved;
+    final originalIndex =
+        _originalQueue.indexWhere((item) => item.id == song.id);
+    if (originalIndex >= 0) _originalQueue[originalIndex] = resolved;
+    return resolved;
   }
 
   Future<void> _updateMediaQueue() async {
@@ -593,7 +638,15 @@ class AudioPlayerHandler extends BaseAudioHandler
   }
 
   @override
-  Future<void> play() => _player.play();
+  Future<void> play() async {
+    final duration = _player.duration;
+    final isAtEnd = _player.processingState == ProcessingState.completed ||
+        (duration != null &&
+            duration > Duration.zero &&
+            _player.position >= duration - const Duration(milliseconds: 300));
+    if (isAtEnd) await _player.seek(Duration.zero);
+    await _player.play();
+  }
 
   @override
   Future<void> pause() => _player.pause();
@@ -651,7 +704,7 @@ class AudioPlayerHandler extends BaseAudioHandler
         if (remaining <= _crossfadeDuration && remaining > Duration.zero) {
           _crossfadeSubscription?.cancel();
           _crossfadeSubscription = null;
-          _onTrackComplete();
+          unawaited(_onTrackComplete());
         }
       });
     } else {
@@ -748,3 +801,40 @@ class AudioPlayerHandler extends BaseAudioHandler
 }
 
 enum LoopStyle { off, all, one }
+
+enum PlaybackCompletionAction { replayCurrent, playIndex, rewindAndPause }
+
+@immutable
+class PlaybackCompletionDecision {
+  const PlaybackCompletionDecision._(this.action, [this.nextIndex]);
+
+  final PlaybackCompletionAction action;
+  final int? nextIndex;
+
+  static PlaybackCompletionDecision decide({
+    required int currentIndex,
+    required int queueLength,
+    required LoopStyle repeatMode,
+  }) {
+    if (repeatMode == LoopStyle.one) {
+      return const PlaybackCompletionDecision._(
+        PlaybackCompletionAction.replayCurrent,
+      );
+    }
+    if (currentIndex + 1 < queueLength) {
+      return PlaybackCompletionDecision._(
+        PlaybackCompletionAction.playIndex,
+        currentIndex + 1,
+      );
+    }
+    if (repeatMode == LoopStyle.all && queueLength > 0) {
+      return const PlaybackCompletionDecision._(
+        PlaybackCompletionAction.playIndex,
+        0,
+      );
+    }
+    return const PlaybackCompletionDecision._(
+      PlaybackCompletionAction.rewindAndPause,
+    );
+  }
+}

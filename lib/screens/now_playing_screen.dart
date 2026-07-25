@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/share_service.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
@@ -519,11 +520,25 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                       ? null
                                       : () {
                                           if (song != null) {
+                                            final spotifyId =
+                                                song.id.startsWith('spotify:')
+                                                    ? song.id.replaceFirst(
+                                                        'spotify:', '')
+                                                    : song.id;
+                                            final sourceVideoId = song.filePath
+                                                    .startsWith('youtube://')
+                                                ? song.filePath.replaceFirst(
+                                                    'youtube://', '')
+                                                : RegExp(r'^[A-Za-z0-9_-]{11}$')
+                                                        .hasMatch(song.id)
+                                                    ? song.id
+                                                    : null;
                                             dl.enqueueTrack(
-                                              spotifyTrackId: 'youtube',
+                                              spotifyTrackId: spotifyId,
                                               title: song.title,
                                               artist: song.artist,
                                               album: song.album,
+                                              sourceVideoId: sourceVideoId,
                                             );
                                             ScaffoldMessenger.of(context)
                                                 .showSnackBar(
@@ -1076,17 +1091,21 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                 duration: const Duration(milliseconds: 320),
                 transitionBuilder: (child, animation) =>
                     FadeTransition(opacity: animation, child: child),
-                child: Text(
-                  line,
+                child: FittedBox(
                   key: ValueKey(
                       'lyric_${_currentLineIndex}_${_lyricsLines.length}_$line'),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: hasTiming ? Colors.white : Colors.white70,
-                    fontSize: hasTiming ? 16 : 13,
-                    fontWeight: hasTiming ? FontWeight.w700 : FontWeight.w500,
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.center,
+                  child: Text(
+                    line,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: TextStyle(
+                      color: hasTiming ? Colors.white : Colors.white70,
+                      fontSize: hasTiming ? 16 : 13,
+                      fontWeight: hasTiming ? FontWeight.w700 : FontWeight.w500,
+                    ),
                   ),
                 ),
               ),
@@ -1187,7 +1206,15 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 
   Future<void> _shareSong(BuildContext context, SongModel song) async {
     try {
-      await ShareService.instance.shareSong(song);
+      final result = await ShareService.instance.shareSong(song);
+      if (result.status == ShareResultStatus.unavailable && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Paylaşım bu aygıtta kullanılamıyor'),
+            backgroundColor: MelodiTheme.errorRed,
+          ),
+        );
+      }
     } catch (e) {
       debugPrint('Share error: $e');
       if (context.mounted) {
@@ -1291,7 +1318,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => SafeArea(
+      builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1310,7 +1337,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               title: Text(AppLocale.tr('add_to_playlist'),
                   style: TextStyle(color: MelodiTheme.onSurface)),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(sheetContext);
                 _showAddToPlaylist(context, song);
               },
             ),
@@ -1320,7 +1347,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               title: Text(AppLocale.tr('song_info'),
                   style: TextStyle(color: MelodiTheme.onSurface)),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(sheetContext);
                 _showSongInfo(context, song);
               },
             ),
@@ -1332,8 +1359,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               subtitle: Text(AppLocale.tr('share_file'),
                   style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
               onTap: () {
-                Navigator.pop(context);
-                _shareSong(context, song);
+                Navigator.pop(sheetContext);
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) _shareSong(this.context, song);
+                });
               },
             ),
             ListTile(
@@ -1341,7 +1370,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               title: Text(AppLocale.tr('sleep_timer'),
                   style: TextStyle(color: MelodiTheme.onSurface)),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(sheetContext);
                 _showSleepTimer(context, player);
               },
             ),
@@ -1351,7 +1380,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               title: Text(AppLocale.tr('crossfade'),
                   style: TextStyle(color: MelodiTheme.onSurface)),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.pop(sheetContext);
                 showModalBottomSheet(
                   context: context,
                   backgroundColor: MelodiTheme.containerLow,

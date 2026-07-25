@@ -32,6 +32,24 @@ import WebKit
         result(cookies.map { ["name": $0.name, "value": $0.value, "domain": $0.domain] })
       }
     }
+    let storageChannel = FlutterMethodChannel(name: "com.melodi/storage", binaryMessenger: messenger)
+    storageChannel.setMethodCallHandler { call, result in
+      guard call.method == "excludeFromBackup",
+            let arguments = call.arguments as? [String: Any],
+            let path = arguments["path"] as? String else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      var url = URL(fileURLWithPath: path, isDirectory: true)
+      do {
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try url.setResourceValues(values)
+        result(nil)
+      } catch {
+        result(FlutterError(code: "exclude_from_backup_failed", message: error.localizedDescription, details: nil))
+      }
+    }
     airPlayHandler = AirPlayHandler(messenger: messenger)
     carPlayHandler = CarPlayHandler(messenger: messenger)
     voiceControlHandler = VoiceControlHandler(messenger: messenger)

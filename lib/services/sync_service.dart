@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 import '../models/playlist_model.dart';
 import '../models/song_model.dart';
@@ -16,6 +17,7 @@ class SyncService {
   Timer? _syncTimer;
   SyncState _state = SyncState.idle;
   String? _lastError;
+  final Map<String, Future<Uint8List?>> _spotifyArtworkDownloads = {};
 
   SpotifyService? _spotify;
   YTMusicService? _ytmusic;
@@ -118,46 +120,81 @@ class SyncService {
 
   Future<void> _pullSpotifyPlaylists() async {
     final remotePlaylists = await _spotify!.getUserPlaylists();
+    final existingPlaylists = await _db.getAllPlaylists();
+    final byName = {
+      for (final playlist in existingPlaylists) playlist.name: playlist
+    };
+    final localSongs = await _db.getAllSongs();
+    final localById = {for (final song in localSongs) song.id: song};
+    final cachedArtwork = await _db.getAllCachedAlbumArts();
+    final artworkScheduled = <String>{};
+    final artworkJobs = <Future<void>>[];
+
+    // v4.1 briefly created empty, unprefixed shell playlists before the real
+    // sync. Remove only those known shells so user-created lists stay intact.
+    final remoteNames =
+        remotePlaylists.map((playlist) => playlist.name).toSet();
+    for (final playlist in existingPlaylists) {
+      if (playlist.description == 'Spotify' &&
+          playlist.songIds.isEmpty &&
+          remoteNames.contains(playlist.name)) {
+        await _db.deletePlaylist(playlist.id);
+        byName.remove(playlist.name);
+      }
+    }
 
     for (final rp in remotePlaylists) {
       final playlistName = 'Spotify — ${rp.name}';
-      final existingPlaylists = await _db.getAllPlaylists();
-      PlaylistModel? existing;
-      for (final p in existingPlaylists) {
-        if (p.name == playlistName) {
-          existing = p;
-          break;
-        }
-      }
+      final existing = byName[playlistName];
 
       final tracks = await _spotify!.getPlaylistTracks(rp.id);
-      final localSongs = await _db.getAllSongs();
+      if (tracks.isEmpty && rp.trackCount > 0) {
+        debugPrint(
+            'Spotify playlist ${rp.name} returned no tracks; keeping local copy');
+        continue;
+      }
       final matchedIds = <String>[];
 
       for (final track in tracks) {
-        double bestScore = 0.3;
-        String? bestId;
-        for (final ls in localSongs) {
-          final score = TrackMatcher.scoreWithDuration(
-            track.name,
-            track.artists.join(' '),
-            track.durationMs,
-            ls.title,
-            ls.artist,
-            ls.duration.inMilliseconds,
-          );
-          if (score > bestScore) {
-            bestScore = score;
-            bestId = ls.id;
+        final placeholderId = 'spotify:${track.id}';
+        final knownPlaceholder = localById[placeholderId];
+        if (knownPlaceholder != null) {
+          matchedIds.add(knownPlaceholder.id);
+          if (track.albumImageUrl != null &&
+              !cachedArtwork.containsKey(knownPlaceholder.id) &&
+              artworkScheduled.add(knownPlaceholder.id)) {
+            artworkJobs.add(
+              _cacheSpotifyArtwork(knownPlaceholder.id, track.albumImageUrl!),
+            );
+            if (artworkJobs.length >= 6) {
+              await Future.wait(artworkJobs);
+              artworkJobs.clear();
+            }
           }
-        }
-        if (bestId != null) {
-          matchedIds.add(bestId);
         } else {
-          // Keep unmatched Spotify entries visible in the local playlist.
-          // They can be resolved/downloaded later instead of disappearing.
+          double bestScore = 0.65;
+          String? bestId;
+          for (final local in localSongs) {
+            final score = TrackMatcher.scoreWithDuration(
+              track.name,
+              track.artists.join(' '),
+              track.durationMs,
+              local.title,
+              local.artist,
+              local.duration.inMilliseconds,
+            );
+            if (score > bestScore) {
+              bestScore = score;
+              bestId = local.id;
+            }
+          }
+          if (bestId != null) {
+            matchedIds.add(bestId);
+            continue;
+          }
+
           final placeholder = SongModel(
-            id: 'spotify:${track.id}',
+            id: placeholderId,
             title: track.name,
             artist: track.artists.join(', '),
             album: track.albumName ?? '',
@@ -167,17 +204,25 @@ class SyncService {
           );
           await _db.insertSong(placeholder);
           localSongs.add(placeholder);
+          localById[placeholder.id] = placeholder;
           matchedIds.add(placeholder.id);
+          if (track.albumImageUrl != null) {
+            artworkJobs.add(
+              _cacheSpotifyArtwork(placeholder.id, track.albumImageUrl!),
+            );
+            if (artworkJobs.length >= 6) {
+              await Future.wait(artworkJobs);
+              artworkJobs.clear();
+            }
+          }
         }
       }
 
-      // Create or update playlist even if no tracks matched locally
       String localId;
       if (existing != null) {
-        if (matchedIds.isNotEmpty) {
-          final updated = existing.copyWith(songIds: matchedIds);
-          await _db.insertPlaylist(updated);
-        }
+        final updated = existing.copyWith(songIds: matchedIds);
+        await _db.insertPlaylist(updated);
+        byName[playlistName] = updated;
         localId = existing.id;
       } else {
         localId = Uuid().v4();
@@ -188,8 +233,31 @@ class SyncService {
           songIds: matchedIds,
         );
         await _db.insertPlaylist(newPlaylist);
+        byName[playlistName] = newPlaylist;
       }
       await _db.setRemotePlaylistId(localId, rp.id, 'spotify');
+    }
+    if (artworkJobs.isNotEmpty) await Future.wait(artworkJobs);
+  }
+
+  Future<void> _cacheSpotifyArtwork(String songId, String url) async {
+    try {
+      final bytes = await _spotifyArtworkDownloads.putIfAbsent(
+        url,
+        () async {
+          final response = await http
+              .get(Uri.parse(url))
+              .timeout(const Duration(seconds: 15));
+          if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
+            return null;
+          }
+          if (response.bodyBytes.length > 5 * 1024 * 1024) return null;
+          return response.bodyBytes;
+        },
+      );
+      if (bytes != null) await _db.cacheAlbumArt(songId, bytes);
+    } catch (error) {
+      debugPrint('Spotify artwork cache failed: $error');
     }
   }
 
@@ -255,14 +323,32 @@ class SyncService {
 
   Future<void> _syncSpotifyLikedSongs() async {
     try {
-      final likedSongs = await _spotify!.getLikedSongs(limit: 50);
+      final likedSongs = await _spotify!.getLikedSongs();
       if (likedSongs.isEmpty) return;
 
       final localSongs = await _db.getAllSongs();
+      final localById = {for (final song in localSongs) song.id: song};
+      final cachedArtwork = await _db.getAllCachedAlbumArts();
       final matchedIds = <String>[];
+      final artworkJobs = <Future<void>>[];
 
       for (final track in likedSongs) {
-        double bestScore = 0.3;
+        final placeholderId = 'spotify:${track.id}';
+        if (localById.containsKey(placeholderId)) {
+          matchedIds.add(placeholderId);
+          if (track.albumImageUrl != null &&
+              !cachedArtwork.containsKey(placeholderId)) {
+            artworkJobs.add(
+              _cacheSpotifyArtwork(placeholderId, track.albumImageUrl!),
+            );
+            if (artworkJobs.length >= 6) {
+              await Future.wait(artworkJobs);
+              artworkJobs.clear();
+            }
+          }
+          continue;
+        }
+        double bestScore = 0.65;
         String? bestId;
         for (final ls in localSongs) {
           final score = TrackMatcher.scoreWithDuration(
@@ -278,8 +364,36 @@ class SyncService {
             bestId = ls.id;
           }
         }
-        if (bestId != null) matchedIds.add(bestId);
+        if (bestId != null) {
+          matchedIds.add(bestId);
+          continue;
+        }
+
+        final placeholder = SongModel(
+          id: placeholderId,
+          title: track.name,
+          artist: track.artists.join(', '),
+          album: track.albumName ?? '',
+          duration: Duration(milliseconds: track.durationMs),
+          filePath: 'spotify://${track.id}',
+          fileSize: 0,
+        );
+        await _db.insertSong(placeholder);
+        localSongs.add(placeholder);
+        localById[placeholder.id] = placeholder;
+        matchedIds.add(placeholder.id);
+        if (track.albumImageUrl != null) {
+          artworkJobs.add(
+            _cacheSpotifyArtwork(placeholder.id, track.albumImageUrl!),
+          );
+          if (artworkJobs.length >= 6) {
+            await Future.wait(artworkJobs);
+            artworkJobs.clear();
+          }
+        }
       }
+
+      if (artworkJobs.isNotEmpty) await Future.wait(artworkJobs);
 
       if (matchedIds.isNotEmpty) {
         final playlistName = 'Spotify — Beğenilen Şarkılar';
