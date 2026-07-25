@@ -1,6 +1,3 @@
-import 'dart:io';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -20,11 +17,10 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  static const _pageCount = 5;
+  static const _pageCount = 4;
   final PageController _controller = PageController();
   int _page = 0;
   bool _showSplash = true;
-  String _downloadPath = '';
 
   String _copy(String tr, String en, String de) {
     switch (AppLocale.currentLocale) {
@@ -126,7 +122,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       _buildLanguage(theme),
                       _buildTheme(theme),
                       _buildSources(theme),
-                      _buildStorage(theme),
                     ],
                   ),
                 ),
@@ -153,7 +148,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         1 => const Color(0xFF2EC4B6),
         2 => const Color(0xFF8C72FF),
         3 => const Color(0xFFFF9F43),
-        4 => const Color(0xFF4D96FF),
         _ => theme.colorScheme.primary,
       };
 
@@ -369,96 +363,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             icon: const Icon(Icons.tune_rounded),
             label: Text(_copy(
                 'Kaynakları yönet', 'Manage sources', 'Quellen verwalten')),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStorage(ThemeData theme) {
-    final accent = _pageAccent(theme, 4);
-    return _pageBody(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _StepIcon(icon: Icons.download_done_rounded, color: accent),
-          const SizedBox(height: 26),
-          Text(
-              _copy('Çevrimdışı hazır', 'Ready for offline',
-                  'Bereit für offline'),
-              style: theme.textTheme.headlineLarge),
-          const SizedBox(height: 10),
-          Text(
-            Platform.isIOS
-                ? _copy(
-                    'İndirilen parçalar Melodi içinde güvenli ve özel olarak saklanır.',
-                    'Downloads stay securely inside Melodi.',
-                    'Downloads werden sicher in Melodi gespeichert.',
-                  )
-                : _copy(
-                    'İndirilen parçaların konumunu seç. Bu ayarı daha sonra değiştirebilirsin.',
-                    'Choose where downloads are stored. You can change this later.',
-                    'Wähle den Speicherort für Downloads. Du kannst ihn später ändern.',
-                  ),
-            style: theme.textTheme.bodyLarge,
-          ),
-          const SizedBox(height: 26),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: theme.colorScheme.outlineVariant),
-            ),
-            child: Row(
-              children: [
-                Icon(Platform.isIOS ? Icons.lock_rounded : Icons.folder_rounded,
-                    color: accent),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    Platform.isIOS
-                        ? _copy(
-                            'Melodi özel çevrimdışı alanı',
-                            'Melodi private offline storage',
-                            'Privater Melodi-Offline-Speicher',
-                          )
-                        : _downloadPath.isEmpty
-                            ? _copy('Varsayılan uygulama klasörü',
-                                'Default app folder', 'Standard-App-Ordner')
-                            : _downloadPath,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: Platform.isIOS
-                ? null
-                : () async {
-                    final path = await FilePicker.platform.getDirectoryPath(
-                      dialogTitle: _copy('İndirme klasörünü seç',
-                          'Choose download folder', 'Download-Ordner wählen'),
-                    );
-                    if (!mounted || path == null || path.isEmpty) return;
-                    await DatabaseService.instance
-                        .setSetting('download_path', path);
-                    if (mounted) setState(() => _downloadPath = path);
-                  },
-            icon: Icon(Platform.isIOS
-                ? Icons.verified_user_rounded
-                : Icons.folder_open_rounded),
-            label: Text(Platform.isIOS
-                ? _copy('Uygulama içinde', 'Stored in app', 'In der App')
-                : _copy('Klasör seç', 'Choose folder', 'Ordner wählen')),
           ),
         ],
       ),

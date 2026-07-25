@@ -145,7 +145,7 @@ jobs:
         with:
           files: build/Melodi-${{ github.ref_name }}.ipa
           fail_on_unmatched_files: false
-          body_path: RELEASE_NOTES_4.1.2.md
+          body_path: RELEASE_NOTES_4.1.3.md
 
       - name: Upload IPA as artifact
         uses: actions/upload-artifact@v4
