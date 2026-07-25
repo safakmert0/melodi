@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -388,11 +390,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               style: theme.textTheme.headlineLarge),
           const SizedBox(height: 10),
           Text(
-            _copy(
-              'İndirilen parçaların konumunu seç. Bu ayarı daha sonra değiştirebilirsin.',
-              'Choose where downloads are stored. You can change this later.',
-              'Wähle den Speicherort für Downloads. Du kannst ihn später ändern.',
-            ),
+            Platform.isIOS
+                ? _copy(
+                    'İndirilen parçalar Melodi içinde güvenli ve özel olarak saklanır.',
+                    'Downloads stay securely inside Melodi.',
+                    'Downloads werden sicher in Melodi gespeichert.',
+                  )
+                : _copy(
+                    'İndirilen parçaların konumunu seç. Bu ayarı daha sonra değiştirebilirsin.',
+                    'Choose where downloads are stored. You can change this later.',
+                    'Wähle den Speicherort für Downloads. Du kannst ihn später ändern.',
+                  ),
             style: theme.textTheme.bodyLarge,
           ),
           const SizedBox(height: 26),
@@ -406,14 +414,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             child: Row(
               children: [
-                Icon(Icons.folder_rounded, color: accent),
+                Icon(Platform.isIOS ? Icons.lock_rounded : Icons.folder_rounded,
+                    color: accent),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    _downloadPath.isEmpty
-                        ? _copy('Varsayılan uygulama klasörü',
-                            'Default app folder', 'Standard-App-Ordner')
-                        : _downloadPath,
+                    Platform.isIOS
+                        ? _copy(
+                            'Melodi özel çevrimdışı alanı',
+                            'Melodi private offline storage',
+                            'Privater Melodi-Offline-Speicher',
+                          )
+                        : _downloadPath.isEmpty
+                            ? _copy('Varsayılan uygulama klasörü',
+                                'Default app folder', 'Standard-App-Ordner')
+                            : _downloadPath,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyMedium?.copyWith(
@@ -426,17 +441,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           const SizedBox(height: 12),
           FilledButton.icon(
-            onPressed: () async {
-              final path = await FilePicker.platform.getDirectoryPath(
-                dialogTitle: _copy('İndirme klasörünü seç',
-                    'Choose download folder', 'Download-Ordner wählen'),
-              );
-              if (!mounted || path == null || path.isEmpty) return;
-              await DatabaseService.instance.setSetting('download_path', path);
-              if (mounted) setState(() => _downloadPath = path);
-            },
-            icon: const Icon(Icons.folder_open_rounded),
-            label: Text(_copy('Klasör seç', 'Choose folder', 'Ordner wählen')),
+            onPressed: Platform.isIOS
+                ? null
+                : () async {
+                    final path = await FilePicker.platform.getDirectoryPath(
+                      dialogTitle: _copy('İndirme klasörünü seç',
+                          'Choose download folder', 'Download-Ordner wählen'),
+                    );
+                    if (!mounted || path == null || path.isEmpty) return;
+                    await DatabaseService.instance
+                        .setSetting('download_path', path);
+                    if (mounted) setState(() => _downloadPath = path);
+                  },
+            icon: Icon(Platform.isIOS
+                ? Icons.verified_user_rounded
+                : Icons.folder_open_rounded),
+            label: Text(Platform.isIOS
+                ? _copy('Uygulama içinde', 'Stored in app', 'In der App')
+                : _copy('Klasör seç', 'Choose folder', 'Ordner wählen')),
           ),
         ],
       ),

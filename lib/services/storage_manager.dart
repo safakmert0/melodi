@@ -91,11 +91,40 @@ class StorageManager {
           'UPDATE songs SET filePath = ? WHERE filePath = ?',
           [newPath, oldPath],
         );
+        await _db.rawUpdate(
+          'UPDATE downloaded_tracks SET filePath = ? WHERE filePath = ?',
+          [newPath, oldPath],
+        );
         moved++;
       }
       try {
         if (await legacy.list().isEmpty) await legacy.delete();
       } catch (_) {}
+    }
+
+    var relinked = 0;
+    final recordedDownloads = await _db.getDownloadedTracks();
+    for (final record in recordedDownloads) {
+      final sourceId = record['spotifyTrackId']?.toString();
+      final localPath = record['filePath']?.toString();
+      if (sourceId == null ||
+          sourceId.isEmpty ||
+          localPath == null ||
+          localPath.isEmpty) {
+        continue;
+      }
+      final file = File(localPath);
+      if (!await file.exists()) continue;
+
+      final placeholderId =
+          sourceId.startsWith('spotify:') ? sourceId : 'spotify:$sourceId';
+      final placeholder = await _db.getSongById(placeholderId);
+      if (placeholder == null || placeholder.filePath == localPath) continue;
+      await _db.insertSong(placeholder.copyWith(
+        filePath: localPath,
+        fileSize: await file.length(),
+      ));
+      relinked++;
     }
 
     final songs = await _db.getAllSongs();
@@ -107,7 +136,6 @@ class StorageManager {
       }
       return File(song.filePath).existsSync();
     }).toList();
-    var relinked = 0;
     for (final placeholder
         in songs.where((song) => song.filePath.startsWith('spotify://'))) {
       final titleKey = _matchKey(placeholder.title);

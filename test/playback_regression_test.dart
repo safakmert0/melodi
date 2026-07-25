@@ -74,4 +74,49 @@ void main() {
       expect(decision.action, PlaybackCompletionAction.replayCurrent);
     });
   });
+
+  group('queue failure fallback', () {
+    test('tries each following item once without wrapping when repeat is off',
+        () {
+      final candidates = PlaybackFailurePlan.candidateIndices(
+        currentIndex: 0,
+        queueLength: 4,
+        repeatMode: LoopStyle.off,
+      );
+
+      expect(candidates, [1, 2, 3]);
+    });
+
+    test('does not retry the failed final item', () {
+      final candidates = PlaybackFailurePlan.candidateIndices(
+        currentIndex: 2,
+        queueLength: 3,
+        repeatMode: LoopStyle.off,
+      );
+
+      expect(candidates, isEmpty);
+    });
+
+    test('wraps once without revisiting the failed item for repeat all', () {
+      final candidates = PlaybackFailurePlan.candidateIndices(
+        currentIndex: 2,
+        queueLength: 4,
+        repeatMode: LoopStyle.all,
+      );
+
+      expect(candidates, [3, 0, 1]);
+      expect(candidates.toSet().length, candidates.length);
+      expect(candidates, isNot(contains(2)));
+    });
+
+    test('a single failed item has no fallback candidate', () {
+      final candidates = PlaybackFailurePlan.candidateIndices(
+        currentIndex: 0,
+        queueLength: 1,
+        repeatMode: LoopStyle.all,
+      );
+
+      expect(candidates, isEmpty);
+    });
+  });
 }

@@ -1,7 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/song_model.dart';
 import '../providers/download_provider.dart';
+import '../providers/player_provider.dart';
+import '../services/database_service.dart';
 import '../services/audio_quality_service.dart';
 import '../services/download_manager.dart';
 import '../services/storage_manager.dart';
@@ -74,7 +79,11 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                         qualityLabel: details == null
                             ? 'Yükleniyor…'
                             : _qualityLabel(details.quality),
-                        pathLabel: details?.path ?? 'İndirme klasörü',
+                        pathLabel: details == null
+                            ? 'İndirme alanı'
+                            : Platform.isIOS
+                                ? 'Melodi içinde · özel çevrimdışı alan'
+                                : details.path,
                         onQuality: () => Navigator.of(context)
                             .push(MaterialPageRoute<void>(
                               builder: (_) => const AudioQualityScreen(),
@@ -110,8 +119,12 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                         stateLabel: provider.stateText(task),
                         selected: _selectedIds.contains(task.id),
                         selectionMode: _selectionMode,
-                        onTap: () {
-                          if (_selectionMode) _toggleSelected(task.id);
+                        onTap: () async {
+                          if (_selectionMode) {
+                            _toggleSelected(task.id);
+                            return;
+                          }
+                          await _playDownloaded(task);
                         },
                         onLongPress: () => _toggleSelected(task.id),
                         onCancel: () => provider.cancelTask(task.id),
@@ -269,6 +282,42 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     });
   }
 
+  Future<void> _playDownloaded(DownloadTask task) async {
+    if (task.state != DownloadState.completed) return;
+    final path = task.filePath;
+    final file = path == null ? null : File(path);
+    if (file == null || !await file.exists()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('İndirilen dosya artık bulunamıyor')),
+        );
+      }
+      return;
+    }
+
+    try {
+      final stored = await DatabaseService.instance.getSongByPath(path!);
+      final song = stored ??
+          SongModel(
+            id: 'download:${task.spotifyTrackId}',
+            title: task.title,
+            artist: task.artist,
+            album: task.album ?? '',
+            duration: Duration.zero,
+            filePath: path,
+            fileSize: await file.length(),
+          );
+      if (!mounted) return;
+      await context.read<PlayerProvider>().playSong(song);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Oynatma hatası: $error')),
+        );
+      }
+    }
+  }
+
   Future<void> _showTaskMenu(BuildContext context, DownloadProvider provider,
       DownloadTask task) async {
     final action = await showModalBottomSheet<_TaskMenuAction>(
@@ -282,8 +331,18 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
               leading: const Icon(Icons.offline_pin_rounded),
               title: Text(task.title,
                   maxLines: 1, overflow: TextOverflow.ellipsis),
-              subtitle: Text(task.filePath ?? 'İndirme kaydı'),
+              subtitle: Text(
+                Platform.isIOS
+                    ? 'Melodi içinde · Dosyalar uygulamasında görünmez'
+                    : task.filePath ?? 'İndirme kaydı',
+              ),
             ),
+            if (task.state == DownloadState.completed)
+              ListTile(
+                leading: const Icon(Icons.play_arrow_rounded),
+                title: const Text('Çal'),
+                onTap: () => Navigator.pop(context, _TaskMenuAction.play),
+              ),
             if (task.state == DownloadState.failed)
               ListTile(
                 leading: const Icon(Icons.refresh_rounded),
@@ -303,6 +362,9 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     );
     if (!mounted || action == null) return;
     switch (action) {
+      case _TaskMenuAction.play:
+        await _playDownloaded(task);
+        break;
       case _TaskMenuAction.retry:
         provider.retryTask(task.id);
         break;
@@ -341,4 +403,4 @@ class _DownloadSnapshot {
   final String quality;
 }
 
-enum _TaskMenuAction { retry, clear }
+enum _TaskMenuAction { play, retry, clear }

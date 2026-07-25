@@ -1059,17 +1059,34 @@ class DatabaseService {
     return result;
   }
 
-  Future<void> insertFailedMatch(String spotifyTrackId, String filePath) async {
+  Future<void> upsertDownloadedTrack(
+      String sourceTrackId, String filePath) async {
     final db = await database;
     await db.insert(
       'downloaded_tracks',
       {
-        'spotifyTrackId': spotifyTrackId,
+        'spotifyTrackId': sourceTrackId,
         'filePath': filePath,
         'downloadedAt': DateTime.now().toIso8601String(),
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+  }
+
+  Future<void> insertFailedMatch(String spotifyTrackId, String filePath) =>
+      upsertDownloadedTrack(spotifyTrackId, filePath);
+
+  Future<String?> getDownloadedTrackPath(String sourceTrackId) async {
+    final db = await database;
+    final maps = await db.query(
+      'downloaded_tracks',
+      columns: const ['filePath'],
+      where: 'spotifyTrackId = ?',
+      whereArgs: [sourceTrackId],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return maps.first['filePath'] as String?;
   }
 
   Future<List<Map<String, dynamic>>> getDownloadedTracks() async {

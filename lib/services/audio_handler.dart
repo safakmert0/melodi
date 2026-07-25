@@ -456,7 +456,7 @@ class AudioPlayerHandler extends BaseAudioHandler
           break;
         case PlaybackCompletionAction.playIndex:
           _currentIndex = decision.nextIndex!;
-          await _playCurrent();
+          await _playCurrent(surfaceError: false);
           break;
         case PlaybackCompletionAction.rewindAndPause:
           await _player.pause();
@@ -470,7 +470,10 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
   }
 
-  Future<void> _playCurrent() async {
+  Future<void> _playCurrent({
+    bool allowFailureFallback = true,
+    bool surfaceError = true,
+  }) async {
     if (_currentIndex < 0 || _currentIndex >= _queue.length) return;
 
     _isInitialized = false;
@@ -578,25 +581,53 @@ class AudioPlayerHandler extends BaseAudioHandler
       debugPrint('Playback failed for ${song.title}: $e\n$stackTrace');
       await _db.insertErrorLog('playback', e.toString(), stackTrace.toString());
       _isInitialized = true;
-      final surfaceError = _queue.length <= 1;
-      // A failed next item occurs while completion handling is active. Release
-      // the guard so another queue item can be attempted instead of stalling.
-      if (_handlingCompletion) _handlingCompletion = false;
-      await _onTrackComplete();
-      if (surfaceError) rethrow;
+      if (!allowFailureFallback) {
+        Error.throwWithStackTrace(e, stackTrace);
+      }
+
+      final failedIndex = _currentIndex;
+      final candidates = PlaybackFailurePlan.candidateIndices(
+        currentIndex: failedIndex,
+        queueLength: _queue.length,
+        repeatMode: _repeatMode,
+      );
+      for (final candidate in candidates) {
+        _currentIndex = candidate;
+        try {
+          await _playCurrent(
+            allowFailureFallback: false,
+            surfaceError: false,
+          );
+          return;
+        } catch (_) {
+          // The nested attempt is already logged. Continue at most once per
+          // remaining queue item; never recurse through completion handling.
+        }
+      }
+
+      await _player.stop();
+      _currentIndex = failedIndex;
+      _isInitialized = true;
+      await savePlayerState();
+      _broadcastState();
+      if (surfaceError) {
+        Error.throwWithStackTrace(e, stackTrace);
+      }
     }
   }
 
   Future<SongModel> _resolvePlayableSong(SongModel song) async {
-    if (!song.filePath.startsWith('spotify://')) return song;
-
     final stored = await _db.getSongById(song.id);
     if (stored != null &&
-        !stored.filePath.startsWith('spotify://') &&
+        !_isRemotePath(stored.filePath) &&
         File(stored.filePath).existsSync()) {
-      _queue[_currentIndex] = stored;
+      _replaceSongInQueues(stored);
       return stored;
     }
+
+    final downloaded = await _resolveDownloadedSong(song);
+    if (downloaded != null) return downloaded;
+    if (!song.filePath.startsWith('spotify://')) return song;
 
     final spotifyId = song.filePath.replaceFirst('spotify://', '');
     final cached = await _db.getCachedMatch(spotifyId);
@@ -617,11 +648,67 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
 
     final resolved = song.copyWith(filePath: 'youtube://$videoId');
-    _queue[_currentIndex] = resolved;
+    _replaceSongInQueues(resolved);
+    return resolved;
+  }
+
+  Future<SongModel?> _resolveDownloadedSong(SongModel song) async {
+    final sourceIds = <String>{};
+
+    void addSourceId(String value) {
+      final trimmed = value.trim();
+      if (trimmed.isNotEmpty) sourceIds.add(trimmed);
+    }
+
+    addSourceId(song.id);
+    for (final prefix in const ['spotify:', 'youtube:']) {
+      if (song.id.startsWith(prefix)) {
+        addSourceId(song.id.substring(prefix.length));
+      }
+    }
+    if (song.filePath.startsWith('spotify://')) {
+      addSourceId(song.filePath.replaceFirst('spotify://', ''));
+    } else if (song.filePath.startsWith('youtube://')) {
+      addSourceId(song.filePath.replaceFirst('youtube://', ''));
+    }
+
+    for (final sourceId in sourceIds) {
+      final localPath = await _db.getDownloadedTrackPath(sourceId);
+      if (localPath == null || localPath.isEmpty) continue;
+      final file = File(localPath);
+      if (!await file.exists()) continue;
+
+      final fileSize = await file.length();
+      final resolved = song.copyWith(
+        filePath: localPath,
+        fileSize: fileSize,
+      );
+      final storedSong = await _db.getSongById(song.id);
+      if (storedSong != null) {
+        await _db.insertSong(storedSong.copyWith(
+          filePath: localPath,
+          fileSize: fileSize,
+        ));
+      }
+      _replaceSongInQueues(resolved);
+      return resolved;
+    }
+    return null;
+  }
+
+  bool _isRemotePath(String path) =>
+      path.startsWith('spotify://') ||
+      path.startsWith('youtube://') ||
+      path.startsWith('http://') ||
+      path.startsWith('https://');
+
+  void _replaceSongInQueues(SongModel song) {
+    if (_currentIndex >= 0 && _currentIndex < _queue.length) {
+      _queue[_currentIndex] = song;
+    }
     final originalIndex =
         _originalQueue.indexWhere((item) => item.id == song.id);
-    if (originalIndex >= 0) _originalQueue[originalIndex] = resolved;
-    return resolved;
+    if (originalIndex >= 0) _originalQueue[originalIndex] = song;
   }
 
   Future<void> _updateMediaQueue() async {
@@ -797,6 +884,32 @@ class AudioPlayerHandler extends BaseAudioHandler
     _saveStateTimer?.cancel();
     _crossfadeSubscription?.cancel();
     _player.dispose();
+  }
+}
+
+@immutable
+class PlaybackFailurePlan {
+  const PlaybackFailurePlan._();
+
+  static List<int> candidateIndices({
+    required int currentIndex,
+    required int queueLength,
+    required LoopStyle repeatMode,
+  }) {
+    if (queueLength <= 1 || currentIndex < 0 || currentIndex >= queueLength) {
+      return const [];
+    }
+
+    final candidates = <int>[];
+    for (var index = currentIndex + 1; index < queueLength; index++) {
+      candidates.add(index);
+    }
+    if (repeatMode == LoopStyle.all) {
+      for (var index = 0; index < currentIndex; index++) {
+        candidates.add(index);
+      }
+    }
+    return candidates;
   }
 }
 

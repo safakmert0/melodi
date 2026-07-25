@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import '../models/song_model.dart';
 import 'database_service.dart';
 import 'youtube_service.dart';
 import 'metadata_service.dart';
@@ -213,12 +214,23 @@ class DownloadManager {
                 task.state = DownloadState.completed;
                 task.progress = 1.0;
                 task.error = null;
-                await db.insertFailedMatch(task.spotifyTrackId, importedPath);
+                await db.upsertDownloadedTrack(
+                    task.spotifyTrackId, importedPath);
                 onDownloadComplete?.call();
               } else {
-                task.state = DownloadState.completed;
-                task.progress = 1.0;
-                onDownloadComplete?.call();
+                final downloadedFile = File(resultPath);
+                if (await downloadedFile.exists()) {
+                  task.filePath = resultPath;
+                  task.state = DownloadState.completed;
+                  task.progress = 1.0;
+                  task.error = null;
+                  await db.upsertDownloadedTrack(
+                      task.spotifyTrackId, resultPath);
+                  onDownloadComplete?.call();
+                } else {
+                  task.state = DownloadState.failed;
+                  task.error = 'İndirilen dosya bulunamadı';
+                }
               }
             }
             _notify();
@@ -280,12 +292,21 @@ class DownloadManager {
           task.state = DownloadState.completed;
           task.progress = 1.0;
           task.error = null;
-          await db.insertFailedMatch(task.spotifyTrackId, importedPath);
+          await db.upsertDownloadedTrack(task.spotifyTrackId, importedPath);
           onDownloadComplete?.call();
         } else {
-          task.state = DownloadState.completed;
-          task.progress = 1.0;
-          onDownloadComplete?.call();
+          final downloadedFile = File(resultPath);
+          if (await downloadedFile.exists()) {
+            task.filePath = resultPath;
+            task.state = DownloadState.completed;
+            task.progress = 1.0;
+            task.error = null;
+            await db.upsertDownloadedTrack(task.spotifyTrackId, resultPath);
+            onDownloadComplete?.call();
+          } else {
+            task.state = DownloadState.failed;
+            task.error = 'İndirilen dosya bulunamadı';
+          }
         }
       } else {
         task.state = DownloadState.failed;
@@ -410,7 +431,24 @@ class DownloadManager {
       final metadata = await MetadataService.extractMetadata(destPath);
       if (metadata != null) {
         final placeholderId = 'spotify:${task.spotifyTrackId}';
-        final placeholder = await db.getSongById(placeholderId);
+        SongModel? placeholder = await db.getSongById(placeholderId);
+        if (placeholder == null) {
+          final titleKey = _matchKey(task.title);
+          final artistKey = _matchKey(task.artist.split(',').first);
+          for (final candidate in await db.getAllSongs()) {
+            if (!candidate.filePath.startsWith('spotify://')) continue;
+            final sameTitle = _matchKey(candidate.title) == titleKey;
+            final candidateArtist =
+                _matchKey(candidate.artist.split(',').first);
+            final sameArtist = artistKey.isEmpty ||
+                candidateArtist.contains(artistKey) ||
+                artistKey.contains(candidateArtist);
+            if (sameTitle && sameArtist) {
+              placeholder = candidate;
+              break;
+            }
+          }
+        }
         final normalized = metadata.copyWith(
           id: placeholder?.id ?? metadata.id,
           title: task.title,
@@ -430,6 +468,9 @@ class DownloadManager {
       return null;
     }
   }
+
+  String _matchKey(String value) =>
+      value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
 
   void cancelTask(String taskId) {
     final tasks = _tasks.where((t) => t.id == taskId).toList();

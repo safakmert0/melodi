@@ -954,50 +954,70 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         const SizedBox(height: 8),
                         _SettingsTile(
-                          icon: Icons.folder_rounded,
+                          icon: Platform.isIOS
+                              ? Icons.lock_rounded
+                              : Icons.folder_rounded,
                           iconColor: Colors.orange,
                           title: AppLocale.tr('download_location'),
                           subtitle: Text(
-                            _downloadPath.isNotEmpty
-                                ? _downloadPath
-                                : 'Documents/downloads',
+                            Platform.isIOS
+                                ? 'Melodi içinde · özel çevrimdışı alan'
+                                : _downloadPath.isNotEmpty
+                                    ? _downloadPath
+                                    : 'Documents/downloads',
                             style: TextStyle(
                                 color: MelodiTheme.onSurfaceVariant,
                                 fontSize: 12),
                           ),
-                          trailing: Icon(Icons.chevron_right,
+                          trailing: Icon(
+                              Platform.isIOS
+                                  ? Icons.info_outline_rounded
+                                  : Icons.chevron_right,
                               color: MelodiTheme.textMuted),
-                          onTap: () async {
-                            try {
-                              final result =
-                                  await FilePicker.platform.getDirectoryPath();
-                              if (result != null && context.mounted) {
-                                await DatabaseService.instance
-                                    .setSetting('download_path', result);
-                                setState(() {
-                                  _downloadPath = result;
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                        '${AppLocale.tr('download_location')}: $result'),
-                                    backgroundColor: MelodiTheme.primaryGreen,
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(_downloadPath.isNotEmpty
-                                        ? _downloadPath
-                                        : 'Documents/downloads'),
-                                    backgroundColor: MelodiTheme.primaryGreen,
-                                  ),
-                                );
-                              }
-                            }
-                          },
+                          onTap: Platform.isIOS
+                              ? () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          'İndirilenler Melodi içinde saklanır ve Dosyalar uygulamasında görünmez.'),
+                                    ),
+                                  );
+                                }
+                              : () async {
+                                  try {
+                                    final result = await FilePicker.platform
+                                        .getDirectoryPath();
+                                    if (result == null || !context.mounted)
+                                      return;
+                                    await DatabaseService.instance
+                                        .setSetting('download_path', result);
+                                    if (!context.mounted) return;
+                                    setState(() {
+                                      _downloadPath = result;
+                                    });
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                            '${AppLocale.tr('download_location')}: $result'),
+                                        backgroundColor:
+                                            MelodiTheme.primaryGreen,
+                                      ),
+                                    );
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(_downloadPath.isNotEmpty
+                                              ? _downloadPath
+                                              : 'Documents/downloads'),
+                                          backgroundColor:
+                                              MelodiTheme.primaryGreen,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
                         ),
                         const SizedBox(height: 8),
                         _SettingsTile(
