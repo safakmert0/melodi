@@ -28,9 +28,9 @@ class HomeContinueListening extends StatelessWidget {
         final theme = Theme.of(context);
 
         return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           child: AspectRatio(
-            aspectRatio: 1.7,
+            aspectRatio: 1.18,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(MelodiRadius.panel),
               child: Stack(
@@ -62,38 +62,67 @@ class HomeContinueListening extends StatelessWidget {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(22),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: const Text(
-                            'KALDIĞIN YERDEN',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.2,
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 11,
+                                vertical: 7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.34),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.16),
+                                ),
+                              ),
+                              child: const Text(
+                                'ŞİMDİ SENİN İÇİN',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
                             ),
-                          ),
+                            const Spacer(),
+                            Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.14),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.auto_awesome_rounded,
+                                  color: Colors.white, size: 18),
+                            ),
+                          ],
                         ),
                         const Spacer(),
+                        Text(
+                          'LISTEN NOW',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.62),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 2.2,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         Text(
                           song.title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.headlineSmall?.copyWith(
+                          style: theme.textTheme.headlineLarge?.copyWith(
                             color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.7,
+                            fontSize: 31,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -1.1,
                           ),
                         ),
                         const SizedBox(height: 3),
@@ -105,7 +134,7 @@ class HomeContinueListening extends StatelessWidget {
                             color: Colors.white.withValues(alpha: 0.75),
                           ),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 18),
                         Row(
                           children: [
                             FilledButton.icon(

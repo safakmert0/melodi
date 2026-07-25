@@ -121,11 +121,15 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
         if (parsed.isNotEmpty) {
           _lyricsLines = parsed;
           _lyricsResult = LyricsResult(syncedLrc: text);
+          _lyricsLoading = false;
+          setState(() {});
         } else {
+          // Embedded/plain lyrics are still a useful fallback, but they must
+          // not prevent a synchronized LRCLIB lookup.
           _lyricsResult = LyricsResult(plainText: text);
+          setState(() {});
+          _fetchLyrics(song);
         }
-        _lyricsLoading = false;
-        if (mounted) setState(() {});
       }
     });
     if (song.albumArt == null) {
@@ -145,6 +149,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       album: song.album,
       durationMs: durationMs,
       filePath: song.filePath,
+      preferSynced: true,
     );
     if (result != null && mounted) {
       _lyricsResult = result;
@@ -184,16 +189,11 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: theme.brightness == Brightness.dark
-          ? Brightness.light
-          : Brightness.dark,
-      systemNavigationBarColor: theme.scaffoldBackgroundColor,
-      systemNavigationBarIconBrightness: theme.brightness == Brightness.dark
-          ? Brightness.light
-          : Brightness.dark,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Colors.black,
+      systemNavigationBarIconBrightness: Brightness.light,
     ));
     return Consumer2<PlayerProvider, LocaleNotifier>(
       builder: (context, player, locale, _) {
@@ -344,7 +344,6 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                       const SizedBox(height: 58),
                       _buildPlayerSurface(song, player, hasArt),
                       _buildSurfaceSwitcher(),
-                      if (_surfaceIndex == 0) _buildSingleLineLyrics(),
                       const SizedBox(height: 6),
                       // Song Title + Artist
                       Padding(
@@ -357,7 +356,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: theme.colorScheme.onSurface,
+                                color: Colors.white,
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -627,62 +626,71 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   }
 
   Widget _buildArtworkSurface(SongModel song, bool hasArt) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 6),
-        child: AspectRatio(
-          aspectRatio: 1,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              if (hasArt)
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              MelodiTheme.primaryGreen.withValues(alpha: 0.26),
-                          blurRadius: 64,
-                          spreadRadius: 6,
+    return Column(
+      children: [
+        Expanded(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(28, 4, 28, 8),
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (hasArt)
+                      Positioned.fill(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: MelodiTheme.primaryGreen
+                                    .withValues(alpha: 0.26),
+                                blurRadius: 64,
+                                spreadRadius: 6,
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-              Hero(
-                tag: 'album_art_${song.id}',
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.42),
-                        blurRadius: 32,
-                        offset: const Offset(0, 12),
                       ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: hasArt
-                        ? Image.memory(
-                            song.albumArt!,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
-                            gaplessPlayback: true,
-                            errorBuilder: (_, __, ___) => _buildArtFallback(),
-                          )
-                        : _buildArtFallback(),
-                  ),
+                    Hero(
+                      tag: 'album_art_${song.id}',
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.42),
+                              blurRadius: 32,
+                              offset: const Offset(0, 12),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: hasArt
+                              ? Image.memory(
+                                  song.albumArt!,
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  gaplessPlayback: true,
+                                  errorBuilder: (_, __, ___) =>
+                                      _buildArtFallback(),
+                                )
+                              : _buildArtFallback(),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
-      ),
+        _buildSingleLineLyrics(),
+        const SizedBox(height: 2),
+      ],
     );
   }
 
@@ -1023,63 +1031,72 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     } else if (_lyricsResult?.instrumental == true) {
       line = AppLocale.tr('instrumental');
     } else {
-      return SizedBox(
-          height: 40,
-          child: Center(
-            child: _lyricsLoading
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : Text('♪',
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontSize: 20)),
-          ));
+      line = _lyricsLoading ? 'Sözler eşitleniyor…' : 'Sözler için dokun';
     }
 
     if (line.isEmpty) {
-      return SizedBox(
-          height: 40,
-          child: Center(
-            child: Text('♪',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontSize: 20)),
-          ));
+      line = '♪';
     }
 
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const LyricsScreen()),
       ),
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 400),
-        transitionBuilder: (child, animation) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        child: Padding(
-          key: ValueKey('lyric_${_currentLineIndex}_${_lyricsLines.length}'),
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 6),
-          child: Text(
-            line,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: hasTiming
-                  ? Theme.of(context).colorScheme.onSurface
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
-              fontSize: hasTiming ? 17 : 14,
-              fontWeight: hasTiming ? FontWeight.w600 : FontWeight.w400,
-              shadows: [
-                Shadow(
-                  color: Colors.black.withValues(alpha: 0.4),
-                  blurRadius: 10,
+      child: Container(
+        height: 52,
+        margin: const EdgeInsets.symmetric(horizontal: 28),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.38),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        ),
+        child: Row(
+          children: [
+            if (_lyricsLoading)
+              const Padding(
+                padding: EdgeInsets.only(right: 10),
+                child: SizedBox(
+                  width: 15,
+                  height: 15,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white70,
+                  ),
                 ),
-              ],
+              )
+            else
+              const Padding(
+                padding: EdgeInsets.only(right: 10),
+                child:
+                    Icon(Icons.lyrics_rounded, size: 17, color: Colors.white70),
+              ),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 320),
+                transitionBuilder: (child, animation) =>
+                    FadeTransition(opacity: animation, child: child),
+                child: Text(
+                  line,
+                  key: ValueKey(
+                      'lyric_${_currentLineIndex}_${_lyricsLines.length}_$line'),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: hasTiming ? Colors.white : Colors.white70,
+                    fontSize: hasTiming ? 16 : 13,
+                    fontWeight: hasTiming ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+              ),
             ),
-          ),
+            const Padding(
+              padding: EdgeInsets.only(left: 10),
+              child: Icon(Icons.open_in_full_rounded,
+                  size: 15, color: Colors.white54),
+            ),
+          ],
         ),
       ),
     );

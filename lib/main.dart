@@ -49,7 +49,7 @@ Future<void> main() async {
       DeviceOrientation.portraitDown,
     ]);
 
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
       systemNavigationBarColor: MelodiTheme.background,
@@ -141,24 +141,24 @@ Future<void> main() async {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.error_outline,
+                  Icon(Icons.error_outline,
                       color: MelodiTheme.errorRed, size: 48),
                   const SizedBox(height: 16),
-                  const Text('HATA:',
+                  Text('HATA:',
                       style: TextStyle(
                           color: MelodiTheme.errorRed,
                           fontSize: 20,
                           fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   Text('${details.exception}',
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: MelodiTheme.onSurface, fontSize: 12)),
                   const SizedBox(height: 16),
                   if (details.stack != null)
                     Expanded(
                       child: SingleChildScrollView(
                         child: Text('${details.stack}',
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: MelodiTheme.onSurfaceVariant,
                                 fontSize: 10)),
                       ),
@@ -185,8 +185,7 @@ Future<void> main() async {
             padding: const EdgeInsets.all(24),
             child: Text(
               'Startup error:\n$e',
-              style:
-                  const TextStyle(color: MelodiTheme.onSurface, fontSize: 16),
+              style: TextStyle(color: MelodiTheme.onSurface, fontSize: 16),
               textAlign: TextAlign.center,
             ),
           ),
@@ -234,7 +233,7 @@ class _AppEntryState extends State<_AppEntry> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: MelodiTheme.background,
         body: Center(
           child: CircularProgressIndicator(color: MelodiTheme.primaryGreen),

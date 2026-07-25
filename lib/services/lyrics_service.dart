@@ -147,16 +147,24 @@ class LyricsService {
     String? album,
     int? durationMs,
     String? filePath,
+    bool preferSynced = false,
   }) async {
+    LyricsResult? plainFallback;
     if (filePath != null) {
       final sidecar = await _readSidecar(filePath);
-      if (sidecar != null) return sidecar;
+      if (sidecar != null) {
+        if (!preferSynced || _hasSyncedLyrics(sidecar)) return sidecar;
+        plainFallback = sidecar;
+      }
     }
 
     final songId = '${artist}_${track}_${album ?? ''}';
 
     final cached = await _getCachedLyrics(songId);
-    if (cached != null) return cached;
+    if (cached != null) {
+      if (!preferSynced || _hasSyncedLyrics(cached)) return cached;
+      plainFallback ??= cached;
+    }
 
     final result = await _fetchFromApi(
         artist: artist, track: track, album: album, durationMs: durationMs);
@@ -168,8 +176,11 @@ class LyricsService {
       }
     }
 
-    return result;
+    return result ?? plainFallback;
   }
+
+  static bool _hasSyncedLyrics(LyricsResult result) =>
+      result.syncedLrc != null && result.syncedLrc!.trim().isNotEmpty;
 
   static Future<LyricsResult?> _fetchFromApi({
     required String artist,

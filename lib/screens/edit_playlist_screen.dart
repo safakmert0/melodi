@@ -49,7 +49,7 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
           onPressed: () => Navigator.of(context).pop(),
           child: Text(
             AppLocale.tr('cancel'),
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: AppConstants.fontFamily,
               color: MelodiTheme.onSurfaceVariant,
               fontSize: 14,
@@ -92,7 +92,7 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    const Icon(Icons.queue_music_rounded,
+                    Icon(Icons.queue_music_rounded,
                         size: 60, color: MelodiTheme.onSurfaceVariant),
                     Positioned(
                       bottom: 0,
@@ -105,7 +105,7 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
                           borderRadius: const BorderRadius.vertical(
                               bottom: Radius.circular(12)),
                         ),
-                        child: const Icon(Icons.camera_alt_rounded,
+                        child: Icon(Icons.camera_alt_rounded,
                             size: 20, color: MelodiTheme.onSurface),
                       ),
                     ),
@@ -119,7 +119,7 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
                 children: [
                   TextField(
                     controller: _nameController,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: AppConstants.fontFamily,
                       color: MelodiTheme.onSurface,
                       fontSize: 16,
@@ -127,7 +127,7 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
                     ),
                     decoration: InputDecoration(
                       labelText: AppLocale.tr('playlist_name'),
-                      labelStyle: const TextStyle(
+                      labelStyle: TextStyle(
                         fontFamily: AppConstants.fontFamily,
                         color: MelodiTheme.onSurfaceVariant,
                       ),
@@ -139,14 +139,14 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
                   const SizedBox(height: 16),
                   TextField(
                     controller: _descController,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: AppConstants.fontFamily,
                       color: MelodiTheme.onSurface,
                       fontSize: 14,
                     ),
                     decoration: InputDecoration(
                       labelText: AppLocale.tr('description'),
-                      labelStyle: const TextStyle(
+                      labelStyle: TextStyle(
                         fontFamily: AppConstants.fontFamily,
                         color: MelodiTheme.onSurfaceVariant,
                       ),
@@ -188,7 +188,7 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
                   leading: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.drag_handle_rounded,
+                      Icon(Icons.drag_handle_rounded,
                           color: MelodiTheme.onSurfaceVariant),
                       const SizedBox(width: 8),
                       Container(
@@ -204,7 +204,7 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
                                 child: Image.memory(song.albumArt!,
                                     fit: BoxFit.cover, gaplessPlayback: true),
                               )
-                            : const Icon(Icons.music_note_rounded,
+                            : Icon(Icons.music_note_rounded,
                                 color: MelodiTheme.onSurfaceVariant),
                       ),
                     ],
@@ -213,7 +213,7 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
                     song.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: AppConstants.fontFamily,
                       color: MelodiTheme.onSurface,
                       fontSize: 14,
@@ -223,14 +223,14 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
                     song.artist,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: AppConstants.fontFamily,
                       color: MelodiTheme.onSurfaceVariant,
                       fontSize: 14,
                     ),
                   ),
                   trailing: IconButton(
-                    icon: const Icon(Icons.remove_circle_outline_rounded,
+                    icon: Icon(Icons.remove_circle_outline_rounded,
                         color: MelodiTheme.errorRed, size: 22),
                     onPressed: () {
                       setState(() => _songs.removeAt(index));

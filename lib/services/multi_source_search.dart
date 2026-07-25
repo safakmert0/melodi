@@ -72,6 +72,9 @@ class MultiSourceSearch {
   }
 
   Future<String?> getStreamUrl(OnlineTrack track) async {
+    // Deezer's public API exposes metadata and a 30-second preview only.
+    // Never let preview-only sources enter the playback/download pipeline.
+    if (!track.source.supportsFullTrack) return null;
     final source = _sources.firstWhere(
       (s) => s.type == track.source,
       orElse: () => _sources.first,
@@ -80,38 +83,45 @@ class MultiSourceSearch {
   }
 
   /// Try to get stream URL with fallback across all sources.
-  /// Priority: the track's own source first, then YouTube > JioSaavn > Deezer.
+  /// Preview-only catalogue results are resolved against a full-track source.
+  /// Priority: the track's own full source first, then YouTube > JioSaavn.
   Future<String?> getStreamUrlWithFallback(OnlineTrack track,
       {String? query}) async {
-    // 1. Try the track's own source first
+    // 1. Try the track's own source only if it can provide a full track.
     final primarySource = _sources.firstWhere(
       (s) => s.type == track.source,
       orElse: () => _sources.first,
     );
-    try {
-      final url = await primarySource.getStreamUrl(track);
-      if (url != null && url.isNotEmpty) return url;
-    } catch (_) {}
+    if (primarySource.type.supportsFullTrack) {
+      try {
+        final url = await primarySource.getStreamUrl(track);
+        if (url != null && url.isNotEmpty) return url;
+      } catch (_) {}
+    }
 
     // 2. Fallback: search by query across other sources
-    final searchQuery = query ?? '${track.artist} - ${track.title}';
-    final fallbackOrder =
-        _sources.where((s) => s.type != track.source).toList();
-    // Prioritize YouTube, then JioSaavn, then Deezer
+    // Use the selected result's exact metadata; a broad UI query can resolve
+    // to an unrelated first result.
+    final searchQuery = '${track.artist} - ${track.title}'.trim();
+    final fallbackOrder = _sources
+        .where((s) => s.type != track.source && s.type.supportsFullTrack)
+        .toList();
+    // YouTube is the broadest catalogue, JioSaavn is the full-stream fallback.
     fallbackOrder.sort((a, b) {
       const priority = {
         MusicSourceType.youtube: 0,
         MusicSourceType.jiosaavn: 1,
-        MusicSourceType.deezer: 2,
-        MusicSourceType.lastfm: 3,
       };
       return (priority[a.type] ?? 99).compareTo(priority[b.type] ?? 99);
     });
 
     for (final source in fallbackOrder) {
       try {
-        final results = await source.search(searchQuery, limit: 3);
+        final results = await source.search(searchQuery, limit: 5);
+        results.sort(
+            (a, b) => _matchScore(b, track).compareTo(_matchScore(a, track)));
         for (final result in results) {
+          if (_matchScore(result, track) < 2) continue;
           final url = await source.getStreamUrl(result);
           if (url != null && url.isNotEmpty) return url;
         }
@@ -119,6 +129,36 @@ class MultiSourceSearch {
     }
     return null;
   }
+
+  int _matchScore(OnlineTrack candidate, OnlineTrack requested) {
+    final wantedTitle = _normalize(requested.title);
+    final wantedArtist = _normalize(requested.artist.split(',').first);
+    final title = _normalize(candidate.title);
+    final artist = _normalize(candidate.artist);
+    var score = 0;
+    if (title == wantedTitle) {
+      score += 5;
+    } else if (title.contains(wantedTitle) || wantedTitle.contains(title)) {
+      score += 3;
+    }
+    if (wantedArtist.isNotEmpty && artist.contains(wantedArtist)) score += 3;
+    final requestedSeconds = requested.duration.inSeconds;
+    final candidateSeconds = candidate.duration.inSeconds;
+    if (requestedSeconds > 0 && candidateSeconds > 0) {
+      final delta = (requestedSeconds - candidateSeconds).abs();
+      if (delta <= 3) {
+        score += 2;
+      } else if (delta > 20) {
+        score -= 2;
+      }
+    }
+    return score;
+  }
+
+  String _normalize(String value) => value
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9\u00c0-\u024f\u0400-\u04ff]+'), ' ')
+      .trim();
 
   void dispose() {
     for (final source in _sources) {

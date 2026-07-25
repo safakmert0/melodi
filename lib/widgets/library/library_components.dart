@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-import '../../core/constants.dart';
 import '../../core/melodi_design.dart';
 import '../../models/song_model.dart';
 
@@ -107,7 +106,9 @@ class LibraryHeader extends StatelessWidget {
                 Text('Müziğin, tek yerde',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: MelodiTheme.heading(size: 21)),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontSize: 21,
+                        )),
               ],
             ),
           ),
@@ -604,7 +605,9 @@ class LibraryEmptyState extends StatelessWidget {
               const SizedBox(height: 18),
               Text(title,
                   textAlign: TextAlign.center,
-                  style: MelodiTheme.heading(size: 20)),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontSize: 20,
+                      )),
               const SizedBox(height: 8),
               Text(message,
                   textAlign: TextAlign.center,

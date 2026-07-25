@@ -2,6 +2,14 @@ import 'dart:typed_data';
 
 enum MusicSourceType { youtube, jiosaavn, deezer, lastfm }
 
+extension MusicSourceTypeCapabilities on MusicSourceType {
+  /// Whether the public source can resolve a complete playable track.
+  bool get supportsFullTrack =>
+      this == MusicSourceType.youtube || this == MusicSourceType.jiosaavn;
+
+  bool get isPreviewCatalogue => this == MusicSourceType.deezer;
+}
+
 class OnlineTrack {
   final String id;
   final String title;

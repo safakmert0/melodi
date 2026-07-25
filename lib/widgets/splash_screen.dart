@@ -142,7 +142,7 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                   child: Text(
                     'Melodi',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: AppConstants.fontFamily,
                       fontSize: 36,
                       fontWeight: FontWeight.w800,

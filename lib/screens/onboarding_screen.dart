@@ -1,15 +1,14 @@
-import 'dart:async';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:file_picker/file_picker.dart';
-import '../core/constants.dart';
+
 import '../core/localization.dart';
 import '../providers/theme_provider.dart';
 import '../services/database_service.dart';
-import '../widgets/splash_screen.dart';
 import '../widgets/main_shell.dart';
-import 'settings_screen.dart';
+import '../widgets/splash_screen.dart';
+import 'source_hub_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -18,33 +17,27 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen>
-    with TickerProviderStateMixin {
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  static const _pageCount = 5;
+  final PageController _controller = PageController();
+  int _page = 0;
   bool _showSplash = true;
   String _downloadPath = '';
-  late AnimationController _fadeController;
-  late AnimationController _slideController;
 
-  @override
-  void initState() {
-    super.initState();
-    _fadeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    _slideController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
+  String _copy(String tr, String en, String de) {
+    switch (AppLocale.currentLocale) {
+      case 'en':
+        return en;
+      case 'de':
+        return de;
+      default:
+        return tr;
+    }
   }
 
   @override
   void dispose() {
-    _pageController.dispose();
-    _fadeController.dispose();
-    _slideController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -53,1006 +46,796 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     await DatabaseService.instance.setSetting('onboarding_completed', 'true');
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
+      PageRouteBuilder<void>(
         pageBuilder: (_, __, ___) => const MainShell(),
-        transitionsBuilder: (_, anim, __, child) {
-          return FadeTransition(
-            opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut),
-            child: child,
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 600),
+        transitionsBuilder: (_, animation, __, child) => FadeTransition(
+          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+          child: child,
+        ),
+        transitionDuration: const Duration(milliseconds: 450),
       ),
     );
   }
 
-  void _nextPage() {
+  void _goTo(int page) {
     HapticFeedback.selectionClick();
-    if (_currentPage < 4) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeOutCubic,
-      );
-    } else {
-      _complete();
-    }
-  }
-
-  void _prevPage() {
-    HapticFeedback.selectionClick();
-    if (_currentPage > 0) {
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeOutCubic,
-      );
-    }
+    _controller.animateToPage(
+      page.clamp(0, _pageCount - 1),
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    // A direct dependency guarantees that language changes repaint the current
+    // onboarding page immediately, without waiting for a page transition.
+    context.watch<LocaleNotifier>().locale;
     if (_showSplash) {
       return SplashScreen(
-        onComplete: () {
-          setState(() => _showSplash = false);
-          _fadeController.forward();
-          _slideController.forward();
-        },
+        onComplete: () => setState(() => _showSplash = false),
       );
     }
 
+    final theme = Theme.of(context);
+    final accent = _pageAccent(theme, _page);
     return Scaffold(
-      backgroundColor: MelodiTheme.background,
-      body: FadeTransition(
-        opacity: _fadeController,
-        child: Stack(
-          children: [
-            // Animated background gradient
-            Positioned.fill(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 1000),
-                curve: Curves.easeInOut,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      _getPageColor(_currentPage).withOpacity(0.12),
-                      MelodiTheme.background,
-                      MelodiTheme.background,
-                      _getPageColor(_currentPage).withOpacity(0.06),
-                    ],
-                    stops: const [0.0, 0.3, 0.7, 1.0],
-                  ),
-                ),
-              ),
-            ),
-            // Floating orbs
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _OrbPainter(
-                  color: _getPageColor(_currentPage),
-                  progress: _currentPage / 4,
-                ),
-              ),
-            ),
-            // Content
-            SafeArea(
-              child: Column(
-                children: [
-                  // Top bar
-                  _buildTopBar(),
-                  // Page content
-                  Expanded(
-                    child: PageView(
-                      controller: _pageController,
-                      onPageChanged: (i) => setState(() => _currentPage = i),
-                      physics: const BouncingScrollPhysics(),
-                      children: [
-                        _buildWelcomePage(),
-                        _buildLanguagePage(),
-                        _buildThemePage(),
-                        _buildServicesPage(),
-                        _buildDownloadPage(),
-                      ],
-                    ),
-                  ),
-                  // Bottom section
-                  _buildBottomSection(),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Color _getPageColor(int page) {
-    switch (page) {
-      case 0:
-        return MelodiTheme.primaryGreen;
-      case 1:
-        return const Color(0xFF42A5F5);
-      case 2:
-        return const Color(0xFF64B5F6);
-      case 3:
-        return MelodiTheme.primaryContainer;
-      case 4:
-        return const Color(0xFF8D67AB);
-      default:
-        return MelodiTheme.primaryGreen;
-    }
-  }
-
-  Widget _buildTopBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-      child: Row(
+      body: Stack(
         children: [
-          // Back button
-          if (_currentPage > 0)
-            GestureDetector(
-              onTap: _prevPage,
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: MelodiTheme.surfaceBright.withOpacity(0.5),
-                ),
-                child: const Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  size: 18,
-                  color: MelodiTheme.onSurface,
-                ),
-              ),
-            )
-          else
-            const SizedBox(width: 40),
-          const Spacer(),
-          // Skip button
-          if (_currentPage < 4)
-            GestureDetector(
-              onTap: _complete,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: MelodiTheme.outlineVariant.withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  AppLocale.tr('skip'),
-                  style: MelodiTheme.bodySm(
-                    color: MelodiTheme.onSurfaceVariant.withOpacity(0.7),
-                  ),
-                ),
-              ),
-            )
-          else
-            const SizedBox(width: 60),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWelcomePage() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Animated logo with glow
-          SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.3),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: _slideController,
-              curve: Curves.easeOutBack,
-            )),
-            child: FadeTransition(
-              opacity: _slideController,
-              child: Container(
-                width: 160,
-                height: 160,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: MelodiTheme.primaryGreen.withOpacity(0.25),
-                      blurRadius: 60,
-                      spreadRadius: 20,
-                    ),
-                  ],
-                ),
-                child: Container(
-                  width: 160,
-                  height: 160,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        MelodiTheme.primaryGreen.withOpacity(0.15),
-                        MelodiTheme.primaryGreen.withOpacity(0.05),
-                        Colors.transparent,
-                      ],
-                    ),
-                    border: Border.all(
-                      color: MelodiTheme.primaryGreen.withOpacity(0.2),
-                      width: 2,
-                    ),
-                  ),
-                  child: Center(
-                    child: Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            MelodiTheme.primaryGreen.withOpacity(0.2),
-                            MelodiTheme.primaryGreen.withOpacity(0.08),
-                          ],
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.music_note_rounded,
-                        size: 52,
-                        color: MelodiTheme.primaryGreen,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 56),
-          // Title
-          Text(
-            AppLocale.tr('welcome_to_melodi'),
-            style: MelodiTheme.display(size: 44),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 20),
-          // Subtitle
-          Text(
-            AppLocale.tr('onboarding_welcome_desc'),
-            style: MelodiTheme.body(
-              size: 19,
-              color: MelodiTheme.onSurfaceVariant.withOpacity(0.8),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 40),
-          // Feature highlights
-          _FeatureRow(
-            icon: Icons.bolt_rounded,
-            text: AppLocale.tr('signal_path_preparing'),
-          ),
-          const SizedBox(height: 12),
-          _FeatureRow(
-            icon: Icons.shield_rounded,
-            text: AppLocale.tr('scanning_library'),
-          ),
-          const SizedBox(height: 12),
-          _FeatureRow(
-            icon: Icons.favorite_rounded,
-            text: AppLocale.tr('enjoy_listening'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLanguagePage() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Icon
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  MelodiTheme.primaryGreen.withOpacity(0.15),
-                  MelodiTheme.primaryGreen.withOpacity(0.05),
-                ],
-              ),
-              border: Border.all(
-                color: MelodiTheme.primaryGreen.withOpacity(0.2),
-                width: 1.5,
-              ),
-            ),
-            child: const Icon(
-              Icons.language_rounded,
-              size: 40,
-              color: MelodiTheme.primaryGreen,
-            ),
-          ),
-          const SizedBox(height: 44),
-          // Title
-          Text(
-            AppLocale.tr('choose_language'),
-            style: MelodiTheme.heading(size: 38),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          // Subtitle
-          Text(
-            AppLocale.tr('onboarding_language_desc'),
-            style: MelodiTheme.body(
-              size: 18,
-              color: MelodiTheme.onSurfaceVariant.withOpacity(0.8),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 44),
-          _LanguageSelector(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildThemePage() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Icon
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  MelodiTheme.primaryGreen.withOpacity(0.15),
-                  MelodiTheme.primaryGreen.withOpacity(0.05),
-                ],
-              ),
-              border: Border.all(
-                color: MelodiTheme.primaryGreen.withOpacity(0.2),
-                width: 1.5,
-              ),
-            ),
-            child: const Icon(
-              Icons.palette_rounded,
-              size: 40,
-              color: MelodiTheme.primaryGreen,
-            ),
-          ),
-          const SizedBox(height: 44),
-          // Title
-          Text(
-            AppLocale.tr('choose_theme'),
-            style: MelodiTheme.heading(size: 38),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          // Subtitle
-          Text(
-            AppLocale.tr('onboarding_theme_desc'),
-            style: MelodiTheme.body(
-              size: 18,
-              color: MelodiTheme.onSurfaceVariant.withOpacity(0.8),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 44),
-          _ThemeSelector(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildServicesPage() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Icon
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  MelodiTheme.primaryGreen.withOpacity(0.15),
-                  MelodiTheme.primaryGreen.withOpacity(0.05),
-                ],
-              ),
-              border: Border.all(
-                color: MelodiTheme.primaryGreen.withOpacity(0.2),
-                width: 1.5,
-              ),
-            ),
-            child: const Icon(
-              Icons.sync_rounded,
-              size: 40,
-              color: MelodiTheme.primaryGreen,
-            ),
-          ),
-          const SizedBox(height: 44),
-          // Title
-          Text(
-            AppLocale.tr('connect_services'),
-            style: MelodiTheme.heading(size: 38),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          // Subtitle
-          Text(
-            AppLocale.tr('onboarding_services_desc'),
-            style: MelodiTheme.body(
-              size: 18,
-              color: MelodiTheme.onSurfaceVariant.withOpacity(0.8),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 44),
-          // Service cards
-          _ServiceCard(
-            icon: Icons.music_note_rounded,
-            iconColor: const Color(0xFF2196F3),
-            title: 'Spotify',
-            subtitle: AppLocale.tr('spotify_subtitle'),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              );
-            },
-          ),
-          const SizedBox(height: 14),
-          _ServiceCard(
-            icon: Icons.play_circle_rounded,
-            iconColor: const Color(0xFFFF0000),
-            title: 'YouTube Music',
-            subtitle: AppLocale.tr('youtube_subtitle'),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDownloadPage() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: MelodiTheme.primaryGreen.withOpacity(0.12),
-              border:
-                  Border.all(color: MelodiTheme.primaryGreen.withOpacity(0.25)),
-            ),
-            child: const Icon(Icons.folder_special_rounded,
-                size: 40, color: MelodiTheme.primaryGreen),
-          ),
-          const SizedBox(height: 36),
-          Text('İndirme konumunu seç',
-              style: MelodiTheme.heading(size: 30),
-              textAlign: TextAlign.center),
-          const SizedBox(height: 14),
-          Text(
-            'Çevrimdışı müziklerin kaydedileceği klasörü şimdi seçebilirsin. Daha sonra Ayarlar bölümünden değiştirebilirsin.',
-            style:
-                MelodiTheme.body(size: 16, color: MelodiTheme.onSurfaceVariant),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 28),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: MelodiTheme.containerLow,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: MelodiTheme.outlineVariant),
-            ),
-            child: Text(
-              _downloadPath.isEmpty
-                  ? 'Varsayılan uygulama klasörü kullanılacak'
-                  : _downloadPath,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: MelodiTheme.bodySm(color: MelodiTheme.onSurfaceVariant),
-            ),
-          ),
-          const SizedBox(height: 14),
-          FilledButton.icon(
-            onPressed: () async {
-              final path = await FilePicker.platform
-                  .getDirectoryPath(dialogTitle: 'İndirme klasörünü seç');
-              if (!mounted || path == null || path.isEmpty) return;
-              await DatabaseService.instance.setSetting('download_path', path);
-              setState(() => _downloadPath = path);
-            },
-            icon: const Icon(Icons.folder_open_rounded),
-            label: const Text('Klasör seç'),
-            style: FilledButton.styleFrom(
-              backgroundColor: MelodiTheme.primaryGreen,
-              foregroundColor: MelodiTheme.onPrimary,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text('Seçmeden devam edersen varsayılan konum kullanılır.',
-              style: MelodiTheme.labelSm(color: MelodiTheme.textMuted),
-              textAlign: TextAlign.center),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomSection() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(40, 16, 40, 40),
-      child: Column(
-        children: [
-          // Progress dots
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(5, (i) {
-              final isActive = i == _currentPage;
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 400),
-                margin: const EdgeInsets.symmetric(horizontal: 5),
-                width: isActive ? 28 : 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  gradient: isActive
-                      ? const LinearGradient(
-                          colors: [MelodiTheme.primaryGreen, Color(0xFF42A5F5)],
-                        )
-                      : null,
-                  color: isActive
-                      ? null
-                      : MelodiTheme.surfaceBright.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(4),
-                  boxShadow: isActive
-                      ? [
-                          BoxShadow(
-                            color: MelodiTheme.primaryGreen.withOpacity(0.4),
-                            blurRadius: 8,
-                          ),
-                        ]
-                      : null,
-                ),
-              );
-            }),
-          ),
-          const SizedBox(height: 32),
-          // Next button
-          SizedBox(
-            width: double.infinity,
-            height: 60,
-            child: ElevatedButton(
-              onPressed: _nextPage,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: MelodiTheme.primaryGreen,
-                foregroundColor: MelodiTheme.onPrimary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                elevation: 0,
-                shadowColor: Colors.transparent,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    _currentPage < 4
-                        ? AppLocale.tr('next')
-                        : AppLocale.tr('get_started'),
-                    style: const TextStyle(
-                      fontFamily: AppConstants.fontFamily,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Icon(
-                    _currentPage < 4
-                        ? Icons.arrow_forward_rounded
-                        : Icons.check_circle_outline_rounded,
-                    size: 22,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Floating orb painter
-class _OrbPainter extends CustomPainter {
-  final Color color;
-  final double progress;
-
-  _OrbPainter({required this.color, required this.progress});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
-
-    final orbs = [
-      Offset(size.width * 0.8, size.height * 0.15),
-      Offset(size.width * 0.15, size.height * 0.75),
-      Offset(size.width * 0.85, size.height * 0.85),
-    ];
-
-    for (int i = 0; i < orbs.length; i++) {
-      final orbProgress = (progress + i * 0.33) % 1.0;
-      final radius = 60.0 + orbProgress * 40.0;
-      final opacity = (0.03 + orbProgress * 0.02).clamp(0.0, 0.05);
-
-      paint.shader = RadialGradient(
-        colors: [
-          color.withOpacity(opacity),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromCircle(center: orbs[i], radius: radius));
-
-      canvas.drawCircle(orbs[i], radius, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _OrbPainter oldDelegate) =>
-      oldDelegate.progress != progress || oldDelegate.color != color;
-}
-
-// Feature row for welcome page
-class _FeatureRow extends StatelessWidget {
-  final IconData icon;
-  final String text;
-
-  const _FeatureRow({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: MelodiTheme.primaryGreen.withOpacity(0.1),
-          ),
-          child: Icon(
-            icon,
-            size: 16,
-            color: MelodiTheme.primaryGreen,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Text(
-          text,
-          style: MelodiTheme.bodySm(
-            size: 15,
-            color: MelodiTheme.onSurfaceVariant.withOpacity(0.7),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _LanguageSelector extends StatefulWidget {
-  @override
-  State<_LanguageSelector> createState() => _LanguageSelectorState();
-}
-
-class _LanguageSelectorState extends State<_LanguageSelector> {
-  String _selectedLocale = AppLocale.currentLocale;
-
-  @override
-  Widget build(BuildContext context) {
-    final languages = [
-      ('TÜRKÇE', 'tr', '\u{1F1F9}\u{1F1F7}'),
-      ('English', 'en', '\u{1F1EC}\u{1F1E7}'),
-      ('Deutsch', 'de', '\u{1F1E9}\u{1F1EA}'),
-    ];
-
-    return Column(
-      children: languages.map((lang) {
-        final isSelected = _selectedLocale == lang.$2;
-        return GestureDetector(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            setState(() => _selectedLocale = lang.$2);
-            context.read<LocaleNotifier>().change(lang.$2);
-            DatabaseService.instance.setSetting('app_locale', lang.$2);
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            margin: const EdgeInsets.symmetric(vertical: 6),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-            decoration: BoxDecoration(
-              gradient: isSelected
-                  ? LinearGradient(
-                      colors: [
-                        MelodiTheme.primaryGreen.withOpacity(0.12),
-                        MelodiTheme.primaryGreen.withOpacity(0.05),
-                      ],
-                    )
-                  : null,
-              color: isSelected ? null : MelodiTheme.containerLow,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: isSelected
-                    ? MelodiTheme.primaryGreen.withOpacity(0.5)
-                    : MelodiTheme.outlineVariant.withOpacity(0.3),
-                width: 1.5,
-              ),
-            ),
-            child: Row(
-              children: [
-                Text(
-                  lang.$3,
-                  style: const TextStyle(fontSize: 24),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        lang.$1,
-                        style: TextStyle(
-                          fontFamily: AppConstants.fontFamily,
-                          fontSize: 19,
-                          fontWeight:
-                              isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: isSelected
-                              ? MelodiTheme.primaryGreen
-                              : MelodiTheme.onSurface,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (isSelected)
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: MelodiTheme.primaryGreen,
-                    ),
-                    child: const Icon(
-                      Icons.check_rounded,
-                      size: 18,
-                      color: MelodiTheme.onPrimary,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
-
-class _ThemeSelector extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _ThemeOption(
-          label: AppLocale.tr('dark'),
-          icon: Icons.dark_mode_rounded,
-          isSelected: context.watch<ThemeProvider>().isDark,
-          onTap: () {
-            HapticFeedback.selectionClick();
-            context.read<ThemeProvider>().setThemeMode(ThemeMode.dark);
-          },
-        ),
-        const SizedBox(width: 24),
-        _ThemeOption(
-          label: AppLocale.tr('light'),
-          icon: Icons.light_mode_rounded,
-          isSelected: context.watch<ThemeProvider>().isLight,
-          onTap: () {
-            HapticFeedback.selectionClick();
-            context.read<ThemeProvider>().setThemeMode(ThemeMode.light);
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _ThemeOption extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _ThemeOption({
-    required this.label,
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        width: 150,
-        padding: const EdgeInsets.symmetric(vertical: 28),
-        decoration: BoxDecoration(
-          gradient: isSelected
-              ? LinearGradient(
+          Positioned.fill(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 500),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    MelodiTheme.primaryGreen.withOpacity(0.12),
-                    MelodiTheme.primaryGreen.withOpacity(0.05),
+                    accent.withValues(alpha: 0.18),
+                    theme.scaffoldBackgroundColor,
+                    theme.scaffoldBackgroundColor,
                   ],
-                )
-              : null,
-          color: isSelected ? null : MelodiTheme.containerLow,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: isSelected
-                ? MelodiTheme.primaryGreen.withOpacity(0.5)
-                : MelodiTheme.outlineVariant.withOpacity(0.3),
-            width: 1.5,
+                  stops: const [0, 0.38, 1],
+                ),
+              ),
+            ),
           ),
+          Positioned(
+            right: -90,
+            top: 90,
+            child: _GlowOrb(color: accent, size: 230),
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                _TopBar(
+                  page: _page,
+                  pageCount: _pageCount,
+                  onBack: () => _goTo(_page - 1),
+                  onSkip: _complete,
+                  skipLabel: _copy('Atla', 'Skip', 'Überspringen'),
+                ),
+                Expanded(
+                  child: PageView(
+                    controller: _controller,
+                    physics: const BouncingScrollPhysics(),
+                    onPageChanged: (value) => setState(() => _page = value),
+                    children: [
+                      _buildWelcome(theme),
+                      _buildLanguage(theme),
+                      _buildTheme(theme),
+                      _buildSources(theme),
+                      _buildStorage(theme),
+                    ],
+                  ),
+                ),
+                _BottomDock(
+                  page: _page,
+                  pageCount: _pageCount,
+                  accent: accent,
+                  label: _page == _pageCount - 1
+                      ? _copy('Melodi’yi aç', 'Open Melodi', 'Melodi öffnen')
+                      : _copy('Devam', 'Continue', 'Weiter'),
+                  onPressed: _page == _pageCount - 1
+                      ? _complete
+                      : () => _goTo(_page + 1),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _pageAccent(ThemeData theme, int page) => switch (page) {
+        1 => const Color(0xFF2EC4B6),
+        2 => const Color(0xFF8C72FF),
+        3 => const Color(0xFFFF9F43),
+        4 => const Color(0xFF4D96FF),
+        _ => theme.colorScheme.primary,
+      };
+
+  Widget _pageBody({
+    required Widget child,
+    EdgeInsets padding = const EdgeInsets.fromLTRB(24, 12, 24, 12),
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: padding,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight - 24),
+          child: child,
         ),
-        child: Column(
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isSelected
-                    ? MelodiTheme.primaryGreen.withOpacity(0.15)
-                    : MelodiTheme.containerHigh,
-              ),
-              child: Icon(
-                icon,
-                size: 28,
-                color: isSelected
-                    ? MelodiTheme.primaryGreen
-                    : MelodiTheme.onSurfaceVariant,
-              ),
+      ),
+    );
+  }
+
+  Widget _buildWelcome(ThemeData theme) {
+    return _pageBody(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _EditorialMark(color: theme.colorScheme.primary),
+          const SizedBox(height: 34),
+          Text(
+            _copy('Müzik, tek bir yerde.', 'Music, in one place.',
+                'Musik an einem Ort.'),
+            style: theme.textTheme.displayLarge,
+          ),
+          const SizedBox(height: 18),
+          Text(
+            _copy(
+              'Yerel arşivin, çevrim içi kaynakların, indirmelerin ve canlı sözlerin için yeni nesil müzik alanı.',
+              'A new home for your local library, online sources, downloads and live lyrics.',
+              'Ein neues Zuhause für deine lokale Mediathek, Online-Quellen, Downloads und Live-Texte.',
             ),
-            const SizedBox(height: 14),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: AppConstants.fontFamily,
-                fontSize: 17,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected
-                    ? MelodiTheme.primaryGreen
-                    : MelodiTheme.onSurfaceVariant,
-              ),
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontSize: 18,
             ),
+          ),
+          const SizedBox(height: 30),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _FeaturePill(icon: Icons.offline_bolt_rounded, label: 'Offline'),
+              _FeaturePill(
+                  icon: Icons.lyrics_rounded,
+                  label: _copy('Canlı söz', 'Live lyrics', 'Live-Texte')),
+              _FeaturePill(
+                  icon: Icons.hub_rounded,
+                  label: _copy('Çoklu kaynak', 'Multi-source', 'Multi-Quelle')),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLanguage(ThemeData theme) {
+    final selected = context.watch<LocaleNotifier>().locale;
+    final languages = [
+      ('Türkçe', 'tr', 'TR'),
+      ('English', 'en', 'EN'),
+      ('Deutsch', 'de', 'DE'),
+    ];
+    return _pageBody(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _StepIcon(
+              icon: Icons.translate_rounded, color: _pageAccent(theme, 1)),
+          const SizedBox(height: 26),
+          Text(_copy('Dilini seç', 'Choose your language', 'Sprache wählen'),
+              style: theme.textTheme.headlineLarge),
+          const SizedBox(height: 10),
+          Text(
+            _copy(
+                'Seçim anında tüm kurulum akışına uygulanır.',
+                'Your choice is applied to setup instantly.',
+                'Deine Auswahl wird sofort auf die Einrichtung angewendet.'),
+            style: theme.textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 26),
+          for (final language in languages) ...[
+            _ChoiceTile(
+              title: language.$1,
+              badge: language.$3,
+              selected: selected == language.$2,
+              accent: _pageAccent(theme, 1),
+              onTap: () {
+                HapticFeedback.selectionClick();
+                context.read<LocaleNotifier>().change(language.$2);
+                DatabaseService.instance.setSetting('app_locale', language.$2);
+              },
+            ),
+            const SizedBox(height: 10),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTheme(ThemeData theme) {
+    final provider = context.watch<ThemeProvider>();
+    final accent = _pageAccent(theme, 2);
+    return _pageBody(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _StepIcon(icon: Icons.auto_awesome_rounded, color: accent),
+          const SizedBox(height: 26),
+          Text(
+              _copy('Nasıl görünsün?', 'Choose your atmosphere',
+                  'Wähle deine Atmosphäre'),
+              style: theme.textTheme.headlineLarge),
+          const SizedBox(height: 10),
+          Text(
+            _copy(
+                'Her seçenek yüksek kontrast ve aynı premium kimlikle tasarlandı.',
+                'Every option keeps high contrast and the same premium identity.',
+                'Jede Option bietet hohen Kontrast und dieselbe Premium-Identität.'),
+            style: theme.textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 28),
+          _ThemePreview(
+            label: _copy('Sistem', 'System', 'System'),
+            icon: Icons.brightness_auto_rounded,
+            selected: provider.themeMode == ThemeMode.system,
+            accent: accent,
+            onTap: () => provider.setThemeMode(ThemeMode.system),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _ThemePreview(
+                  label: _copy('Açık', 'Light', 'Hell'),
+                  icon: Icons.light_mode_rounded,
+                  selected: provider.isLight,
+                  accent: accent,
+                  onTap: () => provider.setThemeMode(ThemeMode.light),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _ThemePreview(
+                  label: _copy('Koyu', 'Dark', 'Dunkel'),
+                  icon: Icons.dark_mode_rounded,
+                  selected: provider.isDark,
+                  accent: accent,
+                  onTap: () => provider.setThemeMode(ThemeMode.dark),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSources(ThemeData theme) {
+    final accent = _pageAccent(theme, 3);
+    return _pageBody(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _StepIcon(icon: Icons.hub_rounded, color: accent),
+          const SizedBox(height: 26),
+          Text(
+              _copy('Kaynaklarını birleştir', 'Bring your sources together',
+                  'Verbinde deine Quellen'),
+              style: theme.textTheme.headlineLarge),
+          const SizedBox(height: 10),
+          Text(
+            _copy(
+              'Hesap bağlamak isteğe bağlıdır. Yerel müzik ve çevrim içi arama hemen kullanılabilir.',
+              'Connecting accounts is optional. Local music and online search work right away.',
+              'Konten sind optional. Lokale Musik und Online-Suche funktionieren sofort.',
+            ),
+            style: theme.textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 26),
+          _SourcePreview(
+            icon: Icons.music_note_rounded,
+            title: 'Spotify',
+            subtitle: _copy('Kitaplık ve çalma listeleri',
+                'Library and playlists', 'Mediathek und Playlists'),
+            color: const Color(0xFF1ED760),
+          ),
+          const SizedBox(height: 10),
+          _SourcePreview(
+            icon: Icons.play_arrow_rounded,
+            title: 'YouTube Music',
+            subtitle: _copy(
+                'Tam parça kaynağı ve keşif',
+                'Full-track source and discovery',
+                'Volltitel-Quelle und Entdecken'),
+            color: const Color(0xFFFF3B30),
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const SourceHubScreen()),
+            ),
+            icon: const Icon(Icons.tune_rounded),
+            label: Text(_copy(
+                'Kaynakları yönet', 'Manage sources', 'Quellen verwalten')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStorage(ThemeData theme) {
+    final accent = _pageAccent(theme, 4);
+    return _pageBody(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _StepIcon(icon: Icons.download_done_rounded, color: accent),
+          const SizedBox(height: 26),
+          Text(
+              _copy('Çevrimdışı hazır', 'Ready for offline',
+                  'Bereit für offline'),
+              style: theme.textTheme.headlineLarge),
+          const SizedBox(height: 10),
+          Text(
+            _copy(
+              'İndirilen parçaların konumunu seç. Bu ayarı daha sonra değiştirebilirsin.',
+              'Choose where downloads are stored. You can change this later.',
+              'Wähle den Speicherort für Downloads. Du kannst ihn später ändern.',
+            ),
+            style: theme.textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 26),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: theme.colorScheme.outlineVariant),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.folder_rounded, color: accent),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _downloadPath.isEmpty
+                        ? _copy('Varsayılan uygulama klasörü',
+                            'Default app folder', 'Standard-App-Ordner')
+                        : _downloadPath,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: () async {
+              final path = await FilePicker.platform.getDirectoryPath(
+                dialogTitle: _copy('İndirme klasörünü seç',
+                    'Choose download folder', 'Download-Ordner wählen'),
+              );
+              if (!mounted || path == null || path.isEmpty) return;
+              await DatabaseService.instance.setSetting('download_path', path);
+              if (mounted) setState(() => _downloadPath = path);
+            },
+            icon: const Icon(Icons.folder_open_rounded),
+            label: Text(_copy('Klasör seç', 'Choose folder', 'Ordner wählen')),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TopBar extends StatelessWidget {
+  const _TopBar({
+    required this.page,
+    required this.pageCount,
+    required this.onBack,
+    required this.onSkip,
+    required this.skipLabel,
+  });
+
+  final int page;
+  final int pageCount;
+  final VoidCallback onBack;
+  final VoidCallback onSkip;
+  final String skipLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 44,
+            child: page == 0
+                ? null
+                : IconButton(
+                    onPressed: onBack,
+                    icon: const Icon(Icons.arrow_back_rounded),
+                  ),
+          ),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                pageCount,
+                (index) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 280),
+                  width: page == index ? 24 : 6,
+                  height: 6,
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  decoration: BoxDecoration(
+                    color: page == index
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 72,
+            child: page == pageCount - 1
+                ? null
+                : TextButton(onPressed: onSkip, child: Text(skipLabel)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BottomDock extends StatelessWidget {
+  const _BottomDock({
+    required this.page,
+    required this.pageCount,
+    required this.accent,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final int page;
+  final int pageCount;
+  final Color accent;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 10, 24, 18),
+      child: SizedBox(
+        width: double.infinity,
+        height: 56,
+        child: FilledButton(
+          onPressed: onPressed,
+          style: FilledButton.styleFrom(backgroundColor: accent),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(label),
+              const SizedBox(width: 10),
+              Icon(page == pageCount - 1
+                  ? Icons.check_rounded
+                  : Icons.arrow_forward_rounded),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _ServiceCard extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
-  final VoidCallback? onTap;
-
-  const _ServiceCard({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-    this.onTap,
-  });
+class _EditorialMark extends StatelessWidget {
+  const _EditorialMark({required this.color});
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
+    return SizedBox(
+      height: 170,
+      child: Stack(
+        children: [
+          Positioned(
+            left: 16,
+            top: 0,
+            child: Transform.rotate(
+              angle: -0.12,
+              child: _AlbumTile(color: color, icon: Icons.graphic_eq_rounded),
+            ),
+          ),
+          Positioned(
+            left: 112,
+            top: 24,
+            child: Transform.rotate(
+              angle: 0.11,
+              child: const _AlbumTile(
+                  color: Color(0xFF8C72FF), icon: Icons.waves_rounded),
+            ),
+          ),
+          Positioned(
+            left: 205,
+            top: 4,
+            child: Transform.rotate(
+              angle: -0.04,
+              child: const _AlbumTile(
+                  color: Color(0xFF2EC4B6), icon: Icons.music_note_rounded),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AlbumTile extends StatelessWidget {
+  const _AlbumTile({required this.color, required this.icon});
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 116,
+      height: 140,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [color, Color.lerp(color, Colors.black, 0.34)!],
+        ),
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.25),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Icon(icon, color: Colors.white, size: 40),
+    );
+  }
+}
+
+class _GlowOrb extends StatelessWidget {
+  const _GlowOrb({required this.color, required this.size});
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+        width: size,
+        height: size,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              MelodiTheme.containerLow,
-              MelodiTheme.containerLow.withOpacity(0.5),
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: [color.withValues(alpha: 0.14), Colors.transparent],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StepIcon extends StatelessWidget {
+  const _StepIcon({required this.icon, required this.color});
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 62,
+      height: 62,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(21),
+      ),
+      child: Icon(icon, color: color, size: 28),
+    );
+  }
+}
+
+class _FeaturePill extends StatelessWidget {
+  const _FeaturePill({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: theme.colorScheme.primary),
+          const SizedBox(width: 7),
+          Text(label, style: theme.textTheme.labelMedium),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChoiceTile extends StatelessWidget {
+  const _ChoiceTile({
+    required this.title,
+    required this.badge,
+    required this.selected,
+    required this.accent,
+    required this.onTap,
+  });
+  final String title;
+  final String badge;
+  final bool selected;
+  final Color accent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: selected
+          ? accent.withValues(alpha: 0.13)
+          : theme.colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(badge, style: theme.textTheme.labelLarge),
+              ),
+              const SizedBox(width: 13),
+              Expanded(child: Text(title, style: theme.textTheme.titleMedium)),
+              Icon(
+                  selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+                  color: selected ? accent : theme.colorScheme.outline),
             ],
           ),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: MelodiTheme.outlineVariant.withOpacity(0.2),
-            width: 1,
+        ),
+      ),
+    );
+  }
+}
+
+class _ThemePreview extends StatelessWidget {
+  const _ThemePreview({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.accent,
+    required this.onTap,
+  });
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final Color accent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: selected
+          ? accent.withValues(alpha: 0.14)
+          : theme.colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(22),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon,
+                  color: selected ? accent : theme.colorScheme.onSurface),
+              const SizedBox(width: 9),
+              Flexible(
+                child: Text(label,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: selected ? accent : theme.colorScheme.onSurface,
+                    )),
+              ),
+            ],
           ),
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: iconColor.withOpacity(0.12),
-              ),
-              child: Icon(icon, size: 24, color: iconColor),
+      ),
+    );
+  }
+}
+
+class _SourcePreview extends StatelessWidget {
+  const _SourcePreview({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+  });
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(15),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: MelodiTheme.title(
-                      size: 18,
-                      weight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: MelodiTheme.bodySm(
-                      size: 14,
-                      color: MelodiTheme.onSurfaceVariant.withOpacity(0.7),
-                    ),
-                  ),
-                ],
-              ),
+            child: Icon(icon, color: color),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: theme.textTheme.titleMedium),
+                Text(subtitle, style: theme.textTheme.bodySmall),
+              ],
             ),
-            Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 16,
-              color: MelodiTheme.onSurfaceVariant.withOpacity(0.4),
-            ),
-          ],
-        ),
+          ),
+          Icon(Icons.add_circle_outline_rounded,
+              color: theme.colorScheme.onSurfaceVariant),
+        ],
       ),
     );
   }

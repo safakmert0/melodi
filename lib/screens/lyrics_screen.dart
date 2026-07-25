@@ -90,7 +90,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
           }
 
           return Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
@@ -131,7 +131,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
                                     song.title,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontFamily: AppConstants.fontFamily,
                                       color: MelodiTheme.onSurface,
                                       fontSize: 15,
@@ -161,7 +161,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
                           ? Center(
                               child: Text(
                                 AppLocale.tr('no_lyrics_available'),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: AppConstants.fontFamily,
                                   color: MelodiTheme.onSurfaceVariant,
                                   fontSize: 16,
@@ -224,7 +224,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
                             children: [
                               Text(
                                 player.position.toShortString(),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: AppConstants.fontFamily,
                                   color: MelodiTheme.onSurfaceVariant,
                                   fontSize: 14,
@@ -261,7 +261,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
                               ),
                               Text(
                                 player.duration.toShortString(),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: AppConstants.fontFamily,
                                   color: MelodiTheme.onSurfaceVariant,
                                   fontSize: 14,
@@ -291,7 +291,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
                               Container(
                                 width: 56,
                                 height: 56,
-                                decoration: const BoxDecoration(
+                                decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: MelodiTheme.surfaceBright,
                                 ),

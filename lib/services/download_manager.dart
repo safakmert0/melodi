@@ -115,7 +115,8 @@ class DownloadManager {
           Directory(await StorageManager.instance.getStorageLocation());
       await downloadDir.create(recursive: true);
 
-      // Try multi-source search first (JioSaavn, Deezer, etc.)
+      // Try full-track sources first. Deezer catalogue entries are deliberately
+      // excluded because its public URL is only a 30-second preview.
       task.progress = 0.05;
       task.error = 'Kaynaklar aranıyor...';
       _notify();
@@ -127,10 +128,10 @@ class DownloadManager {
       final allTracks =
           await _multiSource.searchAllSync(query, limitPerSource: 3);
       if (allTracks.isNotEmpty) {
-        // Prioritize: JioSaavn > Deezer > YouTube (direct download)
+        // JioSaavn can expose a full media URL. YouTube is handled separately
+        // by YouTubeService so throttling/signature changes are supported.
         final priorityOrder = [
           MusicSourceType.jiosaavn,
-          MusicSourceType.deezer,
         ];
         for (final sourceType in priorityOrder) {
           final sourceTracks =
@@ -236,8 +237,18 @@ class DownloadManager {
       _notify();
 
       // Download from stream URL
-      final resultPath =
+      var resultPath =
           await _downloadFromUrl(streamUrl, task.title, downloadDir);
+
+      // A provider URL can expire or reject a direct request. Fall back to the
+      // dedicated YouTube downloader before marking the task as failed.
+      if (resultPath == null && !task.cancelled) {
+        resultPath = await _downloadFromYouTube(
+          task: task,
+          searchResults: allTracks,
+          query: query,
+        );
+      }
 
       if (resultPath == null || task.cancelled) {
         if (task.cancelled) {
@@ -282,6 +293,50 @@ class DownloadManager {
     _notify();
     _activeDownloads--;
     _processQueue();
+  }
+
+  Future<String?> _downloadFromYouTube({
+    required DownloadTask task,
+    required List<OnlineTrack> searchResults,
+    required String query,
+  }) async {
+    try {
+      final ytTracks = searchResults
+          .where((track) => track.source == MusicSourceType.youtube)
+          .toList();
+      String? videoId = ytTracks.isEmpty ? null : ytTracks.first.id;
+      if (videoId == null) {
+        task.progress = 0.15;
+        task.error = 'YouTube yedek kaynağı aranıyor...';
+        _notify();
+        final videos = await _youtubeService.search(query);
+        if (videos.isNotEmpty) {
+          final title = task.title.toLowerCase();
+          final artist = task.artist.toLowerCase().split(',').first.trim();
+          final exact = videos.where((video) {
+            final videoTitle = video.title.toLowerCase();
+            final author = video.author.toLowerCase();
+            return videoTitle.contains(title) &&
+                (artist.isEmpty ||
+                    author.contains(artist) ||
+                    videoTitle.contains(artist));
+          }).toList();
+          videoId = (exact.isNotEmpty ? exact.first : videos.first).id;
+        }
+      }
+      if (videoId == null || task.cancelled) return null;
+      task.progress = 0.2;
+      task.error = 'YouTube yedek kaynağından indiriliyor...';
+      _notify();
+      return _youtubeService.downloadAudio(
+        videoId,
+        task.title,
+        quality: task.requestedQuality,
+      );
+    } catch (error) {
+      debugPrint('YouTube fallback download error: $error');
+      return null;
+    }
   }
 
   Future<String?> _downloadFromUrl(

@@ -74,7 +74,7 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen> {
                   const SizedBox(height: 12),
                   Text(
                     AppLocale.tr('add_cover_photo'),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: AppConstants.fontFamily,
                       color: MelodiTheme.onSurfaceVariant,
                       fontSize: 13,
@@ -104,12 +104,12 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.lock_outline_rounded,
+                      Icon(Icons.lock_outline_rounded,
                           size: 20, color: MelodiTheme.onSurfaceVariant),
                       const SizedBox(width: 8),
                       Text(
                         AppLocale.tr('private_playlist'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: AppConstants.fontFamily,
                           color: MelodiTheme.onSurface,
                           fontSize: 14,
@@ -140,7 +140,7 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen> {
                   const SizedBox(width: 8),
                   Text(
                     AppLocale.tr('high_fidelity_active'),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: AppConstants.fontFamily,
                       color: MelodiTheme.onSurfaceVariant,
                       fontSize: 13,
@@ -236,14 +236,14 @@ class _GlassInput extends StatelessWidget {
                   TextField(
                     controller: controller,
                     maxLines: maxLines,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: AppConstants.fontFamily,
                       color: MelodiTheme.onSurface,
                       fontSize: 15,
                     ),
                     decoration: InputDecoration(
                       hintText: hint,
-                      hintStyle: const TextStyle(
+                      hintStyle: TextStyle(
                         fontFamily: AppConstants.fontFamily,
                         color: MelodiTheme.onSurfaceVariant,
                         fontSize: 15,

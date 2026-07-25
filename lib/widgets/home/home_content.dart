@@ -90,13 +90,18 @@ class _QuickActions extends StatelessWidget {
       ),
     ];
 
-    return SizedBox(
-      height: 102,
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-        scrollDirection: Axis.horizontal,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 2.05,
+        ),
         itemCount: actions.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 9),
         itemBuilder: (_, index) => _ActionCard(data: actions[index]),
       ),
     );
@@ -128,38 +133,45 @@ class _ActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 104,
-      child: MelodiPanel(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        onTap: data.onTap,
-        child: Row(
-          children: [
-            Icon(data.icon, color: data.color, size: 22),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    data.value,
-                    maxLines: 1,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                  ),
-                  Text(
-                    data.label,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                ],
-              ),
+    final theme = Theme.of(context);
+    return MelodiPanel(
+      padding: const EdgeInsets.all(13),
+      onTap: data.onTap,
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: data.color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(14),
             ),
-          ],
-        ),
+            child: Icon(data.icon, color: data.color, size: 21),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  data.value,
+                  maxLines: 1,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                Text(
+                  data.label,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -21,8 +21,8 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  static const _dockHeight = 68.0;
-  static const _horizontalInset = 14.0;
+  static const _dockHeight = 74.0;
+  static const _horizontalInset = 12.0;
 
   int _currentIndex = 0;
 
@@ -48,12 +48,13 @@ class _MainShellState extends State<MainShell> {
       extendBody: true,
       body: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: RadialGradient(
-            center: const Alignment(0.8, -1.1),
-            radius: 1.25,
+          gradient: LinearGradient(
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
             colors: [
-              theme.colorScheme.primary.withValues(alpha: 0.11),
-              theme.scaffoldBackgroundColor.withValues(alpha: 0),
+              theme.colorScheme.primary.withValues(alpha: 0.08),
+              theme.scaffoldBackgroundColor,
+              theme.colorScheme.secondary.withValues(alpha: 0.045),
             ],
           ),
         ),
@@ -109,23 +110,25 @@ class _MelodiDock extends StatelessWidget {
     ];
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(28),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
         child: Container(
-          height: 68,
+          height: 74,
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
             color: theme.colorScheme.surface.withValues(alpha: 0.86),
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(28),
             border: Border.all(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.09),
+              color: theme.colorScheme.primary.withValues(alpha: 0.16),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.28),
-                blurRadius: 28,
-                offset: const Offset(0, 12),
+                color: Colors.black.withValues(
+                  alpha: theme.brightness == Brightness.dark ? 0.3 : 0.13,
+                ),
+                blurRadius: 34,
+                offset: const Offset(0, 14),
               ),
             ],
           ),
@@ -140,44 +143,44 @@ class _MelodiDock extends StatelessWidget {
                   label: item.label,
                   child: InkWell(
                     onTap: () => onSelected(index),
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(22),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 240),
                       curve: Curves.easeOutCubic,
                       decoration: BoxDecoration(
-                        color: selected
-                            ? theme.colorScheme.primary.withValues(alpha: 0.16)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(18),
+                        gradient: selected
+                            ? LinearGradient(
+                                colors: [
+                                  theme.colorScheme.primary,
+                                  theme.colorScheme.secondary,
+                                ],
+                              )
+                            : null,
+                        borderRadius: BorderRadius.circular(22),
                       ),
-                      child: Row(
+                      child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
                             item.icon,
-                            size: 23,
+                            size: selected ? 24 : 22,
                             color: selected
-                                ? theme.colorScheme.primary
+                                ? Colors.white
                                 : theme.colorScheme.onSurfaceVariant,
                           ),
-                          AnimatedSize(
-                            duration: const Duration(milliseconds: 220),
-                            curve: Curves.easeOutCubic,
-                            child: selected
-                                ? Padding(
-                                    padding: const EdgeInsets.only(left: 8),
-                                    child: Text(
-                                      item.label,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.fade,
-                                      style:
-                                          theme.textTheme.labelLarge?.copyWith(
-                                        color: theme.colorScheme.primary,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  )
-                                : const SizedBox.shrink(),
+                          const SizedBox(height: 3),
+                          Text(
+                            item.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.fade,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: selected
+                                  ? Colors.white
+                                  : theme.colorScheme.onSurfaceVariant,
+                              fontSize: 10,
+                              fontWeight:
+                                  selected ? FontWeight.w800 : FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),

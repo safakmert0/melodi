@@ -103,7 +103,9 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
-              track.sourceLabel,
+              track.source.isPreviewCatalogue
+                  ? '${track.sourceLabel} · katalog'
+                  : track.sourceLabel,
               style: TextStyle(
                 color: sourceColor,
                 fontSize: 10,

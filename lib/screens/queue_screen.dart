@@ -102,8 +102,7 @@ class QueueScreen extends StatelessWidget {
                                           width: 48,
                                           height: 48,
                                           color: MelodiTheme.containerLow,
-                                          child: const Icon(
-                                              Icons.music_note_rounded,
+                                          child: Icon(Icons.music_note_rounded,
                                               color: MelodiTheme
                                                   .onSurfaceVariant)),
                                     Positioned(
@@ -115,7 +114,7 @@ class QueueScreen extends StatelessWidget {
                                             color: MelodiTheme.primaryGreen,
                                             borderRadius:
                                                 BorderRadius.circular(2)),
-                                        child: const Icon(Icons.equalizer,
+                                        child: Icon(Icons.equalizer,
                                             size: 12,
                                             color: MelodiTheme.background),
                                       ),
@@ -139,7 +138,7 @@ class QueueScreen extends StatelessWidget {
                                     Text(currentSong.artist,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                             fontFamily: AppConstants.fontFamily,
                                             color: MelodiTheme.onSurfaceVariant,
                                             fontSize: 13)),
@@ -161,7 +160,7 @@ class QueueScreen extends StatelessWidget {
                                         letterSpacing: 0.08)),
                               ),
                               const SizedBox(width: 8),
-                              const Icon(Icons.more_vert_rounded,
+                              Icon(Icons.more_vert_rounded,
                                   color: MelodiTheme.onSurfaceVariant,
                                   size: 20),
                             ],
@@ -179,7 +178,7 @@ class QueueScreen extends StatelessWidget {
                               Text('NEXT UP',
                                   style: MelodiTheme.label(letterSpacing: 0.1)),
                               Text('${nextUp.length} Songs',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontFamily: AppConstants.fontFamily,
                                       color: MelodiTheme.onSurfaceVariant,
                                       fontSize: 12)),
@@ -209,24 +208,24 @@ class QueueScreen extends StatelessWidget {
                                         gaplessPlayback: true))
                                 : Container(
                                     color: MelodiTheme.containerHigh,
-                                    child: const Icon(Icons.music_note_rounded,
+                                    child: Icon(Icons.music_note_rounded,
                                         color: MelodiTheme.onSurfaceVariant)),
                           ),
                           title: Text(song.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontFamily: AppConstants.fontFamily,
                                   color: MelodiTheme.onSurface,
                                   fontSize: 15)),
                           subtitle: Text(song.artist,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontFamily: AppConstants.fontFamily,
                                   color: MelodiTheme.onSurfaceVariant,
                                   fontSize: 13)),
-                          trailing: const Icon(Icons.drag_handle_rounded,
+                          trailing: Icon(Icons.drag_handle_rounded,
                               color: MelodiTheme.onSurfaceVariant, size: 20),
                         );
                       }, childCount: nextUp.length)),

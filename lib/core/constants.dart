@@ -5,8 +5,8 @@ export 'localization.dart' show AppLocale;
 
 class AppConstants {
   static const String appName = 'Melodi';
-  static const String appVersion = '4.0.0';
-  static const String buildNumber = '1';
+  static const String appVersion = '4.1.0';
+  static const String buildNumber = '2';
 
   static const List<String> supportedAudioExtensions = [
     'mp3',
@@ -56,25 +56,39 @@ class AppConstants {
 }
 
 class MelodiTheme {
-  // Stitch Design System - Exact Colors
-  static const Color background = Color(0xFF121414);
-  static const Color surface = Color(0xFF121414);
-  static const Color surfaceBright = Color(0xFF37393A);
-  static const Color surfaceLowest = Color(0xFF0C0F0F);
-  static const Color containerLow = Color(0xFF1A1C1C);
-  static const Color container = Color(0xFF1E2020);
-  static const Color containerHigh = Color(0xFF282A2B);
-  static const Color containerHighest = Color(0xFF333535);
+  // Melodi Spectrum — ink surfaces with a warm, musical brand accent.
+  // These compatibility colors intentionally resolve at runtime. A large
+  // number of mature feature screens predate ColorScheme; keeping the legacy
+  // API dynamic makes those screens immediately safe in light mode too.
+  static Color get background =>
+      AppTheme.isLightMode ? const Color(0xFFF8F5F8) : const Color(0xFF08080C);
+  static Color get surface =>
+      AppTheme.isLightMode ? const Color(0xFFFFFFFF) : const Color(0xFF08080C);
+  static Color get surfaceBright =>
+      AppTheme.isLightMode ? const Color(0xFFFFFFFF) : const Color(0xFF34313D);
+  static Color get surfaceLowest =>
+      AppTheme.isLightMode ? const Color(0xFFFFFBFF) : const Color(0xFF050507);
+  static Color get containerLow =>
+      AppTheme.isLightMode ? const Color(0xFFF2EDF2) : const Color(0xFF101016);
+  static Color get container =>
+      AppTheme.isLightMode ? const Color(0xFFEBE4EC) : const Color(0xFF16151E);
+  static Color get containerHigh =>
+      AppTheme.isLightMode ? const Color(0xFFE3DAE5) : const Color(0xFF201E2A);
+  static Color get containerHighest =>
+      AppTheme.isLightMode ? const Color(0xFFD8CDD9) : const Color(0xFF2B2836);
 
-  static const Color onSurface = Color(0xFFE2E2E2);
-  static const Color onSurfaceVariant = Color(0xFFBCCBB9);
+  static Color get onSurface =>
+      AppTheme.isLightMode ? const Color(0xFF211B20) : const Color(0xFFF8F4F7);
+  static Color get onSurfaceVariant =>
+      AppTheme.isLightMode ? const Color(0xFF645B64) : const Color(0xFFC9C1CB);
 
-  // Primary - Blue
-  static const Color primaryGreen = Color(0xFF2196F3);
-  static const Color primaryGreenBright = Color(0xFF42A5F5);
-  static const Color primaryContainer = Color(0xFF1976D2);
-  static const Color onPrimary = Color(0xFF003914);
-  static const Color onPrimaryContainer = Color(0xFF004118);
+  // Kept under the legacy name so existing feature screens inherit the new
+  // brand without a risky, all-at-once API rename.
+  static const Color primaryGreen = Color(0xFFFF4D8D);
+  static const Color primaryGreenBright = Color(0xFFFF79AA);
+  static const Color primaryContainer = Color(0xFF5E1638);
+  static const Color onPrimary = Color(0xFFFFFFFF);
+  static const Color onPrimaryContainer = Color(0xFFFFD8E7);
 
   // Secondary
   static const Color secondary = Color(0xFFC8C6C5);
@@ -82,13 +96,18 @@ class MelodiTheme {
   static const Color onSecondaryContainer = Color(0xFFBAB8B7);
 
   // Outline
-  static const Color outline = Color(0xFF869585);
-  static const Color outlineVariant = Color(0xFF3D4A3D);
+  static Color get outline =>
+      AppTheme.isLightMode ? const Color(0xFF81747F) : const Color(0xFF8F8492);
+  static Color get outlineVariant =>
+      AppTheme.isLightMode ? const Color(0xFFD7CCD7) : const Color(0xFF3B3540);
 
   // Error
-  static const Color errorRed = Color(0xFFFFB4AB);
-  static const Color errorContainer = Color(0xFF93000A);
-  static const Color onErrorContainer = Color(0xFFFFDAD6);
+  static Color get errorRed =>
+      AppTheme.isLightMode ? const Color(0xFFB3261E) : const Color(0xFFFFB4AB);
+  static Color get errorContainer =>
+      AppTheme.isLightMode ? const Color(0xFFFFDAD6) : const Color(0xFF93000A);
+  static Color get onErrorContainer =>
+      AppTheme.isLightMode ? const Color(0xFF410002) : const Color(0xFFFFDAD6);
 
   // Glass
   static const Color glassBorder = Color(0x15FFFFFF);
@@ -100,12 +119,13 @@ class MelodiTheme {
   // Backward compatibility
   static Color get textPrimary => onSurface;
   static Color get textSecondary => onSurfaceVariant;
-  static const Color textMuted = Color(0xFF869585);
+  static Color get textMuted =>
+      AppTheme.isLightMode ? const Color(0xFF766C76) : const Color(0xFF958B99);
 
   // Additional surface colors
-  static const Color surfaceMid2 = container;
-  static const Color surfaceMid1 = containerLow;
-  static const Color surfaceHigh = containerHighest;
+  static Color get surfaceMid2 => container;
+  static Color get surfaceMid1 => containerLow;
+  static Color get surfaceHigh => containerHighest;
 
   // Genre Colors (from Stitch)
   static const Map<String, Color> genreColors = {
@@ -241,7 +261,7 @@ class MelodiTheme {
       scaffoldBackgroundColor: background,
       fontFamily: AppConstants.fontFamily,
       primaryColor: primaryGreen,
-      colorScheme: const ColorScheme.dark(
+      colorScheme: ColorScheme.dark(
         primary: primaryGreen,
         secondary: secondary,
         surface: background,
@@ -253,8 +273,8 @@ class MelodiTheme {
       ),
       cardColor: containerLow,
       dividerColor: outlineVariant,
-      iconTheme: const IconThemeData(color: onSurfaceVariant),
-      appBarTheme: const AppBarTheme(
+      iconTheme: IconThemeData(color: onSurfaceVariant),
+      appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
@@ -266,7 +286,7 @@ class MelodiTheme {
           letterSpacing: -0.24,
         ),
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: Colors.transparent,
         elevation: 0,
         selectedItemColor: primaryGreen,
@@ -279,7 +299,7 @@ class MelodiTheme {
         unselectedLabelStyle:
             TextStyle(fontFamily: AppConstants.fontFamily, fontSize: 12),
       ),
-      sliderTheme: const SliderThemeData(
+      sliderTheme: SliderThemeData(
         activeTrackColor: primaryGreen,
         inactiveTrackColor: surfaceBright,
         thumbColor: primaryGreen,
@@ -341,10 +361,10 @@ class AppTheme {
   static Color get errorColor => MelodiTheme.errorRed;
   static Color get favoriteColor => MelodiTheme.primaryGreen;
   static Color get divider => MelodiTheme.outlineVariant;
-  static const Color lightBackground = Color(0xFFF5F5F5);
+  static const Color lightBackground = Color(0xFFF8F5F8);
   static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color lightCard = Color(0xFFEEEEEE);
-  static const Color darkBackground = MelodiTheme.background;
-  static const Color darkSurface = MelodiTheme.containerLow;
-  static const Color darkCard = MelodiTheme.containerLow;
+  static const Color lightCard = Color(0xFFF0EAF0);
+  static const Color darkBackground = Color(0xFF08080C);
+  static const Color darkSurface = Color(0xFF101016);
+  static const Color darkCard = Color(0xFF101016);
 }

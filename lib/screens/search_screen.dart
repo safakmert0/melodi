@@ -42,17 +42,36 @@ class _SearchScreenState extends State<SearchScreen> {
           slivers: [
             SliverAppBar(
               pinned: true,
+              stretch: true,
               elevation: 0,
               scrolledUnderElevation: 0,
-              toolbarHeight: 70,
+              toolbarHeight: 64,
+              expandedHeight: 146,
               backgroundColor:
                   theme.scaffoldBackgroundColor.withValues(alpha: 0.94),
               surfaceTintColor: Colors.transparent,
               title: Text(
-                'Keşfet',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.7,
+                'MELODI SEARCH',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.8,
+                ),
+              ),
+              flexibleSpace: FlexibleSpaceBar(
+                collapseMode: CollapseMode.parallax,
+                background: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 78, 18, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Keşfet.', style: theme.textTheme.headlineLarge),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Aygıtında ve tüm kaynaklarda tek arama.',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
                 ),
               ),
               actions: [
@@ -92,11 +111,11 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _searchField() {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
       child: SearchBar(
         controller: _controller,
         focusNode: _focusNode,
-        hintText: 'Şarkı, sanatçı, albüm veya kaynak ara',
+        hintText: 'Ne dinlemek istiyorsun?',
         leading: const Icon(Icons.search_rounded),
         trailing: [
           if (_hasQuery)
@@ -122,7 +141,7 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
         ),
         shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         ),
         onChanged: (query) {
           setState(() => _selectedSource = null);

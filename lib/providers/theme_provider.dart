@@ -1,10 +1,17 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../services/database_service.dart';
 
-class ThemeProvider extends ChangeNotifier {
+class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
+  ThemeProvider() {
+    WidgetsBinding.instance.addObserver(this);
+  }
+
   ThemeMode _themeMode = ThemeMode.dark;
-  Color _accentColor = const Color(0xFF2196F3);
+  static const Color _melodiAccent = Color(0xFFFF4D8D);
+  static const int _legacyBlue = 0xFF2196F3;
+  Color _accentColor = _melodiAccent;
   Color? _customBackground;
   Color? _customSurface;
   Color? _customCard;
@@ -66,7 +73,15 @@ class ThemeProvider extends ChangeNotifier {
       final colorStr = await db.getSetting('accent_color');
       if (colorStr != null && colorStr.isNotEmpty) {
         final val = int.tryParse(colorStr);
-        if (val != null) _accentColor = Color(val);
+        if (val == _legacyBlue) {
+          _accentColor = _melodiAccent;
+          await db.setSetting(
+            'accent_color',
+            _melodiAccent.toARGB32().toString(),
+          );
+        } else if (val != null) {
+          _accentColor = Color(val);
+        }
       }
       AppTheme.accentColor = _accentColor;
 
@@ -96,7 +111,7 @@ class ThemeProvider extends ChangeNotifier {
   Future<void> _saveColor(String key, Color? color) async {
     final db = DatabaseService.instance;
     if (color != null) {
-      await db.setSetting(key, color.value.toString());
+      await db.setSetting(key, color.toARGB32().toString());
     } else {
       await db.setSetting(key, '');
     }
@@ -105,9 +120,22 @@ class ThemeProvider extends ChangeNotifier {
   Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
     _syncIsLightMode();
+    notifyListeners();
     await DatabaseService.instance
         .setSetting('theme_mode', mode.index.toString());
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    if (_themeMode != ThemeMode.system) return;
+    _syncIsLightMode();
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   Future<void> setUseDynamicColor(bool value) async {
@@ -121,7 +149,7 @@ class ThemeProvider extends ChangeNotifier {
     _accentColor = color;
     AppTheme.accentColor = color;
     await DatabaseService.instance
-        .setSetting('accent_color', color.value.toString());
+        .setSetting('accent_color', color.toARGB32().toString());
     notifyListeners();
   }
 
@@ -232,127 +260,218 @@ class ThemeProvider extends ChangeNotifier {
   Color _darkTextSecondary() => _customTextSecondary ?? const Color(0xFFB3B3B3);
 
   ThemeData _buildLightTheme() {
-    final bg = _bg();
-    final surface = _surface();
-    final card = _card();
-    final textPri = _textPrimary();
-    final textSec = _textSecondary();
-    return ThemeData(
+    return _buildTheme(
       brightness: Brightness.light,
-      primaryColor: _accentColor,
-      scaffoldBackgroundColor: bg,
-      colorScheme: ColorScheme.light(
-        primary: _accentColor,
-        secondary: _accentColor,
-        surface: surface,
-        error: AppTheme.errorColor,
-      ),
-      appBarTheme: AppBarTheme(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        titleTextStyle: TextStyle(
-          color: textPri,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
-        iconTheme: IconThemeData(color: textPri),
-      ),
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: surface,
-        selectedItemColor: textPri,
-        unselectedItemColor: textSec,
-        type: BottomNavigationBarType.fixed,
-        elevation: 8,
-      ),
-      cardTheme: CardThemeData(
-        color: card,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-      iconTheme: IconThemeData(color: textPri),
-      textTheme: TextTheme(
-        headlineLarge: TextStyle(color: textPri, fontWeight: FontWeight.bold),
-        headlineMedium: TextStyle(color: textPri, fontWeight: FontWeight.w600),
-        titleLarge: TextStyle(color: textPri, fontWeight: FontWeight.w600),
-        titleMedium: TextStyle(color: textPri, fontWeight: FontWeight.w500),
-        bodyLarge: TextStyle(color: textPri),
-        bodyMedium: TextStyle(color: textSec),
-        bodySmall: TextStyle(color: AppTheme.textTertiary),
-      ),
-      dividerTheme:
-          const DividerThemeData(color: Color(0xFFD0D0D0), thickness: 0.5),
-      sliderTheme: SliderThemeData(
-        activeTrackColor: _accentColor,
-        inactiveTrackColor: const Color(0xFFD0D0D0),
-        thumbColor: textPri,
-        overlayColor: _accentColor.withOpacity(0.2),
-        trackHeight: 4,
-      ),
+      background: _bg(),
+      surface: _surface(),
+      card: _card(),
+      textPrimary: _textPrimary(),
+      textSecondary: _textSecondary(),
     );
   }
 
   ThemeData _buildDarkTheme() {
-    final bg = _darkBg();
-    final surface = _darkSurface();
-    final card = _darkCard();
-    final textPri = _darkTextPrimary();
-    final textSec = _darkTextSecondary();
-    return ThemeData(
+    return _buildTheme(
       brightness: Brightness.dark,
-      primaryColor: _accentColor,
-      scaffoldBackgroundColor: bg,
-      colorScheme: ColorScheme.dark(
-        primary: _accentColor,
-        secondary: _accentColor,
-        surface: surface,
-        error: AppTheme.errorColor,
+      background: _darkBg(),
+      surface: _darkSurface(),
+      card: _darkCard(),
+      textPrimary: _darkTextPrimary(),
+      textSecondary: _darkTextSecondary(),
+    );
+  }
+
+  ThemeData _buildTheme({
+    required Brightness brightness,
+    required Color background,
+    required Color surface,
+    required Color card,
+    required Color textPrimary,
+    required Color textSecondary,
+  }) {
+    final dark = brightness == Brightness.dark;
+    final onAccent =
+        _accentColor.computeLuminance() > 0.52 ? Colors.black : Colors.white;
+    final scheme = ColorScheme.fromSeed(
+      seedColor: _accentColor,
+      brightness: brightness,
+      surface: surface,
+    ).copyWith(
+      primary: _accentColor,
+      onPrimary: onAccent,
+      secondary: const Color(0xFF8C72FF),
+      tertiary: dark ? const Color(0xFF42DCC8) : const Color(0xFF007F73),
+      onSurface: textPrimary,
+      onSurfaceVariant: textSecondary,
+      outline: dark ? const Color(0xFF6F6574) : const Color(0xFF8C818E),
+      outlineVariant: dark ? const Color(0xFF39323F) : const Color(0xFFE1D8E2),
+      error: AppTheme.errorColor,
+    );
+    final typography = TextTheme(
+      displayLarge: TextStyle(
+        color: textPrimary,
+        fontSize: 52,
+        height: 0.98,
+        letterSpacing: -2.4,
+        fontWeight: FontWeight.w900,
       ),
+      headlineLarge: TextStyle(
+        color: textPrimary,
+        fontSize: 34,
+        letterSpacing: -1.3,
+        fontWeight: FontWeight.w800,
+      ),
+      headlineMedium: TextStyle(
+        color: textPrimary,
+        fontSize: 27,
+        letterSpacing: -0.8,
+        fontWeight: FontWeight.w800,
+      ),
+      headlineSmall: TextStyle(
+        color: textPrimary,
+        fontSize: 22,
+        letterSpacing: -0.5,
+        fontWeight: FontWeight.w800,
+      ),
+      titleLarge: TextStyle(
+        color: textPrimary,
+        fontSize: 19,
+        fontWeight: FontWeight.w800,
+      ),
+      titleMedium: TextStyle(
+        color: textPrimary,
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+      ),
+      bodyLarge: TextStyle(color: textPrimary, height: 1.35),
+      bodyMedium: TextStyle(color: textSecondary, height: 1.35),
+      bodySmall: TextStyle(color: textSecondary, height: 1.3),
+      labelLarge: TextStyle(color: textPrimary, fontWeight: FontWeight.w700),
+      labelMedium: TextStyle(color: textSecondary, fontWeight: FontWeight.w600),
+    ).apply(fontFamily: AppConstants.fontFamily);
+
+    final controlShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(18),
+    );
+    return ThemeData(
+      useMaterial3: true,
+      brightness: brightness,
+      fontFamily: AppConstants.fontFamily,
+      primaryColor: _accentColor,
+      scaffoldBackgroundColor: background,
+      colorScheme: scheme,
+      textTheme: typography,
+      splashFactory: InkSparkle.splashFactory,
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
+        foregroundColor: textPrimary,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
-        centerTitle: true,
-        titleTextStyle: TextStyle(
-          color: textPri,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
-        iconTheme: IconThemeData(color: textPri),
-      ),
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: surface,
-        selectedItemColor: textPri,
-        unselectedItemColor: textSec,
-        type: BottomNavigationBarType.fixed,
-        elevation: 8,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        titleTextStyle: typography.titleLarge,
       ),
       cardTheme: CardThemeData(
-        color: card,
+        color: card.withValues(alpha: 0.82),
         elevation: 0,
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
         ),
       ),
-      iconTheme: IconThemeData(color: textPri),
-      textTheme: TextTheme(
-        headlineLarge: TextStyle(color: textPri, fontWeight: FontWeight.bold),
-        headlineMedium: TextStyle(color: textPri, fontWeight: FontWeight.w600),
-        titleLarge: TextStyle(color: textPri, fontWeight: FontWeight.w600),
-        titleMedium: TextStyle(color: textPri, fontWeight: FontWeight.w500),
-        bodyLarge: TextStyle(color: textPri),
-        bodyMedium: TextStyle(color: textSec),
-        bodySmall: TextStyle(color: AppTheme.textTertiary),
+      listTileTheme: ListTileThemeData(
+        iconColor: textSecondary,
+        textColor: textPrimary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
-      dividerTheme:
-          const DividerThemeData(color: Color(0xFF404040), thickness: 0.5),
+      chipTheme: ChipThemeData(
+        backgroundColor: card.withValues(alpha: 0.82),
+        selectedColor: _accentColor.withValues(alpha: 0.2),
+        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.55)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+        labelStyle: typography.labelMedium,
+      ),
+      searchBarTheme: SearchBarThemeData(
+        elevation: const WidgetStatePropertyAll(0),
+        backgroundColor:
+            WidgetStatePropertyAll(card.withValues(alpha: dark ? 0.88 : 1)),
+        side: WidgetStatePropertyAll(
+          BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.65)),
+        ),
+        shape: WidgetStatePropertyAll(controlShape),
+        textStyle: WidgetStatePropertyAll(typography.bodyLarge),
+        hintStyle: WidgetStatePropertyAll(
+          typography.bodyMedium?.copyWith(color: textSecondary),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: card.withValues(alpha: dark ? 0.88 : 1),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: scheme.outlineVariant),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: _accentColor, width: 1.5),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(48, 48),
+          shape: controlShape,
+          textStyle: typography.labelLarge,
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(shape: const CircleBorder()),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: surface,
+        modalBackgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
+        showDragHandle: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+      dividerTheme: DividerThemeData(
+        color: scheme.outlineVariant.withValues(alpha: 0.6),
+        thickness: 0.6,
+      ),
       sliderTheme: SliderThemeData(
         activeTrackColor: _accentColor,
-        inactiveTrackColor: const Color(0xFF404040),
-        thumbColor: textPri,
-        overlayColor: _accentColor.withOpacity(0.2),
-        trackHeight: 4,
+        inactiveTrackColor: scheme.outlineVariant,
+        thumbColor: textPrimary,
+        overlayColor: _accentColor.withValues(alpha: 0.18),
+        trackHeight: 3,
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) =>
+            states.contains(WidgetState.selected)
+                ? Colors.white
+                : textSecondary),
+        trackColor: WidgetStateProperty.resolveWith((states) =>
+            states.contains(WidgetState.selected) ? _accentColor : card),
+      ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+        },
       ),
     );
   }
