@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../services/database_service.dart';
-import '../services/listening_recorder.dart';
 
 class ListeningHistoryScreen extends StatefulWidget {
   const ListeningHistoryScreen({super.key});
@@ -19,7 +17,6 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
   List<Map<String, dynamic>> _groupedHistory = [];
   List<Map<String, dynamic>> _topTracks = [];
   List<Map<String, dynamic>> _topArtists = [];
-  List<Map<String, dynamic>> _recentlyPlayed = [];
   Map<String, dynamic> _stats = {};
   bool _isLoading = true;
 
@@ -44,7 +41,6 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
       final grouped = await db.getListeningHistoryGroupedByDate(limitDays: 30);
       final topTracks = await db.getTopTracksByPeriod(10, 'all');
       final topArtists = await db.getTopArtistsByPeriod(10, 'all');
-      final recent = await db.getRecentlyPlayedUnique(limit: 20);
       final stats = await db.getListeningStats();
 
       if (mounted) {
@@ -53,7 +49,6 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
           _groupedHistory = grouped;
           _topTracks = topTracks;
           _topArtists = topArtists;
-          _recentlyPlayed = recent;
           _stats = stats;
           _isLoading = false;
         });
@@ -104,7 +99,8 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: MelodiTheme.primaryGreen))
+          ? const Center(
+              child: CircularProgressIndicator(color: MelodiTheme.primaryGreen))
           : TabBarView(
               controller: _tabController,
               children: [
@@ -151,11 +147,14 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.history_rounded, size: 64, color: MelodiTheme.onSurfaceVariant.withOpacity(0.3)),
+                      Icon(Icons.history_rounded,
+                          size: 64,
+                          color: MelodiTheme.onSurfaceVariant.withOpacity(0.3)),
                       const SizedBox(height: 16),
                       Text(
                         AppLocale.tr('no_listening_history'),
-                        style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 16),
+                        style: TextStyle(
+                            color: MelodiTheme.onSurfaceVariant, fontSize: 16),
                       ),
                     ],
                   ),
@@ -177,7 +176,8 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
     final now = DateTime.now();
     final firstDay = DateTime(now.year, now.month, 1);
     final lastDay = DateTime(now.year, now.month + 1, 0);
-    final datesWithHistory = _groupedHistory.map((g) => g['date'] as String).toSet();
+    final datesWithHistory =
+        _groupedHistory.map((g) => g['date'] as String).toSet();
 
     return Container(
       margin: const EdgeInsets.all(16),
@@ -195,7 +195,8 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
                 icon: const Icon(Icons.chevron_left_rounded, size: 24),
                 color: MelodiTheme.onSurfaceVariant,
                 onPressed: () {
-                  final newMonth = DateTime(_selectedDate.year, _selectedDate.month - 1);
+                  final newMonth =
+                      DateTime(_selectedDate.year, _selectedDate.month - 1);
                   _onDateSelected(newMonth);
                 },
               ),
@@ -211,7 +212,8 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
                 icon: const Icon(Icons.chevron_right_rounded, size: 24),
                 color: MelodiTheme.onSurfaceVariant,
                 onPressed: () {
-                  final newMonth = DateTime(_selectedDate.year, _selectedDate.month + 1);
+                  final newMonth =
+                      DateTime(_selectedDate.year, _selectedDate.month + 1);
                   _onDateSelected(newMonth);
                 },
               ),
@@ -219,7 +221,8 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
           ),
           const SizedBox(height: 8),
           Row(
-            children: ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map((day) {
+            children:
+                ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map((day) {
               return Expanded(
                 child: Center(
                   child: Text(
@@ -241,7 +244,8 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
     );
   }
 
-  Widget _buildCalendarGrid(DateTime firstDay, DateTime lastDay, Set<String> datesWithHistory) {
+  Widget _buildCalendarGrid(
+      DateTime firstDay, DateTime lastDay, Set<String> datesWithHistory) {
     final firstWeekday = firstDay.weekday;
     final totalDays = lastDay.day;
     final today = DateTime.now();
@@ -252,9 +256,12 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
     }
     for (int day = 1; day <= totalDays; day++) {
       final date = DateTime(firstDay.year, firstDay.month, day);
-      final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final dateStr =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
       final hasHistory = datesWithHistory.contains(dateStr);
-      final isToday = date.year == today.year && date.month == today.month && date.day == today.day;
+      final isToday = date.year == today.year &&
+          date.month == today.month &&
+          date.day == today.day;
       final isSelected = date.year == _selectedDate.year &&
           date.month == _selectedDate.month &&
           date.day == _selectedDate.day;
@@ -280,9 +287,7 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
                   Text(
                     '$day',
                     style: TextStyle(
-                      color: isSelected
-                          ? Colors.white
-                          : MelodiTheme.onSurface,
+                      color: isSelected ? Colors.white : MelodiTheme.onSurface,
                       fontSize: 13,
                       fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
                     ),
@@ -521,7 +526,8 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
     );
   }
 
-  Widget _buildSuggestionSection(String title, IconData icon, String? subtitle) {
+  Widget _buildSuggestionSection(
+      String title, IconData icon, String? subtitle) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -597,10 +603,14 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: [MelodiTheme.primaryGreen.withOpacity(0.3), MelodiTheme.primaryGreen.withOpacity(0.1)],
+                colors: [
+                  MelodiTheme.primaryGreen.withOpacity(0.3),
+                  MelodiTheme.primaryGreen.withOpacity(0.1)
+                ],
               ),
             ),
-            child: const Icon(Icons.music_note_rounded, color: MelodiTheme.primaryGreen),
+            child: const Icon(Icons.music_note_rounded,
+                color: MelodiTheme.primaryGreen),
           ),
           const SizedBox(height: 8),
           Padding(
@@ -637,8 +647,10 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
   }
 
   Widget _buildHistoryTile(Map<String, dynamic> event) {
-    final playedAt = DateTime.tryParse(event['playedAt'] as String? ?? '') ?? DateTime.now();
-    final timeStr = '${playedAt.hour.toString().padLeft(2, '0')}:${playedAt.minute.toString().padLeft(2, '0')}';
+    final playedAt =
+        DateTime.tryParse(event['playedAt'] as String? ?? '') ?? DateTime.now();
+    final timeStr =
+        '${playedAt.hour.toString().padLeft(2, '0')}:${playedAt.minute.toString().padLeft(2, '0')}';
     final isSkip = (event['isSkip'] as int? ?? 0) == 1;
 
     return Container(
@@ -654,7 +666,9 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: isSkip ? Colors.orange.withOpacity(0.1) : MelodiTheme.primaryGreen.withOpacity(0.1),
+              color: isSkip
+                  ? Colors.orange.withOpacity(0.1)
+                  : MelodiTheme.primaryGreen.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -724,7 +738,9 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
               '$rank',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: rank <= 3 ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant,
+                color: rank <= 3
+                    ? MelodiTheme.primaryGreen
+                    : MelodiTheme.onSurfaceVariant,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
@@ -738,7 +754,8 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
               color: MelodiTheme.primaryGreen.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.music_note_rounded, size: 22, color: MelodiTheme.primaryGreen),
+            child: const Icon(Icons.music_note_rounded,
+                size: 22, color: MelodiTheme.primaryGreen),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -800,7 +817,9 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
               '$rank',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: rank <= 3 ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant,
+                color: rank <= 3
+                    ? MelodiTheme.primaryGreen
+                    : MelodiTheme.onSurfaceVariant,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
@@ -814,7 +833,8 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
               color: MelodiTheme.primaryGreen.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.person_rounded, size: 22, color: MelodiTheme.primaryGreen),
+            child: const Icon(Icons.person_rounded,
+                size: 22, color: MelodiTheme.primaryGreen),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -843,16 +863,38 @@ class _ListeningHistoryScreenState extends State<ListeningHistoryScreen>
 
   String _formatDate(DateTime date) {
     final months = [
-      '', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
-      'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+      '',
+      'Ocak',
+      'Şubat',
+      'Mart',
+      'Nisan',
+      'Mayıs',
+      'Haziran',
+      'Temmuz',
+      'Ağustos',
+      'Eylül',
+      'Ekim',
+      'Kasım',
+      'Aralık'
     ];
     return '${date.day} ${months[date.month]} ${date.year}';
   }
 
   String _getMonthName(int month) {
     final months = [
-      '', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
-      'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+      '',
+      'Ocak',
+      'Şubat',
+      'Mart',
+      'Nisan',
+      'Mayıs',
+      'Haziran',
+      'Temmuz',
+      'Ağustos',
+      'Eylül',
+      'Ekim',
+      'Kasım',
+      'Aralık'
     ];
     return months[month];
   }

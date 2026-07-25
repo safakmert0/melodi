@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sqflite/sqflite.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../services/database_service.dart';
 
 class PlaylistSyncSettings extends StatefulWidget {
@@ -120,7 +118,8 @@ class _PlaylistSyncSettingsState extends State<PlaylistSyncSettings> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 40, height: 4,
+                    width: 40,
+                    height: 4,
                     decoration: BoxDecoration(
                       color: MelodiTheme.outlineVariant,
                       borderRadius: BorderRadius.circular(2),
@@ -138,7 +137,8 @@ class _PlaylistSyncSettingsState extends State<PlaylistSyncSettings> {
                   const SizedBox(height: 4),
                   Text(
                     widget.playlistName,
-                    style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
+                    style: TextStyle(
+                        color: MelodiTheme.onSurfaceVariant, fontSize: 14),
                   ),
                   const SizedBox(height: 24),
                   _buildToggle(
@@ -166,9 +166,12 @@ class _PlaylistSyncSettingsState extends State<PlaylistSyncSettings> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    _buildDirectionOption('bidirectional', AppLocale.tr('bidirectional')),
-                    _buildDirectionOption('spotify_to_yt', AppLocale.tr('spotify_to_yt')),
-                    _buildDirectionOption('yt_to_spotify', AppLocale.tr('yt_to_spotify')),
+                    _buildDirectionOption(
+                        'bidirectional', AppLocale.tr('bidirectional')),
+                    _buildDirectionOption(
+                        'spotify_to_yt', AppLocale.tr('spotify_to_yt')),
+                    _buildDirectionOption(
+                        'yt_to_spotify', AppLocale.tr('yt_to_spotify')),
                     const SizedBox(height: 16),
                     _InfoRow(
                       label: AppLocale.tr('last_synced'),
@@ -181,8 +184,10 @@ class _PlaylistSyncSettingsState extends State<PlaylistSyncSettings> {
                         onPressed: _isSyncing ? null : _syncNow,
                         icon: _isSyncing
                             ? const SizedBox(
-                                width: 18, height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.black),
                               )
                             : const Icon(Icons.sync_rounded, size: 20),
                         label: Text(AppLocale.tr('sync_now')),

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:collection/collection.dart';
 import '../models/song_model.dart';
 import '../models/album_model.dart';
 import '../models/artist_model.dart';
@@ -219,8 +218,8 @@ class LibraryProvider extends ChangeNotifier {
     _albums = albumMap.entries.map((entry) {
       final songs = entry.value;
       final first = songs.first;
-      final totalDur = songs.fold<Duration>(
-          Duration.zero, (sum, s) => sum + s.duration);
+      final totalDur =
+          songs.fold<Duration>(Duration.zero, (sum, s) => sum + s.duration);
       return AlbumModel(
         id: entry.key,
         name: first.album,
@@ -245,9 +244,9 @@ class LibraryProvider extends ChangeNotifier {
       final songs = entry.value;
       final albumNames = songs.map((s) => s.album).toSet();
       final firstSongWithArt = songs.cast<SongModel?>().firstWhere(
-        (s) => s!.albumArt != null,
-        orElse: () => null,
-      );
+            (s) => s!.albumArt != null,
+            orElse: () => null,
+          );
       return ArtistModel(
         id: entry.key,
         name: entry.key,

@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../providers/playlist_provider.dart';
 
 class CreatePlaylistScreen extends StatefulWidget {
@@ -70,7 +69,8 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.camera_alt_rounded, size: 48, color: MelodiTheme.primaryGreen),
+                  Icon(Icons.camera_alt_rounded,
+                      size: 48, color: MelodiTheme.primaryGreen),
                   const SizedBox(height: 12),
                   Text(
                     AppLocale.tr('add_cover_photo'),
@@ -104,7 +104,8 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.lock_outline_rounded, size: 20, color: MelodiTheme.onSurfaceVariant),
+                      const Icon(Icons.lock_outline_rounded,
+                          size: 20, color: MelodiTheme.onSurfaceVariant),
                       const SizedBox(width: 8),
                       Text(
                         AppLocale.tr('private_playlist'),
@@ -131,19 +132,20 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen> {
                 color: MelodiTheme.surfaceMid2,
                 borderRadius: BorderRadius.circular(8),
               ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.bar_chart_rounded, size: 18, color: MelodiTheme.primaryGreen),
-                    const SizedBox(width: 8),
-                    Text(
-                      AppLocale.tr('high_fidelity_active'),
-                      style: const TextStyle(
-                        fontFamily: AppConstants.fontFamily,
-                        color: MelodiTheme.onSurfaceVariant,
-                        fontSize: 13,
-                      ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.bar_chart_rounded,
+                      size: 18, color: MelodiTheme.primaryGreen),
+                  const SizedBox(width: 8),
+                  Text(
+                    AppLocale.tr('high_fidelity_active'),
+                    style: const TextStyle(
+                      fontFamily: AppConstants.fontFamily,
+                      color: MelodiTheme.onSurfaceVariant,
+                      fontSize: 13,
                     ),
+                  ),
                 ],
               ),
             ),
@@ -181,9 +183,9 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen> {
   void _createPlaylist() {
     if (_nameController.text.trim().isEmpty) return;
     context.read<PlaylistProvider>().createPlaylist(
-      _nameController.text.trim(),
-      description: _descController.text.trim(),
-    );
+          _nameController.text.trim(),
+          description: _descController.text.trim(),
+        );
     Navigator.of(context).pop();
   }
 }

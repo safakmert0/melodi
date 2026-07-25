@@ -21,7 +21,6 @@ class PlayerProvider extends ChangeNotifier {
   VoidCallback? onNowPlaying;
 
   bool _streamingEnabled = true;
-  bool _autoSkipOffline = false;
 
   bool get streamingEnabled => _streamingEnabled;
 
@@ -99,13 +98,15 @@ class PlayerProvider extends ChangeNotifier {
   int get currentIndex => _handler.currentIndex;
   double get playbackSpeed => _handler.playbackSpeed;
   double get volumeBoost => _handler.volume;
-  bool get hasActivePlayback => _handler.currentSong != null || _handler.isPlaying;
+  bool get hasActivePlayback =>
+      _handler.currentSong != null || _handler.isPlaying;
   int? get sleepTimerMinutes => _handler.sleepTimerMinutes;
 
   set playbackSpeed(double speed) {
     _handler.setPlaybackSpeed(speed);
     notifyListeners();
   }
+
   bool get autoShuffleEnabled => _handler.autoShuffleEnabled;
   Duration get crossfadeDuration => _handler.crossfadeDuration;
 
@@ -143,23 +144,32 @@ class PlayerProvider extends ChangeNotifier {
     _handler.savePlayerState();
     CarPlayService.updateNowPlaying(song);
     ListeningRecorder.instance.recordPlayback(
-      song.id, song.title, song.artist,
-      album: song.album, source: song.filePath,
+      song.id,
+      song.title,
+      song.artist,
+      album: song.album,
+      source: song.filePath,
       durationMs: _handler.duration.inMilliseconds,
     );
-    try { WidgetService.instance.updateNowPlaying(song); } catch (_) {}
+    try {
+      WidgetService.instance.updateNowPlaying(song);
+    } catch (_) {}
     onNowPlaying?.call();
     notifyListeners();
   }
 
   Future<void> playFromQueue(List<SongModel> songs, int index) async {
     final queue = List<SongModel>.from(songs);
-    if (index >= 0 && index < queue.length && queue[index].filePath.startsWith('spotify://')) {
+    if (index >= 0 &&
+        index < queue.length &&
+        queue[index].filePath.startsWith('spotify://')) {
       final target = queue[index];
       try {
-        final results = await YTMusicService().search('${target.artist} ${target.title}');
+        final results =
+            await YTMusicService().search('${target.artist} ${target.title}');
         if (results.isNotEmpty) {
-          final resolved = target.copyWith(filePath: 'youtube://${results.first.videoId}');
+          final resolved =
+              target.copyWith(filePath: 'youtube://${results.first.videoId}');
           queue[index] = resolved;
           await _db.insertSong(resolved);
         }
@@ -305,7 +315,9 @@ class PlayerProvider extends ChangeNotifier {
     if (scrobbleAt <= 0) return;
     _scrobbleTimer = Timer(Duration(milliseconds: scrobbleAt), () {
       if (_handler.currentSong?.id == song.id && _handler.isPlaying) {
-        final timestamp = (_playStartTime?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch) ~/ 1000;
+        final timestamp = (_playStartTime?.millisecondsSinceEpoch ??
+                DateTime.now().millisecondsSinceEpoch) ~/
+            1000;
         onScrobble?.call(song, timestamp);
       }
     });

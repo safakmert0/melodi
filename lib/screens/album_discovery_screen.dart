@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../services/album_discovery_service.dart';
 import 'album_detail_screen.dart';
 
@@ -21,9 +20,21 @@ class _AlbumDiscoveryScreenState extends State<AlbumDiscoveryScreen> {
   String _selectedGenre = 'Pop';
 
   static const List<String> _genres = [
-    'Pop', 'Rock', 'Jazz', 'Classical', 'Electronic',
-    'Hip-Hop', 'R&B', 'Metal', 'Folk', 'Blues',
-    'Reggae', 'Country', 'Indie', 'Soul', 'Funk',
+    'Pop',
+    'Rock',
+    'Jazz',
+    'Classical',
+    'Electronic',
+    'Hip-Hop',
+    'R&B',
+    'Metal',
+    'Folk',
+    'Blues',
+    'Reggae',
+    'Country',
+    'Indie',
+    'Soul',
+    'Funk',
   ];
 
   @override
@@ -98,7 +109,8 @@ class _AlbumDiscoveryScreenState extends State<AlbumDiscoveryScreen> {
                           padding: const EdgeInsets.all(32),
                           child: Center(
                             child: Text(AppLocale.tr('no_albums_found'),
-                                style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
+                                style: TextStyle(
+                                    color: MelodiTheme.onSurfaceVariant)),
                           ),
                         )
                       : SizedBox(
@@ -158,9 +170,8 @@ class _AlbumDiscoveryScreenState extends State<AlbumDiscoveryScreen> {
                         selectedColor: MelodiTheme.primaryGreen,
                         backgroundColor: MelodiTheme.containerLow,
                         labelStyle: TextStyle(
-                          color: isSelected
-                              ? Colors.black
-                              : MelodiTheme.onSurface,
+                          color:
+                              isSelected ? Colors.black : MelodiTheme.onSurface,
                           fontSize: 13,
                         ),
                         side: BorderSide.none,
@@ -184,7 +195,8 @@ class _AlbumDiscoveryScreenState extends State<AlbumDiscoveryScreen> {
                           padding: const EdgeInsets.all(32),
                           child: Center(
                             child: Text(AppLocale.tr('no_albums_found'),
-                                style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
+                                style: TextStyle(
+                                    color: MelodiTheme.onSurfaceVariant)),
                           ),
                         )
                       : GridView.builder(
@@ -257,10 +269,8 @@ class _AlbumCard extends StatelessWidget {
                           child: Icon(Icons.album_rounded,
                               size: 48, color: MelodiTheme.textMuted),
                         ),
-                        errorWidget: (_, __, ___) => Icon(
-                            Icons.album_rounded,
-                            size: 48,
-                            color: MelodiTheme.textMuted),
+                        errorWidget: (_, __, ___) => Icon(Icons.album_rounded,
+                            size: 48, color: MelodiTheme.textMuted),
                       )
                     : Icon(Icons.album_rounded,
                         size: 48, color: MelodiTheme.textMuted),

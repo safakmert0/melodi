@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../services/wrong_match_service.dart';
-import '../services/ytmusic_service.dart';
 
 class WrongMatchButton extends StatelessWidget {
   final String spotifyTrackId;
@@ -62,7 +60,8 @@ class WrongMatchButton extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Text(
                   AppLocale.tr('find_alternative'),
                   style: TextStyle(
@@ -77,7 +76,8 @@ class WrongMatchButton extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
                   '$title - $artist',
-                  style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
+                  style: TextStyle(
+                      color: MelodiTheme.onSurfaceVariant, fontSize: 13),
                   textAlign: TextAlign.center,
                 ),
               ),

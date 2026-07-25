@@ -11,12 +11,26 @@ class StorageManager {
   final DatabaseService _db = DatabaseService.instance;
 
   static const _audioExtensions = [
-    'flac', 'mp3', 'm4a', 'wav', 'aac', 'ogg', 'wma',
-    'alac', 'aiff', 'opus', 'ape', 'wv',
+    'flac',
+    'mp3',
+    'm4a',
+    'wav',
+    'aac',
+    'ogg',
+    'wma',
+    'alac',
+    'aiff',
+    'opus',
+    'ape',
+    'wv',
   ];
 
   static const _imageExtensions = [
-    'jpg', 'jpeg', 'png', 'webp', 'bmp',
+    'jpg',
+    'jpeg',
+    'png',
+    'webp',
+    'bmp',
   ];
 
   Future<String> getStorageLocation() async {
@@ -112,11 +126,14 @@ class StorageManager {
       if (entity is File) files.add(entity);
     }
     files.sort((a, b) => b.lengthSync().compareTo(a.lengthSync()));
-    return files.take(limit).map((f) => {
-      'path': f.path,
-      'name': f.path.split('/').last,
-      'size': f.lengthSync(),
-    }).toList();
+    return files
+        .take(limit)
+        .map((f) => {
+              'path': f.path,
+              'name': f.path.split('/').last,
+              'size': f.lengthSync(),
+            })
+        .toList();
   }
 
   Future<Map<String, Map<String, int>>> getFormatBreakdown() async {

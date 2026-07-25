@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/playlist_provider.dart';
 import '../services/album_discovery_service.dart';
 import '../models/song_model.dart';
-import '../widgets/song_tile.dart';
 
 class AlbumDetailScreen extends StatefulWidget {
   final DiscoveredAlbum album;
@@ -73,8 +71,8 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                 value: 'add_all',
                 child: Row(
                   children: [
-                    Icon(Icons.playlist_add, size: 20,
-                        color: MelodiTheme.onSurfaceVariant),
+                    Icon(Icons.playlist_add,
+                        size: 20, color: MelodiTheme.onSurfaceVariant),
                     const SizedBox(width: 8),
                     Text(AppLocale.tr('add_to_playlist')),
                   ],
@@ -94,8 +92,8 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                 ),
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Row(
                       children: [
                         FilledButton.icon(
@@ -130,14 +128,16 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Divider(color: MelodiTheme.outlineVariant, height: 1),
+                    child:
+                        Divider(color: MelodiTheme.outlineVariant, height: 1),
                   ),
                 ),
                 if (_tracks.isEmpty)
                   SliverFillRemaining(
                     child: Center(
                       child: Text(AppLocale.tr('no_songs'),
-                          style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
+                          style:
+                              TextStyle(color: MelodiTheme.onSurfaceVariant)),
                     ),
                   )
                 else
@@ -160,9 +160,8 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
   }
 
   Widget _buildHeader(BuildContext context, DiscoveredAlbum album) {
-    final durationStr = _tracks.isNotEmpty
-        ? '${_tracks.length} ${AppLocale.tr('songs')}'
-        : '';
+    final durationStr =
+        _tracks.isNotEmpty ? '${_tracks.length} ${AppLocale.tr('songs')}' : '';
     return Container(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -243,8 +242,9 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
     final songs = _tracks.map((t) {
       // Search local library by title + artist
       final localMatch = library.songs.firstWhere(
-        (s) => s.title.toLowerCase() == t.name.toLowerCase() &&
-               s.artist.toLowerCase().contains(t.artist.toLowerCase()),
+        (s) =>
+            s.title.toLowerCase() == t.name.toLowerCase() &&
+            s.artist.toLowerCase().contains(t.artist.toLowerCase()),
         orElse: () => _toSongModel(t),
       );
       return localMatch;
@@ -276,7 +276,8 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Text(
                   AppLocale.tr('add_to_playlist'),
                   style: TextStyle(
@@ -298,7 +299,8 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('${AppLocale.tr('added_to')} ${pl.name}'),
+                          content:
+                              Text('${AppLocale.tr('added_to')} ${pl.name}'),
                           backgroundColor: MelodiTheme.primaryGreen,
                         ),
                       );

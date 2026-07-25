@@ -2,8 +2,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../services/database_service.dart';
 import '../services/scrobble_service.dart';
-import '../services/ytmusic_service.dart';
-import '../services/spotify_service.dart';
 
 class ScrobbleProvider extends ChangeNotifier {
   final ScrobbleService _service;
@@ -65,7 +63,6 @@ class ScrobbleProvider extends ChangeNotifier {
       if (count > 0) {
         _lastScrobbledAt = DateTime.now();
         _scrobbleCount += count;
-        final db = DatabaseService.instance;
         await _loadRecentHistory();
       }
       return count;

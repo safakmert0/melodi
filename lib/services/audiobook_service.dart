@@ -20,22 +20,23 @@ class AudiobookChapter {
   });
 
   Map<String, dynamic> toMap() => {
-    'id': id,
-    'title': title,
-    'audioPath': audioPath,
-    'durationMs': duration.inMilliseconds,
-    'position': position,
-    'completed': completed ? 1 : 0,
-  };
+        'id': id,
+        'title': title,
+        'audioPath': audioPath,
+        'durationMs': duration.inMilliseconds,
+        'position': position,
+        'completed': completed ? 1 : 0,
+      };
 
-  factory AudiobookChapter.fromMap(Map<String, dynamic> map) => AudiobookChapter(
-    id: map['id'] as String,
-    title: map['title'] as String? ?? '',
-    audioPath: map['audioPath'] as String? ?? '',
-    duration: Duration(milliseconds: map['durationMs'] as int? ?? 0),
-    position: map['position'] as int? ?? 0,
-    completed: (map['completed'] as int? ?? 0) == 1,
-  );
+  factory AudiobookChapter.fromMap(Map<String, dynamic> map) =>
+      AudiobookChapter(
+        id: map['id'] as String,
+        title: map['title'] as String? ?? '',
+        audioPath: map['audioPath'] as String? ?? '',
+        duration: Duration(milliseconds: map['durationMs'] as int? ?? 0),
+        position: map['position'] as int? ?? 0,
+        completed: (map['completed'] as int? ?? 0) == 1,
+      );
 }
 
 class Audiobook {
@@ -55,7 +56,8 @@ class Audiobook {
     required this.createdAt,
   });
 
-  Duration get totalDuration => chapters.fold(Duration.zero, (sum, ch) => sum + ch.duration);
+  Duration get totalDuration =>
+      chapters.fold(Duration.zero, (sum, ch) => sum + ch.duration);
 
   double get progress {
     if (chapters.isEmpty) return 0;
@@ -64,13 +66,13 @@ class Audiobook {
   }
 
   Map<String, dynamic> toMap() => {
-    'id': id,
-    'title': title,
-    'author': author,
-    'chapters': chapters.map((c) => c.toMap()).toList(),
-    'folderPath': folderPath,
-    'createdAt': createdAt.toIso8601String(),
-  };
+        'id': id,
+        'title': title,
+        'author': author,
+        'chapters': chapters.map((c) => c.toMap()).toList(),
+        'folderPath': folderPath,
+        'createdAt': createdAt.toIso8601String(),
+      };
 
   factory Audiobook.fromMap(Map<String, dynamic> map) {
     final chaptersList = (map['chapters'] as List?)
@@ -82,7 +84,8 @@ class Audiobook {
       author: map['author'] as String? ?? '',
       chapters: chaptersList ?? [],
       folderPath: map['folderPath'] as String? ?? '',
-      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
+      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
 }
@@ -105,22 +108,24 @@ class AudiobookBookmark {
   });
 
   Map<String, dynamic> toMap() => {
-    'id': id,
-    'audiobookId': audiobookId,
-    'chapterId': chapterId,
-    'positionMs': position.inMilliseconds,
-    'note': note,
-    'createdAt': createdAt.toIso8601String(),
-  };
+        'id': id,
+        'audiobookId': audiobookId,
+        'chapterId': chapterId,
+        'positionMs': position.inMilliseconds,
+        'note': note,
+        'createdAt': createdAt.toIso8601String(),
+      };
 
-  factory AudiobookBookmark.fromMap(Map<String, dynamic> map) => AudiobookBookmark(
-    id: map['id'] as String,
-    audiobookId: map['audiobookId'] as String? ?? '',
-    chapterId: map['chapterId'] as String? ?? '',
-    position: Duration(milliseconds: map['positionMs'] as int? ?? 0),
-    note: map['note'] as String?,
-    createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
-  );
+  factory AudiobookBookmark.fromMap(Map<String, dynamic> map) =>
+      AudiobookBookmark(
+        id: map['id'] as String,
+        audiobookId: map['audiobookId'] as String? ?? '',
+        chapterId: map['chapterId'] as String? ?? '',
+        position: Duration(milliseconds: map['positionMs'] as int? ?? 0),
+        note: map['note'] as String?,
+        createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ??
+            DateTime.now(),
+      );
 }
 
 class AudiobookService {
@@ -181,7 +186,16 @@ class AudiobookService {
     final dir = Directory(path);
     if (!await dir.exists()) return null;
 
-    final audioExtensions = {'.mp3', '.m4a', '.aac', '.ogg', '.flac', '.wav', '.opus', '.wma'};
+    final audioExtensions = {
+      '.mp3',
+      '.m4a',
+      '.aac',
+      '.ogg',
+      '.flac',
+      '.wav',
+      '.opus',
+      '.wma'
+    };
     final files = <FileSystemEntity>[];
 
     await for (final entity in dir.list(recursive: true, followLinks: false)) {
@@ -232,20 +246,35 @@ class AudiobookService {
     await db.rawInsert('''
       INSERT OR REPLACE INTO audiobooks (id, title, author, folderPath, createdAt)
       VALUES (?, ?, ?, ?, ?)
-    ''', [book.id, book.title, book.author, book.folderPath, book.createdAt.toIso8601String()]);
+    ''', [
+      book.id,
+      book.title,
+      book.author,
+      book.folderPath,
+      book.createdAt.toIso8601String()
+    ]);
 
     for (final ch in book.chapters) {
       await db.rawInsert('''
         INSERT OR REPLACE INTO audiobook_chapters (id, audiobookId, title, audioPath, durationMs, position, completed)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-      ''', [ch.id, book.id, ch.title, ch.audioPath, ch.duration.inMilliseconds, ch.position, ch.completed ? 1 : 0]);
+      ''', [
+        ch.id,
+        book.id,
+        ch.title,
+        ch.audioPath,
+        ch.duration.inMilliseconds,
+        ch.position,
+        ch.completed ? 1 : 0
+      ]);
     }
   }
 
   Future<List<Audiobook>> getAllAudiobooks() async {
     await _ensureTables();
     final db = DatabaseService.instance;
-    final bookMaps = await db.rawQuery('SELECT * FROM audiobooks ORDER BY createdAt DESC');
+    final bookMaps =
+        await db.rawQuery('SELECT * FROM audiobooks ORDER BY createdAt DESC');
 
     final books = <Audiobook>[];
     for (final bookMap in bookMaps) {
@@ -253,7 +282,8 @@ class AudiobookService {
         'SELECT * FROM audiobook_chapters WHERE audiobookId = ? ORDER BY position',
         [bookMap['id']],
       );
-      final chapters = chapterMaps.map((m) => AudiobookChapter.fromMap(m)).toList();
+      final chapters =
+          chapterMaps.map((m) => AudiobookChapter.fromMap(m)).toList();
       books.add(Audiobook.fromMap({...bookMap, 'chapters': chapters}));
     }
     return books;
@@ -262,7 +292,8 @@ class AudiobookService {
   Future<Audiobook?> getAudiobook(String id) async {
     await _ensureTables();
     final db = DatabaseService.instance;
-    final bookMaps = await db.rawQuery('SELECT * FROM audiobooks WHERE id = ?', [id]);
+    final bookMaps =
+        await db.rawQuery('SELECT * FROM audiobooks WHERE id = ?', [id]);
     if (bookMaps.isEmpty) return null;
 
     final bookMap = bookMaps.first;
@@ -270,30 +301,43 @@ class AudiobookService {
       'SELECT * FROM audiobook_chapters WHERE audiobookId = ? ORDER BY position',
       [id],
     );
-    final chapters = chapterMaps.map((m) => AudiobookChapter.fromMap(m)).toList();
+    final chapters =
+        chapterMaps.map((m) => AudiobookChapter.fromMap(m)).toList();
     return Audiobook.fromMap({...bookMap, 'chapters': chapters});
   }
 
   Future<void> deleteAudiobook(String id) async {
     final db = DatabaseService.instance;
     await db.rawQuery('DELETE FROM audiobooks WHERE id = ?', [id]);
-    await db.rawQuery('DELETE FROM audiobook_chapters WHERE audiobookId = ?', [id]);
-    await db.rawQuery('DELETE FROM audiobook_progress WHERE audiobookId = ?', [id]);
-    await db.rawQuery('DELETE FROM audiobook_bookmarks WHERE audiobookId = ?', [id]);
+    await db
+        .rawQuery('DELETE FROM audiobook_chapters WHERE audiobookId = ?', [id]);
+    await db
+        .rawQuery('DELETE FROM audiobook_progress WHERE audiobookId = ?', [id]);
+    await db.rawQuery(
+        'DELETE FROM audiobook_bookmarks WHERE audiobookId = ?', [id]);
   }
 
-  Future<void> saveProgress(String audiobookId, String chapterId, Duration position) async {
+  Future<void> saveProgress(
+      String audiobookId, String chapterId, Duration position) async {
     await _ensureTables();
     final db = DatabaseService.instance;
     await db.rawInsert('''
       INSERT OR REPLACE INTO audiobook_progress (audiobookId, chapterId, positionMs, lastPlayedAt)
       VALUES (?, ?, ?, ?)
-    ''', [audiobookId, chapterId, position.inMilliseconds, DateTime.now().toIso8601String()]);
+    ''', [
+      audiobookId,
+      chapterId,
+      position.inMilliseconds,
+      DateTime.now().toIso8601String()
+    ]);
   }
 
-  Future<(String chapterId, Duration position)?> getProgress(String audiobookId) async {
+  Future<(String chapterId, Duration position)?> getProgress(
+      String audiobookId) async {
     final db = DatabaseService.instance;
-    final result = await db.rawQuery('SELECT * FROM audiobook_progress WHERE audiobookId = ?', [audiobookId]);
+    final result = await db.rawQuery(
+        'SELECT * FROM audiobook_progress WHERE audiobookId = ?',
+        [audiobookId]);
     if (result.isEmpty) return null;
     final row = result.first;
     return (
@@ -310,7 +354,9 @@ class AudiobookService {
     );
   }
 
-  Future<AudiobookBookmark> addBookmark(String audiobookId, String chapterId, Duration position, {String? note}) async {
+  Future<AudiobookBookmark> addBookmark(
+      String audiobookId, String chapterId, Duration position,
+      {String? note}) async {
     await _ensureTables();
     final db = DatabaseService.instance;
     final id = '${audiobookId}_${DateTime.now().millisecondsSinceEpoch}';
@@ -326,7 +372,14 @@ class AudiobookService {
     await db.rawInsert('''
       INSERT INTO audiobook_bookmarks (id, audiobookId, chapterId, positionMs, note, createdAt)
       VALUES (?, ?, ?, ?, ?, ?)
-    ''', [map['id'], map['audiobookId'], map['chapterId'], map['positionMs'], map['note'], map['createdAt']]);
+    ''', [
+      map['id'],
+      map['audiobookId'],
+      map['chapterId'],
+      map['positionMs'],
+      map['note'],
+      map['createdAt']
+    ]);
     return bookmark;
   }
 
@@ -341,6 +394,7 @@ class AudiobookService {
 
   Future<void> removeBookmark(String bookmarkId) async {
     final db = DatabaseService.instance;
-    await db.rawQuery('DELETE FROM audiobook_bookmarks WHERE id = ?', [bookmarkId]);
+    await db
+        .rawQuery('DELETE FROM audiobook_bookmarks WHERE id = ?', [bookmarkId]);
   }
 }

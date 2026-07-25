@@ -33,8 +33,8 @@ class MetadataService {
       final id = '$filePath|${DateTime.now().millisecondsSinceEpoch}';
 
       Uint8List? albumArt;
-      if (metadata.pictures != null && metadata.pictures!.isNotEmpty) {
-        albumArt = metadata.pictures!.first.bytes;
+      if (metadata.pictures.isNotEmpty) {
+        albumArt = metadata.pictures.first.bytes;
       }
 
       String? lyrics;
@@ -148,7 +148,6 @@ class MetadataService {
       final trackId = track['id'] as String;
       final title = track['title'] as String? ?? '';
       final artist = track['artist'] as String? ?? '';
-      final album = track['album'] as String? ?? '';
 
       String? imageUrl;
 
@@ -198,20 +197,27 @@ class MetadataService {
           final playerData = await ytmusicService.client.player(videoId);
           if (playerData != null) {
             final captions = playerData['captions'] as Map<String, dynamic>?;
-            final playerCaptionsTracklistRenderer = captions?['playerCaptionsTracklistRenderer'] as Map<String, dynamic>?;
-            final captionTracks = playerCaptionsTracklistRenderer?['captionTracks'] as List<dynamic>?;
+            final playerCaptionsTracklistRenderer =
+                captions?['playerCaptionsTracklistRenderer']
+                    as Map<String, dynamic>?;
+            final captionTracks =
+                playerCaptionsTracklistRenderer?['captionTracks']
+                    as List<dynamic>?;
             if (captionTracks != null && captionTracks.isNotEmpty) {
               for (final ct in captionTracks) {
-                final baseUrl = (ct as Map<String, dynamic>)['baseUrl'] as String?;
+                final baseUrl =
+                    (ct as Map<String, dynamic>)['baseUrl'] as String?;
                 if (baseUrl != null) {
                   try {
                     final uri = Uri.parse('$baseUrl&fmt=srv3');
-                    final client = HttpClient()..connectionTimeout = const Duration(seconds: 10);
+                    final client = HttpClient()
+                      ..connectionTimeout = const Duration(seconds: 10);
                     try {
                       final request = await client.getUrl(uri);
                       final response = await request.close();
                       if (response.statusCode == 200) {
-                        final xml = await response.transform(utf8.decoder).join();
+                        final xml =
+                            await response.transform(utf8.decoder).join();
                         final lyrics = _parseTimedText(xml);
                         if (lyrics.isNotEmpty) {
                           await _db.saveLyrics(trackId, {
@@ -246,7 +252,8 @@ class MetadataService {
 
     for (final match in matches) {
       final timeMs = int.tryParse(match.group(1) ?? '0') ?? 0;
-      final text = match.group(2)?.replaceAll(RegExp(r'<[^>]*>'), '').trim() ?? '';
+      final text =
+          match.group(2)?.replaceAll(RegExp(r'<[^>]*>'), '').trim() ?? '';
       if (text.isEmpty) continue;
       final minutes = (timeMs ~/ 60000).toString().padLeft(2, '0');
       final seconds = ((timeMs % 60000) ~/ 1000).toString().padLeft(2, '0');
@@ -277,13 +284,17 @@ class MetadataService {
         if (results.isNotEmpty) {
           final result = results.first;
           final updates = <String, dynamic>{};
-          if (result.albumName != null && (track['album'] == 'Unknown Album' || track['album'] == null)) {
+          if (result.albumName != null &&
+              (track['album'] == 'Unknown Album' || track['album'] == null)) {
             updates['album'] = result.albumName;
           }
-          if (result.artists.isNotEmpty && (track['artist'] == 'Unknown Artist' || track['artist'] == null)) {
+          if (result.artists.isNotEmpty &&
+              (track['artist'] == 'Unknown Artist' ||
+                  track['artist'] == null)) {
             updates['artist'] = result.artists.join(', ');
           }
-          if (result.durationMs > 0 && ((track['durationMs'] as int?) ?? 0) == 0) {
+          if (result.durationMs > 0 &&
+              ((track['durationMs'] as int?) ?? 0) == 0) {
             updates['durationMs'] = result.durationMs;
           }
           if (updates.isNotEmpty) {
@@ -297,7 +308,8 @@ class MetadataService {
     return updated;
   }
 
-  static Future<String?> getHighResAlbumArt(String spotifyTrackId, {SpotifyService? spotifyService}) async {
+  static Future<String?> getHighResAlbumArt(String spotifyTrackId,
+      {SpotifyService? spotifyService}) async {
     final cached = await _db.getHighResArtUrl(spotifyTrackId);
     if (cached != null) return cached;
 
@@ -308,7 +320,8 @@ class MetadataService {
 
     try {
       final url = '${SpotifyAuthConfig.webApiBase}/tracks/$spotifyTrackId';
-      final client = HttpClient()..connectionTimeout = const Duration(seconds: 10);
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 10);
       try {
         final request = await client.getUrl(Uri.parse(url));
         request.headers.set('Authorization', 'Bearer $token');
@@ -363,7 +376,8 @@ class MetadataService {
     return null;
   }
 
-  static Map<String, dynamic> addMetadataToSong(Map<String, dynamic> song, {bool highResArt = false}) {
+  static Map<String, dynamic> addMetadataToSong(Map<String, dynamic> song,
+      {bool highResArt = false}) {
     final enriched = Map<String, dynamic>.from(song);
     if (highResArt && song['spotifyTrackId'] != null) {
       final trackId = song['spotifyTrackId'] as String;
@@ -379,7 +393,8 @@ class MetadataService {
     YTMusicService? ytmusicService,
   }) async {
     int total = 0;
-    total += await backfillAlbumArt(spotifyService: spotifyService, ytmusicService: ytmusicService);
+    total += await backfillAlbumArt(
+        spotifyService: spotifyService, ytmusicService: ytmusicService);
     total += await backfillLyrics(ytmusicService: ytmusicService);
     total += await backfillTrackMetadata(spotifyService: spotifyService);
     return total;

@@ -23,10 +23,13 @@ class WidgetService {
 
   Future<void> updateRecentlyPlayed(List<SongModel> songs) async {
     try {
-      final data = songs.take(10).map((s) => {
-        'title': s.title,
-        'artist': s.artist,
-      }).toList();
+      final data = songs
+          .take(10)
+          .map((s) => {
+                'title': s.title,
+                'artist': s.artist,
+              })
+          .toList();
 
       await _channel.invokeMethod('updateRecentlyPlayed', {
         'songs': data,
@@ -36,10 +39,13 @@ class WidgetService {
 
   Future<void> updateFavorites(List<SongModel> songs) async {
     try {
-      final data = songs.take(10).map((s) => {
-        'title': s.title,
-        'artist': s.artist,
-      }).toList();
+      final data = songs
+          .take(10)
+          .map((s) => {
+                'title': s.title,
+                'artist': s.artist,
+              })
+          .toList();
 
       await _channel.invokeMethod('updateFavorites', {
         'songs': data,

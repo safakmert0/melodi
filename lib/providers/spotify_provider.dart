@@ -1,11 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../services/database_service.dart';
+import '../services/secure_storage_service.dart';
 import '../services/spotify_service.dart';
 import '../services/track_matcher.dart';
 import '../models/song_model.dart';
 
 class SpotifyProvider extends ChangeNotifier {
+  static const _spDcKey = 'spotify_sp_dc';
+  static const _accessTokenKey = 'spotify_access_token';
+
   final SpotifyService _service = SpotifyService();
   bool _isConnecting = false;
   String? _spDc;
@@ -32,52 +36,53 @@ class SpotifyProvider extends ChangeNotifier {
 
   Future<void> init() async {
     try {
-    final db = DatabaseService.instance;
-    final spDc = await db.getSetting('spotify_sp_dc');
-    if (spDc != null && spDc.isNotEmpty) {
-      _spDc = spDc;
+      final db = DatabaseService.instance;
+      final spDc = await _readSecret(_spDcKey);
+      if (spDc != null && spDc.isNotEmpty) {
+        _spDc = spDc;
 
-      // Try to restore saved session first (avoids network call on every launch)
-      final savedToken = await db.getSetting('spotify_access_token');
-      final savedExpiry = await db.getSetting('spotify_expires_at');
-      final savedUsername = await db.getSetting('spotify_username');
-      final savedClientId = await db.getSetting('spotify_client_id');
+        // Try to restore saved session first (avoids network call on every launch)
+        final savedToken = await _readSecret(_accessTokenKey);
+        final savedExpiry = await db.getSetting('spotify_expires_at');
+        final savedUsername = await db.getSetting('spotify_username');
+        final savedClientId = await db.getSetting('spotify_client_id');
 
-      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      final expiry = int.tryParse(savedExpiry ?? '0') ?? 0;
+        final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        final expiry = int.tryParse(savedExpiry ?? '0') ?? 0;
 
-      if (savedToken != null && savedToken.isNotEmpty && now < expiry - 60) {
-        // Saved token is still valid — use it directly
-        _service.restoreSession(
-          accessToken: savedToken,
-          refreshToken: spDc,
-          expiresAtEpoch: expiry,
-          username: savedUsername,
-          clientId: savedClientId,
-        );
-        _username = savedUsername;
-        notifyListeners();
-      } else {
-        // Token expired or missing — refresh from server
-        try {
-          final session = await _service.getAccessToken(spDc);
-          if (session != null) {
-            _username = session.username;
-            await _saveSession(session);
-            notifyListeners();
-          } else {
-            debugPrint('Spotify: Token refresh failed, keeping sp_dc for retry');
-            _username = savedUsername;
-            notifyListeners();
-          }
-        } catch (e) {
-          debugPrint('Spotify: Init error, keeping session for retry: $e');
+        if (savedToken != null && savedToken.isNotEmpty && now < expiry - 60) {
+          // Saved token is still valid — use it directly
+          _service.restoreSession(
+            accessToken: savedToken,
+            refreshToken: spDc,
+            expiresAtEpoch: expiry,
+            username: savedUsername,
+            clientId: savedClientId,
+          );
           _username = savedUsername;
+          notifyListeners();
+        } else {
+          // Token expired or missing — refresh from server
+          try {
+            final session = await _service.getAccessToken(spDc);
+            if (session != null) {
+              _username = session.username;
+              await _saveSession(session);
+              notifyListeners();
+            } else {
+              debugPrint(
+                  'Spotify: Token refresh failed, keeping sp_dc for retry');
+              _username = savedUsername;
+              notifyListeners();
+            }
+          } catch (e) {
+            debugPrint('Spotify: Init error, keeping session for retry: $e');
+            _username = savedUsername;
+          }
         }
       }
-    }
-    await _loadMatches();
-    await _loadPlaylists();
+      await _loadMatches();
+      await _loadPlaylists();
     } finally {
       _isInitialized = true;
       notifyListeners();
@@ -101,8 +106,7 @@ class SpotifyProvider extends ChangeNotifier {
       _spDc = spDc;
       _username = session.username;
 
-      final db = DatabaseService.instance;
-      await db.setSetting('spotify_sp_dc', spDc);
+      await _writeSecret(_spDcKey, spDc);
       await _saveSession(session);
 
       _isConnecting = false;
@@ -118,17 +122,36 @@ class SpotifyProvider extends ChangeNotifier {
 
   Future<void> _saveSession(SpotifySession session) async {
     final db = DatabaseService.instance;
-    await db.setSetting('spotify_access_token', session.accessToken);
-    await db.setSetting('spotify_expires_at', session.expiresAtEpoch.toString());
+    await _writeSecret(_accessTokenKey, session.accessToken);
+    await db.setSetting(
+        'spotify_expires_at', session.expiresAtEpoch.toString());
     await db.setSetting('spotify_username', session.username);
     await db.setSetting('spotify_client_id', session.clientId);
   }
 
+  Future<String?> _readSecret(String key) async {
+    final secureStorage = SecureStorageService.instance;
+    final secureValue = await secureStorage.read(key);
+    if (secureValue != null && secureValue.isNotEmpty) return secureValue;
+
+    // One-time migration from versions that stored credentials in SQLite.
+    final db = DatabaseService.instance;
+    final legacyValue = await db.getSetting(key);
+    if (legacyValue == null || legacyValue.isEmpty) return null;
+    await secureStorage.write(key, legacyValue);
+    await db.deleteSetting(key);
+    return legacyValue;
+  }
+
+  Future<void> _writeSecret(String key, String value) async {
+    await SecureStorageService.instance.write(key, value);
+    await DatabaseService.instance.deleteSetting(key);
+  }
+
   Future<void> _saveMatches() async {
     final db = DatabaseService.instance;
-    await db.setSetting('spotify_matches', _matchedTrackIds.entries
-        .map((e) => '${e.key}=${e.value}')
-        .join(','));
+    await db.setSetting('spotify_matches',
+        _matchedTrackIds.entries.map((e) => '${e.key}=${e.value}').join(','));
   }
 
   Future<void> _loadMatches() async {
@@ -145,6 +168,7 @@ class SpotifyProvider extends ChangeNotifier {
   }
 
   Future<void> disconnect() async {
+    _service.disconnect();
     _spDc = null;
     _username = null;
     _playlists = [];
@@ -152,9 +176,11 @@ class SpotifyProvider extends ChangeNotifier {
     _error = null;
 
     final db = DatabaseService.instance;
-    await db.setSetting('spotify_sp_dc', '');
+    await SecureStorageService.instance.delete(_spDcKey);
+    await SecureStorageService.instance.delete(_accessTokenKey);
+    await db.deleteSetting('spotify_sp_dc');
     await db.setSetting('spotify_matches', '');
-    await db.setSetting('spotify_access_token', '');
+    await db.deleteSetting('spotify_access_token');
     await db.setSetting('spotify_expires_at', '');
     await db.setSetting('spotify_username', '');
     await db.setSetting('spotify_client_id', '');
@@ -162,15 +188,20 @@ class SpotifyProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Map<String, String> matchTracks(List<SpotifyTrackItem> spotifyTracks, List<SongModel> localSongs) {
+  Map<String, String> matchTracks(
+      List<SpotifyTrackItem> spotifyTracks, List<SongModel> localSongs) {
     final matches = <String, String>{};
     for (final st in spotifyTracks) {
       double bestScore = 0.5;
       String? bestMatch;
       for (final ls in localSongs) {
         final score = TrackMatcher.scoreWithDuration(
-          st.name, st.artists.join(' '), st.durationMs,
-          ls.title, ls.artist, ls.duration.inMilliseconds,
+          st.name,
+          st.artists.join(' '),
+          st.durationMs,
+          ls.title,
+          ls.artist,
+          ls.duration.inMilliseconds,
         );
         if (score > bestScore) {
           bestScore = score;
@@ -237,13 +268,15 @@ class SpotifyProvider extends ChangeNotifier {
   Future<void> _savePlaylists() async {
     try {
       final db = DatabaseService.instance;
-      final encoded = jsonEncode(_playlists.map((p) => {
-        'id': p.id,
-        'name': p.name,
-        'ownerId': p.ownerId,
-        'imageUrl': p.imageUrl,
-        'trackCount': p.trackCount,
-      }).toList());
+      final encoded = jsonEncode(_playlists
+          .map((p) => {
+                'id': p.id,
+                'name': p.name,
+                'ownerId': p.ownerId,
+                'imageUrl': p.imageUrl,
+                'trackCount': p.trackCount,
+              })
+          .toList());
       await db.setSetting('spotify_playlists', encoded);
     } catch (e) {
       debugPrint('Spotify _savePlaylists error: $e');
@@ -256,13 +289,15 @@ class SpotifyProvider extends ChangeNotifier {
       final saved = await db.getSetting('spotify_playlists');
       if (saved != null && saved.isNotEmpty) {
         final List<dynamic> decoded = jsonDecode(saved);
-        _playlists = decoded.map((e) => SpotifyPlaylistItem(
-          id: e['id'] as String,
-          name: e['name'] as String,
-          ownerId: e['ownerId'] as String? ?? '',
-          imageUrl: e['imageUrl'] as String?,
-          trackCount: e['trackCount'] as int? ?? 0,
-        )).toList();
+        _playlists = decoded
+            .map((e) => SpotifyPlaylistItem(
+                  id: e['id'] as String,
+                  name: e['name'] as String,
+                  ownerId: e['ownerId'] as String? ?? '',
+                  imageUrl: e['imageUrl'] as String?,
+                  trackCount: e['trackCount'] as int? ?? 0,
+                ))
+            .toList();
       }
     } catch (e) {
       debugPrint('Spotify _loadPlaylists error: $e');

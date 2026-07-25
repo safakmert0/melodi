@@ -22,7 +22,8 @@ class FileOrganizer {
     return downloadsDir.path;
   }
 
-  Future<String> getOrganizedPath(String artist, String album, String filename) async {
+  Future<String> getOrganizedPath(
+      String artist, String album, String filename) async {
     final baseDir = await _getDownloadsDir();
     final safeArtist = _sanitizeName(artist);
     final safeAlbum = _sanitizeName(album);
@@ -43,7 +44,10 @@ class FileOrganizer {
         final artist = record['artist'] as String;
         final album = record['album'] as String;
         final filename = record['filename'] as String;
-        reports.add({'from': file.path, 'to': await getOrganizedPath(artist, album, filename)});
+        reports.add({
+          'from': file.path,
+          'to': await getOrganizedPath(artist, album, filename)
+        });
       }
     }
 

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -97,7 +96,8 @@ class BackendApiService {
     if (_initialized) return;
     _initialized = true;
     try {
-      final saved = await DatabaseService.instance.getSetting('backend_api_url');
+      final saved =
+          await DatabaseService.instance.getSetting('backend_api_url');
       if (saved != null && saved.isNotEmpty) {
         _baseUrl = saved;
       }
@@ -108,7 +108,8 @@ class BackendApiService {
     await _ensureInitialized();
     if (_baseUrl.isEmpty) return false;
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/'))
+      final response = await http
+          .get(Uri.parse('$_baseUrl/'))
           .timeout(const Duration(seconds: 5));
       return response.statusCode == 200;
     } catch (e) {
@@ -119,11 +120,13 @@ class BackendApiService {
 
   Future<List<BackendVideo>> search(String query, {int limit = 20}) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/api/search'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'query': query, 'limit': limit}),
-      ).timeout(const Duration(seconds: 30));
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/api/search'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'query': query, 'limit': limit}),
+          )
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -143,9 +146,11 @@ class BackendApiService {
 
   Future<Map<String, dynamic>> getVideoInfo(String videoId) async {
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/api/info/$videoId'),
-      ).timeout(const Duration(seconds: 30));
+      final response = await http
+          .get(
+            Uri.parse('$_baseUrl/api/info/$videoId'),
+          )
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -171,14 +176,15 @@ class BackendApiService {
   }) async {
     try {
       final url = '$_baseUrl/api/download';
-      
+
       final request = http.Request('POST', Uri.parse(url));
       request.headers['Content-Type'] = 'application/json';
       request.body = jsonEncode({
         'url': 'https://www.youtube.com/watch?v=$videoId',
       });
 
-      final streamedResponse = await http.Client().send(request)
+      final streamedResponse = await http.Client()
+          .send(request)
           .timeout(const Duration(seconds: 120));
 
       if (streamedResponse.statusCode == 200) {
@@ -200,9 +206,8 @@ class BackendApiService {
           downloadedBytes += chunk.length;
 
           if (onProgress != null) {
-            final progress = totalBytes != null
-                ? downloadedBytes / totalBytes
-                : 0.0;
+            final progress =
+                totalBytes != null ? downloadedBytes / totalBytes : 0.0;
             onProgress(DownloadProgress(
               progress: progress.clamp(0.0, 1.0),
               downloadedBytes: downloadedBytes,
@@ -233,9 +238,11 @@ class BackendApiService {
 
   Future<List<BackendVideo>> getPlaylist(String playlistId) async {
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/api/playlist/$playlistId'),
-      ).timeout(const Duration(seconds: 30));
+      final response = await http
+          .get(
+            Uri.parse('$_baseUrl/api/playlist/$playlistId'),
+          )
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

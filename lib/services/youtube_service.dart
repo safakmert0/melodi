@@ -1,11 +1,9 @@
 import 'dart:io';
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-
 
 class YouTubeVideo {
   final String id;
@@ -49,9 +47,7 @@ class YouTubeService {
 
   Future<List<YouTubeVideo>> search(String query) async {
     try {
-      final results = await _client.search
-          .search(query)
-          .timeout(_timeout);
+      final results = await _client.search.search(query).timeout(_timeout);
       final videos = <YouTubeVideo>[];
       for (final video in results) {
         if (video.duration != null && video.duration!.inSeconds > 0) {
@@ -72,23 +68,32 @@ class YouTubeService {
     }
   }
 
-  AudioOnlyStreamInfo _bestAudio(Iterable<AudioOnlyStreamInfo> streams) {
+  AudioOnlyStreamInfo _selectAudio(
+    Iterable<AudioOnlyStreamInfo> streams, {
+    String quality = 'high',
+  }) {
     final m4a = streams.where((s) => s.container == StreamContainer.mp4);
-    final candidates = m4a.isNotEmpty ? m4a : streams;
-    return candidates.reduce(
-      (a, b) => a.bitrate.bitsPerSecond > b.bitrate.bitsPerSecond ? a : b,
-    );
+    final candidates = (m4a.isNotEmpty ? m4a : streams).toList()
+      ..sort(
+          (a, b) => a.bitrate.bitsPerSecond.compareTo(b.bitrate.bitsPerSecond));
+    if (quality == 'low') return candidates.first;
+    if (quality == 'normal' && candidates.length > 2) {
+      return candidates[candidates.length ~/ 2];
+    }
+    // YouTube does not expose lossless audio. A lossless preference therefore
+    // receives the best available encoded stream without claiming it is FLAC.
+    return candidates.last;
   }
 
-  Future<String?> _tryGetManifest(String videoId) async {
+  Future<String?> _tryGetManifest(String videoId,
+      {String quality = 'high'}) async {
     for (final client in _clients) {
       try {
         final manifest = await _client.videos.streams
-            .getManifest(videoId, ytClients: [client])
-            .timeout(_timeout);
+            .getManifest(videoId, ytClients: [client]).timeout(_timeout);
         final audio = manifest.audioOnly;
         if (audio.isNotEmpty) {
-          final url = _bestAudio(audio).url.toString();
+          final url = _selectAudio(audio, quality: quality).url.toString();
           debugPrint('YouTube: got audio URL via $client');
           return url;
         }
@@ -105,15 +110,15 @@ class YouTubeService {
   }
 
   Future<String?> _downloadAudio(String videoId, String title, Directory dir,
-      {String ext = '.m4a'}) async {
+      {String ext = '.m4a', String quality = 'high'}) async {
     try {
       final sanitized = title.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
       String safeTitle = sanitized.isEmpty ? videoId : sanitized;
-      final filePath = p.join(dir.path, '${safeTitle}_$videoId$ext');
+      final filePath = p.join(dir.path, '${safeTitle}_${videoId}_$quality$ext');
       final file = File(filePath);
       if (await file.exists()) return filePath;
 
-      final url = await _tryGetManifest(videoId);
+      final url = await _tryGetManifest(videoId, quality: quality);
       if (url == null) return null;
 
       debugPrint('YouTube: downloading audio from $url');
@@ -133,7 +138,7 @@ class YouTubeService {
         await response.pipe(sink);
         await sink.close();
         final len = await file.length();
-        debugPrint('YouTube: downloaded ${len} bytes');
+        debugPrint('YouTube: downloaded $len bytes');
         if (len < 1000) {
           await file.delete();
           debugPrint('YouTube: file too small, deleted');
@@ -159,10 +164,11 @@ class YouTubeService {
     }
   }
 
-  Future<String?> downloadAudio(String videoId, String title) async {
+  Future<String?> downloadAudio(String videoId, String title,
+      {String quality = 'high'}) async {
     try {
       final dir = await getApplicationDocumentsDirectory();
-      return await _downloadAudio(videoId, title, dir);
+      return await _downloadAudio(videoId, title, dir, quality: quality);
     } catch (e) {
       debugPrint('YouTube downloadAudio error: $e');
       return null;

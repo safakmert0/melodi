@@ -1,25 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'dart:ui' show Brightness, ImageFilter;
-import 'localization.dart';
-
 export 'localization.dart' show AppLocale;
 
 class AppConstants {
   static const String appName = 'Melodi';
-  static const String appVersion = '3.4.0';
+  static const String appVersion = '4.0.0';
   static const String buildNumber = '1';
 
   static const List<String> supportedAudioExtensions = [
-    'mp3', 'm4a', 'flac', 'wav', 'aac', 'ogg', 'wma',
-    'alac', 'aiff', 'opus', 'ape', 'wv', 'mid', 'midi',
+    'mp3',
+    'm4a',
+    'flac',
+    'wav',
+    'aac',
+    'ogg',
+    'wma',
+    'alac',
+    'aiff',
+    'opus',
+    'ape',
+    'wv',
+    'mid',
+    'midi',
   ];
 
   static const List<String> supportedMimeTypes = [
-    'audio/mpeg', 'audio/mp4', 'audio/flac', 'audio/wav',
-    'audio/aac', 'audio/ogg', 'audio/x-ms-wma',
-    'audio/x-alac', 'audio/x-aiff', 'audio/opus',
-    'audio/x-ape', 'audio/x-wavpack',
+    'audio/mpeg',
+    'audio/mp4',
+    'audio/flac',
+    'audio/wav',
+    'audio/aac',
+    'audio/ogg',
+    'audio/x-ms-wma',
+    'audio/x-alac',
+    'audio/x-aiff',
+    'audio/opus',
+    'audio/x-ape',
+    'audio/x-wavpack',
   ];
 
   static const Duration seekStep = Duration(seconds: 10);
@@ -102,7 +120,8 @@ class MelodiTheme {
   };
 
   // Typography - Be Vietnam Pro (Profesyonel boyutlar)
-  static TextStyle display({double size = 52, FontWeight weight = FontWeight.w800}) {
+  static TextStyle display(
+      {double size = 52, FontWeight weight = FontWeight.w800}) {
     return TextStyle(
       fontFamily: AppConstants.fontFamily,
       fontSize: size,
@@ -112,7 +131,8 @@ class MelodiTheme {
     );
   }
 
-  static TextStyle heading({double size = 32, FontWeight weight = FontWeight.w700}) {
+  static TextStyle heading(
+      {double size = 32, FontWeight weight = FontWeight.w700}) {
     return TextStyle(
       fontFamily: AppConstants.fontFamily,
       fontSize: size,
@@ -122,7 +142,8 @@ class MelodiTheme {
     );
   }
 
-  static TextStyle title({double size = 22, FontWeight weight = FontWeight.w600}) {
+  static TextStyle title(
+      {double size = 22, FontWeight weight = FontWeight.w600}) {
     return TextStyle(
       fontFamily: AppConstants.fontFamily,
       fontSize: size,
@@ -131,7 +152,8 @@ class MelodiTheme {
     );
   }
 
-  static TextStyle body({double size = 17, FontWeight weight = FontWeight.w400, Color? color}) {
+  static TextStyle body(
+      {double size = 17, FontWeight weight = FontWeight.w400, Color? color}) {
     return TextStyle(
       fontFamily: AppConstants.fontFamily,
       fontSize: size,
@@ -141,7 +163,8 @@ class MelodiTheme {
     );
   }
 
-  static TextStyle bodySm({double size = 15, FontWeight weight = FontWeight.w400, Color? color}) {
+  static TextStyle bodySm(
+      {double size = 15, FontWeight weight = FontWeight.w400, Color? color}) {
     return TextStyle(
       fontFamily: AppConstants.fontFamily,
       fontSize: size,
@@ -151,7 +174,11 @@ class MelodiTheme {
     );
   }
 
-  static TextStyle label({double size = 13, FontWeight weight = FontWeight.w700, Color? color, double letterSpacing = 0.04}) {
+  static TextStyle label(
+      {double size = 13,
+      FontWeight weight = FontWeight.w700,
+      Color? color,
+      double letterSpacing = 0.04}) {
     return TextStyle(
       fontFamily: AppConstants.fontFamily,
       fontSize: size,
@@ -162,7 +189,8 @@ class MelodiTheme {
     );
   }
 
-  static TextStyle labelSm({double size = 14, FontWeight weight = FontWeight.w500, Color? color}) {
+  static TextStyle labelSm(
+      {double size = 14, FontWeight weight = FontWeight.w500, Color? color}) {
     return TextStyle(
       fontFamily: AppConstants.fontFamily,
       fontSize: size,
@@ -173,9 +201,10 @@ class MelodiTheme {
   }
 
   // Glassmorphism Helpers
-  static BoxDecoration glassDecoration({double radius = 8, double opacity = 0.6}) {
+  static BoxDecoration glassDecoration(
+      {double radius = 8, double opacity = 0.6}) {
     return BoxDecoration(
-      color: background.withOpacity( opacity),
+      color: background.withValues(alpha: opacity),
       borderRadius: BorderRadius.circular(radius),
       border: Border.all(color: glassBorder, width: 0.5),
     );
@@ -196,7 +225,7 @@ class MelodiTheme {
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            color: background.withOpacity( opacity),
+            color: background.withValues(alpha: opacity),
             border: Border.all(color: glassBorder, width: 0.5),
           ),
           child: child,
@@ -243,8 +272,12 @@ class MelodiTheme {
         selectedItemColor: primaryGreen,
         unselectedItemColor: onSurfaceVariant,
         type: BottomNavigationBarType.fixed,
-        selectedLabelStyle: TextStyle(fontFamily: AppConstants.fontFamily, fontSize: 13, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: TextStyle(fontFamily: AppConstants.fontFamily, fontSize: 12),
+        selectedLabelStyle: TextStyle(
+            fontFamily: AppConstants.fontFamily,
+            fontSize: 13,
+            fontWeight: FontWeight.w600),
+        unselectedLabelStyle:
+            TextStyle(fontFamily: AppConstants.fontFamily, fontSize: 12),
       ),
       sliderTheme: const SliderThemeData(
         activeTrackColor: primaryGreen,
@@ -261,7 +294,9 @@ class MelodiTheme {
           return onSurfaceVariant;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) return primaryGreen.withOpacity(0.3);
+          if (states.contains(WidgetState.selected)) {
+            return primaryGreen.withValues(alpha: 0.3);
+          }
           return surfaceBright;
         }),
       ),
@@ -285,12 +320,23 @@ class AppTheme {
   static Color? customTextPrimary;
   static Color? customTextSecondary;
 
-  static Color get background => customBackground ?? (isLightMode ? const Color(0xFFF5F5F5) : MelodiTheme.background);
-  static Color get surface => customSurface ?? (isLightMode ? const Color(0xFFFFFFFF) : MelodiTheme.containerLow);
-  static Color get card => customCard ?? (isLightMode ? const Color(0xFFEEEEEE) : MelodiTheme.containerLow);
-  static Color get textPrimary => customTextPrimary ?? (isLightMode ? const Color(0xFF1A1A1A) : MelodiTheme.onSurface);
-  static Color get textSecondary => customTextSecondary ?? (isLightMode ? const Color(0xFF666666) : MelodiTheme.onSurfaceVariant);
-  static Color get textTertiary => isLightMode ? const Color(0xFF999999) : MelodiTheme.textMuted;
+  static Color get background =>
+      customBackground ??
+      (isLightMode ? const Color(0xFFF5F5F5) : MelodiTheme.background);
+  static Color get surface =>
+      customSurface ??
+      (isLightMode ? const Color(0xFFFFFFFF) : MelodiTheme.containerLow);
+  static Color get card =>
+      customCard ??
+      (isLightMode ? const Color(0xFFEEEEEE) : MelodiTheme.containerLow);
+  static Color get textPrimary =>
+      customTextPrimary ??
+      (isLightMode ? const Color(0xFF1A1A1A) : MelodiTheme.onSurface);
+  static Color get textSecondary =>
+      customTextSecondary ??
+      (isLightMode ? const Color(0xFF666666) : MelodiTheme.onSurfaceVariant);
+  static Color get textTertiary =>
+      isLightMode ? const Color(0xFF999999) : MelodiTheme.textMuted;
   static Color get primaryColor => accentColor;
   static Color get errorColor => MelodiTheme.errorRed;
   static Color get favoriteColor => MelodiTheme.primaryGreen;

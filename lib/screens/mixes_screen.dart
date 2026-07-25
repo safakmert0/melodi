@@ -2,7 +2,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../providers/mix_provider.dart';
 
 class MixesScreen extends StatefulWidget {
@@ -125,8 +124,7 @@ class _MixesScreenState extends State<MixesScreen> {
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
-              onPressed: () =>
-                  context.read<MixProvider>().generateAllMixes(),
+              onPressed: () => context.read<MixProvider>().generateAllMixes(),
               icon: const Icon(Icons.refresh_rounded),
               label: Text(AppLocale.tr('regenerate')),
               style: FilledButton.styleFrom(
@@ -192,18 +190,18 @@ class _MixesScreenState extends State<MixesScreen> {
             physics: const NeverScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: mixProvider.releaseRadar.length,
-              itemBuilder: (context, index) {
-                final track = mixProvider.releaseRadar[index];
-                return _TrackListTile(
-                  title: track['title'] as String? ?? '',
-                  artist: track['artist'] as String? ?? '',
-                  album: track['album'] as String? ?? '',
-                  imageUrl: track['imageUrl'] as String?,
-                  albumArt: track['albumArt'] as Uint8List?,
-                  durationMs: track['durationMs'] as int? ?? 0,
-                  onTap: () => _showTrackInfo(track),
-                );
-              },
+            itemBuilder: (context, index) {
+              final track = mixProvider.releaseRadar[index];
+              return _TrackListTile(
+                title: track['title'] as String? ?? '',
+                artist: track['artist'] as String? ?? '',
+                album: track['album'] as String? ?? '',
+                imageUrl: track['imageUrl'] as String?,
+                albumArt: track['albumArt'] as Uint8List?,
+                durationMs: track['durationMs'] as int? ?? 0,
+                onTap: () => _showTrackInfo(track),
+              );
+            },
           ),
         ],
       ),
@@ -534,55 +532,55 @@ class _TrackListTile extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: _buildArtwork(),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: MelodiTheme.onSurface,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$artist • $album',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: MelodiTheme.onSurfaceVariant,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: _buildArtwork(),
               ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              durationStr,
-              style: TextStyle(
-                color: MelodiTheme.textMuted,
-                fontSize: 14,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: MelodiTheme.onSurface,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$artist • $album',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: MelodiTheme.onSurfaceVariant,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+              Text(
+                durationStr,
+                style: TextStyle(
+                  color: MelodiTheme.textMuted,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

@@ -14,14 +14,17 @@ class YouTubeMusicSource implements MusicSource {
   Future<List<OnlineTrack>> search(String query, {int limit = 20}) async {
     try {
       final videos = await _service.search(query);
-      return videos.take(limit).map((v) => OnlineTrack(
-        id: v.id,
-        title: v.title,
-        artist: v.author,
-        duration: v.duration,
-        thumbnailUrl: v.thumbnailUrl,
-        source: MusicSourceType.youtube,
-      )).toList();
+      return videos
+          .take(limit)
+          .map((v) => OnlineTrack(
+                id: v.id,
+                title: v.title,
+                artist: v.author,
+                duration: v.duration,
+                thumbnailUrl: v.thumbnailUrl,
+                source: MusicSourceType.youtube,
+              ))
+          .toList();
     } catch (e) {
       return [];
     }

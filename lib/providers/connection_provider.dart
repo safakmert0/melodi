@@ -33,7 +33,8 @@ class ConnectionProvider extends ChangeNotifier {
       await loadState();
       await checkConnections().timeout(const Duration(seconds: 15));
     } catch (_) {}
-    _timer = Timer.periodic(const Duration(seconds: 60), (_) => checkConnections());
+    _timer =
+        Timer.periodic(const Duration(seconds: 60), (_) => checkConnections());
   }
 
   Future<void> checkConnections() async {
@@ -42,7 +43,9 @@ class ConnectionProvider extends ChangeNotifier {
     _spotifyConnected = _spotifyService.isConnected;
     if (_spotifyConnected) {
       try {
-        final session = await _spotifyService.refreshAccessToken().timeout(const Duration(seconds: 10));
+        final session = await _spotifyService
+            .refreshAccessToken()
+            .timeout(const Duration(seconds: 10));
         if (session == null) {
           _spotifyExpired = true;
           _spotifyConnected = false;
@@ -60,7 +63,8 @@ class ConnectionProvider extends ChangeNotifier {
     _ytMusicConnected = _ytmusicService.isConnected;
     if (_ytMusicConnected) {
       try {
-        final response = await _ytmusicService.client.browse('FEmusic_liked_playlists')
+        final response = await _ytmusicService.client
+            .browse('FEmusic_liked_playlists')
             .timeout(const Duration(seconds: 10));
         if (response == null) {
           _ytMusicExpired = true;

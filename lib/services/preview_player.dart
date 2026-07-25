@@ -35,8 +35,7 @@ class PreviewPlayer {
 
       _durationTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         final remaining = const Duration(seconds: 30) - _player.position;
-        _remaining =
-            remaining.isNegative ? Duration.zero : remaining;
+        _remaining = remaining.isNegative ? Duration.zero : remaining;
         _durationController.add(_remaining);
       });
     } catch (_) {

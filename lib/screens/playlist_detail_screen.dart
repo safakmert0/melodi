@@ -2,22 +2,18 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../models/playlist_model.dart';
 import '../models/song_model.dart';
 import '../services/database_service.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/playlist_provider.dart';
-import '../models/album_model.dart';
 import '../widgets/song_tile.dart';
-import '../widgets/image_with_fallback.dart';
 import '../widgets/wrong_match_button.dart';
 import '../providers/spotify_provider.dart';
 import '../providers/ytmusic_provider.dart';
 import '../providers/sync_provider.dart';
 import '../services/track_matcher.dart';
-import '../services/ytmusic_service.dart';
 import '../widgets/playlist_sync_settings.dart';
 
 class PlaylistDetailScreen extends StatefulWidget {
@@ -46,10 +42,12 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   }
 
   Future<void> _loadSyncState() async {
-    final state = await DatabaseService.instance.getPlaylistSyncState(widget.playlist.id);
+    final state =
+        await DatabaseService.instance.getPlaylistSyncState(widget.playlist.id);
     if (mounted) {
       setState(() {
-        _syncEnabled = state != null ? (state['syncEnabled'] as int?) == 1 : false;
+        _syncEnabled =
+            state != null ? (state['syncEnabled'] as int?) == 1 : false;
       });
     }
   }
@@ -195,7 +193,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 value: 'add',
                 child: Row(
                   children: [
-                    Icon(Icons.playlist_add, size: 20, color: MelodiTheme.onSurfaceVariant),
+                    Icon(Icons.playlist_add,
+                        size: 20, color: MelodiTheme.onSurfaceVariant),
                     const SizedBox(width: 8),
                     Text(AppLocale.tr('add_songs')),
                   ],
@@ -205,7 +204,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 value: 'rename',
                 child: Row(
                   children: [
-                    Icon(Icons.edit_outlined, size: 20, color: MelodiTheme.onSurfaceVariant),
+                    Icon(Icons.edit_outlined,
+                        size: 20, color: MelodiTheme.onSurfaceVariant),
                     const SizedBox(width: 8),
                     Text(AppLocale.tr('rename_playlist')),
                   ],
@@ -215,7 +215,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 value: 'delete',
                 child: Row(
                   children: [
-                    Icon(Icons.delete_outline, size: 20, color: MelodiTheme.errorRed),
+                    Icon(Icons.delete_outline,
+                        size: 20, color: MelodiTheme.errorRed),
                     const SizedBox(width: 8),
                     Text(AppLocale.tr('delete_playlist'),
                         style: TextStyle(color: MelodiTheme.errorRed)),
@@ -261,7 +262,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                             height: 120,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12),
-                              gradient: _songs.isNotEmpty && _songs.first.albumArt != null
+                              gradient: _songs.isNotEmpty &&
+                                      _songs.first.albumArt != null
                                   ? null
                                   : LinearGradient(
                                       begin: Alignment.topLeft,
@@ -272,7 +274,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                       ],
                                     ),
                             ),
-                            child: _songs.isNotEmpty && _songs.first.albumArt != null
+                            child: _songs.isNotEmpty &&
+                                    _songs.first.albumArt != null
                                 ? ClipRRect(
                                     borderRadius: BorderRadius.circular(12),
                                     child: Image.memory(
@@ -318,8 +321,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                       backgroundColor: MelodiTheme.primaryGreen,
                                       foregroundColor: Colors.black,
                                       shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(20),
+                                        borderRadius: BorderRadius.circular(20),
                                       ),
                                     ),
                                   ),
@@ -367,8 +369,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                             ),
                           ),
                           Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 16),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(4),
                               child: LinearProgressIndicator(
@@ -393,8 +394,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                           _songs.insert(newIndex, song);
                           context
                               .read<PlaylistProvider>()
-                              .reorderPlaylist(
-                                  playlist.id, oldIndex, newIndex);
+                              .reorderPlaylist(playlist.id, oldIndex, newIndex);
                         },
                         itemBuilder: (context, index) {
                           final song = _songs[index];
@@ -428,8 +428,10 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                   .read<LibraryProvider>()
                                   .toggleFavorite(song),
                               showArtwork: true,
-                              onViewAlbum: () => _navigateToAlbum(context, song),
-                              onViewArtist: () => _navigateToArtist(context, song),
+                              onViewAlbum: () =>
+                                  _navigateToAlbum(context, song),
+                              onViewArtist: () =>
+                                  _navigateToArtist(context, song),
                               wrongMatchButton: _buildWrongMatch(context, song),
                               confidence: _confidenceMap[song.id],
                             ),
@@ -488,7 +490,9 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
 
   void _navigateToAlbum(BuildContext context, SongModel song) {
     final lib = context.read<LibraryProvider>();
-    final albums = lib.albums.where((a) => a.name == song.album && a.artist == song.artist).toList();
+    final albums = lib.albums
+        .where((a) => a.name == song.album && a.artist == song.artist)
+        .toList();
     if (albums.isEmpty) return;
     final albumSongs = lib.getSongsForAlbum(albums.first);
     Navigator.of(context).push(
@@ -567,17 +571,20 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     );
   }
 
-  void _pushToRemote({List<String>? addedSongIds, List<String>? removedSongIds}) async {
+  void _pushToRemote(
+      {List<String>? addedSongIds, List<String>? removedSongIds}) async {
     if (!mounted) return;
     try {
-      final syncState = await DatabaseService.instance.getPlaylistSyncState(widget.playlist.id);
+      final syncState = await DatabaseService.instance
+          .getPlaylistSyncState(widget.playlist.id);
       if (syncState == null || syncState['syncEnabled'] != 1) return;
 
       final remoteService = syncState['remoteService'] as String?;
       final remotePlaylistId = syncState['remotePlaylistId'] as String?;
       if (remoteService == null || remotePlaylistId == null) return;
 
-      final direction = syncState['syncDirection'] as String? ?? 'bidirectional';
+      final direction =
+          syncState['syncDirection'] as String? ?? 'bidirectional';
 
       if (remoteService == 'spotify' && direction != 'yt_to_spotify') {
         final spotify = context.read<SpotifyProvider>();
@@ -595,8 +602,10 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
             if (spotifyEntry != null) {
               uris.add('spotify:track:${spotifyEntry.key}');
             } else {
-              final song = allSongs.firstWhere((s) => s.id == songId, orElse: () => allSongs.first);
-              final results = await spotify.service.searchTracks('${song.title} ${song.artist}', limit: 1);
+              final song = allSongs.firstWhere((s) => s.id == songId,
+                  orElse: () => allSongs.first);
+              final results = await spotify.service
+                  .searchTracks('${song.title} ${song.artist}', limit: 1);
               if (results.isNotEmpty) uris.add(results.first.uri);
             }
           }
@@ -621,10 +630,10 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           }
           if (uris.isNotEmpty) {
             await context.read<SyncProvider>().service.pushPlaylistToSpotify(
-              localPlaylistId: widget.playlist.id,
-              addedTrackUris: [],
-              removedTrackUris: uris,
-            );
+                  localPlaylistId: widget.playlist.id,
+                  addedTrackUris: [],
+                  removedTrackUris: uris,
+                );
           }
         }
       }
@@ -639,7 +648,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
             final db = DatabaseService.instance;
             final song = await db.getSongById(songId);
             if (song != null) {
-              final results = await ytmusic.service.search('${song.title} ${song.artist}');
+              final results =
+                  await ytmusic.service.search('${song.title} ${song.artist}');
               if (results.isNotEmpty) videoIds.add(results.first.videoId);
             }
           }
@@ -658,16 +668,17 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
             final db = DatabaseService.instance;
             final song = await db.getSongById(songId);
             if (song != null) {
-              final results = await ytmusic.service.search('${song.title} ${song.artist}');
+              final results =
+                  await ytmusic.service.search('${song.title} ${song.artist}');
               if (results.isNotEmpty) videoIds.add(results.first.videoId);
             }
           }
           if (videoIds.isNotEmpty) {
             await context.read<SyncProvider>().service.pushPlaylistToYTMusic(
-              localPlaylistId: widget.playlist.id,
-              addedVideoIds: [],
-              removedVideoIds: videoIds,
-            );
+                  localPlaylistId: widget.playlist.id,
+                  addedVideoIds: [],
+                  removedVideoIds: videoIds,
+                );
           }
         }
       }
@@ -680,7 +691,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     final library = context.read<LibraryProvider>();
     final playlistProvider = context.read<PlaylistProvider>();
     final existingIds = widget.playlist.songIds.toSet();
-    final available = library.songs.where((s) => !existingIds.contains(s.id)).toList();
+    final available =
+        library.songs.where((s) => !existingIds.contains(s.id)).toList();
 
     showModalBottomSheet(
       context: context,
@@ -699,7 +711,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 children: [
                   Container(
                     margin: const EdgeInsets.symmetric(vertical: 12),
-                    width: 40, height: 4,
+                    width: 40,
+                    height: 4,
                     decoration: BoxDecoration(
                       color: MelodiTheme.outlineVariant,
                       borderRadius: BorderRadius.circular(2),
@@ -721,8 +734,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                               final songIds = selected.toList();
                               playlistProvider.addSongsToPlaylist(
                                   widget.playlist.id, songIds);
-                              setState(() => _songs.addAll(
-                                  available.where((s) => selected.contains(s.id))));
+                              setState(() => _songs.addAll(available
+                                  .where((s) => selected.contains(s.id))));
                               _pushToRemote(addedSongIds: songIds);
                               Navigator.pop(ctx);
                             },
@@ -739,7 +752,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                     child: available.isEmpty
                         ? Center(
                             child: Text(AppLocale.tr('all_songs_added'),
-                                style: TextStyle(color: MelodiTheme.onSurfaceVariant)))
+                                style: TextStyle(
+                                    color: MelodiTheme.onSurfaceVariant)))
                         : ListView.builder(
                             itemCount: available.length,
                             itemBuilder: (context, index) {
@@ -753,13 +767,16 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                       : null,
                                   child: song.albumArt == null
                                       ? Icon(Icons.music_note_rounded,
-                                          color: MelodiTheme.textMuted, size: 20)
+                                          color: MelodiTheme.textMuted,
+                                          size: 20)
                                       : null,
                                 ),
                                 title: Text(song.title,
-                                    style: TextStyle(color: MelodiTheme.onSurface)),
+                                    style: TextStyle(
+                                        color: MelodiTheme.onSurface)),
                                 subtitle: Text(song.artist,
-                                    style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
+                                    style: TextStyle(
+                                        color: MelodiTheme.onSurfaceVariant)),
                                 trailing: Icon(
                                   isSelected
                                       ? Icons.check_circle
@@ -815,8 +832,10 @@ class _SimpleAlbumScreen extends StatelessWidget {
           final song = songs[index];
           return SongTile(
             song: song,
-            onTap: () => context.read<PlayerProvider>().playFromQueue(songs, index),
-            onFavorite: () => context.read<LibraryProvider>().toggleFavorite(song),
+            onTap: () =>
+                context.read<PlayerProvider>().playFromQueue(songs, index),
+            onFavorite: () =>
+                context.read<LibraryProvider>().toggleFavorite(song),
             onViewArtist: () => _navigateToArtist(context, song),
           );
         },
@@ -860,8 +879,10 @@ class _SimpleArtistScreen extends StatelessWidget {
           final song = songs[index];
           return SongTile(
             song: song,
-            onTap: () => context.read<PlayerProvider>().playFromQueue(songs, index),
-            onFavorite: () => context.read<LibraryProvider>().toggleFavorite(song),
+            onTap: () =>
+                context.read<PlayerProvider>().playFromQueue(songs, index),
+            onFavorite: () =>
+                context.read<LibraryProvider>().toggleFavorite(song),
             onViewAlbum: () => _navigateToAlbum(context, song),
           );
         },
@@ -871,7 +892,9 @@ class _SimpleArtistScreen extends StatelessWidget {
 
   void _navigateToAlbum(BuildContext context, SongModel song) {
     final lib = context.read<LibraryProvider>();
-    final albums = lib.albums.where((a) => a.name == song.album && a.artist == song.artist).toList();
+    final albums = lib.albums
+        .where((a) => a.name == song.album && a.artist == song.artist)
+        .toList();
     if (albums.isEmpty) return;
     final albumSongs = lib.getSongsForAlbum(albums.first);
     Navigator.of(context).push(

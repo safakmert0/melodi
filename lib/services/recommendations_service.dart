@@ -26,9 +26,8 @@ class RecommendationsService {
       score += song.playCount * 2;
 
       if (song.lastPlayed != null) {
-        final hoursSincePlayed = DateTime.now()
-            .difference(song.lastPlayed!)
-            .inHours;
+        final hoursSincePlayed =
+            DateTime.now().difference(song.lastPlayed!).inHours;
         if (hoursSincePlayed < 24) {
           score += 10;
         } else if (hoursSincePlayed < 168) {
@@ -85,7 +84,8 @@ class RecommendationsService {
     final genreCounts = <String, int>{};
     for (final song in allSongs) {
       if (song.genre != null) {
-        genreCounts[song.genre!] = (genreCounts[song.genre!] ?? 0) + song.playCount;
+        genreCounts[song.genre!] =
+            (genreCounts[song.genre!] ?? 0) + song.playCount;
       }
     }
 
@@ -107,7 +107,9 @@ class RecommendationsService {
     } else if (hour >= 18 && hour < 22) {
       return genreLower.contains('electronic') || genreLower.contains('dance');
     } else {
-      return genreLower.contains('jazz') || genreLower.contains('classical') || genreLower.contains('ambient');
+      return genreLower.contains('jazz') ||
+          genreLower.contains('classical') ||
+          genreLower.contains('ambient');
     }
   }
 }

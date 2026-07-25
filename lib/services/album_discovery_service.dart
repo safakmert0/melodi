@@ -29,8 +29,9 @@ class DiscoveredAlbum {
         '';
     final artistsList = json['artists'] as List<dynamic>?;
     final artistId = (artistsList != null && artistsList.isNotEmpty
-        ? (artistsList.first as Map<String, dynamic>)['id'] as String?
-        : '') ?? '';
+            ? (artistsList.first as Map<String, dynamic>)['id'] as String?
+            : '') ??
+        '';
     final images = json['images'] as List<dynamic>?;
     final imageUrl = images != null && images.isNotEmpty
         ? (images.first as Map<String, dynamic>)['url'] as String?
@@ -104,10 +105,9 @@ class DiscoveredArtist {
         : null;
     final followersObj = json['followers'] as Map<String, dynamic>?;
     final followers = followersObj?['total'] as int?;
-    final genresList = (json['genres'] as List<dynamic>?)
-            ?.map((g) => g as String)
-            .toList() ??
-        [];
+    final genresList =
+        (json['genres'] as List<dynamic>?)?.map((g) => g as String).toList() ??
+            [];
 
     return DiscoveredArtist(
       id: json['id'] as String,
@@ -132,7 +132,8 @@ class AlbumDiscoveryService {
 
   Future<String?> _getToken() async {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    if (_clientCredentialsToken != null && now < _clientCredentialsExpiry - 60) {
+    if (_clientCredentialsToken != null &&
+        now < _clientCredentialsExpiry - 60) {
       return _clientCredentialsToken;
     }
     try {
@@ -164,7 +165,8 @@ class AlbumDiscoveryService {
     try {
       var url = '$_webApiBase$path';
       if (params != null && params.isNotEmpty) {
-        url += '?${params.entries.map((e) => '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}').join('&')}';
+        url +=
+            '?${params.entries.map((e) => '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}').join('&')}';
       }
       final response = await http.get(
         Uri.parse(url),
@@ -188,7 +190,8 @@ class AlbumDiscoveryService {
       if (DateTime.now().difference(cachedAt).inHours < 6) {
         final list = jsonDecode(cached['data']!) as List<dynamic>;
         return list
-            .map((e) => DiscoveredAlbum.fromSpotifyJson(e as Map<String, dynamic>))
+            .map((e) =>
+                DiscoveredAlbum.fromSpotifyJson(e as Map<String, dynamic>))
             .toList();
       }
     }
@@ -213,17 +216,17 @@ class AlbumDiscoveryService {
       if (DateTime.now().difference(cachedAt).inHours < 6) {
         final list = jsonDecode(cached['data']!) as List<dynamic>;
         return list
-            .map((e) => DiscoveredAlbum.fromSpotifyJson(e as Map<String, dynamic>))
+            .map((e) =>
+                DiscoveredAlbum.fromSpotifyJson(e as Map<String, dynamic>))
             .toList();
       }
     }
 
-    final json = await _get('/artists/$artistId/albums',
-        params: {
-          'limit': limit.toString(),
-          'include_groups': 'album,single',
-          'market': 'US',
-        });
+    final json = await _get('/artists/$artistId/albums', params: {
+      'limit': limit.toString(),
+      'include_groups': 'album,single',
+      'market': 'US',
+    });
     if (json == null) return [];
     final items = json['items'] as List<dynamic>? ?? [];
     final albums = items
@@ -241,7 +244,8 @@ class AlbumDiscoveryService {
       if (DateTime.now().difference(cachedAt).inHours < 6) {
         final list = jsonDecode(cached['data']!) as List<dynamic>;
         return list
-            .map((e) => DiscoveredTrack.fromSpotifyJson(e as Map<String, dynamic>))
+            .map((e) =>
+                DiscoveredTrack.fromSpotifyJson(e as Map<String, dynamic>))
             .toList();
       }
     }
@@ -266,18 +270,18 @@ class AlbumDiscoveryService {
       if (DateTime.now().difference(cachedAt).inHours < 6) {
         final list = jsonDecode(cached['data']!) as List<dynamic>;
         return list
-            .map((e) => DiscoveredAlbum.fromSpotifyJson(e as Map<String, dynamic>))
+            .map((e) =>
+                DiscoveredAlbum.fromSpotifyJson(e as Map<String, dynamic>))
             .toList();
       }
     }
 
-    final json = await _get('/search',
-        params: {
-          'q': 'genre:"$genre"',
-          'type': 'album',
-          'limit': limit.toString(),
-          'market': 'US',
-        });
+    final json = await _get('/search', params: {
+      'q': 'genre:"$genre"',
+      'type': 'album',
+      'limit': limit.toString(),
+      'market': 'US',
+    });
     if (json == null) return [];
     final items = json['albums']?['items'] as List<dynamic>? ?? [];
     final albums = items
@@ -289,13 +293,12 @@ class AlbumDiscoveryService {
 
   Future<List<DiscoveredAlbum>> searchAlbums(String query,
       {int limit = 20}) async {
-    final json = await _get('/search',
-        params: {
-          'q': query,
-          'type': 'album',
-          'limit': limit.toString(),
-          'market': 'US',
-        });
+    final json = await _get('/search', params: {
+      'q': query,
+      'type': 'album',
+      'limit': limit.toString(),
+      'market': 'US',
+    });
     if (json == null) return [];
     final items = json['albums']?['items'] as List<dynamic>? ?? [];
     return items
@@ -305,13 +308,12 @@ class AlbumDiscoveryService {
 
   Future<List<DiscoveredArtist>> searchArtists(String query,
       {int limit = 10}) async {
-    final json = await _get('/search',
-        params: {
-          'q': query,
-          'type': 'artist',
-          'limit': limit.toString(),
-          'market': 'US',
-        });
+    final json = await _get('/search', params: {
+      'q': query,
+      'type': 'artist',
+      'limit': limit.toString(),
+      'market': 'US',
+    });
     if (json == null) return [];
     final items = json['artists']?['items'] as List<dynamic>? ?? [];
     return items
@@ -329,7 +331,4 @@ class AlbumDiscoveryService {
     final query = '$artistName album';
     return await _ytmusic.search(query);
   }
-
 }
-
-

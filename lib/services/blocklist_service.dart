@@ -14,18 +14,18 @@ class BlockedTrack {
   });
 
   Map<String, dynamic> toMap() => {
-    'trackId': trackId,
-    'title': title,
-    'artist': artist,
-    'blockedAt': blockedAt,
-  };
+        'trackId': trackId,
+        'title': title,
+        'artist': artist,
+        'blockedAt': blockedAt,
+      };
 
   factory BlockedTrack.fromMap(Map<String, dynamic> map) => BlockedTrack(
-    trackId: map['trackId'] as String,
-    title: map['title'] as String? ?? '',
-    artist: map['artist'] as String? ?? '',
-    blockedAt: map['blockedAt'] as String? ?? '',
-  );
+        trackId: map['trackId'] as String,
+        title: map['title'] as String? ?? '',
+        artist: map['artist'] as String? ?? '',
+        blockedAt: map['blockedAt'] as String? ?? '',
+      );
 }
 
 class BlocklistService {
@@ -90,7 +90,8 @@ class BlocklistService {
 
   Future<int> getBlockedCount() async {
     final db = DatabaseService.instance;
-    final result = await db.rawQuery('SELECT COUNT(*) as count FROM blocked_tracks');
+    final result =
+        await db.rawQuery('SELECT COUNT(*) as count FROM blocked_tracks');
     return (result.first['count'] as int?) ?? 0;
   }
 

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 
 class SplashScreen extends StatefulWidget {
   final VoidCallback onComplete;
@@ -13,7 +12,8 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with TickerProviderStateMixin {
   late AnimationController _logoController;
   late AnimationController _waveController;
   late AnimationController _progressController;
@@ -208,14 +208,19 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   }
 
   Widget _buildFloatingNote(int index) {
-    final controllers = [_noteController1, _noteController2, _noteController3, _noteController4];
+    final controllers = [
+      _noteController1,
+      _noteController2,
+      _noteController3,
+      _noteController4
+    ];
     final icons = [
       Icons.music_note_rounded,
       Icons.queue_music_rounded,
       Icons.library_music_rounded,
       Icons.album_rounded,
     ];
-    
+
     final positions = [
       const Offset(0.15, 0.2),
       const Offset(0.85, 0.3),
@@ -234,8 +239,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
         final rotation = sin(progress * pi * 2) * 0.3;
 
         return Positioned(
-          left: MediaQuery.of(context).size.width * positions[index].dx + xOffset,
-          top: MediaQuery.of(context).size.height * positions[index].dy + yOffset,
+          left:
+              MediaQuery.of(context).size.width * positions[index].dx + xOffset,
+          top: MediaQuery.of(context).size.height * positions[index].dy +
+              yOffset,
           child: Transform.rotate(
             angle: rotation,
             child: Transform.scale(

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../providers/player_provider.dart';
 import '../services/metadata_service.dart';
 import '../services/lyrics_service.dart';
@@ -16,7 +15,6 @@ class LyricsSheet extends StatefulWidget {
 
 class _LyricsSheetState extends State<LyricsSheet> {
   String? _lyrics;
-  String? _syncedLyrics;
   List<LrcLine> _lyricsLines = [];
   int _currentLineIndex = -1;
   bool _loading = true;
@@ -101,7 +99,6 @@ class _LyricsSheetState extends State<LyricsSheet> {
     if (mounted) {
       setState(() {
         _lyrics = lyricsText;
-        _syncedLyrics = syncedText;
         _loading = false;
         if (syncedText != null) {
           _lyricsLines = LrcParser.parse(syncedText);

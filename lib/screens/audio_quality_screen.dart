@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../services/audio_quality_service.dart';
-import '../services/database_service.dart';
 
 class AudioQualityScreen extends StatefulWidget {
   const AudioQualityScreen({super.key});
@@ -13,7 +11,6 @@ class AudioQualityScreen extends StatefulWidget {
 
 class _AudioQualityScreenState extends State<AudioQualityScreen> {
   final AudioQualityService _service = AudioQualityService();
-  final DatabaseService _db = DatabaseService.instance;
 
   String _streamingQuality = 'auto';
   String _downloadQuality = 'high';
@@ -52,12 +49,18 @@ class _AudioQualityScreenState extends State<AudioQualityScreen> {
 
   String _qualityLabel(String key) {
     switch (key) {
-      case 'auto': return AppLocale.tr('quality_auto');
-      case 'low': return AppLocale.tr('quality_low');
-      case 'normal': return AppLocale.tr('quality_normal');
-      case 'high': return AppLocale.tr('quality_high');
-      case 'lossless': return AppLocale.tr('quality_lossless');
-      default: return key;
+      case 'auto':
+        return AppLocale.tr('quality_auto');
+      case 'low':
+        return AppLocale.tr('quality_low');
+      case 'normal':
+        return AppLocale.tr('quality_normal');
+      case 'high':
+        return AppLocale.tr('quality_high');
+      case 'lossless':
+        return AppLocale.tr('quality_lossless');
+      default:
+        return key;
     }
   }
 
@@ -129,7 +132,8 @@ class _AudioQualityScreenState extends State<AudioQualityScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(AppLocale.tr('keep_downloads'),
-                          style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15)),
+                          style: TextStyle(
+                              color: MelodiTheme.onSurface, fontSize: 15)),
                     ],
                   ),
                 ),
@@ -154,7 +158,8 @@ class _AudioQualityScreenState extends State<AudioQualityScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(AppLocale.tr('auto_delete'),
-                          style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15)),
+                          style: TextStyle(
+                              color: MelodiTheme.onSurface, fontSize: 15)),
                     ],
                   ),
                 ),
@@ -169,7 +174,7 @@ class _AudioQualityScreenState extends State<AudioQualityScreen> {
                       child: Text(
                         days == null
                             ? AppLocale.tr('never')
-                            : '${days} ${AppLocale.tr('days')}',
+                            : '$days ${AppLocale.tr('days')}',
                         style: TextStyle(color: MelodiTheme.onSurface),
                       ),
                     );

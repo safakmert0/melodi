@@ -1,12 +1,9 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../models/album_model.dart';
-import '../models/song_model.dart';
 import '../core/constants.dart';
 import '../providers/library_provider.dart';
-import 'image_with_fallback.dart';
 
 class AlbumCard extends StatelessWidget {
   final AlbumModel album;
@@ -40,7 +37,8 @@ class AlbumCard extends StatelessWidget {
                 child: Consumer<LibraryProvider>(
                   builder: (context, lib, _) {
                     final songs = lib.getSongsForAlbum(album);
-                    final artBytes = songs.isNotEmpty ? songs.first.albumArt : null;
+                    final artBytes =
+                        songs.isNotEmpty ? songs.first.albumArt : null;
                     if (artBytes != null && artBytes.isNotEmpty) {
                       return Image.memory(artBytes, fit: BoxFit.cover);
                     }

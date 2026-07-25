@@ -79,9 +79,8 @@ class LoudnessService {
       process.stdout.listen((chunk) => stdoutBytes.addAll(chunk));
       await process.exitCode;
 
-      final stdout = utf8.decode(stdoutBytes);
-      final data = jsonDecode(stdout) as Map<String, dynamic>;
-      final format = data['format'] as Map<String, dynamic>?;
+      // Consume stdout so the fallback process can exit without pipe pressure.
+      utf8.decode(stdoutBytes);
 
       return LoudnessResult(
         integratedLoudness: 0,

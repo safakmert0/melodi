@@ -26,7 +26,8 @@ class PlaylistProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<PlaylistModel> createPlaylist(String name, {String? description}) async {
+  Future<PlaylistModel> createPlaylist(String name,
+      {String? description}) async {
     final playlist = PlaylistModel(
       id: _uuid.v4(),
       name: name,
@@ -69,7 +70,8 @@ class PlaylistProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addSongsToPlaylist(String playlistId, List<String> songIds) async {
+  Future<void> addSongsToPlaylist(
+      String playlistId, List<String> songIds) async {
     final index = _playlists.indexWhere((p) => p.id == playlistId);
     if (index == -1) return;
 

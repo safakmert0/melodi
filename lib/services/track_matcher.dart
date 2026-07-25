@@ -40,8 +40,7 @@ class TrackMatcher {
           '',
         )
         .replaceAll(
-          RegExp(r'-\s*(feat\.|ft\.|featuring).*',
-              caseSensitive: false),
+          RegExp(r'-\s*(feat\.|ft\.|featuring).*', caseSensitive: false),
           '',
         )
         .replaceAll(RegExp(r'[^\w\s]'), '')
@@ -59,8 +58,7 @@ class TrackMatcher {
           '',
         )
         .replaceAll(
-          RegExp(r'-\s*(feat\.|ft\.|featuring).*',
-              caseSensitive: false),
+          RegExp(r'-\s*(feat\.|ft\.|featuring).*', caseSensitive: false),
           '',
         )
         .replaceAll(RegExp(r'\s*&\s*'), ' and ')
@@ -92,8 +90,12 @@ class TrackMatcher {
     final lenB = b.length;
     final matrix = List.generate(lenA + 1, (i) => List.filled(lenB + 1, 0));
 
-    for (var i = 0; i <= lenA; i++) matrix[i][0] = i;
-    for (var j = 0; j <= lenB; j++) matrix[0][j] = j;
+    for (var i = 0; i <= lenA; i++) {
+      matrix[i][0] = i;
+    }
+    for (var j = 0; j <= lenB; j++) {
+      matrix[0][j] = j;
+    }
 
     for (var i = 1; i <= lenA; i++) {
       for (var j = 1; j <= lenB; j++) {
@@ -148,7 +150,9 @@ class TrackMatcher {
         reasons.add('exact_title_artist');
       }
 
-      if (confidence < 0.95 && normTitle == normYtTitle && normArtist == normYtArtist) {
+      if (confidence < 0.95 &&
+          normTitle == normYtTitle &&
+          normArtist == normYtArtist) {
         confidence = 0.95;
         reasons.add('exact_normalized');
       }
@@ -296,8 +300,8 @@ class TrackMatcher {
         results.add(result);
         final spotifyId = track['id'] as String?;
         if (spotifyId != null) {
-          await DatabaseService.instance.cacheMatch(
-              spotifyId, result.ytVideoId, result.confidence);
+          await DatabaseService.instance
+              .cacheMatch(spotifyId, result.ytVideoId, result.confidence);
         }
       }
 
@@ -307,10 +311,7 @@ class TrackMatcher {
     return results;
   }
 
-  static double score(
-      String queryTitle,
-      String queryArtist,
-      String targetTitle,
+  static double score(String queryTitle, String queryArtist, String targetTitle,
       String targetArtist) {
     final matcher = TrackMatcher((_) async => []);
     final normQueryTitle = matcher.normalizeTitle(queryTitle);

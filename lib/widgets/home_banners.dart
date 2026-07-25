@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../services/database_service.dart';
 import '../providers/download_provider.dart';
 import '../providers/metadata_provider.dart';
@@ -23,7 +22,8 @@ class BannerDismiss {
     return true;
   }
 
-  static Future<void> dismiss(String key, {Duration expiry = const Duration(days: 1)}) async {
+  static Future<void> dismiss(String key,
+      {Duration expiry = const Duration(days: 1)}) async {
     final db = DatabaseService.instance;
     final expiryStr = DateTime.now().add(expiry).toIso8601String();
     await db.setSetting('banner_dismiss_$key', 'dismissed|$expiryStr');
@@ -55,7 +55,8 @@ class _MetadataBackfillBanner extends StatefulWidget {
   const _MetadataBackfillBanner({required this.md});
 
   @override
-  State<_MetadataBackfillBanner> createState() => _MetadataBackfillBannerState();
+  State<_MetadataBackfillBanner> createState() =>
+      _MetadataBackfillBannerState();
 }
 
 class _MetadataBackfillBannerState extends State<_MetadataBackfillBanner> {
@@ -83,7 +84,8 @@ class _MetadataBackfillBannerState extends State<_MetadataBackfillBanner> {
     return _BannerCard(
       type: BannerType.info,
       icon: Icons.image_rounded,
-      message: AppLocale.tr('x_tracks_need_art').replaceAll('{count}', '$_trackCount'),
+      message: AppLocale.tr('x_tracks_need_art')
+          .replaceAll('{count}', '$_trackCount'),
       actionLabel: 'Start',
       onAction: () {
         widget.md.startBackfillAlbumArt();
@@ -136,7 +138,8 @@ class _LyricsBackfillBannerState extends State<_LyricsBackfillBanner> {
     return _BannerCard(
       type: BannerType.info,
       icon: Icons.lyrics_rounded,
-      message: AppLocale.tr('x_tracks_need_lyrics').replaceAll('{count}', '$_trackCount'),
+      message: AppLocale.tr('x_tracks_need_lyrics')
+          .replaceAll('{count}', '$_trackCount'),
       actionLabel: 'Start',
       onAction: () {
         widget.md.startBackfillLyrics();
@@ -155,7 +158,8 @@ class _LyricsBackfillBannerState extends State<_LyricsBackfillBanner> {
 class _WaitingForLosslessBanner extends StatefulWidget {
   const _WaitingForLosslessBanner();
   @override
-  State<_WaitingForLosslessBanner> createState() => _WaitingForLosslessBannerState();
+  State<_WaitingForLosslessBanner> createState() =>
+      _WaitingForLosslessBannerState();
 }
 
 class _WaitingForLosslessBannerState extends State<_WaitingForLosslessBanner> {
@@ -172,7 +176,8 @@ class _WaitingForLosslessBannerState extends State<_WaitingForLosslessBanner> {
     _dismissed = await BannerDismiss.isDismissed('waiting_lossless');
     final db = DatabaseService.instance;
     try {
-      final result = await db.rawQuery("SELECT COUNT(*) as count FROM pending_lossless");
+      final result =
+          await db.rawQuery("SELECT COUNT(*) as count FROM pending_lossless");
       _count = (result.first['count'] as int?) ?? 0;
     } catch (_) {
       _count = 0;
@@ -187,7 +192,8 @@ class _WaitingForLosslessBannerState extends State<_WaitingForLosslessBanner> {
     return _BannerCard(
       type: BannerType.warning,
       icon: Icons.hourglass_empty_rounded,
-      message: AppLocale.tr('x_tracks_waiting_lossless').replaceAll('{count}', '$_count'),
+      message: AppLocale.tr('x_tracks_waiting_lossless')
+          .replaceAll('{count}', '$_count'),
       onDismiss: () {
         setState(() => _dismissed = true);
         BannerDismiss.dismiss('waiting_lossless');
@@ -207,7 +213,8 @@ class _FailedDownloadsBanner extends StatelessWidget {
     return _BannerCard(
       type: BannerType.error,
       icon: Icons.error_outline_rounded,
-      message: AppLocale.tr('x_downloads_failed').replaceAll('{count}', '${dp.failedCount}'),
+      message: AppLocale.tr('x_downloads_failed')
+          .replaceAll('{count}', '${dp.failedCount}'),
       actionLabel: 'View',
       onAction: () {
         Navigator.of(context).push(
@@ -281,17 +288,23 @@ class _BannerCard extends StatelessWidget {
 
   Color get _backgroundColor {
     switch (type) {
-      case BannerType.info: return const Color(0xFF1A5276);
-      case BannerType.warning: return const Color(0xFF7D6608);
-      case BannerType.error: return const Color(0xFF922B21);
+      case BannerType.info:
+        return const Color(0xFF1A5276);
+      case BannerType.warning:
+        return const Color(0xFF7D6608);
+      case BannerType.error:
+        return const Color(0xFF922B21);
     }
   }
 
   Color get _iconColor {
     switch (type) {
-      case BannerType.info: return const Color(0xFF5DADE2);
-      case BannerType.warning: return const Color(0xFFF4D03F);
-      case BannerType.error: return const Color(0xFFE74C3C);
+      case BannerType.info:
+        return const Color(0xFF5DADE2);
+      case BannerType.warning:
+        return const Color(0xFFF4D03F);
+      case BannerType.error:
+        return const Color(0xFFE74C3C);
     }
   }
 
@@ -318,14 +331,18 @@ class _BannerCard extends StatelessWidget {
               GestureDetector(
                 onTap: onAction,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     actionLabel!,
-                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -334,7 +351,8 @@ class _BannerCard extends StatelessWidget {
               const SizedBox(width: 8),
               GestureDetector(
                 onTap: onDismiss,
-                child: Icon(Icons.close, color: Colors.white.withOpacity(0.7), size: 18),
+                child: Icon(Icons.close,
+                    color: Colors.white.withOpacity(0.7), size: 18),
               ),
             ],
           ],

@@ -14,7 +14,8 @@ class StringSimilarity {
 
     for (var i = 0; i < s1.length; i++) {
       final start = (i - matchWindow) > 0 ? (i - matchWindow) : 0;
-      final end = (i + matchWindow + 1) < s2.length ? (i + matchWindow + 1) : s2.length;
+      final end =
+          (i + matchWindow + 1) < s2.length ? (i + matchWindow + 1) : s2.length;
 
       for (var j = start; j < end; j++) {
         if (s2Matches[j]) continue;
@@ -31,7 +32,9 @@ class StringSimilarity {
     var k = 0;
     for (var i = 0; i < s1.length; i++) {
       if (!s1Matches[i]) continue;
-      while (k < s2.length && !s2Matches[k]) k++;
+      while (k < s2.length && !s2Matches[k]) {
+        k++;
+      }
       if (k < s2.length && s1.codeUnitAt(i) != s2.codeUnitAt(k)) {
         transpositions++;
       }
@@ -59,5 +62,6 @@ class StringSimilarity {
 }
 
 extension StringSimilarityExtension on String {
-  double similarityTo(String other) => StringSimilarity.jaroWinkler(this, other);
+  double similarityTo(String other) =>
+      StringSimilarity.jaroWinkler(this, other);
 }

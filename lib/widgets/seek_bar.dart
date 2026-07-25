@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
-import '../core/extensions/duration_ext.dart';
 
 class MelodiSeekBar extends StatelessWidget {
   final Duration position;
@@ -22,10 +21,14 @@ class MelodiSeekBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final safeDuration = duration.inMilliseconds > 0 ? duration : Duration.zero;
     final safePosition = safeDuration.inMilliseconds > 0
-        ? Duration(milliseconds: position.inMilliseconds.clamp(0, safeDuration.inMilliseconds))
+        ? Duration(
+            milliseconds:
+                position.inMilliseconds.clamp(0, safeDuration.inMilliseconds))
         : Duration.zero;
     final safeBuffered = safeDuration.inMilliseconds > 0
-        ? Duration(milliseconds: bufferedPosition.inMilliseconds.clamp(0, safeDuration.inMilliseconds))
+        ? Duration(
+            milliseconds: bufferedPosition.inMilliseconds
+                .clamp(0, safeDuration.inMilliseconds))
         : bufferedPosition;
 
     return Column(
@@ -48,7 +51,9 @@ class MelodiSeekBar extends StatelessWidget {
           ),
           onSeek: (pos) {
             if (onSeek != null && safeDuration.inMilliseconds > 0) {
-              final clampedPos = Duration(milliseconds: pos.inMilliseconds.clamp(0, safeDuration.inMilliseconds));
+              final clampedPos = Duration(
+                  milliseconds:
+                      pos.inMilliseconds.clamp(0, safeDuration.inMilliseconds));
               onSeek!(clampedPos);
             }
           },

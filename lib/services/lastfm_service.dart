@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 import 'package:crypto/crypto.dart';
-import 'package:flutter/foundation.dart';
 
 class LastFmSession {
   final String username;
@@ -87,8 +85,7 @@ class LastFmService {
     return _post(fullParams);
   }
 
-  Future<Map<String, dynamic>> _unsignedGet(
-      Map<String, String> params) async {
+  Future<Map<String, dynamic>> _unsignedGet(Map<String, String> params) async {
     final fullParams = Map<String, String>.from(params);
     fullParams['format'] = 'json';
     return _request(fullParams);
@@ -96,7 +93,8 @@ class LastFmService {
 
   Future<Map<String, dynamic>> _request(Map<String, String> params) async {
     final uri = Uri.parse(_apiUrl).replace(queryParameters: params);
-    final client = HttpClient()..connectionTimeout = const Duration(seconds: 10);
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 10);
     try {
       final request = await client.getUrl(uri);
       request.headers.set('User-Agent', 'Melodi/1.0');
@@ -104,8 +102,7 @@ class LastFmService {
       final body = await response.transform(utf8.decoder).join();
       final data = jsonDecode(body) as Map<String, dynamic>;
       if (data.containsKey('error')) {
-        throw LastFmException(
-            data['message'] as String? ?? 'Unknown error',
+        throw LastFmException(data['message'] as String? ?? 'Unknown error',
             data['error'] as int? ?? 0);
       }
       return data;
@@ -115,19 +112,21 @@ class LastFmService {
   }
 
   Future<Map<String, dynamic>> _post(Map<String, String> params) async {
-    final client = HttpClient()..connectionTimeout = const Duration(seconds: 10);
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 10);
     try {
       final request = await client.postUrl(Uri.parse(_apiUrl));
       request.headers.set('Content-Type', 'application/x-www-form-urlencoded');
       request.headers.set('User-Agent', 'Melodi/1.0');
-      request.write(params.entries.map((e) =>
-          '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}').join('&'));
+      request.write(params.entries
+          .map((e) =>
+              '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+          .join('&'));
       final response = await request.close();
       final body = await response.transform(utf8.decoder).join();
       final data = jsonDecode(body) as Map<String, dynamic>;
       if (data.containsKey('error')) {
-        throw LastFmException(
-            data['message'] as String? ?? 'Unknown error',
+        throw LastFmException(data['message'] as String? ?? 'Unknown error',
             data['error'] as int? ?? 0);
       }
       return data;
@@ -188,7 +187,8 @@ class LastFmService {
     await scrobbleTrack(artist, track, album: album, timestamp: timestamp);
   }
 
-  Future<void> scrobbleTrack(String artist, String track, {String? album, int? timestamp, int? duration}) async {
+  Future<void> scrobbleTrack(String artist, String track,
+      {String? album, int? timestamp, int? duration}) async {
     if (_session == null) throw LastFmException('Not connected', 0);
     final params = {
       'method': 'track.scrobble',
@@ -199,7 +199,8 @@ class LastFmService {
     };
     if (timestamp != null) params['timestamp'] = timestamp.toString();
     if (album != null && album.isNotEmpty) params['album'] = album;
-    if (duration != null && duration > 0) params['duration'] = duration.toString();
+    if (duration != null && duration > 0)
+      params['duration'] = duration.toString();
     await _signedPost(params);
   }
 
@@ -218,7 +219,8 @@ class LastFmService {
       'track': track,
     };
     if (album != null && album.isNotEmpty) params['album'] = album;
-    if (duration != null && duration > 0) params['duration'] = duration.toString();
+    if (duration != null && duration > 0)
+      params['duration'] = duration.toString();
     await _signedPost(params);
   }
 
@@ -235,7 +237,9 @@ class LastFmService {
     if (info == null) throw LastFmException('Track not found', 0);
     return LastFmTrackInfo(
       mbid: info['mbid'] as String?,
-      durationMs: info['duration'] != null ? int.tryParse(info['duration'].toString()) : null,
+      durationMs: info['duration'] != null
+          ? int.tryParse(info['duration'].toString())
+          : null,
       listeners: int.tryParse(info['listeners']?.toString() ?? '0') ?? 0,
       playcount: int.tryParse(info['playcount']?.toString() ?? '0') ?? 0,
       bestImageUrl: _extractImageUrl(info['album'] as Map<String, dynamic>?),

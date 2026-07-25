@@ -59,7 +59,8 @@ class DatabaseBackup {
           });
         }
       }
-      backups.sort((a, b) => (b['modified'] as DateTime).compareTo(a['modified'] as DateTime));
+      backups.sort((a, b) =>
+          (b['modified'] as DateTime).compareTo(a['modified'] as DateTime));
       return backups;
     } catch (e) {
       debugPrint('Get backups failed: $e');

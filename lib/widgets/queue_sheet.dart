@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
-import '../core/extensions/duration_ext.dart';
 import '../models/song_model.dart';
 import '../models/playlist_model.dart';
 import '../providers/player_provider.dart';
@@ -18,8 +17,6 @@ class QueueSheet extends StatelessWidget {
       builder: (context, player, locale, _) {
         final queue = player.queue;
         final currentIndex = player.currentIndex;
-        final currentSong = player.currentSong;
-
         return Container(
           height: MediaQuery.of(context).size.height * 0.7,
           decoration: BoxDecoration(
@@ -104,7 +101,6 @@ class QueueSheet extends StatelessWidget {
                     : ReorderableListView.builder(
                         itemCount: queue.length,
                         onReorder: (oldIndex, newIndex) {
-                          if (oldIndex < newIndex) newIndex--;
                           player.moveInQueue(oldIndex, newIndex);
                         },
                         itemBuilder: (context, index) {
@@ -230,8 +226,8 @@ class AddToPlaylistSheet extends StatelessWidget {
                 )),
           const SizedBox(height: 8),
           ListTile(
-            leading: Icon(Icons.add_circle_outline,
-                color: MelodiTheme.primaryGreen),
+            leading:
+                Icon(Icons.add_circle_outline, color: MelodiTheme.primaryGreen),
             title: Text(AppLocale.tr('create_new_playlist'),
                 style: TextStyle(color: MelodiTheme.primaryGreen)),
             onTap: () {
@@ -276,16 +272,17 @@ class AddToPlaylistSheet extends StatelessWidget {
           TextButton(
             onPressed: () async {
               if (controller.text.trim().isNotEmpty) {
-                final pl = await context
-                    .read<PlaylistProvider>()
+                final playlistProvider = context.read<PlaylistProvider>();
+                final messenger = ScaffoldMessenger.of(context);
+                final pl = await playlistProvider
                     .createPlaylist(controller.text.trim());
-                context
-                    .read<PlaylistProvider>()
-                    .addSongToPlaylist(pl.id, song);
+                await playlistProvider.addSongToPlaylist(pl.id, song);
+                if (!ctx.mounted) return;
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   SnackBar(
-                    content: Text('${AppLocale.tr('created_and_added_to')} ${pl.name}'),
+                    content: Text(
+                        '${AppLocale.tr('created_and_added_to')} ${pl.name}'),
                     backgroundColor: MelodiTheme.primaryGreen,
                   ),
                 );

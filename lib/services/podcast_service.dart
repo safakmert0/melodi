@@ -23,24 +23,25 @@ class PodcastEpisode {
   });
 
   Map<String, dynamic> toMap() => {
-    'id': id,
-    'title': title,
-    'description': description,
-    'audioUrl': audioUrl,
-    'durationMs': duration.inMilliseconds,
-    'publishDate': publishDate.toIso8601String(),
-    'imageUrl': imageUrl,
-  };
+        'id': id,
+        'title': title,
+        'description': description,
+        'audioUrl': audioUrl,
+        'durationMs': duration.inMilliseconds,
+        'publishDate': publishDate.toIso8601String(),
+        'imageUrl': imageUrl,
+      };
 
   factory PodcastEpisode.fromMap(Map<String, dynamic> map) => PodcastEpisode(
-    id: map['id'] as String,
-    title: map['title'] as String? ?? '',
-    description: map['description'] as String? ?? '',
-    audioUrl: map['audioUrl'] as String? ?? '',
-    duration: Duration(milliseconds: map['durationMs'] as int? ?? 0),
-    publishDate: DateTime.tryParse(map['publishDate'] as String? ?? '') ?? DateTime.now(),
-    imageUrl: map['imageUrl'] as String?,
-  );
+        id: map['id'] as String,
+        title: map['title'] as String? ?? '',
+        description: map['description'] as String? ?? '',
+        audioUrl: map['audioUrl'] as String? ?? '',
+        duration: Duration(milliseconds: map['durationMs'] as int? ?? 0),
+        publishDate: DateTime.tryParse(map['publishDate'] as String? ?? '') ??
+            DateTime.now(),
+        imageUrl: map['imageUrl'] as String?,
+      );
 }
 
 class PodcastFeed {
@@ -63,14 +64,14 @@ class PodcastFeed {
   });
 
   Map<String, dynamic> toMap() => {
-    'id': id,
-    'title': title,
-    'description': description,
-    'imageUrl': imageUrl,
-    'episodes': jsonEncode(episodes.map((e) => e.toMap()).toList()),
-    'rssUrl': rssUrl,
-    'fetchedAt': fetchedAt.toIso8601String(),
-  };
+        'id': id,
+        'title': title,
+        'description': description,
+        'imageUrl': imageUrl,
+        'episodes': jsonEncode(episodes.map((e) => e.toMap()).toList()),
+        'rssUrl': rssUrl,
+        'fetchedAt': fetchedAt.toIso8601String(),
+      };
 
   factory PodcastFeed.fromMap(Map<String, dynamic> map) {
     final episodesJson = map['episodes'] as String? ?? '[]';
@@ -84,7 +85,8 @@ class PodcastFeed {
       imageUrl: map['imageUrl'] as String?,
       episodes: episodesList,
       rssUrl: map['rssUrl'] as String? ?? '',
-      fetchedAt: DateTime.tryParse(map['fetchedAt'] as String? ?? '') ?? DateTime.now(),
+      fetchedAt: DateTime.tryParse(map['fetchedAt'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
 }
@@ -134,16 +136,22 @@ class PodcastService {
   }
 
   PodcastFeed _parseRss(String xml, String rssUrl) {
-    final channelMatch = RegExp(r'<channel>(.*?)</channel>', dotAll: true).firstMatch(xml);
-    if (channelMatch == null) throw FormatException('Invalid RSS: no channel element');
+    final channelMatch =
+        RegExp(r'<channel>(.*?)</channel>', dotAll: true).firstMatch(xml);
+    if (channelMatch == null)
+      throw FormatException('Invalid RSS: no channel element');
 
     final channel = channelMatch.group(1)!;
     final title = _extractTag(channel, 'title');
-    final description = _extractTag(channel, 'description') ?? _extractTag(channel, 'itunes:summary');
-    final imageUrl = _extractTag(channel, 'itunes:image') ?? _extractTag(channel, 'image');
+    final description = _extractTag(channel, 'description') ??
+        _extractTag(channel, 'itunes:summary');
+    final imageUrl =
+        _extractTag(channel, 'itunes:image') ?? _extractTag(channel, 'image');
 
-    final items = RegExp(r'<item>(.*?)</item>', dotAll: true).allMatches(channel);
-    final episodes = items.map((m) => _parseEpisode(m.group(1)!, title ?? '')).toList();
+    final items =
+        RegExp(r'<item>(.*?)</item>', dotAll: true).allMatches(channel);
+    final episodes =
+        items.map((m) => _parseEpisode(m.group(1)!, title ?? '')).toList();
 
     final id = _hashUrl(rssUrl);
 
@@ -160,14 +168,17 @@ class PodcastService {
 
   PodcastEpisode _parseEpisode(String item, String feedTitle) {
     final title = _extractTag(item, 'title');
-    final description = _extractTag(item, 'description') ?? _extractTag(item, 'itunes:summary');
+    final description =
+        _extractTag(item, 'description') ?? _extractTag(item, 'itunes:summary');
     final audioUrl = _extractEnclosureUrl(item);
     final imageUrl = _extractTag(item, 'itunes:image');
     final publishDate = _parseDate(_extractTag(item, 'pubDate'));
     final duration = _parseDuration(_extractTag(item, 'itunes:duration'));
 
     final guid = _extractTag(item, 'guid');
-    final id = guid != null ? _hashUrl(guid) : '${feedTitle.hashCode}_${title.hashCode}';
+    final id = guid != null
+        ? _hashUrl(guid)
+        : '${feedTitle.hashCode}_${title.hashCode}';
 
     return PodcastEpisode(
       id: id,
@@ -203,8 +214,10 @@ class PodcastService {
   Duration _parseDuration(String? durationStr) {
     if (durationStr == null) return Duration.zero;
     final parts = durationStr.split(':').map(int.parse).toList();
-    if (parts.length == 3) return Duration(hours: parts[0], minutes: parts[1], seconds: parts[2]);
-    if (parts.length == 2) return Duration(minutes: parts[0], seconds: parts[1]);
+    if (parts.length == 3)
+      return Duration(hours: parts[0], minutes: parts[1], seconds: parts[2]);
+    if (parts.length == 2)
+      return Duration(minutes: parts[0], seconds: parts[1]);
     return Duration(seconds: int.tryParse(durationStr) ?? 0);
   }
 
@@ -218,18 +231,29 @@ class PodcastService {
     await db.rawInsert('''
       INSERT OR REPLACE INTO podcast_subscriptions (id, title, description, imageUrl, rssUrl, episodes, fetchedAt, subscribedAt)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', [maps['id'], maps['title'], maps['description'], maps['imageUrl'], maps['rssUrl'], maps['episodes'], maps['fetchedAt'], maps['subscribedAt']]);
+    ''', [
+      maps['id'],
+      maps['title'],
+      maps['description'],
+      maps['imageUrl'],
+      maps['rssUrl'],
+      maps['episodes'],
+      maps['fetchedAt'],
+      maps['subscribedAt']
+    ]);
   }
 
   Future<void> unsubscribe(String podcastId) async {
     final db = DatabaseService.instance;
-    await db.rawQuery('DELETE FROM podcast_subscriptions WHERE id = ?', [podcastId]);
+    await db.rawQuery(
+        'DELETE FROM podcast_subscriptions WHERE id = ?', [podcastId]);
   }
 
   Future<List<PodcastFeed>> getSubscriptions() async {
     await _ensureTable();
     final db = DatabaseService.instance;
-    final maps = await db.rawQuery('SELECT * FROM podcast_subscriptions ORDER BY subscribedAt DESC');
+    final maps = await db.rawQuery(
+        'SELECT * FROM podcast_subscriptions ORDER BY subscribedAt DESC');
     return maps.map((m) => PodcastFeed.fromMap(m)).toList();
   }
 
@@ -241,28 +265,48 @@ class PodcastService {
       VALUES (?, ?, ?, ?, ?, ?, ?, (
         SELECT subscribedAt FROM podcast_subscriptions WHERE id = ?
       ))
-    ''', [maps['id'], maps['title'], maps['description'], maps['imageUrl'], maps['rssUrl'], maps['episodes'], maps['fetchedAt'], maps['id']]);
+    ''', [
+      maps['id'],
+      maps['title'],
+      maps['description'],
+      maps['imageUrl'],
+      maps['rssUrl'],
+      maps['episodes'],
+      maps['fetchedAt'],
+      maps['id']
+    ]);
   }
 
-  Future<void> saveProgress(String episodeId, String podcastId, Duration position, bool completed) async {
+  Future<void> saveProgress(String episodeId, String podcastId,
+      Duration position, bool completed) async {
     await _ensureTable();
     final db = DatabaseService.instance;
     await db.rawInsert('''
       INSERT OR REPLACE INTO podcast_progress (episodeId, podcastId, positionMs, completed, lastPlayedAt)
       VALUES (?, ?, ?, ?, ?)
-    ''', [episodeId, podcastId, position.inMilliseconds, completed ? 1 : 0, DateTime.now().toIso8601String()]);
+    ''', [
+      episodeId,
+      podcastId,
+      position.inMilliseconds,
+      completed ? 1 : 0,
+      DateTime.now().toIso8601String()
+    ]);
   }
 
   Future<Duration> getProgress(String episodeId) async {
     final db = DatabaseService.instance;
-    final result = await db.rawQuery('SELECT positionMs FROM podcast_progress WHERE episodeId = ?', [episodeId]);
+    final result = await db.rawQuery(
+        'SELECT positionMs FROM podcast_progress WHERE episodeId = ?',
+        [episodeId]);
     if (result.isEmpty) return Duration.zero;
     return Duration(milliseconds: result.first['positionMs'] as int? ?? 0);
   }
 
   Future<bool> isCompleted(String episodeId) async {
     final db = DatabaseService.instance;
-    final result = await db.rawQuery('SELECT completed FROM podcast_progress WHERE episodeId = ?', [episodeId]);
+    final result = await db.rawQuery(
+        'SELECT completed FROM podcast_progress WHERE episodeId = ?',
+        [episodeId]);
     if (result.isEmpty) return false;
     return (result.first['completed'] as int? ?? 0) == 1;
   }

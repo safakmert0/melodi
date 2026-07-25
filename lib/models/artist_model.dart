@@ -36,10 +36,14 @@ class ArtistModel {
       name: map['name'] as String,
       albumCount: map['albumCount'] as int,
       songCount: map['songCount'] as int,
-      albumIds:
-          (map['albumIds'] as String).split(',').where((s) => s.isNotEmpty).toList(),
-      songIds:
-          (map['songIds'] as String).split(',').where((s) => s.isNotEmpty).toList(),
+      albumIds: (map['albumIds'] as String)
+          .split(',')
+          .where((s) => s.isNotEmpty)
+          .toList(),
+      songIds: (map['songIds'] as String)
+          .split(',')
+          .where((s) => s.isNotEmpty)
+          .toList(),
     );
   }
 }

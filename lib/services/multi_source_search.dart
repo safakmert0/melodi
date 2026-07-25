@@ -30,7 +30,8 @@ class MultiSourceSearch {
     return _controller!.stream;
   }
 
-  Future<List<OnlineTrack>> searchAllSync(String query, {int limitPerSource = 10}) async {
+  Future<List<OnlineTrack>> searchAllSync(String query,
+      {int limitPerSource = 10}) async {
     final futures = _sources.map((source) async {
       try {
         return await source.search(query, limit: limitPerSource);
@@ -80,7 +81,8 @@ class MultiSourceSearch {
 
   /// Try to get stream URL with fallback across all sources.
   /// Priority: the track's own source first, then YouTube > JioSaavn > Deezer.
-  Future<String?> getStreamUrlWithFallback(OnlineTrack track, {String? query}) async {
+  Future<String?> getStreamUrlWithFallback(OnlineTrack track,
+      {String? query}) async {
     // 1. Try the track's own source first
     final primarySource = _sources.firstWhere(
       (s) => s.type == track.source,
@@ -93,7 +95,8 @@ class MultiSourceSearch {
 
     // 2. Fallback: search by query across other sources
     final searchQuery = query ?? '${track.artist} - ${track.title}';
-    final fallbackOrder = _sources.where((s) => s.type != track.source).toList();
+    final fallbackOrder =
+        _sources.where((s) => s.type != track.source).toList();
     // Prioritize YouTube, then JioSaavn, then Deezer
     fallbackOrder.sort((a, b) {
       const priority = {

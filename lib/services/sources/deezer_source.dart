@@ -17,7 +17,8 @@ class DeezerSource implements MusicSource {
     try {
       final client = HttpClient()
         ..connectionTimeout = const Duration(seconds: 15);
-      final uri = Uri.parse('$_searchUrl?q=${Uri.encodeComponent(query)}&limit=$limit');
+      final uri =
+          Uri.parse('$_searchUrl?q=${Uri.encodeComponent(query)}&limit=$limit');
       final request = await client.getUrl(uri);
       request.headers.set('User-Agent', 'Melodi/3.3.0');
       final response = await request.close();

@@ -1,10 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../services/database_service.dart';
+import '../services/secure_storage_service.dart';
 import '../services/track_matcher.dart';
 import '../services/ytmusic_service.dart';
 
 class YTMusicProvider extends ChangeNotifier {
+  static const _cookieKey = 'ytmusic_cookie';
+
   final YTMusicService _service;
   bool _isConnecting = false;
   bool _isInitialized = false;
@@ -24,10 +27,21 @@ class YTMusicProvider extends ChangeNotifier {
   Future<void> loadSession() async {
     try {
       final db = DatabaseService.instance;
-      final savedCookie = await db.getSetting('ytmusic_cookie');
+      var savedCookie = await SecureStorageService.instance.read(_cookieKey);
+      if (savedCookie == null || savedCookie.isEmpty) {
+        savedCookie = await db.getSetting(_cookieKey);
+        if (savedCookie != null && savedCookie.isNotEmpty) {
+          await SecureStorageService.instance.write(_cookieKey, savedCookie);
+          await db.deleteSetting(_cookieKey);
+        }
+      }
       if (savedCookie != null && savedCookie.isNotEmpty) {
-        _service.connectWithCookie(savedCookie);
-        await _loadPlaylists();
+        if (_service.connectWithCookie(savedCookie)) {
+          await _loadPlaylists();
+        } else {
+          await SecureStorageService.instance.delete(_cookieKey);
+          await db.deleteSetting(_cookieKey);
+        }
       }
     } catch (e) {
       _error = e.toString();
@@ -43,7 +57,9 @@ class YTMusicProvider extends ChangeNotifier {
       final saved = await db.getSetting('ytmusic_playlists');
       if (saved != null && saved.isNotEmpty) {
         final List<dynamic> decoded = jsonDecode(saved);
-        _playlists = decoded.map((e) => YTMusicPlaylist.fromJson(e as Map<String, dynamic>)).toList();
+        _playlists = decoded
+            .map((e) => YTMusicPlaylist.fromJson(e as Map<String, dynamic>))
+            .toList();
       }
     } catch (e) {
       debugPrint('YTMusic _loadPlaylists error: $e');
@@ -66,24 +82,30 @@ class YTMusicProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _service.connectWithCookie(cookie);
+      if (!_service.connectWithCookie(cookie) ||
+          !await _service.validateConnection()) {
+        _error = 'Invalid or expired YouTube Music cookie';
+        return false;
+      }
       final db = DatabaseService.instance;
-      await db.setSetting('ytmusic_cookie', cookie);
-      _isConnecting = false;
-      notifyListeners();
+      await SecureStorageService.instance.write(_cookieKey, cookie);
+      await db.deleteSetting(_cookieKey);
       return true;
     } catch (e) {
+      _service.disconnect();
       _error = e.toString();
+      return false;
+    } finally {
       _isConnecting = false;
       notifyListeners();
-      return false;
     }
   }
 
   Future<void> disconnect() async {
     _service.disconnect();
     final db = DatabaseService.instance;
-    await db.setSetting('ytmusic_cookie', '');
+    await SecureStorageService.instance.delete(_cookieKey);
+    await db.deleteSetting(_cookieKey);
     await db.setSetting('ytmusic_playlists', '');
     _playlists = [];
     _error = null;

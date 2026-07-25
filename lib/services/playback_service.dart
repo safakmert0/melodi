@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'database_service.dart';
 
 class SleepTimerState {
@@ -40,18 +39,39 @@ class PlaybackService {
   Stream<SleepTimerState> get sleepTimerStream => _sleepTimerController.stream;
 
   static const List<EqualizerPreset> equalizerPresets = [
-    EqualizerPreset(name: 'normal', label: 'Normal', bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-    EqualizerPreset(name: 'pop', label: 'Pop', bands: [2, 3, 5, 4, 2, 0, -1, -1, 0, 1]),
-    EqualizerPreset(name: 'rock', label: 'Rock', bands: [5, 4, 2, -1, -2, -1, 1, 3, 4, 4]),
-    EqualizerPreset(name: 'jazz', label: 'Jazz', bands: [3, 2, 1, 1, 2, 3, 2, 1, 1, 2]),
-    EqualizerPreset(name: 'classical', label: 'Classical', bands: [4, 3, 2, 1, 0, 0, 1, 2, 3, 4]),
-    EqualizerPreset(name: 'bass_boost', label: 'Bass Boost', bands: [6, 5, 4, 2, 0, -1, -2, -2, -1, 0]),
-    EqualizerPreset(name: 'vocal', label: 'Vocal', bands: [-2, -1, 1, 3, 5, 5, 3, 1, -1, -2]),
+    EqualizerPreset(
+        name: 'normal', label: 'Normal', bands: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    EqualizerPreset(
+        name: 'pop', label: 'Pop', bands: [2, 3, 5, 4, 2, 0, -1, -1, 0, 1]),
+    EqualizerPreset(
+        name: 'rock', label: 'Rock', bands: [5, 4, 2, -1, -2, -1, 1, 3, 4, 4]),
+    EqualizerPreset(
+        name: 'jazz', label: 'Jazz', bands: [3, 2, 1, 1, 2, 3, 2, 1, 1, 2]),
+    EqualizerPreset(
+        name: 'classical',
+        label: 'Classical',
+        bands: [4, 3, 2, 1, 0, 0, 1, 2, 3, 4]),
+    EqualizerPreset(
+        name: 'bass_boost',
+        label: 'Bass Boost',
+        bands: [6, 5, 4, 2, 0, -1, -2, -2, -1, 0]),
+    EqualizerPreset(
+        name: 'vocal',
+        label: 'Vocal',
+        bands: [-2, -1, 1, 3, 5, 5, 3, 1, -1, -2]),
   ];
 
   static const List<String> eqBandLabels = [
-    '60 Hz', '170 Hz', '310 Hz', '600 Hz', '1 kHz',
-    '3 kHz', '6 kHz', '12 kHz', '14 kHz', '16 kHz',
+    '60 Hz',
+    '170 Hz',
+    '310 Hz',
+    '600 Hz',
+    '1 kHz',
+    '3 kHz',
+    '6 kHz',
+    '12 kHz',
+    '14 kHz',
+    '16 kHz',
   ];
 
   Future<void> startSleepTimer(int minutes) async {
@@ -159,7 +179,8 @@ class PlaybackService {
 
   Future<void> setCustomEQ(List<double> bands) async {
     if (bands.length != 10) return;
-    await _db.setSetting('eq_custom_bands', bands.map((b) => b.toStringAsFixed(1)).join(','));
+    await _db.setSetting(
+        'eq_custom_bands', bands.map((b) => b.toStringAsFixed(1)).join(','));
     await _db.setSetting('eq_preset', 'custom');
   }
 

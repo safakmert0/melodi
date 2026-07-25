@@ -94,8 +94,8 @@ class MixService {
                 'id': track['id'] as String? ?? '',
                 'title': track['name'] as String? ?? '',
                 'artist': (a['artists'] as List<dynamic>?)
-                        ?.map(
-                            (ar) => (ar as Map<String, dynamic>)['name'] as String?)
+                        ?.map((ar) =>
+                            (ar as Map<String, dynamic>)['name'] as String?)
                         .join(', ') ??
                     '',
                 'album': a['name'] as String? ?? '',
@@ -163,15 +163,17 @@ class MixService {
     final shuffled = List.of(allSongs)..shuffle(_random);
     final selected = shuffled.take(min(count, shuffled.length));
 
-    return selected.map((s) => <String, dynamic>{
-      'id': s.id,
-      'title': s.title,
-      'artist': s.artist,
-      'album': s.album,
-      'imageUrl': null,
-      'albumArt': s.albumArt,
-      'durationMs': s.duration.inMilliseconds,
-    }).toList();
+    return selected
+        .map((s) => <String, dynamic>{
+              'id': s.id,
+              'title': s.title,
+              'artist': s.artist,
+              'album': s.album,
+              'imageUrl': null,
+              'albumArt': s.albumArt,
+              'durationMs': s.duration.inMilliseconds,
+            })
+        .toList();
   }
 
   Future<List<Map<String, dynamic>>> getTasteMatch(String userId) async {
@@ -179,15 +181,18 @@ class MixService {
     final allSongs = await db.getAllSongs();
     if (allSongs.isEmpty) return [];
     final shuffled = List.of(allSongs)..shuffle(_random);
-    return shuffled.take(10).map((s) => <String, dynamic>{
-      'id': s.id,
-      'title': s.title,
-      'artist': s.artist,
-      'album': s.album,
-      'imageUrl': null,
-      'albumArt': s.albumArt,
-      'durationMs': s.duration.inMilliseconds,
-    }).toList();
+    return shuffled
+        .take(10)
+        .map((s) => <String, dynamic>{
+              'id': s.id,
+              'title': s.title,
+              'artist': s.artist,
+              'album': s.album,
+              'imageUrl': null,
+              'albumArt': s.albumArt,
+              'durationMs': s.duration.inMilliseconds,
+            })
+        .toList();
   }
 
   Future<List<Map<String, dynamic>>> _fetchRecommendations(
@@ -233,8 +238,7 @@ class MixService {
       'id': track['id'] as String? ?? '',
       'title': track['name'] as String? ?? '',
       'artist': (track['artists'] as List<dynamic>?)
-              ?.map(
-                  (a) => (a as Map<String, dynamic>)['name'] as String? ?? '')
+              ?.map((a) => (a as Map<String, dynamic>)['name'] as String? ?? '')
               .join(', ') ??
           '',
       'album': album?['name'] as String? ?? '',
@@ -257,13 +261,13 @@ class MixService {
     final cached = await db.getCachedMix(mixType);
     if (cached == null) return null;
 
-    final generatedAt = cached['generatedAt'] as String?;
+    final generatedAt = cached['generatedAt'];
     if (generatedAt == null) return null;
 
     final generated = DateTime.parse(generatedAt);
     if (DateTime.now().difference(generated).inHours >= 24) return null;
 
-    final dataStr = cached['data'] as String?;
+    final dataStr = cached['data'];
     if (dataStr == null) return null;
 
     final decoded = jsonDecode(dataStr) as List<dynamic>;

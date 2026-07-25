@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/playlist_provider.dart';
-import '../services/database_service.dart';
 import '../services/listening_recorder.dart';
+import '../core/melodi_design.dart';
+import '../widgets/listening_heatmap.dart';
 import 'settings_screen.dart';
 import 'downloads_screen.dart';
 import 'library_screen.dart';
@@ -21,6 +21,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic> _listeningStats = {};
+  List<Map<String, dynamic>> _listeningDays = [];
   bool _isLoading = true;
 
   @override
@@ -32,10 +33,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadStats() async {
     try {
       final recorder = ListeningRecorder.instance;
-      final stats = await recorder.getListeningStats();
+      final results = await Future.wait([
+        recorder.getListeningStats(),
+        recorder.getListeningHistoryGroupedByDate(limitDays: 190),
+      ]);
+      final stats = results[0] as Map<String, dynamic>;
+      final listeningDays = results[1] as List<Map<String, dynamic>>;
       if (mounted) {
         setState(() {
           _listeningStats = stats;
+          _listeningDays = listeningDays;
           _isLoading = false;
         });
       }
@@ -64,7 +71,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             actions: [
               IconButton(
-                icon: Icon(Icons.settings_rounded, color: MelodiTheme.onSurfaceVariant),
+                icon: Icon(Icons.settings_rounded,
+                    color: MelodiTheme.onSurfaceVariant),
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const SettingsScreen()),
                 ),
@@ -177,11 +185,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildListeningStats() {
-    return Consumer2<PlayerProvider, LibraryProvider>(
-      builder: (context, player, library, _) {
+    return Consumer2<LibraryProvider, PlaylistProvider>(
+      builder: (context, library, playlists, _) {
         final totalSongs = library.songs.length;
-        final totalPlaylists = context.read<PlaylistProvider>().playlists.length;
+        final totalPlaylists = playlists.playlists.length;
         final favorites = library.favorites.length;
+        final totalPlays = _listeningStats['totalPlays'] as int? ?? 0;
+        final totalMinutes =
+            ((_listeningStats['totalListeningTimeMs'] as int? ?? 0) / 60000)
+                .round();
+        final uniqueArtists = _listeningStats['uniqueArtists'] as int? ?? 0;
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -190,6 +203,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Text(
                 AppLocale.tr('listening_stats').toUpperCase(),
+                style: TextStyle(
+                  color: MelodiTheme.onSurfaceVariant,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (_isLoading)
+                const LinearProgressIndicator(color: MelodiTheme.primaryGreen)
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: _StatCard(
+                        icon: Icons.play_circle_outline_rounded,
+                        label: AppLocale.tr('total_plays'),
+                        value: '$totalPlays',
+                        color: MelodiTheme.primaryGreen,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _StatCard(
+                        icon: Icons.access_time_rounded,
+                        label: AppLocale.tr('total_listening_time'),
+                        value: '$totalMinutes ${AppLocale.tr('minutes')}',
+                        color: const Color(0xFFFFA726),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _StatCard(
+                        icon: Icons.person_outline_rounded,
+                        label: AppLocale.tr('unique_artists'),
+                        value: '$uniqueArtists',
+                        color: const Color(0xFFAB47BC),
+                      ),
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 24),
+              MelodiPanel(
+                child: ListeningHeatmap(days: _listeningDays),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                AppLocale.tr('library').toUpperCase(),
                 style: TextStyle(
                   color: MelodiTheme.onSurfaceVariant,
                   fontSize: 14,
@@ -294,7 +355,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             subtitle: AppLocale.tr('scrobbling_subtitle'),
             onTap: () {
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ListeningHistoryScreen()),
+                MaterialPageRoute(
+                    builder: (_) => const ListeningHistoryScreen()),
               );
             },
           ),

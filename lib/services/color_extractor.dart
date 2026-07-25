@@ -70,8 +70,10 @@ class ColorExtractor {
 
   static Future<List<Color>> getBackgroundColors(Uint8List imageData) async {
     final palette = await extractColors(imageData);
-    final darkVariant = palette.darkVibrant ?? palette.darkMuted ?? palette.dominant;
-    final lightVariant = palette.lightVibrant ?? palette.lightMuted ?? palette.dominant;
+    final darkVariant =
+        palette.darkVibrant ?? palette.darkMuted ?? palette.dominant;
+    final lightVariant =
+        palette.lightVibrant ?? palette.lightMuted ?? palette.dominant;
     return [darkVariant, lightVariant];
   }
 

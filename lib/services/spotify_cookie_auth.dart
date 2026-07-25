@@ -3,8 +3,14 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'database_service.dart';
 import 'encryption_service.dart';
+import 'secure_storage_service.dart';
 
 class SpotifyCookieAuth {
+  static const _spDcKey = 'spotify_sp_dc';
+  static const _spKeyKey = 'spotify_sp_key';
+  static const _legacySpDcKey = 'spotify_sp_dc_enc';
+  static const _legacySpKeyKey = 'spotify_sp_key_enc';
+
   static const String _tokenUrl = 'https://open.spotify.com/get_access_token';
   static const String _userAgent =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36';
@@ -15,7 +21,8 @@ class SpotifyCookieAuth {
   int _expiresAtEpoch = 0;
 
   bool get isLoggedIn => _spDc != null;
-  bool get isExpired => DateTime.now().millisecondsSinceEpoch ~/ 1000 >= _expiresAtEpoch;
+  bool get isExpired =>
+      DateTime.now().millisecondsSinceEpoch ~/ 1000 >= _expiresAtEpoch;
 
   Future<bool> loginWithCookies(String spDc, String spKey) async {
     try {
@@ -81,7 +88,8 @@ class SpotifyCookieAuth {
       );
 
       if (response.statusCode != 200) {
-        debugPrint('Spotify token exchange failed: HTTP ${response.statusCode}');
+        debugPrint(
+            'Spotify token exchange failed: HTTP ${response.statusCode}');
         return null;
       }
 
@@ -103,22 +111,33 @@ class SpotifyCookieAuth {
   }
 
   Future<void> storeCookiesEncrypted(String spDc, String spKey) async {
+    final secureStorage = SecureStorageService.instance;
+    await secureStorage.write(_spDcKey, spDc);
+    await secureStorage.write(_spKeyKey, spKey);
     final db = DatabaseService.instance;
-    final encryptedDc = EncryptionService.encrypt(spDc);
-    final encryptedKey = EncryptionService.encrypt(spKey);
-    await db.setSetting('spotify_sp_dc_enc', encryptedDc);
-    await db.setSetting('spotify_sp_key_enc', encryptedKey);
+    await db.deleteSetting(_legacySpDcKey);
+    await db.deleteSetting(_legacySpKeyKey);
   }
 
   Future<Map<String, String?>> getStoredCookies() async {
+    final secureStorage = SecureStorageService.instance;
+    var spDc = await secureStorage.read(_spDcKey);
+    var spKey = await secureStorage.read(_spKeyKey);
+    if (spDc != null) return {'sp_dc': spDc, 'sp_key': spKey};
+
+    // Migrate credentials written by older releases.
     final db = DatabaseService.instance;
-    final encryptedDc = await db.getSetting('spotify_sp_dc_enc');
-    final encryptedKey = await db.getSetting('spotify_sp_key_enc');
+    final encryptedDc = await db.getSetting(_legacySpDcKey);
+    final encryptedKey = await db.getSetting(_legacySpKeyKey);
     if (encryptedDc == null) return {'sp_dc': null, 'sp_key': null};
-    return {
-      'sp_dc': EncryptionService.decrypt(encryptedDc),
-      'sp_key': encryptedKey != null ? EncryptionService.decrypt(encryptedKey) : null,
-    };
+    spDc = EncryptionService.decrypt(encryptedDc);
+    spKey =
+        encryptedKey != null ? EncryptionService.decrypt(encryptedKey) : null;
+    await secureStorage.write(_spDcKey, spDc);
+    if (spKey != null) await secureStorage.write(_spKeyKey, spKey);
+    await db.deleteSetting(_legacySpDcKey);
+    await db.deleteSetting(_legacySpKeyKey);
+    return {'sp_dc': spDc, 'sp_key': spKey};
   }
 
   Future<void> logout() async {
@@ -126,8 +145,10 @@ class SpotifyCookieAuth {
     _spKey = null;
     _accessToken = null;
     _expiresAtEpoch = 0;
+    await SecureStorageService.instance.delete(_spDcKey);
+    await SecureStorageService.instance.delete(_spKeyKey);
     final db = DatabaseService.instance;
-    await db.setSetting('spotify_sp_dc_enc', '');
-    await db.setSetting('spotify_sp_key_enc', '');
+    await db.deleteSetting(_legacySpDcKey);
+    await db.deleteSetting(_legacySpKeyKey);
   }
 }

@@ -1,7 +1,7 @@
 name: melodi
-description: A premium local music player for iOS inspired by Spotify and Apple Music.
+description: A source-aware music library, streaming companion, downloader, and local player for iOS and Android.
 publish_to: 'none'
-version: 3.4.4+1
+version: 4.0.0+1
 
 environment:
   sdk: ^3.2.0
@@ -73,6 +73,7 @@ dependencies:
   flutter_secure_storage: ^10.3.1
   logger: ^2.5.0
 
+  intl: ^0.20.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

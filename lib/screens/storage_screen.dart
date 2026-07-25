@@ -1,11 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../services/storage_manager.dart';
-import '../services/database_service.dart';
 import '../services/database_backup.dart';
 
 class StorageScreen extends StatefulWidget {
@@ -18,7 +15,6 @@ class StorageScreen extends StatefulWidget {
 class _StorageScreenState extends State<StorageScreen> {
   final StorageManager _storage = StorageManager.instance;
 
-  int _totalSize = 0;
   Map<String, int> _usage = {'audio': 0, 'art': 0, 'other': 0};
   int _fileCount = 0;
   Map<String, Map<String, int>> _formatBreakdown = {};
@@ -35,7 +31,6 @@ class _StorageScreenState extends State<StorageScreen> {
   Future<void> _refresh() async {
     setState(() => _isLoading = true);
     final results = await Future.wait([
-      _storage.getLibrarySize(),
       _storage.getStorageUsage(),
       _storage.getFileCount(),
       _storage.getFormatBreakdown(),
@@ -43,11 +38,10 @@ class _StorageScreenState extends State<StorageScreen> {
     ]);
     if (!mounted) return;
     setState(() {
-      _totalSize = results[0] as int;
-      _usage = results[1] as Map<String, int>;
-      _fileCount = results[2] as int;
-      _formatBreakdown = results[3] as Map<String, Map<String, int>>;
-      _location = results[4] as String;
+      _usage = results[0] as Map<String, int>;
+      _fileCount = results[1] as int;
+      _formatBreakdown = results[2] as Map<String, Map<String, int>>;
+      _location = results[3] as String;
       _isLoading = false;
     });
   }
@@ -88,8 +82,7 @@ class _StorageScreenState extends State<StorageScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  _buildUsageCard(
-                      used, totalAudio, totalArt, totalOther),
+                  _buildUsageCard(used, totalAudio, totalArt, totalOther),
                   const SizedBox(height: 20),
                   _buildInfoRow(
                     AppLocale.tr('file_label'),
@@ -172,11 +165,10 @@ class _StorageScreenState extends State<StorageScreen> {
           _usageLegend(MelodiTheme.primaryGreen, AppLocale.tr('audio'),
               _formatBytes(totalAudio)),
           const SizedBox(height: 4),
-          _usageLegend(Colors.amber, AppLocale.tr('artists'),
-              _formatBytes(totalArt)),
+          _usageLegend(
+              Colors.amber, AppLocale.tr('artists'), _formatBytes(totalArt)),
           const SizedBox(height: 4),
-          _usageLegend(Colors.grey, 'Other',
-              _formatBytes(totalOther)),
+          _usageLegend(Colors.grey, 'Other', _formatBytes(totalOther)),
         ],
       ),
     );
@@ -236,7 +228,8 @@ class _StorageScreenState extends State<StorageScreen> {
               children: [
                 Text(
                   label,
-                  style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 12),
+                  style: TextStyle(
+                      color: MelodiTheme.onSurfaceVariant, fontSize: 12),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -287,8 +280,8 @@ class _StorageScreenState extends State<StorageScreen> {
                 children: [
                   Container(
                     width: 48,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: MelodiTheme.primaryGreen.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(6),
@@ -475,16 +468,20 @@ class _StorageScreenState extends State<StorageScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: MelodiTheme.containerLow,
-        title: Text('Veritabanı Yedekle', style: TextStyle(color: MelodiTheme.onSurface)),
-        content: Text('Veritabanı yedeklenecek. Devam edilsin mi?', style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
+        title: Text('Veritabanı Yedekle',
+            style: TextStyle(color: MelodiTheme.onSurface)),
+        content: Text('Veritabanı yedeklenecek. Devam edilsin mi?',
+            style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(AppLocale.tr('cancel'), style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
+            child: Text(AppLocale.tr('cancel'),
+                style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Yedekle', style: TextStyle(color: MelodiTheme.primaryGreen)),
+            child: Text('Yedekle',
+                style: TextStyle(color: MelodiTheme.primaryGreen)),
           ),
         ],
       ),
@@ -495,8 +492,11 @@ class _StorageScreenState extends State<StorageScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(path != null ? 'Yedek oluşturuldu: $path' : 'Yedekleme başarısız'),
-          backgroundColor: path != null ? MelodiTheme.primaryGreen : MelodiTheme.errorRed,
+          content: Text(path != null
+              ? 'Yedek oluşturuldu: $path'
+              : 'Yedekleme başarısız'),
+          backgroundColor:
+              path != null ? MelodiTheme.primaryGreen : MelodiTheme.errorRed,
         ),
       );
     }

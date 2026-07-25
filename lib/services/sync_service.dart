@@ -59,7 +59,12 @@ class SyncService {
     final enabled = await _db.getSetting('sync_enabled');
 
     if (enabled == 'true' && hour != null && minute != null) {
-      final daysList = days?.split(',').map((e) => int.tryParse(e) ?? 0).where((e) => e > 0).toList() ?? [1,2,3,4,5,6,7];
+      final daysList = days
+              ?.split(',')
+              .map((e) => int.tryParse(e) ?? 0)
+              .where((e) => e > 0)
+              .toList() ??
+          [1, 2, 3, 4, 5, 6, 7];
       _scheduleNext(int.parse(hour), int.parse(minute), daysList);
     }
 
@@ -67,7 +72,12 @@ class SyncService {
       'hour': hour != null ? int.parse(hour) : 3,
       'minute': minute != null ? int.parse(minute) : 0,
       'wifiOnly': wifiOnly == 'true',
-      'days': days?.split(',').map((e) => int.tryParse(e) ?? 0).where((e) => e > 0).toList() ?? [1,2,3,4,5,6,7],
+      'days': days
+              ?.split(',')
+              .map((e) => int.tryParse(e) ?? 0)
+              .where((e) => e > 0)
+              .toList() ??
+          [1, 2, 3, 4, 5, 6, 7],
       'enabled': enabled == 'true',
     };
   }
@@ -379,7 +389,8 @@ class SyncService {
         await _spotify!.addTracksToPlaylist(remotePlaylistId, addedTrackUris);
       }
       if (removedTrackUris.isNotEmpty) {
-        await _spotify!.removeTracksFromPlaylist(remotePlaylistId, removedTrackUris);
+        await _spotify!
+            .removeTracksFromPlaylist(remotePlaylistId, removedTrackUris);
       }
     } catch (e) {
       debugPrint('pushPlaylistToSpotify failed: $e');
@@ -437,7 +448,8 @@ class SyncService {
     _syncTimer = Timer(delay, () {
       triggerManualSync();
     });
-    debugPrint('Sync scheduled: $next (in ${delay.inHours}h ${delay.inMinutes % 60}m)');
+    debugPrint(
+        'Sync scheduled: $next (in ${delay.inHours}h ${delay.inMinutes % 60}m)');
   }
 
   void _cancelTimer() {
@@ -447,9 +459,11 @@ class SyncService {
 
   Future<bool> _checkConnectivity() async {
     try {
-      final client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 5);
       try {
-        final request = await client.getUrl(Uri.parse('https://clients3.google.com/generate_204'));
+        final request = await client
+            .getUrl(Uri.parse('https://clients3.google.com/generate_204'));
         final response = await request.close();
         return response.statusCode == 204;
       } finally {

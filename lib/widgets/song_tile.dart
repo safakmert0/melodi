@@ -6,8 +6,6 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
-import '../core/extensions/duration_ext.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/playlist_provider.dart';
@@ -152,32 +150,31 @@ class SongTile extends StatelessWidget {
                     size: 20,
                   ),
                   onPressed: onFavorite ??
-                      () => context
-                          .read<LibraryProvider>()
-                          .toggleFavorite(song),
+                      () =>
+                          context.read<LibraryProvider>().toggleFavorite(song),
                 ),
-                  PopupMenuButton<String>(
+              PopupMenuButton<String>(
                 icon: Icon(Icons.more_horiz,
                     color: MelodiTheme.onSurfaceVariant, size: 20),
                 onSelected: (value) {
                   switch (value) {
                     case 'queue':
                       (onAddToQueue ??
-                          () => context
-                              .read<PlayerProvider>()
-                              .addToQueue(song))
+                              () => context
+                                  .read<PlayerProvider>()
+                                  .addToQueue(song))
                           .call();
                       break;
                     case 'playNext':
                       (onPlayNext ??
-                          () => context
-                              .read<PlayerProvider>()
-                              .insertNext(song))
+                              () => context
+                                  .read<PlayerProvider>()
+                                  .insertNext(song))
                           .call();
                       break;
                     case 'playlist':
                       (onAddToPlaylist ??
-                          () => _showAddToPlaylistSheet(context))
+                              () => _showAddToPlaylistSheet(context))
                           .call();
                       break;
                     case 'share':
@@ -334,7 +331,10 @@ class _DownloadIndicator extends StatelessWidget {
                       ),
                       Text(
                         '${(progress * 100).toInt()}',
-                        style: TextStyle(fontSize: 7, fontWeight: FontWeight.bold, color: MelodiTheme.primaryGreen),
+                        style: TextStyle(
+                            fontSize: 7,
+                            fontWeight: FontWeight.bold,
+                            color: MelodiTheme.primaryGreen),
                       ),
                     ],
                   ),
@@ -355,7 +355,8 @@ class _DownloadIndicator extends StatelessWidget {
           case DownloadState.completed:
             return Padding(
               padding: const EdgeInsets.only(right: 4),
-              child: Icon(Icons.check_circle, color: MelodiTheme.primaryGreen, size: 18),
+              child: Icon(Icons.check_circle,
+                  color: MelodiTheme.primaryGreen, size: 18),
             );
           case DownloadState.failed:
             return Padding(

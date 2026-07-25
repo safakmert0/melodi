@@ -92,7 +92,8 @@ class AudioEffectsService {
     if (json == null || json.isEmpty) return;
     try {
       final list = jsonDecode(json) as List;
-      _userPresets = list.map((m) => EQPreset.fromMap(m as Map<String, dynamic>)).toList();
+      _userPresets =
+          list.map((m) => EQPreset.fromMap(m as Map<String, dynamic>)).toList();
     } catch (_) {}
   }
 

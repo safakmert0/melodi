@@ -27,7 +27,8 @@ class _SpotifyWebViewLoginState extends State<SpotifyWebViewLogin> {
         onPageFinished: _onPageFinished,
       ))
       ..loadRequest(Uri.parse('https://accounts.spotify.com/en/login'));
-    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) => _checkCookies());
+    _pollTimer =
+        Timer.periodic(const Duration(seconds: 3), (_) => _checkCookies());
   }
 
   @override
@@ -43,7 +44,8 @@ class _SpotifyWebViewLoginState extends State<SpotifyWebViewLogin> {
   Future<void> _checkCookies() async {
     if (_found) return;
     try {
-      final nativeCookies = await _cookieChannel.invokeMethod<List<dynamic>>('getCookies');
+      final nativeCookies =
+          await _cookieChannel.invokeMethod<List<dynamic>>('getCookies');
       for (final item in nativeCookies ?? const []) {
         if (item is Map && item['name'] == 'sp_dc') {
           final value = item['value'] as String? ?? '';
@@ -62,7 +64,9 @@ class _SpotifyWebViewLoginState extends State<SpotifyWebViewLogin> {
         final cookies = cookieString.split(';');
         for (final c in cookies) {
           final parts = c.trim().split('=');
-          if (parts.length == 2 && parts[0].trim() == 'sp_dc' && parts[1].trim().length > 10) {
+          if (parts.length == 2 &&
+              parts[0].trim() == 'sp_dc' &&
+              parts[1].trim().length > 10) {
             _found = true;
             _pollTimer?.cancel();
             widget.onCookieObtained(parts[1].trim());
@@ -70,7 +74,9 @@ class _SpotifyWebViewLoginState extends State<SpotifyWebViewLogin> {
           }
         }
       }
-    } catch (e) { debugPrint('Spotify cookie extraction failed: $e'); }
+    } catch (e) {
+      debugPrint('Spotify cookie extraction failed: $e');
+    }
   }
 
   @override

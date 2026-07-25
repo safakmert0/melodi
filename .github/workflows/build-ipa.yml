@@ -18,12 +18,17 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.7'
           channel: 'stable'
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-warnings --no-fatal-infos
+
+      - name: Test
+        run: flutter test
 
       - name: Setup iOS project
         run: |
@@ -106,12 +111,19 @@ jobs:
         run: cd ios && pod install && cd ..
 
       - name: Build iOS Device (unsigned)
-        run: flutter build ios --release --no-codesign
+        run: |
+          BUILD_NAME=$(sed -n 's/^version: \([^+]*\).*/\1/p' pubspec.yaml)
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            BUILD_NAME="${GITHUB_REF_NAME#v}"
+          fi
+          flutter build ios --release --no-codesign \
+            --build-name "$BUILD_NAME" \
+            --build-number "$GITHUB_RUN_NUMBER"
 
       - name: Package as IPA
         run: |
-          DEVICE_APP=$(find build/ios/iphoneos -name "Runner.app" -maxdepth 1)
-          if [ -z "$DEVICE_APP" ]; then
+          DEVICE_APP="build/ios/iphoneos/Runner.app"
+          if [ ! -d "$DEVICE_APP" ]; then
             echo "Runner.app not found in device build"
             find build/ios/ -name "Runner.app" -type d
             exit 1
@@ -133,20 +145,7 @@ jobs:
         with:
           files: build/Melodi-${{ github.ref_name }}.ipa
           fail_on_unmatched_files: false
-          body: |
-            ## Melodi ${{ github.ref_name }}
-
-            ### Yenilikler
-            - **Çift Yönlü Çalma Listesi Senkronizasyonu**: Yerel çalma listelerinde yapılan değişiklikler (şarkı ekleme/çıkarma) Spotify ve YouTube Music'e otomatik gönderiliyor
-            - **Beğenilen Şarkılar Senkronizasyonu**: Spotify ve YT Music beğenilen şarkılar "Beğenilen Şarkılar" çalma listesi olarak eşzamanlanıyor
-            - **YTMusicProvider Düzeltmesi**: YouTube Music oturum bilgilerinin kaydedilmesi ve otomatik yüklenmesi düzeltildi
-            - **Senkronizasyon Zamanlaması**: Servisler hazır olduktan sonra tetikleniyor, başlangıçta bloklama yapmıyor
-            - **Remote Playlist ID Takibi**: Uzak çalma listesi eşleştirmeleri veritabanında saklanıyor
-
-            ### Kurulum
-            1. [SideStore](https://sidestore.io) veya [Sideloadly](https://sideloadly.io) indirin
-            2. IPA dosyasını yükleyin
-            3. Apple ID ile imzalayın ve kurun
+          body_path: RELEASE_NOTES_4.0.0.md
 
       - name: Upload IPA as artifact
         uses: actions/upload-artifact@v4

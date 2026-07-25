@@ -74,18 +74,21 @@ class FlacVorbisComment {
   factory FlacVorbisComment.decode(Uint8List data) {
     var offset = 0;
 
-    final vendorLen = ByteData.sublistView(data, offset, offset + 4).getUint32(0, Endian.little);
+    final vendorLen = ByteData.sublistView(data, offset, offset + 4)
+        .getUint32(0, Endian.little);
     offset += 4;
     final vendorString = utf8.decode(data.sublist(offset, offset + vendorLen));
     offset += vendorLen;
 
-    final numTags = ByteData.sublistView(data, offset, offset + 4).getUint32(0, Endian.little);
+    final numTags = ByteData.sublistView(data, offset, offset + 4)
+        .getUint32(0, Endian.little);
     offset += 4;
 
     final tags = <String, String>{};
     for (var i = 0; i < numTags; i++) {
       if (offset + 4 > data.length) break;
-      final tagLen = ByteData.sublistView(data, offset, offset + 4).getUint32(0, Endian.little);
+      final tagLen = ByteData.sublistView(data, offset, offset + 4)
+          .getUint32(0, Endian.little);
       offset += 4;
 
       if (offset + tagLen > data.length) break;
@@ -149,29 +152,37 @@ class FlacPicture {
   factory FlacPicture.decode(Uint8List data) {
     var offset = 0;
 
-    final pictureType = ByteData.sublistView(data, offset, offset + 4).getUint32(0, Endian.big);
+    final pictureType =
+        ByteData.sublistView(data, offset, offset + 4).getUint32(0, Endian.big);
     offset += 4;
 
-    final mimeLen = ByteData.sublistView(data, offset, offset + 4).getUint32(0, Endian.big);
+    final mimeLen =
+        ByteData.sublistView(data, offset, offset + 4).getUint32(0, Endian.big);
     offset += 4;
     final mimeType = utf8.decode(data.sublist(offset, offset + mimeLen));
     offset += mimeLen;
 
-    final descLen = ByteData.sublistView(data, offset, offset + 4).getUint32(0, Endian.big);
+    final descLen =
+        ByteData.sublistView(data, offset, offset + 4).getUint32(0, Endian.big);
     offset += 4;
     final description = utf8.decode(data.sublist(offset, offset + descLen));
     offset += descLen;
 
-    final width = ByteData.sublistView(data, offset, offset + 4).getUint32(0, Endian.big);
+    final width =
+        ByteData.sublistView(data, offset, offset + 4).getUint32(0, Endian.big);
     offset += 4;
-    final height = ByteData.sublistView(data, offset, offset + 4).getUint32(0, Endian.big);
+    final height =
+        ByteData.sublistView(data, offset, offset + 4).getUint32(0, Endian.big);
     offset += 4;
-    final colorDepth = ByteData.sublistView(data, offset, offset + 4).getUint32(0, Endian.big);
+    final colorDepth =
+        ByteData.sublistView(data, offset, offset + 4).getUint32(0, Endian.big);
     offset += 4;
-    final colorsUsed = ByteData.sublistView(data, offset, offset + 4).getUint32(0, Endian.big);
+    final colorsUsed =
+        ByteData.sublistView(data, offset, offset + 4).getUint32(0, Endian.big);
     offset += 4;
 
-    final picLen = ByteData.sublistView(data, offset, offset + 4).getUint32(0, Endian.big);
+    final picLen =
+        ByteData.sublistView(data, offset, offset + 4).getUint32(0, Endian.big);
     offset += 4;
     final pictureData = data.sublist(offset, offset + picLen);
 
@@ -193,7 +204,6 @@ class FlacEmbedder {
 
   static const int _blockTypeStreamInfo = 0;
   static const int _blockTypePadding = 1;
-  static const int _blockTypeSeektable = 3;
   static const int _blockTypeVorbisComment = 4;
   static const int _blockTypePicture = 6;
 
@@ -291,7 +301,6 @@ class FlacEmbedder {
 
       final newBlocks = <FlacMetadataBlock>[];
       var replacedComment = false;
-      var replacedPicture = false;
 
       for (final block in blocks) {
         if (block.type == _blockTypeStreamInfo) {
@@ -308,9 +317,7 @@ class FlacEmbedder {
           ));
           replacedComment = true;
         } else if (block.type == _blockTypePicture) {
-          if (coverArt != null) {
-            replacedPicture = true;
-          }
+          // Existing pictures are replaced below when new cover art exists.
         } else if (block.type != _blockTypePadding) {
           newBlocks.add(block);
         }
@@ -383,13 +390,19 @@ class FlacEmbedder {
 
   static String _detectMimeType(Uint8List data) {
     if (data.length < 8) return 'image/jpeg';
-    if (data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47) {
+    if (data[0] == 0x89 &&
+        data[1] == 0x50 &&
+        data[2] == 0x4E &&
+        data[3] == 0x47) {
       return 'image/png';
     }
     if (data[0] == 0xFF && data[1] == 0xD8) {
       return 'image/jpeg';
     }
-    if (data[0] == 0x52 && data[1] == 0x49 && data[2] == 0x46 && data[3] == 0x46) {
+    if (data[0] == 0x52 &&
+        data[1] == 0x49 &&
+        data[2] == 0x46 &&
+        data[3] == 0x46) {
       return 'image/webp';
     }
     return 'image/jpeg';
@@ -408,9 +421,14 @@ class FlacEmbedder {
           }
           offset += 2 + ((data[offset + 2] << 8) | data[offset + 3]);
         }
-      } else if (data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47) {
-        final width = (data[16] << 24) | (data[17] << 16) | (data[18] << 8) | data[19];
-        final height = (data[20] << 24) | (data[21] << 16) | (data[22] << 8) | data[23];
+      } else if (data[0] == 0x89 &&
+          data[1] == 0x50 &&
+          data[2] == 0x4E &&
+          data[3] == 0x47) {
+        final width =
+            (data[16] << 24) | (data[17] << 16) | (data[18] << 8) | data[19];
+        final height =
+            (data[20] << 24) | (data[21] << 16) | (data[22] << 8) | data[23];
         return (width, height);
       }
     } catch (_) {}
@@ -428,5 +446,4 @@ class FlacEmbedder {
       debugPrint('addReplayGain failed: $e');
     }
   }
-
 }

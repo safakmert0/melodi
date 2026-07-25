@@ -120,7 +120,11 @@ class InnerTubeClient {
   }
 
   String? _extractSapiSid(String cookie) {
-    for (final name in ['__Secure-3PSAPISID', '__Secure-1PSAPISID', 'SAPISID']) {
+    for (final name in [
+      '__Secure-3PSAPISID',
+      '__Secure-1PSAPISID',
+      'SAPISID'
+    ]) {
       final regex = RegExp('$name=([^;]+)');
       final match = regex.firstMatch(cookie);
       if (match != null) return match.group(1);
@@ -157,7 +161,8 @@ class InnerTubeClient {
     final apiKeyParam = authenticated || !useMusicBase ? '' : '&key=$apiKey';
     final fullUrl = '$base/$url${separator}prettyPrint=false$apiKeyParam';
 
-    final client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 15);
     try {
       final request = await client.postUrl(Uri.parse(fullUrl));
       request.headers.set('Content-Type', 'application/json');
@@ -290,12 +295,28 @@ class YTMusicService {
   YTMusicService({InnerTubeClient? client})
       : client = client ?? InnerTubeClient();
 
-  bool get isConnected => _cookie != null;
+  bool get isConnected => _cookie != null && client.isAuthenticated;
   String? get cookie => _cookie;
 
-  void connectWithCookie(String cookie) {
-    _cookie = cookie;
+  bool connectWithCookie(String cookie) {
     client.setCookie(cookie);
+    if (!client.isAuthenticated) {
+      client.clearCookie();
+      _cookie = null;
+      return false;
+    }
+    _cookie = cookie;
+    return true;
+  }
+
+  Future<bool> validateConnection() async {
+    if (!isConnected) return false;
+    final response = await client.browse('FEmusic_home');
+    if (response == null) {
+      disconnect();
+      return false;
+    }
+    return true;
   }
 
   void disconnect() {
@@ -309,7 +330,10 @@ class YTMusicService {
     if (parts.length == 2 && parts[0] != null && parts[1] != null) {
       return (parts[0]! * 60 + parts[1]!) * 1000;
     }
-    if (parts.length == 3 && parts[0] != null && parts[1] != null && parts[2] != null) {
+    if (parts.length == 3 &&
+        parts[0] != null &&
+        parts[1] != null &&
+        parts[2] != null) {
       return (parts[0]! * 3600 + parts[1]! * 60 + parts[2]!) * 1000;
     }
     return null;
@@ -350,8 +374,13 @@ class YTMusicService {
     if (fromData != null) return fromData;
 
     return _navigatePath(renderer, [
-      'overlay', 'musicItemThumbnailOverlayRenderer', 'content',
-      'musicPlayButtonRenderer', 'playNavigationEndpoint', 'watchEndpoint', 'videoId',
+      'overlay',
+      'musicItemThumbnailOverlayRenderer',
+      'content',
+      'musicPlayButtonRenderer',
+      'playNavigationEndpoint',
+      'watchEndpoint',
+      'videoId',
     ]);
   }
 
@@ -360,8 +389,9 @@ class YTMusicService {
     final list = thumbnails['thumbnails'] as List<dynamic>?;
     if (list == null || list.isEmpty) return null;
     final best = list.map((e) => e as Map<String, dynamic>).reduce(
-      (a, b) => (a['width'] as int? ?? 0) > (b['width'] as int? ?? 0) ? a : b,
-    );
+          (a, b) =>
+              (a['width'] as int? ?? 0) > (b['width'] as int? ?? 0) ? a : b,
+        );
     return best['url'] as String?;
   }
 
@@ -372,30 +402,34 @@ class YTMusicService {
     final flexColumns = renderer['flexColumns'] as List<dynamic>?;
     if (flexColumns == null || flexColumns.isEmpty) return null;
 
-    final titleCol = (flexColumns[0] as Map<String, dynamic>?)
-        ?.let((c) => c['musicResponsiveListItemFlexColumnRenderer'] as Map<String, dynamic>?);
+    final titleCol = (flexColumns[0] as Map<String, dynamic>?)?.let((c) =>
+        c['musicResponsiveListItemFlexColumnRenderer']
+            as Map<String, dynamic>?);
     final title = _extractText(titleCol);
     if (title == null) return null;
 
     final artistCol = flexColumns.length > 1
-        ? (flexColumns[1] as Map<String, dynamic>?)
-            ?.let((c) => c['musicResponsiveListItemFlexColumnRenderer'] as Map<String, dynamic>?)
+        ? (flexColumns[1] as Map<String, dynamic>?)?.let((c) =>
+            c['musicResponsiveListItemFlexColumnRenderer']
+                as Map<String, dynamic>?)
         : null;
     final artistRuns = _extractArtistRuns(artistCol);
     final artists = artistRuns.join(', ');
 
     String? album;
     if (flexColumns.length > 2) {
-      final albumCol = (flexColumns[2] as Map<String, dynamic>?)
-          ?.let((c) => c['musicResponsiveListItemFlexColumnRenderer'] as Map<String, dynamic>?);
+      final albumCol = (flexColumns[2] as Map<String, dynamic>?)?.let((c) =>
+          c['musicResponsiveListItemFlexColumnRenderer']
+              as Map<String, dynamic>?);
       album = _extractText(albumCol);
     }
 
     final fixedColumns = renderer['fixedColumns'] as List<dynamic>?;
     String? durationText;
     if (fixedColumns != null && fixedColumns.isNotEmpty) {
-      final fixedCol = (fixedColumns.first as Map<String, dynamic>?)
-          ?.let((c) => c['musicResponsiveListItemFixedColumnRenderer'] as Map<String, dynamic>?);
+      final fixedCol = (fixedColumns.first as Map<String, dynamic>?)?.let((c) =>
+          c['musicResponsiveListItemFixedColumnRenderer']
+              as Map<String, dynamic>?);
       durationText = _extractText(fixedCol);
     }
     final durationMs = _parseDurationToMs(durationText);
@@ -403,9 +437,11 @@ class YTMusicService {
     final thumbnail = renderer['thumbnail'] as Map<String, dynamic>?;
     String? thumbnailUrl;
     if (thumbnail != null) {
-      final musicThumbnail = thumbnail['musicThumbnailRenderer'] as Map<String, dynamic>?;
+      final musicThumbnail =
+          thumbnail['musicThumbnailRenderer'] as Map<String, dynamic>?;
       if (musicThumbnail != null) {
-        thumbnailUrl = _pickThumbnailUrl(musicThumbnail['thumbnail'] as Map<String, dynamic>?);
+        thumbnailUrl = _pickThumbnailUrl(
+            musicThumbnail['thumbnail'] as Map<String, dynamic>?);
       }
     }
 
@@ -423,8 +459,11 @@ class YTMusicService {
     final tracks = <YTMusicTrack>[];
 
     final twoColumn = _navigatePath(response, [
-      'contents', 'twoColumnBrowseResultsRenderer',
-      'secondaryContents', 'sectionListRenderer', 'contents',
+      'contents',
+      'twoColumnBrowseResultsRenderer',
+      'secondaryContents',
+      'sectionListRenderer',
+      'contents',
     ]);
     if (twoColumn != null) {
       final shelf = (twoColumn as List<dynamic>)
@@ -436,8 +475,9 @@ class YTMusicService {
         final items = shelf['contents'] as List<dynamic>?;
         if (items != null) {
           for (final item in items) {
-            final renderer = (item as Map<String, dynamic>)
-                ['musicResponsiveListItemRenderer'] as Map<String, dynamic>?;
+            final renderer = (item
+                    as Map<String, dynamic>)['musicResponsiveListItemRenderer']
+                as Map<String, dynamic>?;
             if (renderer == null) continue;
             final track = _parseTrackFromRenderer(renderer);
             if (track != null) tracks.add(track);
@@ -448,7 +488,9 @@ class YTMusicService {
     }
 
     final singleColumn = _navigatePath(response, [
-      'contents', 'singleColumnBrowseResultsRenderer', 'tabs',
+      'contents',
+      'singleColumnBrowseResultsRenderer',
+      'tabs',
     ]);
     if (singleColumn != null) {
       final tab = (singleColumn as List<dynamic>)
@@ -457,9 +499,11 @@ class YTMusicService {
           .whereType<Map<String, dynamic>>()
           .firstOrNull;
       if (tab != null) {
-        final sections = _navigatePath(tab, ['content', 'sectionListRenderer', 'contents']);
+        final sections =
+            _navigatePath(tab, ['content', 'sectionListRenderer', 'contents']);
         if (sections != null) {
-          for (final section in (sections as List<dynamic>).map((e) => e as Map<String, dynamic>)) {
+          for (final section in (sections as List<dynamic>)
+              .map((e) => e as Map<String, dynamic>)) {
             final shelfRaw = section['musicShelfRenderer'];
             if (shelfRaw == null) continue;
             final shelf = shelfRaw as Map<String, dynamic>;
@@ -467,8 +511,8 @@ class YTMusicService {
             if (contentsRaw == null) continue;
             final items = contentsRaw as List<dynamic>;
             for (final item in items) {
-              final renderer = (item as Map<String, dynamic>)
-                  ['musicResponsiveListItemRenderer'] as Map<String, dynamic>?;
+              final renderer = (item as Map<String, dynamic>)[
+                  'musicResponsiveListItemRenderer'] as Map<String, dynamic>?;
               if (renderer == null) continue;
               final track = _parseTrackFromRenderer(renderer);
               if (track != null) tracks.add(track);
@@ -487,13 +531,15 @@ class YTMusicService {
 
     final cc = response['continuationContents'] as Map<String, dynamic>?;
     if (cc != null) {
-      final shelf = (cc['musicPlaylistShelfContinuation'] ?? cc['musicShelfContinuation']) as Map<String, dynamic>?;
+      final shelf = (cc['musicPlaylistShelfContinuation'] ??
+          cc['musicShelfContinuation']) as Map<String, dynamic>?;
       if (shelf != null) {
         final items = shelf['contents'] as List<dynamic>?;
         if (items != null) {
           for (final item in items) {
-            final renderer = (item as Map<String, dynamic>)
-                ['musicResponsiveListItemRenderer'] as Map<String, dynamic>?;
+            final renderer = (item
+                    as Map<String, dynamic>)['musicResponsiveListItemRenderer']
+                as Map<String, dynamic>?;
             if (renderer == null) continue;
             final track = _parseTrackFromRenderer(renderer);
             if (track != null) tracks.add(track);
@@ -507,12 +553,14 @@ class YTMusicService {
     if (actions != null) {
       for (final action in actions) {
         final items = (action as Map<String, dynamic>)
-            .let((a) => a['appendContinuationItemsAction'] as Map<String, dynamic>?)
+            .let((a) =>
+                a['appendContinuationItemsAction'] as Map<String, dynamic>?)
             ?.let((a) => a['continuationItems'] as List<dynamic>?);
         if (items == null) continue;
         for (final item in items) {
-          final renderer = (item as Map<String, dynamic>)
-              ['musicResponsiveListItemRenderer'] as Map<String, dynamic>?;
+          final renderer =
+              (item as Map<String, dynamic>)['musicResponsiveListItemRenderer']
+                  as Map<String, dynamic>?;
           if (renderer == null) continue;
           final track = _parseTrackFromRenderer(renderer);
           if (track != null) tracks.add(track);
@@ -525,7 +573,11 @@ class YTMusicService {
 
   String? _extractContinuationToken(Map<String, dynamic> response) {
     const paths = [
-      ['continuationContents', 'musicPlaylistShelfContinuation', 'continuations'],
+      [
+        'continuationContents',
+        'musicPlaylistShelfContinuation',
+        'continuations'
+      ],
       ['continuationContents', 'musicShelfContinuation', 'continuations'],
     ];
 
@@ -544,21 +596,27 @@ class YTMusicService {
     if (actions != null) {
       for (final action in actions) {
         final items = (action as Map<String, dynamic>)
-            .let((a) => a['appendContinuationItemsAction'] as Map<String, dynamic>?)
+            .let((a) =>
+                a['appendContinuationItemsAction'] as Map<String, dynamic>?)
             ?.let((a) => a['continuationItems'] as List<dynamic>?);
         if (items == null || items.isEmpty) continue;
         final last = items.last as Map<String, dynamic>;
         final token = _navigatePath(last, [
-          'continuationItemRenderer', 'continuationEndpoint',
-          'continuationCommand', 'token',
+          'continuationItemRenderer',
+          'continuationEndpoint',
+          'continuationCommand',
+          'token',
         ]);
         if (token != null) return token;
       }
     }
 
     final twoColumnContents = _navigatePath(response, [
-      'contents', 'twoColumnBrowseResultsRenderer',
-      'secondaryContents', 'sectionListRenderer', 'contents',
+      'contents',
+      'twoColumnBrowseResultsRenderer',
+      'secondaryContents',
+      'sectionListRenderer',
+      'contents',
     ]);
     if (twoColumnContents != null) {
       final shelf = (twoColumnContents as List<dynamic>)
@@ -571,8 +629,10 @@ class YTMusicService {
         if (items != null && items.isNotEmpty) {
           final last = items.last as Map<String, dynamic>;
           final token = _navigatePath(last, [
-            'continuationItemRenderer', 'continuationEndpoint',
-            'continuationCommand', 'token',
+            'continuationItemRenderer',
+            'continuationEndpoint',
+            'continuationCommand',
+            'token',
           ]);
           if (token != null) return token;
         }
@@ -582,7 +642,8 @@ class YTMusicService {
     return null;
   }
 
-  Future<List<YTMusicTrack>> _collectTracksWithPagination(Map<String, dynamic> initialResponse) async {
+  Future<List<YTMusicTrack>> _collectTracksWithPagination(
+      Map<String, dynamic> initialResponse) async {
     final allTracks = <YTMusicTrack>[];
     allTracks.addAll(_parseTracksFromBrowse(initialResponse));
     var token = _extractContinuationToken(initialResponse);
@@ -608,15 +669,20 @@ class YTMusicService {
     final seenIds = <String>{};
 
     final tabs = _navigatePath(response, [
-      'contents', 'singleColumnBrowseResultsRenderer', 'tabs',
+      'contents',
+      'singleColumnBrowseResultsRenderer',
+      'tabs',
     ]);
     if (tabs == null) return [];
 
-    for (final tab in (tabs as List<dynamic>).map((e) => e as Map<String, dynamic>)) {
-      final sections = _navigatePath(tab, ['tabRenderer', 'content', 'sectionListRenderer', 'contents']);
+    for (final tab
+        in (tabs as List<dynamic>).map((e) => e as Map<String, dynamic>)) {
+      final sections = _navigatePath(
+          tab, ['tabRenderer', 'content', 'sectionListRenderer', 'contents']);
       if (sections == null) continue;
 
-      for (final section in (sections as List<dynamic>).map((e) => e as Map<String, dynamic>)) {
+      for (final section in (sections as List<dynamic>)
+          .map((e) => e as Map<String, dynamic>)) {
         List<dynamic>? items;
 
         final grid = section['gridRenderer'] as Map<String, dynamic>?;
@@ -629,11 +695,14 @@ class YTMusicService {
           items = shelf['contents'] as List<dynamic>?;
         }
 
-        final itemSection = section['itemSectionRenderer'] as Map<String, dynamic>?;
+        final itemSection =
+            section['itemSectionRenderer'] as Map<String, dynamic>?;
         if (itemSection != null && items == null) {
           final contents = itemSection['contents'] as List<dynamic>?;
           if (contents != null && contents.isNotEmpty) {
-            final innerGrid = (contents.first as Map<String, dynamic>)['gridRenderer'] as Map<String, dynamic>?;
+            final innerGrid =
+                (contents.first as Map<String, dynamic>)['gridRenderer']
+                    as Map<String, dynamic>?;
             if (innerGrid != null) {
               items = innerGrid['items'] as List<dynamic>?;
             }
@@ -643,10 +712,11 @@ class YTMusicService {
         if (items == null) continue;
 
         for (final item in items) {
-          final renderer = (item as Map<String, dynamic>)
-                  ['musicTwoRowItemRenderer'] as Map<String, dynamic>?
-              ?? (item as Map<String, dynamic>)
-                  ['musicResponsiveListItemRenderer'] as Map<String, dynamic>?;
+          final itemMap = item as Map<String, dynamic>;
+          final renderer =
+              itemMap['musicTwoRowItemRenderer'] as Map<String, dynamic>? ??
+                  itemMap['musicResponsiveListItemRenderer']
+                      as Map<String, dynamic>?;
           if (renderer == null) continue;
 
           final playlist = _parsePlaylistFromRenderer(renderer);
@@ -661,7 +731,8 @@ class YTMusicService {
   }
 
   YTMusicPlaylist? _parsePlaylistFromRenderer(Map<String, dynamic> renderer) {
-    final browseId = _navigatePath(renderer, ['navigationEndpoint', 'browseEndpoint', 'browseId']);
+    final browseId = _navigatePath(
+        renderer, ['navigationEndpoint', 'browseEndpoint', 'browseId']);
     if (browseId == null) return null;
     if (!browseId.startsWith('VL')) return null;
     if (browseId == 'VLLM' || browseId == 'VLSE') return null;
@@ -676,19 +747,23 @@ class YTMusicService {
     if (title == null) {
       final flexColumns = renderer['flexColumns'] as List<dynamic>?;
       if (flexColumns != null && flexColumns.isNotEmpty) {
-        final col = (flexColumns.first as Map<String, dynamic>?)
-            ?.let((c) => c['musicResponsiveListItemFlexColumnRenderer'] as Map<String, dynamic>?);
+        final col = (flexColumns.first as Map<String, dynamic>?)?.let((c) =>
+            c['musicResponsiveListItemFlexColumnRenderer']
+                as Map<String, dynamic>?);
         title = _extractText(col);
       }
     }
     if (title == null) return null;
 
     String? thumbnailUrl;
-    final thumbRenderer = renderer['thumbnailRenderer'] as Map<String, dynamic>?;
+    final thumbRenderer =
+        renderer['thumbnailRenderer'] as Map<String, dynamic>?;
     if (thumbRenderer != null) {
-      final musicThumb = thumbRenderer['musicThumbnailRenderer'] as Map<String, dynamic>?;
+      final musicThumb =
+          thumbRenderer['musicThumbnailRenderer'] as Map<String, dynamic>?;
       if (musicThumb != null) {
-        thumbnailUrl = _pickThumbnailUrl(musicThumb['thumbnail'] as Map<String, dynamic>?);
+        thumbnailUrl =
+            _pickThumbnailUrl(musicThumb['thumbnail'] as Map<String, dynamic>?);
       }
     }
 
@@ -697,7 +772,9 @@ class YTMusicService {
     if (subtitle != null) {
       final runs = subtitle['runs'] as List<dynamic>?;
       if (runs != null) {
-        final text = runs.map((r) => (r as Map<String, dynamic>)['text'] as String? ?? '').join();
+        final text = runs
+            .map((r) => (r as Map<String, dynamic>)['text'] as String? ?? '')
+            .join();
         final match = RegExp(r'(\d+)\s+(?:songs?|tracks?)').firstMatch(text);
         if (match != null) {
           trackCount = int.tryParse(match.group(1)!);
@@ -740,10 +817,12 @@ class YTMusicService {
   Future<bool> addToPlaylist(String playlistId, List<String> videoIds) async {
     if (!client.isAuthenticated) return false;
     try {
-      final actions = videoIds.map((id) => {
-        'action': 'ACTION_ADD_VIDEO',
-        'addedVideoId': id,
-      }).toList();
+      final actions = videoIds
+          .map((id) => {
+                'action': 'ACTION_ADD_VIDEO',
+                'addedVideoId': id,
+              })
+          .toList();
 
       final result = await client.editPlaylist(
         playlistId: playlistId,
@@ -756,13 +835,16 @@ class YTMusicService {
     }
   }
 
-  Future<bool> removeFromPlaylist(String playlistId, List<String> videoIds) async {
+  Future<bool> removeFromPlaylist(
+      String playlistId, List<String> videoIds) async {
     if (!client.isAuthenticated) return false;
     try {
-      final actions = videoIds.map((id) => {
-        'action': 'ACTION_REMOVE_VIDEO',
-        'removedVideoId': id,
-      }).toList();
+      final actions = videoIds
+          .map((id) => {
+                'action': 'ACTION_REMOVE_VIDEO',
+                'removedVideoId': id,
+              })
+          .toList();
 
       final result = await client.editPlaylist(
         playlistId: playlistId,
@@ -782,7 +864,9 @@ class YTMusicService {
     final tracks = <YTMusicTrack>[];
 
     final shelves = _navigatePath(response, [
-      'contents', 'tabbedSearchResultsRenderer', 'tabs',
+      'contents',
+      'tabbedSearchResultsRenderer',
+      'tabs',
     ]);
     if (shelves == null) return [];
 
@@ -793,23 +877,29 @@ class YTMusicService {
         .firstOrNull;
     if (tab == null) return [];
 
-    final sections = _navigatePath(tab, ['content', 'sectionListRenderer', 'contents']);
+    final sections =
+        _navigatePath(tab, ['content', 'sectionListRenderer', 'contents']);
     if (sections == null) return [];
 
-    for (final section in (sections as List<dynamic>).map((e) => e as Map<String, dynamic>)) {
+    for (final section
+        in (sections as List<dynamic>).map((e) => e as Map<String, dynamic>)) {
       final shelf = section['musicShelfRenderer'] as Map<String, dynamic>?;
       if (shelf == null) continue;
 
       final title = _navigatePath(shelf, ['title', 'runs']);
-      final titleText = title is List ? ((title as List<dynamic>).firstOrNull as Map<String, dynamic>?)?.let((t) => t['text'] as String?) : null;
+      final titleText = title is List
+          ? (title.firstOrNull as Map<String, dynamic>?)
+              ?.let((t) => t['text'] as String?)
+          : null;
       if (titleText != null && titleText != 'Songs') continue;
 
       final items = shelf['contents'] as List<dynamic>?;
       if (items == null) continue;
 
       for (final item in items) {
-        final renderer = (item as Map<String, dynamic>)
-            ['musicResponsiveListItemRenderer'] as Map<String, dynamic>?;
+        final renderer =
+            (item as Map<String, dynamic>)['musicResponsiveListItemRenderer']
+                as Map<String, dynamic>?;
         if (renderer == null) continue;
         final track = _parseTrackFromRenderer(renderer);
         if (track != null) tracks.add(track);
@@ -819,7 +909,8 @@ class YTMusicService {
     return tracks;
   }
 
-  Future<List<YTMusicTrack>> syncPlaylist(String playlistId, {String? direction}) async {
+  Future<List<YTMusicTrack>> syncPlaylist(String playlistId,
+      {String? direction}) async {
     debugPrint('YTMusicService.syncPlaylist: $playlistId direction=$direction');
     return getPlaylistTracks(playlistId);
   }

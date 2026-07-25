@@ -70,7 +70,8 @@ class LikeMirrorService {
       final tracks = await spotifyService.getLikedSongs(limit: 50);
       final track = tracks.where((t) => t.id == spotifyTrackId).firstOrNull;
       if (track == null) {
-        debugPrint('LikeMirror: Spotify track $spotifyTrackId not found in likes');
+        debugPrint(
+            'LikeMirror: Spotify track $spotifyTrackId not found in likes');
         return false;
       }
 
@@ -84,7 +85,8 @@ class LikeMirrorService {
       final match = ytResults.first;
       await ytMusicService.rateTrack(match.videoId, 'LIKE');
       await markMirrored(spotifyTrackId, match.videoId);
-      debugPrint('LikeMirror: Mirrored Spotify $spotifyTrackId -> YT ${match.videoId}');
+      debugPrint(
+          'LikeMirror: Mirrored Spotify $spotifyTrackId -> YT ${match.videoId}');
       return true;
     } catch (e) {
       debugPrint('LikeMirror: mirrorSpotifyToYtMusic failed: $e');
@@ -160,7 +162,8 @@ class LikeMirrorService {
         if (already) continue;
 
         final query = '${song.title} ${song.artists}';
-        final spotifyResults = await spotifyService.searchTracks(query, limit: 5);
+        final spotifyResults =
+            await spotifyService.searchTracks(query, limit: 5);
         if (spotifyResults.isEmpty) continue;
 
         final match = spotifyResults.first;
@@ -171,7 +174,8 @@ class LikeMirrorService {
         }
       }
 
-      debugPrint('LikeMirror: checkAndMirror completed, mirrored $mirrored new tracks');
+      debugPrint(
+          'LikeMirror: checkAndMirror completed, mirrored $mirrored new tracks');
     } catch (e) {
       debugPrint('LikeMirror: checkAndMirror failed: $e');
     }

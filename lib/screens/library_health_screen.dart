@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../services/library_health_service.dart';
 
 class LibraryHealthScreen extends StatefulWidget {
@@ -39,7 +38,8 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$fixed ${AppLocale.tr('issues_found')} ${AppLocale.tr('fix_all')}'),
+          content: Text(
+              '$fixed ${AppLocale.tr('issues_found')} ${AppLocale.tr('fix_all')}'),
           backgroundColor: MelodiTheme.primaryGreen,
         ),
       );
@@ -53,7 +53,8 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(success ? 'Issue fixed' : 'Could not fix issue'),
-          backgroundColor: success ? MelodiTheme.primaryGreen : MelodiTheme.errorRed,
+          backgroundColor:
+              success ? MelodiTheme.primaryGreen : MelodiTheme.errorRed,
         ),
       );
       setState(() {});
@@ -68,17 +69,23 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
 
   Color _severityColor(String severity) {
     switch (severity) {
-      case 'error': return const Color(0xFFFF3B30);
-      case 'warning': return const Color(0xFFFFCC02);
-      default: return const Color(0xFF007AFF);
+      case 'error':
+        return const Color(0xFFFF3B30);
+      case 'warning':
+        return const Color(0xFFFFCC02);
+      default:
+        return const Color(0xFF007AFF);
     }
   }
 
   IconData _severityIcon(String severity) {
     switch (severity) {
-      case 'error': return Icons.error_rounded;
-      case 'warning': return Icons.warning_amber_rounded;
-      default: return Icons.info_outline_rounded;
+      case 'error':
+        return Icons.error_rounded;
+      case 'warning':
+        return Icons.warning_amber_rounded;
+      default:
+        return Icons.info_outline_rounded;
     }
   }
 
@@ -96,8 +103,10 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
             Padding(
               padding: const EdgeInsets.only(right: 16),
               child: SizedBox(
-                width: 20, height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: MelodiTheme.primaryGreen),
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: MelodiTheme.primaryGreen),
               ),
             )
           else
@@ -109,7 +118,8 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
         ],
       ),
       body: _loading
-          ? Center(child: CircularProgressIndicator(color: MelodiTheme.primaryGreen))
+          ? Center(
+              child: CircularProgressIndicator(color: MelodiTheme.primaryGreen))
           : _buildContent(),
     );
   }
@@ -125,11 +135,15 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
           children: [
             _buildHealthScore(score),
             const SizedBox(height: 24),
-            Icon(Icons.check_circle_outline_rounded, size: 64, color: const Color(0xFF34C759)),
+            Icon(Icons.check_circle_outline_rounded,
+                size: 64, color: const Color(0xFF34C759)),
             const SizedBox(height: 16),
             Text(
               AppLocale.tr('no_issues'),
-              style: TextStyle(color: MelodiTheme.onSurface, fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: MelodiTheme.onSurface,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -155,13 +169,15 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
                 backgroundColor: MelodiTheme.primaryGreen,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ),
           const SizedBox(height: 24),
         ],
-        ...byCategory.entries.map((entry) => _buildCategorySection(entry.key, entry.value)),
+        ...byCategory.entries
+            .map((entry) => _buildCategorySection(entry.key, entry.value)),
         const SizedBox(height: 32),
       ],
     );
@@ -198,7 +214,8 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
                 ),
                 Text(
                   AppLocale.tr('health_score'),
-                  style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
+                  style: TextStyle(
+                      color: MelodiTheme.onSurfaceVariant, fontSize: 13),
                 ),
               ],
             ),
@@ -208,7 +225,8 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
     );
   }
 
-  Widget _buildCategorySection(String category, List<Map<String, dynamic>> issues) {
+  Widget _buildCategorySection(
+      String category, List<Map<String, dynamic>> issues) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -219,11 +237,15 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
         initiallyExpanded: true,
         title: Row(
           children: [
-            Icon(_categoryIcon(category), size: 20, color: MelodiTheme.onSurface),
+            Icon(_categoryIcon(category),
+                size: 20, color: MelodiTheme.onSurface),
             const SizedBox(width: 10),
             Text(
               _categoryTitle(category),
-              style: TextStyle(color: MelodiTheme.onSurface, fontSize: 16, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  color: MelodiTheme.onSurface,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600),
             ),
             const SizedBox(width: 8),
             Container(
@@ -234,7 +256,10 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
               ),
               child: Text(
                 '${issues.length}',
-                style: TextStyle(color: MelodiTheme.primaryGreen, fontSize: 14, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: MelodiTheme.primaryGreen,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -259,12 +284,14 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
         child: Row(
           children: [
-            Icon(_severityIcon(severity), size: 16, color: _severityColor(severity)),
+            Icon(_severityIcon(severity),
+                size: 16, color: _severityColor(severity)),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 description,
-                style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 13),
+                style: TextStyle(
+                    color: MelodiTheme.onSurfaceVariant, fontSize: 13),
               ),
             ),
           ],
@@ -276,7 +303,8 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
         children: [
-          Icon(_severityIcon(severity), size: 14, color: _severityColor(severity)),
+          Icon(_severityIcon(severity),
+              size: 14, color: _severityColor(severity)),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -301,27 +329,43 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
 
   IconData _categoryIcon(String category) {
     switch (category) {
-      case 'Album Art': return Icons.image_rounded;
-      case 'Metadata': return Icons.article_rounded;
-      case 'Matching': return Icons.compare_arrows_rounded;
-      case 'Downloads': return Icons.download_rounded;
-      case 'Blocked': return Icons.block_rounded;
-      case 'Duplicates': return Icons.content_copy_rounded;
-      case 'Orphaned': return Icons.insert_drive_file_rounded;
-      default: return Icons.warning_rounded;
+      case 'Album Art':
+        return Icons.image_rounded;
+      case 'Metadata':
+        return Icons.article_rounded;
+      case 'Matching':
+        return Icons.compare_arrows_rounded;
+      case 'Downloads':
+        return Icons.download_rounded;
+      case 'Blocked':
+        return Icons.block_rounded;
+      case 'Duplicates':
+        return Icons.content_copy_rounded;
+      case 'Orphaned':
+        return Icons.insert_drive_file_rounded;
+      default:
+        return Icons.warning_rounded;
     }
   }
 
   String _categoryTitle(String category) {
     switch (category) {
-      case 'Album Art': return AppLocale.tr('missing_art');
-      case 'Metadata': return AppLocale.tr('missing_metadata');
-      case 'Matching': return AppLocale.tr('low_confidence');
-      case 'Downloads': return AppLocale.tr('failed_downloads_issue');
-      case 'Blocked': return 'Blocked';
-      case 'Duplicates': return AppLocale.tr('duplicates');
-      case 'Orphaned': return AppLocale.tr('orphaned_files');
-      default: return category;
+      case 'Album Art':
+        return AppLocale.tr('missing_art');
+      case 'Metadata':
+        return AppLocale.tr('missing_metadata');
+      case 'Matching':
+        return AppLocale.tr('low_confidence');
+      case 'Downloads':
+        return AppLocale.tr('failed_downloads_issue');
+      case 'Blocked':
+        return 'Blocked';
+      case 'Duplicates':
+        return AppLocale.tr('duplicates');
+      case 'Orphaned':
+        return AppLocale.tr('orphaned_files');
+      default:
+        return category;
     }
   }
 }

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
@@ -33,14 +32,35 @@ class SpotifyAuthConfig {
   static const int totpInterval = 30;
   static const int totpDigits = 6;
   static const List<int> secretCipher = [
-    44, 55, 47, 42, 70, 40, 34, 114, 76, 74,
-    50, 111, 120, 97, 75, 76, 94, 102, 43, 69,
-    49, 120, 118, 80, 64, 78,
+    44,
+    55,
+    47,
+    42,
+    70,
+    40,
+    34,
+    114,
+    76,
+    74,
+    50,
+    111,
+    120,
+    97,
+    75,
+    76,
+    94,
+    102,
+    43,
+    69,
+    49,
+    120,
+    118,
+    80,
+    64,
+    78,
   ];
-  static const String spotdlClientId =
-      '5f573c9620494bae87890c0f08a60293';
-  static const String spotdlClientSecret =
-      '212476d9b0f3472eaa762d90b19b0ba8';
+  static const String spotdlClientId = '5f573c9620494bae87890c0f08a60293';
+  static const String spotdlClientSecret = '212476d9b0f3472eaa762d90b19b0ba8';
 }
 
 class SpotifyTotp {
@@ -57,8 +77,10 @@ class SpotifyTotp {
       (i) => SpotifyAuthConfig.secretCipher[i] ^ ((i % 33) + 9),
     );
     final joined = transformed.join('');
-    final hexStr =
-        utf8.encode(joined).map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    final hexStr = utf8
+        .encode(joined)
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join();
     return _hexDecode(hexStr);
   }
 
@@ -105,7 +127,8 @@ class SpotifySession {
     required this.clientId,
   });
 
-  bool get isExpired => DateTime.now().millisecondsSinceEpoch ~/ 1000 >= expiresAtEpoch;
+  bool get isExpired =>
+      DateTime.now().millisecondsSinceEpoch ~/ 1000 >= expiresAtEpoch;
 
   bool get isExpiringSoon =>
       DateTime.now().millisecondsSinceEpoch ~/ 1000 >= expiresAtEpoch - 300;
@@ -182,11 +205,21 @@ class SpotifyService {
     _clientId = clientId;
   }
 
+  /// Clears all account-bound state kept in memory.
+  void disconnect() {
+    _accessToken = null;
+    _refreshToken = null;
+    _expiresAtEpoch = 0;
+    _username = null;
+    _clientId = null;
+    _clientToken = null;
+    _clientCredentialsToken = null;
+    _clientCredentialsExpiry = 0;
+    _spTDeviceId = null;
+  }
+
   bool get isExpiringSoon =>
       DateTime.now().millisecondsSinceEpoch ~/ 1000 >= _expiresAtEpoch - 300;
-
-  bool get _isExpired =>
-      DateTime.now().millisecondsSinceEpoch ~/ 1000 >= _expiresAtEpoch;
 
   static const String _userAgent =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36';
@@ -207,7 +240,8 @@ class SpotifyService {
     try {
       final client = HttpClient();
       try {
-        final request = await client.getUrl(Uri.parse('https://open.spotify.com'));
+        final request =
+            await client.getUrl(Uri.parse('https://open.spotify.com'));
         request.headers.set('User-Agent', _userAgent);
         final response = await request.close();
 
@@ -244,7 +278,8 @@ class SpotifyService {
     try {
       final client = HttpClient();
       try {
-        final request = await client.headUrl(Uri.parse('https://open.spotify.com/'));
+        final request =
+            await client.headUrl(Uri.parse('https://open.spotify.com/'));
         request.headers.set('User-Agent', 'Mozilla/5.0');
         final response = await request.close();
         final dateHeader = response.headers.value('Date');
@@ -265,8 +300,8 @@ class SpotifyService {
     try {
       final parts = token.split('.');
       if (parts.length < 2) return null;
-      final payload = utf8.decode(base64Url.decode(
-          parts[1].padRight(parts[1].length + ((4 - parts[1].length % 4) % 4), '=')));
+      final payload = utf8.decode(base64Url.decode(parts[1]
+          .padRight(parts[1].length + ((4 - parts[1].length % 4) % 4), '=')));
       final json = jsonDecode(payload) as Map<String, dynamic>;
       return (json['sub'] ?? json['username']) as String?;
     } catch (_) {
@@ -276,7 +311,8 @@ class SpotifyService {
 
   Future<SpotifySession?> getAccessToken(String spDcCookie) async {
     try {
-      final serverTime = await _getServerTime() ?? (DateTime.now().millisecondsSinceEpoch ~/ 1000);
+      final serverTime = await _getServerTime() ??
+          (DateTime.now().millisecondsSinceEpoch ~/ 1000);
       final totp = SpotifyTotp.generate(serverTime);
 
       final url = Uri.parse(
@@ -300,7 +336,8 @@ class SpotifyService {
       );
 
       if (response.statusCode != 200) {
-        debugPrint('Spotify token endpoint returned HTTP ${response.statusCode}');
+        debugPrint(
+            'Spotify token endpoint returned HTTP ${response.statusCode}');
         return null;
       }
 
@@ -308,7 +345,8 @@ class SpotifyService {
 
       final isAnonymous = body['isAnonymous'] as bool? ?? true;
       if (isAnonymous) {
-        debugPrint('Spotify token is anonymous - sp_dc cookie is invalid or expired');
+        debugPrint(
+            'Spotify token is anonymous - sp_dc cookie is invalid or expired');
         return null;
       }
 
@@ -348,13 +386,15 @@ class SpotifyService {
 
   Future<String?> getClientCredentialsToken() async {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    if (_clientCredentialsToken != null && now < _clientCredentialsExpiry - 60) {
+    if (_clientCredentialsToken != null &&
+        now < _clientCredentialsExpiry - 60) {
       return _clientCredentialsToken;
     }
 
     try {
       final credentials = base64Encode(
-        utf8.encode('${SpotifyAuthConfig.spotdlClientId}:${SpotifyAuthConfig.spotdlClientSecret}'),
+        utf8.encode(
+            '${SpotifyAuthConfig.spotdlClientId}:${SpotifyAuthConfig.spotdlClientSecret}'),
       );
 
       final response = await http.post(
@@ -540,9 +580,11 @@ class SpotifyService {
     }
   }
 
-  List<SpotifyPlaylistItem> _parseLibraryPage(Map<String, dynamic> responseJson) {
+  List<SpotifyPlaylistItem> _parseLibraryPage(
+      Map<String, dynamic> responseJson) {
     try {
-      final items = responseJson['data']?['me']?['libraryV3']?['items'] as List<dynamic>?;
+      final items =
+          responseJson['data']?['me']?['libraryV3']?['items'] as List<dynamic>?;
       if (items == null) return [];
 
       final playlists = <SpotifyPlaylistItem>[];
@@ -576,9 +618,11 @@ class SpotifyService {
           final images = data['images'] as Map<String, dynamic>?;
           final imageItems = images?['items'] as List<dynamic>?;
           if (imageItems != null && imageItems.isNotEmpty) {
-            final sources = (imageItems.first as Map<String, dynamic>)['sources'] as List<dynamic>?;
+            final sources = (imageItems.first
+                as Map<String, dynamic>)['sources'] as List<dynamic>?;
             if (sources != null && sources.isNotEmpty) {
-              imageUrl = (sources.first as Map<String, dynamic>)['url'] as String?;
+              imageUrl =
+                  (sources.first as Map<String, dynamic>)['url'] as String?;
             }
           }
 
@@ -606,7 +650,8 @@ class SpotifyService {
     try {
       final token = await getClientCredentialsToken();
       if (token != null) {
-        final webApiTracks = await _tryGetPlaylistTracksViaWebApi(playlistId, token);
+        final webApiTracks =
+            await _tryGetPlaylistTracksViaWebApi(playlistId, token);
         if (webApiTracks != null) return webApiTracks;
       }
 
@@ -621,7 +666,8 @@ class SpotifyService {
       String playlistId, String token) async {
     try {
       final allTracks = <SpotifyTrackItem>[];
-      String? url = '${SpotifyAuthConfig.webApiBase}/playlists/$playlistId/tracks'
+      String? url =
+          '${SpotifyAuthConfig.webApiBase}/playlists/$playlistId/tracks'
           '?limit=50&offset=0'
           '&fields=items(track(id,name,uri,duration_ms,explicit,external_ids,'
           'artists(id,name),album(id,name,images))),next';
@@ -653,7 +699,8 @@ class SpotifyService {
             if (id == null || name == null) continue;
 
             final artists = (trackObj['artists'] as List<dynamic>?)
-                    ?.map((a) => (a as Map<String, dynamic>)['name'] as String? ?? '')
+                    ?.map((a) =>
+                        (a as Map<String, dynamic>)['name'] as String? ?? '')
                     .where((a) => a.isNotEmpty)
                     .toList() ??
                 [];
@@ -664,7 +711,8 @@ class SpotifyService {
             String? albumImageUrl;
             final images = albumObj?['images'] as List<dynamic>?;
             if (images != null && images.isNotEmpty) {
-              albumImageUrl = (images.first as Map<String, dynamic>)['url'] as String?;
+              albumImageUrl =
+                  (images.first as Map<String, dynamic>)['url'] as String?;
             }
 
             allTracks.add(SpotifyTrackItem(
@@ -724,7 +772,8 @@ class SpotifyService {
   (List<SpotifyTrackItem>, int) _parsePlaylistTracksGraphQLResponse(
       Map<String, dynamic> responseJson) {
     try {
-      final items = responseJson['data']?['playlistV2']?['content']?['items'] as List<dynamic>?;
+      final items = responseJson['data']?['playlistV2']?['content']?['items']
+          as List<dynamic>?;
       if (items == null) return ([], 0);
 
       final rawItemCount = items.length;
@@ -738,7 +787,11 @@ class SpotifyService {
           if (data == null) continue;
 
           final typeName = data['__typename'] as String?;
-          if (typeName != null && typeName != 'Track' && typeName != 'TrackResponseWrapper') continue;
+          if (typeName != null &&
+              typeName != 'Track' &&
+              typeName != 'TrackResponseWrapper') {
+            continue;
+          }
 
           final uri = data['uri'] as String?;
           if (uri == null || !uri.startsWith('spotify:track:')) continue;
@@ -746,13 +799,17 @@ class SpotifyService {
           final trackId = uri.replaceFirst('spotify:track:', '');
           final name = data['name'] as String? ?? 'Unknown';
 
-          final durationMs = data['trackDuration']?['totalMilliseconds'] as int?
-              ?? data['duration']?['totalMilliseconds'] as int?
-              ?? 0;
+          final durationMs =
+              data['trackDuration']?['totalMilliseconds'] as int? ??
+                  data['duration']?['totalMilliseconds'] as int? ??
+                  0;
 
           final artistItems = data['artists']?['items'] as List<dynamic>?;
           final artists = artistItems
-                  ?.map((a) => (a as Map<String, dynamic>)['profile']?['name'] as String? ?? '')
+                  ?.map((a) =>
+                      (a as Map<String, dynamic>)['profile']?['name']
+                          as String? ??
+                      '')
                   .where((a) => a.isNotEmpty)
                   .toList() ??
               [];
@@ -765,7 +822,8 @@ class SpotifyService {
           String? albumImageUrl;
           final sources = albumData?['coverArt']?['sources'] as List<dynamic>?;
           if (sources != null && sources.isNotEmpty) {
-            albumImageUrl = (sources.first as Map<String, dynamic>)['url'] as String?;
+            albumImageUrl =
+                (sources.first as Map<String, dynamic>)['url'] as String?;
           }
 
           tracks.add(SpotifyTrackItem(
@@ -803,19 +861,29 @@ class SpotifyService {
     if (node is Map) {
       final uri = node['uri']?.toString();
       final name = node['name']?.toString();
-      if (uri != null && uri.startsWith('spotify:track:') && name != null && name.isNotEmpty) {
+      if (uri != null &&
+          uri.startsWith('spotify:track:') &&
+          name != null &&
+          name.isNotEmpty) {
         final id = uri.substring('spotify:track:'.length);
         if (seen.add(id)) {
           final rawArtists = node['artists'] is Map
               ? (node['artists']['items'] ?? node['artists']['artists'])
               : node['artists'];
           final artists = rawArtists is List
-              ? rawArtists.map((artist) {
-                  if (artist is Map) {
-                    return (artist['profile'] is Map ? artist['profile']['name'] : artist['name'])?.toString() ?? '';
-                  }
-                  return '';
-                }).where((artist) => artist.isNotEmpty).toList()
+              ? rawArtists
+                  .map((artist) {
+                    if (artist is Map) {
+                      return (artist['profile'] is Map
+                                  ? artist['profile']['name']
+                                  : artist['name'])
+                              ?.toString() ??
+                          '';
+                    }
+                    return '';
+                  })
+                  .where((artist) => artist.isNotEmpty)
+                  .toList()
               : <String>[];
           final duration = node['trackDuration'] is Map
               ? node['trackDuration']['totalMilliseconds']
@@ -826,7 +894,11 @@ class SpotifyService {
             id: id,
             name: name,
             artists: artists,
-            albumName: node['albumOfTrack'] is Map ? node['albumOfTrack']['name']?.toString() : node['album'] is Map ? node['album']['name']?.toString() : null,
+            albumName: node['albumOfTrack'] is Map
+                ? node['albumOfTrack']['name']?.toString()
+                : node['album'] is Map
+                    ? node['album']['name']?.toString()
+                    : null,
             durationMs: duration is num ? duration.toInt() : 0,
             uri: uri,
           ));
@@ -870,7 +942,8 @@ class SpotifyService {
   List<SpotifyTrackItem> _parseLibraryTracksResponse(
       Map<String, dynamic> responseJson) {
     try {
-      final items = responseJson['data']?['me']?['library']?['tracks']?['items'] as List<dynamic>?;
+      final items = responseJson['data']?['me']?['library']?['tracks']?['items']
+          as List<dynamic>?;
       if (items == null) return [];
 
       final tracks = <SpotifyTrackItem>[];
@@ -887,13 +960,17 @@ class SpotifyService {
           final trackId = uri.replaceFirst('spotify:track:', '');
           final name = data['name'] as String? ?? 'Unknown';
 
-          final durationMs = data['trackDuration']?['totalMilliseconds'] as int?
-              ?? data['duration']?['totalMilliseconds'] as int?
-              ?? 0;
+          final durationMs =
+              data['trackDuration']?['totalMilliseconds'] as int? ??
+                  data['duration']?['totalMilliseconds'] as int? ??
+                  0;
 
           final artistItems = data['artists']?['items'] as List<dynamic>?;
           final artists = artistItems
-                  ?.map((a) => (a as Map<String, dynamic>)['profile']?['name'] as String? ?? '')
+                  ?.map((a) =>
+                      (a as Map<String, dynamic>)['profile']?['name']
+                          as String? ??
+                      '')
                   .where((a) => a.isNotEmpty)
                   .toList() ??
               [];
@@ -906,7 +983,8 @@ class SpotifyService {
           String? albumImageUrl;
           final sources = albumData?['coverArt']?['sources'] as List<dynamic>?;
           if (sources != null && sources.isNotEmpty) {
-            albumImageUrl = (sources.first as Map<String, dynamic>)['url'] as String?;
+            albumImageUrl =
+                (sources.first as Map<String, dynamic>)['url'] as String?;
           }
 
           tracks.add(SpotifyTrackItem(
@@ -992,7 +1070,8 @@ class SpotifyService {
   Future<bool> followArtist(String artistId) async {
     if (_accessToken == null) return false;
     try {
-      final url = '${SpotifyAuthConfig.webApiBase}/me/following?type=artist&ids=$artistId';
+      final url =
+          '${SpotifyAuthConfig.webApiBase}/me/following?type=artist&ids=$artistId';
       var response = await http.put(
         Uri.parse(url),
         headers: {
@@ -1024,7 +1103,8 @@ class SpotifyService {
   Future<bool> unfollowArtist(String artistId) async {
     if (_accessToken == null) return false;
     try {
-      final url = '${SpotifyAuthConfig.webApiBase}/me/following?type=artist&ids=$artistId';
+      final url =
+          '${SpotifyAuthConfig.webApiBase}/me/following?type=artist&ids=$artistId';
       var response = await http.delete(
         Uri.parse(url),
         headers: {
@@ -1086,52 +1166,60 @@ class SpotifyService {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
       final items = body['tracks']?['items'] as List<dynamic>? ?? [];
 
-      return items.map((element) {
-        try {
-          final trackObj = element as Map<String, dynamic>;
-          final id = trackObj['id'] as String?;
-          final name = trackObj['name'] as String?;
-          if (id == null || name == null) return null;
+      return items
+          .map((element) {
+            try {
+              final trackObj = element as Map<String, dynamic>;
+              final id = trackObj['id'] as String?;
+              final name = trackObj['name'] as String?;
+              if (id == null || name == null) return null;
 
-          final artists = (trackObj['artists'] as List<dynamic>?)
-                  ?.map((a) => (a as Map<String, dynamic>)['name'] as String? ?? '')
-                  .where((a) => a.isNotEmpty)
-                  .toList() ??
-              [];
+              final artists = (trackObj['artists'] as List<dynamic>?)
+                      ?.map((a) =>
+                          (a as Map<String, dynamic>)['name'] as String? ?? '')
+                      .where((a) => a.isNotEmpty)
+                      .toList() ??
+                  [];
 
-          final albumObj = trackObj['album'] as Map<String, dynamic>?;
-          final albumName = albumObj?['name'] as String?;
-          final albumId = albumObj?['id'] as String?;
-          String? albumImageUrl;
-          final images = albumObj?['images'] as List<dynamic>?;
-          if (images != null && images.isNotEmpty) {
-            albumImageUrl = (images.first as Map<String, dynamic>)['url'] as String?;
-          }
+              final albumObj = trackObj['album'] as Map<String, dynamic>?;
+              final albumName = albumObj?['name'] as String?;
+              final albumId = albumObj?['id'] as String?;
+              String? albumImageUrl;
+              final images = albumObj?['images'] as List<dynamic>?;
+              if (images != null && images.isNotEmpty) {
+                albumImageUrl =
+                    (images.first as Map<String, dynamic>)['url'] as String?;
+              }
 
-          return SpotifyTrackItem(
-            id: id,
-            name: name,
-            artists: artists,
-            albumName: albumName,
-            albumId: albumId,
-            albumImageUrl: albumImageUrl,
-            durationMs: trackObj['duration_ms'] as int? ?? 0,
-            uri: trackObj['uri'] as String? ?? 'spotify:track:$id',
-          );
-        } catch (_) {
-          return null;
-        }
-      }).where((e) => e != null).cast<SpotifyTrackItem>().toList();
+              return SpotifyTrackItem(
+                id: id,
+                name: name,
+                artists: artists,
+                albumName: albumName,
+                albumId: albumId,
+                albumImageUrl: albumImageUrl,
+                durationMs: trackObj['duration_ms'] as int? ?? 0,
+                uri: trackObj['uri'] as String? ?? 'spotify:track:$id',
+              );
+            } catch (_) {
+              return null;
+            }
+          })
+          .where((e) => e != null)
+          .cast<SpotifyTrackItem>()
+          .toList();
     } catch (e) {
       debugPrint('searchTracks failed: $e');
       return [];
     }
   }
 
-  Future<bool> addTracksToPlaylist(String playlistId, List<String> trackUris) async {
+  Future<bool> addTracksToPlaylist(
+      String playlistId, List<String> trackUris) async {
     if (_accessToken == null) return false;
     try {
-      final url = '${SpotifyAuthConfig.webApiBase}/playlists/$playlistId/tracks';
+      final url =
+          '${SpotifyAuthConfig.webApiBase}/playlists/$playlistId/tracks';
       var response = await http.post(
         Uri.parse(url),
         headers: {
@@ -1162,10 +1250,12 @@ class SpotifyService {
     }
   }
 
-  Future<bool> removeTracksFromPlaylist(String playlistId, List<String> trackUris) async {
+  Future<bool> removeTracksFromPlaylist(
+      String playlistId, List<String> trackUris) async {
     if (_accessToken == null) return false;
     try {
-      final url = '${SpotifyAuthConfig.webApiBase}/playlists/$playlistId/tracks';
+      final url =
+          '${SpotifyAuthConfig.webApiBase}/playlists/$playlistId/tracks';
       final tracks = trackUris.map((uri) => {'uri': uri}).toList();
       var response = await http.delete(
         Uri.parse(url),
@@ -1197,7 +1287,8 @@ class SpotifyService {
     }
   }
 
-  Future<List<SpotifyTrackItem>> syncPlaylist(String playlistId, {String? direction}) async {
+  Future<List<SpotifyTrackItem>> syncPlaylist(String playlistId,
+      {String? direction}) async {
     debugPrint('SpotifyService.syncPlaylist: $playlistId direction=$direction');
     return getPlaylistTracks(playlistId);
   }

@@ -16,8 +16,8 @@ class SyncScheduler {
     TimeOfDay time = const TimeOfDay(hour: 3, minute: 0),
   }) async {
     await _db.setSetting('sync_schedule_days', daysOfWeek.join(','));
-    await _db.setSetting(
-        'sync_schedule_time', '${time.hour}:${time.minute.toString().padLeft(2, '0')}');
+    await _db.setSetting('sync_schedule_time',
+        '${time.hour}:${time.minute.toString().padLeft(2, '0')}');
     await _db.setSetting('sync_schedule_enabled', 'true');
     _scheduleNext(daysOfWeek, time);
   }

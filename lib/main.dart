@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:audio_service/audio_service.dart';
-import 'package:dynamic_color/dynamic_color.dart';
 import 'core/constants.dart';
 import 'core/localization.dart';
 import 'services/audio_handler.dart';
@@ -27,6 +25,7 @@ import 'providers/sync_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/metadata_provider.dart';
 import 'providers/scrobble_provider.dart';
+import 'providers/lastfm_provider.dart';
 import 'providers/connection_provider.dart';
 import 'providers/download_provider.dart';
 import 'providers/like_mirror_provider.dart';
@@ -38,7 +37,6 @@ import 'services/notification_service.dart';
 import 'services/bluetooth_service.dart';
 import 'services/audio_effects_service.dart';
 import 'services/voice_control_service.dart';
-import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'widgets/main_shell.dart';
 
@@ -58,17 +56,45 @@ Future<void> main() async {
       systemNavigationBarIconBrightness: Brightness.light,
     ));
 
-    try { CrashReporter.init(); } catch (e) { AppLogger.e('CrashReporter init failed: $e'); }
-    try { DiagnosticsService.instance; } catch (e) { AppLogger.e('DiagnosticsService init failed: $e'); }
-    AppLogger.i('Melodi v3.0 starting...');
+    try {
+      CrashReporter.init();
+    } catch (e) {
+      AppLogger.e('CrashReporter init failed: $e');
+    }
+    try {
+      DiagnosticsService.instance;
+    } catch (e) {
+      AppLogger.e('DiagnosticsService init failed: $e');
+    }
+    AppLogger.i('Melodi v${AppConstants.appVersion} starting...');
 
     final db = DatabaseService.instance;
-    try { await db.database; } catch (e) { AppLogger.e('Database init failed: $e'); }
+    try {
+      await db.database;
+    } catch (e) {
+      AppLogger.e('Database init failed: $e');
+    }
 
-    try { await NotificationService.instance.init(); } catch (e) { AppLogger.e('NotificationService init failed: $e'); }
-    try { await AudioEffectsService().initialize(); } catch (e) { AppLogger.e('AudioEffectsService init failed: $e'); }
-    try { BluetoothService.instance.detectBluetoothConnection(); } catch (e) { AppLogger.e('BluetoothService init failed: $e'); }
-    try { VoiceControlService.instance.registerShortcuts(); } catch (e) { AppLogger.e('VoiceControlService init failed: $e'); }
+    try {
+      await NotificationService.instance.init();
+    } catch (e) {
+      AppLogger.e('NotificationService init failed: $e');
+    }
+    try {
+      await AudioEffectsService().initialize();
+    } catch (e) {
+      AppLogger.e('AudioEffectsService init failed: $e');
+    }
+    try {
+      BluetoothService.instance.detectBluetoothConnection();
+    } catch (e) {
+      AppLogger.e('BluetoothService init failed: $e');
+    }
+    try {
+      VoiceControlService.instance.registerShortcuts();
+    } catch (e) {
+      AppLogger.e('VoiceControlService init failed: $e');
+    }
 
     AppLogger.i('Services initialized');
 
@@ -100,7 +126,8 @@ Future<void> main() async {
 
     FlutterError.onError = (details) {
       FlutterError.presentError(details);
-      debugPrint('=== FLUTTER ERROR ===\n${details.exceptionAsString()}\n${details.stack}');
+      debugPrint(
+          '=== FLUTTER ERROR ===\n${details.exceptionAsString()}\n${details.stack}');
     };
 
     ErrorWidget.builder = (details) {
@@ -114,19 +141,26 @@ Future<void> main() async {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.error_outline, color: MelodiTheme.errorRed, size: 48),
+                  const Icon(Icons.error_outline,
+                      color: MelodiTheme.errorRed, size: 48),
                   const SizedBox(height: 16),
                   const Text('HATA:',
-                      style: TextStyle(color: MelodiTheme.errorRed, fontSize: 20, fontWeight: FontWeight.bold)),
+                      style: TextStyle(
+                          color: MelodiTheme.errorRed,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   Text('${details.exception}',
-                      style: const TextStyle(color: MelodiTheme.onSurface, fontSize: 12)),
+                      style: const TextStyle(
+                          color: MelodiTheme.onSurface, fontSize: 12)),
                   const SizedBox(height: 16),
                   if (details.stack != null)
                     Expanded(
                       child: SingleChildScrollView(
                         child: Text('${details.stack}',
-                            style: const TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 10)),
+                            style: const TextStyle(
+                                color: MelodiTheme.onSurfaceVariant,
+                                fontSize: 10)),
                       ),
                     ),
                 ],
@@ -151,7 +185,8 @@ Future<void> main() async {
             padding: const EdgeInsets.all(24),
             child: Text(
               'Startup error:\n$e',
-              style: const TextStyle(color: MelodiTheme.onSurface, fontSize: 16),
+              style:
+                  const TextStyle(color: MelodiTheme.onSurface, fontSize: 16),
               textAlign: TextAlign.center,
             ),
           ),
@@ -221,7 +256,8 @@ class MelodiApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => PlayerProvider(audioHandler)),
         ChangeNotifierProvider(create: (_) => LibraryProvider()..loadAll()),
-        ChangeNotifierProvider(create: (_) => PlaylistProvider()..loadPlaylists()),
+        ChangeNotifierProvider(
+            create: (_) => PlaylistProvider()..loadPlaylists()),
         ChangeNotifierProvider(create: (_) => SearchProvider()),
         ChangeNotifierProvider(create: (_) => YouTubeProvider()),
         ChangeNotifierProvider(create: (_) => LocaleNotifier()),
@@ -243,7 +279,8 @@ class MelodiApp extends StatelessWidget {
             final sync = SyncProvider();
             final spotify = ctx.read<SpotifyProvider>();
             final ytmusic = ctx.read<YTMusicProvider>();
-            sync.setServices(spotify: spotify.service, ytmusic: ytmusic.service);
+            sync.setServices(
+                spotify: spotify.service, ytmusic: ytmusic.service);
             // Delay sync init to allow SpotifyProvider/YTMusicProvider to finish loading
             Future.delayed(const Duration(seconds: 5), () {
               if (spotify.isConnected || ytmusic.isConnected) {
@@ -257,12 +294,14 @@ class MelodiApp extends StatelessWidget {
           create: (ctx) {
             final ytmusic = ctx.read<YTMusicProvider>();
             final spotify = ctx.read<SpotifyProvider>();
-            final service = ScrobbleService(ytmusic: ytmusic.service, spotify: spotify.service);
+            final service = ScrobbleService(
+                ytmusic: ytmusic.service, spotify: spotify.service);
             final provider = ScrobbleProvider(service: service);
             provider.init();
             return provider;
           },
         ),
+        ChangeNotifierProvider(create: (_) => LastFmProvider()..loadSession()),
         ChangeNotifierProvider(
           create: (ctx) {
             final spotify = ctx.read<SpotifyProvider>();
@@ -279,14 +318,18 @@ class MelodiApp extends StatelessWidget {
           create: (ctx) {
             final spotify = ctx.read<SpotifyProvider>();
             final ytmusic = ctx.read<YTMusicProvider>();
-            return MetadataProvider(spotifyService: spotify.service, ytmusicService: ytmusic.service);
+            return MetadataProvider(
+                spotifyService: spotify.service,
+                ytmusicService: ytmusic.service);
           },
         ),
         ChangeNotifierProvider(
           create: (ctx) {
             final spotify = ctx.read<SpotifyProvider>();
             final ytmusic = ctx.read<YTMusicProvider>();
-            final service = LikeMirrorService(spotifyService: spotify.service, ytMusicService: ytmusic.service);
+            final service = LikeMirrorService(
+                spotifyService: spotify.service,
+                ytMusicService: ytmusic.service);
             final provider = LikeMirrorProvider(service);
             provider.init();
             return provider;
@@ -333,7 +376,9 @@ class MelodiApp extends StatelessWidget {
             localeResolutionCallback: (locale, supportedLocales) {
               if (locale != null) {
                 for (final supported in supportedLocales) {
-                  if (supported.languageCode == locale.languageCode) return supported;
+                  if (supported.languageCode == locale.languageCode) {
+                    return supported;
+                  }
                 }
               }
               return const Locale('en');

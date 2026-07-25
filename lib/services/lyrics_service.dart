@@ -26,7 +26,8 @@ class LrcParser {
     r'^\[(ti|ar|al|length|by|offset|au|re|ve):.*\]\s*$',
     caseSensitive: false,
   );
-  static final RegExp _timestamp = RegExp(r'^(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?$');
+  static final RegExp _timestamp =
+      RegExp(r'^(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?$');
 
   static List<LrcLine> parse(String body) {
     if (body.trim().isEmpty) return [];
@@ -93,7 +94,19 @@ class LyricsService {
 
   static final DatabaseService _db = DatabaseService.instance;
 
-  static final List<int> _durationLadder = [0, -1, 1, -2, 2, -3, 3, -4, 4, -5, 5];
+  static final List<int> _durationLadder = [
+    0,
+    -1,
+    1,
+    -2,
+    2,
+    -3,
+    3,
+    -4,
+    4,
+    -5,
+    5
+  ];
 
   static String _sidecarPath(String audioPath) {
     final dot = audioPath.lastIndexOf('.');
@@ -116,7 +129,8 @@ class LyricsService {
     }
   }
 
-  static Future<void> _writeSidecar(String audioPath, LyricsResult result) async {
+  static Future<void> _writeSidecar(
+      String audioPath, LyricsResult result) async {
     try {
       final content = result.syncedLrc ?? result.plainText;
       if (content == null || content.isEmpty) return;
@@ -144,7 +158,8 @@ class LyricsService {
     final cached = await _getCachedLyrics(songId);
     if (cached != null) return cached;
 
-    final result = await _fetchFromApi(artist: artist, track: track, album: album, durationMs: durationMs);
+    final result = await _fetchFromApi(
+        artist: artist, track: track, album: album, durationMs: durationMs);
 
     if (result != null) {
       await _cacheLyrics(songId, result);
@@ -167,7 +182,8 @@ class LyricsService {
       for (final delta in _durationLadder) {
         final sec = baseSec + delta;
         if (sec <= 0) continue;
-        final result = await _tryGet(artist: artist, track: track, album: album, durationSec: sec);
+        final result = await _tryGet(
+            artist: artist, track: track, album: album, durationSec: sec);
         if (result != null) return result;
       }
     }
@@ -190,8 +206,10 @@ class LyricsService {
       if (album != null && album.isNotEmpty) {
         params['album_name'] = album;
       }
-      final uri = Uri.parse('$_baseUrl/api/get').replace(queryParameters: params);
-      final client = HttpClient()..connectionTimeout = const Duration(seconds: 10);
+      final uri =
+          Uri.parse('$_baseUrl/api/get').replace(queryParameters: params);
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 10);
       try {
         final request = await client.getUrl(uri);
         request.headers.set('User-Agent', _userAgent);
@@ -214,8 +232,10 @@ class LyricsService {
   static Future<LyricsResult?> _trySearch(String artist, String track) async {
     try {
       final query = '$artist $track';
-      final uri = Uri.parse('$_baseUrl/api/search').replace(queryParameters: {'q': query});
-      final client = HttpClient()..connectionTimeout = const Duration(seconds: 10);
+      final uri = Uri.parse('$_baseUrl/api/search')
+          .replace(queryParameters: {'q': query});
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 10);
       try {
         final request = await client.getUrl(uri);
         request.headers.set('User-Agent', _userAgent);
@@ -241,7 +261,9 @@ class LyricsService {
     final instrumental = data['instrumental'] == true;
     final syncedLrc = data['syncedLyrics'] as String?;
     final plainText = data['plainLyrics'] as String?;
-    if (!instrumental && (syncedLrc == null || syncedLrc.isEmpty) && (plainText == null || plainText.isEmpty)) {
+    if (!instrumental &&
+        (syncedLrc == null || syncedLrc.isEmpty) &&
+        (plainText == null || plainText.isEmpty)) {
       return null;
     }
     return LyricsResult(
@@ -255,7 +277,8 @@ class LyricsService {
   static Future<LyricsResult?> _getCachedLyrics(String songId) async {
     try {
       final db = await _db.database;
-      final maps = await db.query('lyrics_cache', where: 'songId = ?', whereArgs: [songId]);
+      final maps = await db
+          .query('lyrics_cache', where: 'songId = ?', whereArgs: [songId]);
       if (maps.isEmpty) return null;
       final row = maps.first;
       return LyricsResult(
@@ -272,14 +295,17 @@ class LyricsService {
   static Future<void> _cacheLyrics(String songId, LyricsResult result) async {
     try {
       final db = await _db.database;
-      await db.insert('lyrics_cache', {
-        'songId': songId,
-        'plainText': result.plainText,
-        'syncedLrc': result.syncedLrc,
-        'instrumental': result.instrumental ? 1 : 0,
-        'source': result.source,
-        'fetchedAt': DateTime.now().toIso8601String(),
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
+      await db.insert(
+          'lyrics_cache',
+          {
+            'songId': songId,
+            'plainText': result.plainText,
+            'syncedLrc': result.syncedLrc,
+            'instrumental': result.instrumental ? 1 : 0,
+            'source': result.source,
+            'fetchedAt': DateTime.now().toIso8601String(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace);
     } catch (_) {}
   }
 

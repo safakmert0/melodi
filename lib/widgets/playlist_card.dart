@@ -32,14 +32,16 @@ class PlaylistCard extends StatelessWidget {
           children: [
             Container(
               margin: const EdgeInsets.symmetric(vertical: 12),
-              width: 40, height: 4,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
                 color: MelodiTheme.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             ListTile(
-              leading: Icon(Icons.add_circle_outline, color: MelodiTheme.onSurfaceVariant),
+              leading: Icon(Icons.add_circle_outline,
+                  color: MelodiTheme.onSurfaceVariant),
               title: Text(AppLocale.tr('add_songs'),
                   style: TextStyle(color: MelodiTheme.onSurface)),
               onTap: () {
@@ -48,7 +50,8 @@ class PlaylistCard extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: Icon(Icons.edit_outlined, color: MelodiTheme.onSurfaceVariant),
+              leading: Icon(Icons.edit_outlined,
+                  color: MelodiTheme.onSurfaceVariant),
               title: Text(AppLocale.tr('rename_playlist'),
                   style: TextStyle(color: MelodiTheme.onSurface)),
               onTap: () {

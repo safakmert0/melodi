@@ -39,12 +39,12 @@ cd ..
 
 echo ""
 echo "[4/7] Building iOS (unsigned .app)..."
-flutter build ios --debug --no-codesign
+flutter build ios --release --no-codesign
 
 echo ""
 echo "[5/7] Creating unsigned .ipa..."
 mkdir -p build/unsigned_ipa/Payload
-cp -r build/ios/debug/iphoneos/Runner.app build/unsigned_ipa/Payload/
+cp -r build/ios/iphoneos/Runner.app build/unsigned_ipa/Payload/
 cd build/unsigned_ipa
 zip -r ../Melodi-unsigned.ipa Payload/
 cd ../..

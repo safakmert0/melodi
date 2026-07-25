@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:collection/collection.dart';
 import '../models/song_model.dart';
 import 'database_service.dart';
@@ -25,22 +24,25 @@ class LibraryHealthIssue {
   });
 
   Map<String, dynamic> toMap() => {
-    'id': id,
-    'category': category,
-    'description': description,
-    'severity': severity,
-    'autoFixable': autoFixable ? 1 : 0,
-    'data': jsonEncode(data),
-  };
+        'id': id,
+        'category': category,
+        'description': description,
+        'severity': severity,
+        'autoFixable': autoFixable ? 1 : 0,
+        'data': jsonEncode(data),
+      };
 
-  factory LibraryHealthIssue.fromMap(Map<String, dynamic> map) => LibraryHealthIssue(
-    id: map['id'] as String,
-    category: map['category'] as String,
-    description: map['description'] as String,
-    severity: map['severity'] as String,
-    autoFixable: (map['autoFixable'] as int?) == 1,
-    data: (map['data'] as String?) != null ? jsonDecode(map['data'] as String) as Map<String, dynamic> : {},
-  );
+  factory LibraryHealthIssue.fromMap(Map<String, dynamic> map) =>
+      LibraryHealthIssue(
+        id: map['id'] as String,
+        category: map['category'] as String,
+        description: map['description'] as String,
+        severity: map['severity'] as String,
+        autoFixable: (map['autoFixable'] as int?) == 1,
+        data: (map['data'] as String?) != null
+            ? jsonDecode(map['data'] as String) as Map<String, dynamic>
+            : {},
+      );
 }
 
 class LibraryHealthService {
@@ -106,7 +108,8 @@ class LibraryHealthService {
     await _cacheScanResults(issues);
   }
 
-  Future<List<LibraryHealthIssue>> _scanMissingArt(List<SongModel> songs) async {
+  Future<List<LibraryHealthIssue>> _scanMissingArt(
+      List<SongModel> songs) async {
     final issues = <LibraryHealthIssue>[];
     final missing = await _db.getTracksMissingArt();
     if (missing.isEmpty) return issues;
@@ -115,7 +118,11 @@ class LibraryHealthService {
       id: 'missing_art_summary',
       category: 'Album Art',
       description: '${missing.length} tracks missing album art',
-      severity: missing.length > 20 ? 'error' : missing.length > 5 ? 'warning' : 'info',
+      severity: missing.length > 20
+          ? 'error'
+          : missing.length > 5
+              ? 'warning'
+              : 'info',
       autoFixable: true,
       data: {'count': missing.length, 'tracks': missing},
     ));
@@ -128,14 +135,19 @@ class LibraryHealthService {
         description: '${track['title']} by ${track['artist']}',
         severity: 'info',
         autoFixable: true,
-        data: {'trackId': trackId, 'title': track['title'], 'artist': track['artist']},
+        data: {
+          'trackId': trackId,
+          'title': track['title'],
+          'artist': track['artist']
+        },
       ));
     }
 
     return issues;
   }
 
-  Future<List<LibraryHealthIssue>> _scanMissingMetadata(List<SongModel> songs) async {
+  Future<List<LibraryHealthIssue>> _scanMissingMetadata(
+      List<SongModel> songs) async {
     final issues = <LibraryHealthIssue>[];
     final missing = await _db.getTracksMissingMetadata();
     if (missing.isEmpty) return issues;
@@ -144,7 +156,11 @@ class LibraryHealthService {
       id: 'missing_metadata_summary',
       category: 'Metadata',
       description: '${missing.length} tracks with incomplete metadata',
-      severity: missing.length > 20 ? 'error' : missing.length > 5 ? 'warning' : 'info',
+      severity: missing.length > 20
+          ? 'error'
+          : missing.length > 5
+              ? 'warning'
+              : 'info',
       autoFixable: true,
       data: {'count': missing.length, 'tracks': missing},
     ));
@@ -172,7 +188,9 @@ class LibraryHealthService {
   Future<List<LibraryHealthIssue>> _scanFailedDownloads() async {
     final issues = <LibraryHealthIssue>[];
     final manager = DownloadManager();
-    final failed = manager.tasks.where((t) => t.state == DownloadState.failed && !t.cancelled).toList();
+    final failed = manager.tasks
+        .where((t) => t.state == DownloadState.failed && !t.cancelled)
+        .toList();
 
     if (failed.isNotEmpty) {
       issues.add(LibraryHealthIssue(
@@ -181,12 +199,17 @@ class LibraryHealthService {
         description: '${failed.length} downloads failed',
         severity: 'error',
         autoFixable: true,
-        data: {'count': failed.length, 'tracks': failed.map((t) => {
-          'taskId': t.id,
-          'title': t.title,
-          'artist': t.artist,
-          'error': t.error,
-        }).toList()},
+        data: {
+          'count': failed.length,
+          'tracks': failed
+              .map((t) => {
+                    'taskId': t.id,
+                    'title': t.title,
+                    'artist': t.artist,
+                    'error': t.error,
+                  })
+              .toList()
+        },
       ));
     }
 
@@ -213,7 +236,8 @@ class LibraryHealthService {
 
   List<LibraryHealthIssue> _scanDuplicates(List<SongModel> songs) {
     final issues = <LibraryHealthIssue>[];
-    final groups = groupBy(songs, (SongModel s) => '${s.title.toLowerCase()}|${s.artist.toLowerCase()}');
+    final groups = groupBy(songs,
+        (SongModel s) => '${s.title.toLowerCase()}|${s.artist.toLowerCase()}');
 
     for (final entry in groups.entries) {
       if (entry.value.length > 1) {
@@ -221,7 +245,8 @@ class LibraryHealthService {
         issues.add(LibraryHealthIssue(
           id: 'duplicate_${track.id}',
           category: 'Duplicates',
-          description: '${track.title} by ${track.artist} (${entry.value.length} copies)',
+          description:
+              '${track.title} by ${track.artist} (${entry.value.length} copies)',
           severity: 'warning',
           autoFixable: false,
           data: {
@@ -250,10 +275,15 @@ class LibraryHealthService {
       description: '${lowConf.length} tracks with low match confidence',
       severity: 'warning',
       autoFixable: false,
-      data: {'count': lowConf.length, 'tracks': lowConf.map((e) => {
-        'spotifyId': e.key,
-        'confidence': e.value,
-      }).toList()},
+      data: {
+        'count': lowConf.length,
+        'tracks': lowConf
+            .map((e) => {
+                  'spotifyId': e.key,
+                  'confidence': e.value,
+                })
+            .toList()
+      },
     ));
 
     return issues;
@@ -266,7 +296,9 @@ class LibraryHealthService {
 
     final orphaned = downloadedTracks.where((t) {
       final path = t['filePath'] as String?;
-      return path != null && !songPaths.contains(path) && File(path).existsSync();
+      return path != null &&
+          !songPaths.contains(path) &&
+          File(path).existsSync();
     }).toList();
 
     if (orphaned.isEmpty) return issues;
@@ -277,10 +309,15 @@ class LibraryHealthService {
       description: '${orphaned.length} orphaned files',
       severity: 'warning',
       autoFixable: false,
-      data: {'count': orphaned.length, 'files': orphaned.map((t) => {
-        'path': t['filePath'],
-        'trackId': t['spotifyTrackId'],
-      }).toList()},
+      data: {
+        'count': orphaned.length,
+        'files': orphaned
+            .map((t) => {
+                  'path': t['filePath'],
+                  'trackId': t['spotifyTrackId'],
+                })
+            .toList()
+      },
     ));
 
     return issues;
@@ -366,7 +403,8 @@ class LibraryHealthService {
   Future<void> _cacheScanResults(List<LibraryHealthIssue> issues) async {
     final data = issues.map((i) => i.toMap()).toList();
     await _db.setSetting('library_health_cache', jsonEncode(data));
-    await _db.setSetting('library_health_cached_at', DateTime.now().toIso8601String());
+    await _db.setSetting(
+        'library_health_cached_at', DateTime.now().toIso8601String());
   }
 
   Future<List<LibraryHealthIssue>?> _getCachedScan() async {
@@ -374,13 +412,16 @@ class LibraryHealthService {
     if (cachedAtStr == null) return null;
 
     final cachedAt = DateTime.tryParse(cachedAtStr);
-    if (cachedAt == null || DateTime.now().difference(cachedAt) > _cacheDuration) return null;
+    if (cachedAt == null ||
+        DateTime.now().difference(cachedAt) > _cacheDuration) return null;
 
     final data = await _db.getSetting('library_health_cache');
     if (data == null) return null;
 
     final list = jsonDecode(data) as List<dynamic>;
-    return list.map((e) => LibraryHealthIssue.fromMap(e as Map<String, dynamic>)).toList();
+    return list
+        .map((e) => LibraryHealthIssue.fromMap(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<void> invalidateCache() async {

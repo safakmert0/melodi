@@ -63,8 +63,10 @@ class PlaylistModel {
       id: map['id'] as String,
       name: map['name'] as String,
       description: map['description'] as String?,
-      songIds:
-          (map['songIds'] as String).split(',').where((s) => s.isNotEmpty).toList(),
+      songIds: (map['songIds'] as String)
+          .split(',')
+          .where((s) => s.isNotEmpty)
+          .toList(),
       createdAt: DateTime.parse(map['createdAt'] as String),
       updatedAt: DateTime.parse(map['updatedAt'] as String),
       isSmartPlaylist: (map['isSmartPlaylist'] as int?) == 1,

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../models/playlist_model.dart';
 import '../providers/playlist_provider.dart';
 import '../providers/library_provider.dart';
@@ -25,7 +24,8 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.playlist.name);
-    _descController = TextEditingController(text: widget.playlist.description ?? '');
+    _descController =
+        TextEditingController(text: widget.playlist.description ?? '');
     final librarySongs = context.read<LibraryProvider>().songs;
     _songs = librarySongs
         .where((song) => widget.playlist.songIds.contains(song.id))
@@ -92,7 +92,8 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    const Icon(Icons.queue_music_rounded, size: 60, color: MelodiTheme.onSurfaceVariant),
+                    const Icon(Icons.queue_music_rounded,
+                        size: 60, color: MelodiTheme.onSurfaceVariant),
                     Positioned(
                       bottom: 0,
                       left: 0,
@@ -101,9 +102,11 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: Colors.black.withOpacity(0.5),
-                          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                          borderRadius: const BorderRadius.vertical(
+                              bottom: Radius.circular(12)),
                         ),
-                        child: const Icon(Icons.camera_alt_rounded, size: 20, color: MelodiTheme.onSurface),
+                        child: const Icon(Icons.camera_alt_rounded,
+                            size: 20, color: MelodiTheme.onSurface),
                       ),
                     ),
                   ],
@@ -185,7 +188,8 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
                   leading: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.drag_handle_rounded, color: MelodiTheme.onSurfaceVariant),
+                      const Icon(Icons.drag_handle_rounded,
+                          color: MelodiTheme.onSurfaceVariant),
                       const SizedBox(width: 8),
                       Container(
                         width: 44,
@@ -197,9 +201,11 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
                         child: song.albumArt != null
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(4),
-                                child: Image.memory(song.albumArt!, fit: BoxFit.cover, gaplessPlayback: true),
+                                child: Image.memory(song.albumArt!,
+                                    fit: BoxFit.cover, gaplessPlayback: true),
                               )
-                            : const Icon(Icons.music_note_rounded, color: MelodiTheme.onSurfaceVariant),
+                            : const Icon(Icons.music_note_rounded,
+                                color: MelodiTheme.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -224,7 +230,8 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
                     ),
                   ),
                   trailing: IconButton(
-                    icon: const Icon(Icons.remove_circle_outline_rounded, color: MelodiTheme.errorRed, size: 22),
+                    icon: const Icon(Icons.remove_circle_outline_rounded,
+                        color: MelodiTheme.errorRed, size: 22),
                     onPressed: () {
                       setState(() => _songs.removeAt(index));
                     },
@@ -238,10 +245,12 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
                 final library = context.read<LibraryProvider>();
                 await library.importFromFiles();
                 setState(() {
-                  _songs.addAll(library.songs.where((s) => !_songs.any((existing) => existing.id == s.id)));
+                  _songs.addAll(library.songs.where(
+                      (s) => !_songs.any((existing) => existing.id == s.id)));
                 });
               },
-              icon: const Icon(Icons.add_circle_outline_rounded, color: MelodiTheme.primaryGreen),
+              icon: const Icon(Icons.add_circle_outline_rounded,
+                  color: MelodiTheme.primaryGreen),
               label: Text(
                 AppLocale.tr('add_song'),
                 style: const TextStyle(

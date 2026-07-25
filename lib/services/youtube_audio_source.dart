@@ -1,3 +1,7 @@
+// just_audio currently marks the range-stream API as experimental. This file
+// isolates that dependency behind Melodi's stable SongModel/player contracts.
+// ignore_for_file: experimental_member_use
+
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
@@ -35,7 +39,8 @@ class YouTubeAudioSource extends StreamAudioSource {
       if (supportedStreams.isNotEmpty) {
         // Sort by bitrate and pick based on quality
         final sorted = supportedStreams.toList()
-          ..sort((a, b) => a.bitrate.bitsPerSecond.compareTo(b.bitrate.bitsPerSecond));
+          ..sort((a, b) =>
+              a.bitrate.bitsPerSecond.compareTo(b.bitrate.bitsPerSecond));
         audioStream = quality == 'high' ? sorted.last : sorted.first;
       } else {
         // Fallback to any audio stream
@@ -43,7 +48,8 @@ class YouTubeAudioSource extends StreamAudioSource {
         if (anyAudio.isEmpty) {
           throw Exception('No audio stream available for video $videoId');
         }
-        anyAudio.sort((a, b) => a.bitrate.bitsPerSecond.compareTo(b.bitrate.bitsPerSecond));
+        anyAudio.sort((a, b) =>
+            a.bitrate.bitsPerSecond.compareTo(b.bitrate.bitsPerSecond));
         audioStream = quality == 'high' ? anyAudio.last : anyAudio.first;
       }
 

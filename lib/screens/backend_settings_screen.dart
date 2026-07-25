@@ -9,7 +9,8 @@ class BackendSettingsScreen extends StatefulWidget {
 }
 
 class _BackendSettingsScreenState extends State<BackendSettingsScreen> {
-  final TextEditingController _urlController = TextEditingController(text: 'http://localhost:8000');
+  final TextEditingController _urlController =
+      TextEditingController(text: 'http://localhost:8000');
   bool _isChecking = false;
   bool _isConnected = false;
 
@@ -29,8 +30,10 @@ class _BackendSettingsScreenState extends State<BackendSettingsScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_isConnected ? 'Backend connected!' : 'Connection failed'),
-          backgroundColor: _isConnected ? MelodiTheme.primaryGreen : MelodiTheme.errorRed,
+          content:
+              Text(_isConnected ? 'Backend connected!' : 'Connection failed'),
+          backgroundColor:
+              _isConnected ? MelodiTheme.primaryGreen : MelodiTheme.errorRed,
         ),
       );
     }
@@ -62,18 +65,23 @@ class _BackendSettingsScreenState extends State<BackendSettingsScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.dns_rounded, color: MelodiTheme.primaryGreen, size: 24),
+                      Icon(Icons.dns_rounded,
+                          color: MelodiTheme.primaryGreen, size: 24),
                       const SizedBox(width: 12),
                       Text(
                         'YT-DLP Backend',
-                        style: TextStyle(color: MelodiTheme.onSurface, fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            color: MelodiTheme.onSurface,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'Run a Python backend server for yt-dlp support.',
-                    style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
+                    style: TextStyle(
+                        color: MelodiTheme.onSurfaceVariant, fontSize: 14),
                   ),
                 ],
               ),
@@ -88,22 +96,38 @@ class _BackendSettingsScreenState extends State<BackendSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Status', style: TextStyle(color: MelodiTheme.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
+                  Text('Status',
+                      style: TextStyle(
+                          color: MelodiTheme.onSurface,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600)),
                   const SizedBox(height: 12),
                   Row(
                     children: [
                       Container(
-                        width: 12, height: 12,
-                        decoration: BoxDecoration(shape: BoxShape.circle, color: _isConnected ? MelodiTheme.primaryGreen : MelodiTheme.errorRed),
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _isConnected
+                                ? MelodiTheme.primaryGreen
+                                : MelodiTheme.errorRed),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         _isConnected ? 'Connected' : 'Not Connected',
-                        style: TextStyle(color: _isConnected ? MelodiTheme.primaryGreen : MelodiTheme.errorRed, fontSize: 14),
+                        style: TextStyle(
+                            color: _isConnected
+                                ? MelodiTheme.primaryGreen
+                                : MelodiTheme.errorRed,
+                            fontSize: 14),
                       ),
                       const Spacer(),
                       if (_isChecking)
-                        const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                        const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2)),
                     ],
                   ),
                 ],
@@ -119,7 +143,11 @@ class _BackendSettingsScreenState extends State<BackendSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Backend URL', style: TextStyle(color: MelodiTheme.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
+                  Text('Backend URL',
+                      style: TextStyle(
+                          color: MelodiTheme.onSurface,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600)),
                   const SizedBox(height: 12),
                   TextField(
                     controller: _urlController,
@@ -129,8 +157,11 @@ class _BackendSettingsScreenState extends State<BackendSettingsScreen> {
                       hintStyle: TextStyle(color: MelodiTheme.textMuted),
                       filled: true,
                       fillColor: MelodiTheme.containerLow,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -142,11 +173,13 @@ class _BackendSettingsScreenState extends State<BackendSettingsScreen> {
                         backgroundColor: MelodiTheme.primaryGreen,
                         foregroundColor: const Color(0xFF003914),
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
                       ),
                       child: Text(
                         _isChecking ? 'Checking...' : 'Check Connection',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -163,7 +196,11 @@ class _BackendSettingsScreenState extends State<BackendSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Setup', style: TextStyle(color: MelodiTheme.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
+                  Text('Setup',
+                      style: TextStyle(
+                          color: MelodiTheme.onSurface,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600)),
                   const SizedBox(height: 12),
                   _buildStep('1', 'Install Python 3.8+'),
                   _buildStep('2', 'pip install -r requirements.txt'),
@@ -184,12 +221,21 @@ class _BackendSettingsScreenState extends State<BackendSettingsScreen> {
       child: Row(
         children: [
           Container(
-            width: 24, height: 24,
-            decoration: BoxDecoration(color: MelodiTheme.primaryGreen, shape: BoxShape.circle),
-            child: Center(child: Text(number, style: const TextStyle(color: Color(0xFF003914), fontSize: 12, fontWeight: FontWeight.bold))),
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+                color: MelodiTheme.primaryGreen, shape: BoxShape.circle),
+            child: Center(
+                child: Text(number,
+                    style: const TextStyle(
+                        color: Color(0xFF003914),
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold))),
           ),
           const SizedBox(width: 12),
-          Text(text, style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14)),
+          Text(text,
+              style:
+                  TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14)),
         ],
       ),
     );

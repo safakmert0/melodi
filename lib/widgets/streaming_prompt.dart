@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 
 class StreamingPrompt extends StatelessWidget {
   const StreamingPrompt({super.key});

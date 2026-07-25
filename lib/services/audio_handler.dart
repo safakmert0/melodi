@@ -50,7 +50,10 @@ class AudioPlayerHandler extends BaseAudioHandler
     });
 
     _player.durationStream.listen((duration) {
-      if (duration != null && duration.inMilliseconds > 0 && _currentIndex >= 0 && _currentIndex < _queue.length) {
+      if (duration != null &&
+          duration.inMilliseconds > 0 &&
+          _currentIndex >= 0 &&
+          _currentIndex < _queue.length) {
         mediaItem.add(mediaItem.value?.copyWith(duration: duration));
       }
     });
@@ -70,9 +73,11 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> applyEqualizerPreset(String name) async {
     await _db.setSetting('eq_preset', name);
   }
+
   Future<void> setEqualizerEnabled(bool enabled) async {
     await _db.setSetting('eq_enabled', enabled.toString());
   }
+
   Future<void> setEqualizerBand(int index, double gain) async {}
 
   bool _isYouTubeUrl(String url) {
@@ -135,7 +140,8 @@ class AudioPlayerHandler extends BaseAudioHandler
       final index = int.tryParse(indexStr) ?? -1;
       final positionMs = int.tryParse(positionMsStr ?? '0') ?? 0;
       final isShuffled = isShuffledStr == 'true';
-      final repeatMode = LoopStyle.values[int.tryParse(repeatModeStr ?? '0') ?? 0];
+      final repeatMode =
+          LoopStyle.values[int.tryParse(repeatModeStr ?? '0') ?? 0];
 
       // Restore queue from settings
       final queueStr = await _db.getSetting('player_queue');
@@ -168,7 +174,8 @@ class AudioPlayerHandler extends BaseAudioHandler
               AudioSource audioSource;
               if (song.filePath.startsWith('youtube://')) {
                 final videoId = song.filePath.replaceFirst('youtube://', '');
-                audioSource = YouTubeAudioSource(videoId: videoId, quality: 'high');
+                audioSource =
+                    YouTubeAudioSource(videoId: videoId, quality: 'high');
               } else if (song.filePath.startsWith('http')) {
                 audioSource = AudioSource.uri(Uri.parse(song.filePath));
               } else {
@@ -182,7 +189,8 @@ class AudioPlayerHandler extends BaseAudioHandler
               // Wait for duration to be available
               for (int i = 0; i < 10; i++) {
                 await Future.delayed(const Duration(milliseconds: 50));
-                if (_player.duration != null && _player.duration!.inMilliseconds > 0) break;
+                if (_player.duration != null &&
+                    _player.duration!.inMilliseconds > 0) break;
               }
               // Apply speed/volume overrides
               if (_playbackSpeedOverride != null) {
@@ -202,7 +210,9 @@ class AudioPlayerHandler extends BaseAudioHandler
                   final artFile = File('${dir.path}/nowplaying_art.jpg');
                   await artFile.writeAsBytes(song.albumArt!);
                   artUri = Uri.file(artFile.path);
-                } catch (e) { debugPrint('Album art write failed: $e'); }
+                } catch (e) {
+                  debugPrint('Album art write failed: $e');
+                }
               }
               final media = MediaItem(
                 id: song.id,
@@ -212,7 +222,7 @@ class AudioPlayerHandler extends BaseAudioHandler
                 duration: _player.duration,
                 artUri: artUri,
               );
-              this.mediaItem.add(media);
+              mediaItem.add(media);
               super.mediaItem.add(media);
             } catch (e) {
               debugPrint('Restore prepare failed: $e');
@@ -222,16 +232,6 @@ class AudioPlayerHandler extends BaseAudioHandler
         } catch (_) {}
       }
     } catch (_) {}
-  }
-
-  Future<void> _clearPlayerState() async {
-    await _db.setSetting('player_current_song', '');
-    await _db.setSetting('player_current_index', '-1');
-    await _db.setSetting('player_position_ms', '0');
-    await _db.setSetting('player_queue', '');
-    await _db.setSetting('player_is_shuffled', 'false');
-    await _db.setSetting('player_repeat_mode', '0');
-    await _db.setSetting('player_saved_at', '');
   }
 
   void _broadcastState() {
@@ -270,11 +270,14 @@ class AudioPlayerHandler extends BaseAudioHandler
   Duration get position {
     final pos = _player.position;
     final dur = _player.duration;
-    if (dur != null && dur.inMilliseconds > 0 && pos.inMilliseconds > dur.inMilliseconds) {
+    if (dur != null &&
+        dur.inMilliseconds > 0 &&
+        pos.inMilliseconds > dur.inMilliseconds) {
       return dur;
     }
     return pos;
   }
+
   Duration get bufferedPosition => _player.bufferedPosition;
   Duration get duration => _player.duration ?? Duration.zero;
   Stream<Duration> get positionStream => _player.positionStream;
@@ -292,8 +295,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     await setQueue([song], initialIndex: 0);
   }
 
-  Future<void> setQueue(List<SongModel> songs,
-      {int initialIndex = 0}) async {
+  Future<void> setQueue(List<SongModel> songs, {int initialIndex = 0}) async {
     _originalQueue = List.from(songs);
     _queue = List.from(songs);
     _currentIndex = initialIndex;
@@ -316,13 +318,6 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (idx != -1) _queue[idx] = song;
     // Update MediaItem if this is the currently playing song
     if (idx == _currentIndex && mediaItem.value != null) {
-      Uri? artUri;
-      if (song.albumArt != null) {
-        try {
-          final dir = _player.sequenceState?.currentSource?.tag;
-          // Defer artUri update to next play cycle
-        } catch (_) {}
-      }
       mediaItem.add(mediaItem.value!.copyWith(
         album: song.album,
         title: song.title,
@@ -404,8 +399,7 @@ class AudioPlayerHandler extends BaseAudioHandler
   void _applyShuffle() {
     if (_queue.isEmpty) return;
     final currentSong = _currentIndex >= 0 ? _queue[_currentIndex] : null;
-    final remaining =
-        _queue.where((s) => s.id != currentSong?.id).toList();
+    final remaining = _queue.where((s) => s.id != currentSong?.id).toList();
     remaining.shuffle();
     _queue = currentSong != null ? [currentSong, ...remaining] : remaining;
     _currentIndex = 0;
@@ -435,6 +429,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
   }
 
+  @override
   Future<void> seek(Duration position) async {
     await _player.seek(position);
   }
@@ -489,7 +484,8 @@ class AudioPlayerHandler extends BaseAudioHandler
         // YouTube video ID format - use custom streaming source
         final videoId = song.filePath.replaceFirst('youtube://', '');
         audioSource = YouTubeAudioSource(videoId: videoId, quality: 'high');
-      } else if (song.filePath.startsWith('http') || song.filePath.startsWith('https')) {
+      } else if (song.filePath.startsWith('http') ||
+          song.filePath.startsWith('https')) {
         // Check if this is a YouTube URL - use custom streaming source
         if (_isYouTubeUrl(song.filePath)) {
           final videoId = _extractYouTubeVideoId(song.filePath);
@@ -513,7 +509,8 @@ class AudioPlayerHandler extends BaseAudioHandler
       // Wait for duration to be available with retry
       for (int i = 0; i < 10; i++) {
         await Future.delayed(const Duration(milliseconds: 50));
-        if (_player.duration != null && _player.duration!.inMilliseconds > 0) break;
+        if (_player.duration != null && _player.duration!.inMilliseconds > 0)
+          break;
       }
       final actualDuration = _player.duration ?? song.duration;
 
@@ -556,7 +553,9 @@ class AudioPlayerHandler extends BaseAudioHandler
           final artFile = File('${dir.path}/nowplaying_art.jpg');
           await artFile.writeAsBytes(song.albumArt!);
           artUri = Uri.file(artFile.path);
-        } catch (e) { debugPrint('Album art write failed: $e'); }
+        } catch (e) {
+          debugPrint('Album art write failed: $e');
+        }
       }
 
       final mediaItem = MediaItem(
@@ -624,9 +623,6 @@ class AudioPlayerHandler extends BaseAudioHandler
       await _playCurrent();
     }
   }
-
-  @override
-  Future<void> seekTo(Duration position) => _player.seek(position);
 
   @override
   Future<void> setSpeed(double speed) => _player.setSpeed(speed);
@@ -750,4 +746,5 @@ class AudioPlayerHandler extends BaseAudioHandler
     _player.dispose();
   }
 }
+
 enum LoopStyle { off, all, one }

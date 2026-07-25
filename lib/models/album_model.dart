@@ -45,7 +45,10 @@ class AlbumModel {
       songCount: map['songCount'] as int,
       totalDuration: Duration(milliseconds: map['totalDurationMs'] as int),
       year: map['year'] as int,
-      songIds: (map['songIds'] as String).split(',').where((s) => s.isNotEmpty).toList(),
+      songIds: (map['songIds'] as String)
+          .split(',')
+          .where((s) => s.isNotEmpty)
+          .toList(),
     );
   }
 }

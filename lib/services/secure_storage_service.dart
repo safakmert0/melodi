@@ -3,7 +3,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class SecureStorageService {
   static const _storage = FlutterSecureStorage();
   static SecureStorageService? _instance;
-  static SecureStorageService get instance => _instance ??= SecureStorageService._();
+  static SecureStorageService get instance =>
+      _instance ??= SecureStorageService._();
   SecureStorageService._();
 
   Future<void> write(String key, String value) async {

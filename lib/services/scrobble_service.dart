@@ -21,7 +21,8 @@ class ScrobbleItem {
     required this.scrobbledAt,
   });
 
-  factory ScrobbleItem.fromDb(Map<String, dynamic> row, {String title = '', String artists = ''}) {
+  factory ScrobbleItem.fromDb(Map<String, dynamic> row,
+      {String title = '', String artists = ''}) {
     return ScrobbleItem(
       videoId: row['videoId'] as String,
       spotifyTrackId: row['spotifyTrackId'] as String?,
@@ -55,7 +56,9 @@ class ScrobbleService {
 
     final tracks = <YTMusicTrack>[];
     final contents = _navigatePath(response, [
-      'contents', 'singleColumnBrowseResultsRenderer', 'tabs',
+      'contents',
+      'singleColumnBrowseResultsRenderer',
+      'tabs',
     ]);
     if (contents == null) return [];
 
@@ -66,18 +69,21 @@ class ScrobbleService {
         .firstOrNull;
     if (tab == null) return [];
 
-    final sections = _navigatePath(tab, ['content', 'sectionListRenderer', 'contents']);
+    final sections =
+        _navigatePath(tab, ['content', 'sectionListRenderer', 'contents']);
     if (sections == null) return [];
 
-    for (final section in (sections as List<dynamic>).map((e) => e as Map<String, dynamic>)) {
+    for (final section
+        in (sections as List<dynamic>).map((e) => e as Map<String, dynamic>)) {
       final shelf = section['musicShelfRenderer'] as Map<String, dynamic>?;
       if (shelf == null) continue;
       final items = shelf['contents'] as List<dynamic>?;
       if (items == null) continue;
 
       for (final item in items) {
-        final renderer = (item as Map<String, dynamic>)
-            ['musicResponsiveListItemRenderer'] as Map<String, dynamic>?;
+        final renderer =
+            (item as Map<String, dynamic>)['musicResponsiveListItemRenderer']
+                as Map<String, dynamic>?;
         if (renderer == null) continue;
         final track = _parseTrackFromRenderer(renderer);
         if (track != null) tracks.add(track);
@@ -106,14 +112,16 @@ class ScrobbleService {
     final flexColumns = renderer['flexColumns'] as List<dynamic>?;
     if (flexColumns == null || flexColumns.isEmpty) return null;
 
-    final titleCol = (flexColumns[0] as Map<String, dynamic>?)
-        ?.let((c) => c['musicResponsiveListItemFlexColumnRenderer'] as Map<String, dynamic>?);
+    final titleCol = (flexColumns[0] as Map<String, dynamic>?)?.let((c) =>
+        c['musicResponsiveListItemFlexColumnRenderer']
+            as Map<String, dynamic>?);
     final title = _extractText(titleCol);
     if (title == null) return null;
 
     final artistCol = flexColumns.length > 1
-        ? (flexColumns[1] as Map<String, dynamic>?)
-            ?.let((c) => c['musicResponsiveListItemFlexColumnRenderer'] as Map<String, dynamic>?)
+        ? (flexColumns[1] as Map<String, dynamic>?)?.let((c) =>
+            c['musicResponsiveListItemFlexColumnRenderer']
+                as Map<String, dynamic>?)
         : null;
     final artistRuns = _extractArtistRuns(artistCol);
     final artists = artistRuns.join(', ');
@@ -131,8 +139,13 @@ class ScrobbleService {
     if (fromData != null) return fromData;
 
     return _navigatePath(renderer, [
-      'overlay', 'musicItemThumbnailOverlayRenderer', 'content',
-      'musicPlayButtonRenderer', 'playNavigationEndpoint', 'watchEndpoint', 'videoId',
+      'overlay',
+      'musicItemThumbnailOverlayRenderer',
+      'content',
+      'musicPlayButtonRenderer',
+      'playNavigationEndpoint',
+      'watchEndpoint',
+      'videoId',
     ]);
   }
 
@@ -153,7 +166,8 @@ class ScrobbleService {
         .toList();
   }
 
-  Future<SpotifyTrackItem?> scrobbleToSpotify(String videoId, String title, String artist) async {
+  Future<SpotifyTrackItem?> scrobbleToSpotify(
+      String videoId, String title, String artist) async {
     if (!spotify.isConnected) return null;
 
     final db = DatabaseService.instance;
@@ -178,8 +192,6 @@ class ScrobbleService {
       final history = await getYtMusicHistory();
       if (history.isEmpty) return 0;
 
-      final now = DateTime.now();
-      final oneHourAgo = now.subtract(const Duration(hours: 1));
       int scrobbled = 0;
 
       for (final track in history) {
@@ -200,7 +212,8 @@ class ScrobbleService {
     }
   }
 
-  Future<List<SpotifyTrackItem>> getRecentlyPlayedSpotify({int limit = 20}) async {
+  Future<List<SpotifyTrackItem>> getRecentlyPlayedSpotify(
+      {int limit = 20}) async {
     if (!spotify.isConnected) return [];
 
     try {
@@ -208,7 +221,8 @@ class ScrobbleService {
         await spotify.refreshAccessToken();
       }
 
-      final url = '${SpotifyAuthConfig.webApiBase}/me/player/recently-played?limit=$limit';
+      final url =
+          '${SpotifyAuthConfig.webApiBase}/me/player/recently-played?limit=$limit';
       final client = http.Client();
       try {
         var response = await client.get(
@@ -237,37 +251,43 @@ class ScrobbleService {
         final body = jsonDecode(response.body) as Map<String, dynamic>;
         final items = body['items'] as List<dynamic>? ?? [];
 
-        return items.map((element) {
-          try {
-            final wrapper = element as Map<String, dynamic>;
-            final trackObj = wrapper['track'] as Map<String, dynamic>?;
-            if (trackObj == null) return null;
+        return items
+            .map((element) {
+              try {
+                final wrapper = element as Map<String, dynamic>;
+                final trackObj = wrapper['track'] as Map<String, dynamic>?;
+                if (trackObj == null) return null;
 
-            final id = trackObj['id'] as String?;
-            final name = trackObj['name'] as String?;
-            if (id == null || name == null) return null;
+                final id = trackObj['id'] as String?;
+                final name = trackObj['name'] as String?;
+                if (id == null || name == null) return null;
 
-            final artists = (trackObj['artists'] as List<dynamic>?)
-                    ?.map((a) => (a as Map<String, dynamic>)['name'] as String? ?? '')
-                    .where((a) => a.isNotEmpty)
-                    .toList() ??
-                [];
+                final artists = (trackObj['artists'] as List<dynamic>?)
+                        ?.map((a) =>
+                            (a as Map<String, dynamic>)['name'] as String? ??
+                            '')
+                        .where((a) => a.isNotEmpty)
+                        .toList() ??
+                    [];
 
-            final albumObj = trackObj['album'] as Map<String, dynamic>?;
-            final albumName = albumObj?['name'] as String?;
+                final albumObj = trackObj['album'] as Map<String, dynamic>?;
+                final albumName = albumObj?['name'] as String?;
 
-            return SpotifyTrackItem(
-              id: id,
-              name: name,
-              artists: artists,
-              albumName: albumName,
-              durationMs: trackObj['duration_ms'] as int? ?? 0,
-              uri: trackObj['uri'] as String? ?? 'spotify:track:$id',
-            );
-          } catch (_) {
-            return null;
-          }
-        }).where((e) => e != null).cast<SpotifyTrackItem>().toList();
+                return SpotifyTrackItem(
+                  id: id,
+                  name: name,
+                  artists: artists,
+                  albumName: albumName,
+                  durationMs: trackObj['duration_ms'] as int? ?? 0,
+                  uri: trackObj['uri'] as String? ?? 'spotify:track:$id',
+                );
+              } catch (_) {
+                return null;
+              }
+            })
+            .where((e) => e != null)
+            .cast<SpotifyTrackItem>()
+            .toList();
       } finally {
         client.close();
       }

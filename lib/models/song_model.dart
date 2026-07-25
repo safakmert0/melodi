@@ -172,12 +172,15 @@ class SongModel {
 
   String toJson() => jsonEncode(toMap());
 
-  factory SongModel.fromJson(String json) => SongModel.fromMap(jsonDecode(json) as Map<String, dynamic>);
+  factory SongModel.fromJson(String json) =>
+      SongModel.fromMap(jsonDecode(json) as Map<String, dynamic>);
 
   static List<SongModel> listFromJson(String jsonStr) {
     try {
       final list = jsonDecode(jsonStr) as List;
-      return list.map((e) => SongModel.fromMap(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => SongModel.fromMap(e as Map<String, dynamic>))
+          .toList();
     } catch (_) {
       return [];
     }

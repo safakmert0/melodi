@@ -4,8 +4,12 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'database_service.dart';
 import 'encryption_service.dart';
+import 'secure_storage_service.dart';
 
 class YouTubeCookieAuth {
+  static const _cookieKey = 'ytmusic_cookie';
+  static const _legacyCookieKey = 'ytmusic_cookie_enc';
+
   static const String _baseUrl = 'https://music.youtube.com';
   static const String _userAgent =
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -29,7 +33,11 @@ class YouTubeCookieAuth {
   }
 
   String? _extractSapiSid(String cookie) {
-    for (final name in ['__Secure-3PSAPISID', '__Secure-1PSAPISID', 'SAPISID']) {
+    for (final name in [
+      '__Secure-3PSAPISID',
+      '__Secure-1PSAPISID',
+      'SAPISID'
+    ]) {
       final regex = RegExp('$name=([^;]+)');
       final match = regex.firstMatch(cookie);
       if (match != null) return match.group(1);
@@ -46,9 +54,11 @@ class YouTubeCookieAuth {
   Future<bool> validateCookies() async {
     if (_cookieString == null) return false;
     try {
-      final client = HttpClient()..connectionTimeout = const Duration(seconds: 10);
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 10);
       try {
-        final request = await client.getUrl(Uri.parse('$_baseUrl/youtubei/v1/browse?prettyPrint=false'));
+        final request = await client.getUrl(
+            Uri.parse('$_baseUrl/youtubei/v1/browse?prettyPrint=false'));
         request.headers.set('Content-Type', 'application/json');
         request.headers.set('User-Agent', _userAgent);
         request.headers.set('X-YouTube-Client-Name', '67');
@@ -83,23 +93,32 @@ class YouTubeCookieAuth {
   }
 
   Future<void> storeCookiesEncrypted(String cookies) async {
+    await SecureStorageService.instance.write(_cookieKey, cookies);
     final db = DatabaseService.instance;
-    final encrypted = EncryptionService.encrypt(cookies);
-    await db.setSetting('ytmusic_cookie_enc', encrypted);
+    await db.deleteSetting(_legacyCookieKey);
   }
 
   Future<String?> getStoredCookies() async {
+    final secureStorage = SecureStorageService.instance;
+    final storedCookie = await secureStorage.read(_cookieKey);
+    if (storedCookie != null) return storedCookie;
+
+    // Migrate credentials written by older releases.
     final db = DatabaseService.instance;
-    final encrypted = await db.getSetting('ytmusic_cookie_enc');
+    final encrypted = await db.getSetting(_legacyCookieKey);
     if (encrypted == null) return null;
-    return EncryptionService.decrypt(encrypted);
+    final cookie = EncryptionService.decrypt(encrypted);
+    await secureStorage.write(_cookieKey, cookie);
+    await db.deleteSetting(_legacyCookieKey);
+    return cookie;
   }
 
   Future<void> logout() async {
     _cookieString = null;
     _sapiSid = null;
     _authHeader = null;
+    await SecureStorageService.instance.delete(_cookieKey);
     final db = DatabaseService.instance;
-    await db.setSetting('ytmusic_cookie_enc', '');
+    await db.deleteSetting(_legacyCookieKey);
   }
 }

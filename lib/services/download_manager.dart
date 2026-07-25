@@ -7,6 +7,7 @@ import 'metadata_service.dart';
 import 'multi_source_search.dart';
 import 'music_source.dart';
 import 'storage_manager.dart';
+import 'audio_quality_service.dart';
 
 enum DownloadState { pending, downloading, completed, failed }
 
@@ -21,6 +22,7 @@ class DownloadTask {
   double progress;
   String? error;
   String? filePath;
+  String requestedQuality;
   bool cancelled;
 
   DownloadTask({
@@ -34,6 +36,7 @@ class DownloadTask {
     this.progress = 0,
     this.error,
     this.filePath,
+    this.requestedQuality = 'high',
     this.cancelled = false,
   });
 }
@@ -46,7 +49,8 @@ class DownloadManager {
   final List<DownloadTask> _tasks = [];
   int _activeDownloads = 0;
   static const int _maxParallel = 8;
-  final StreamController<List<DownloadTask>> _controller = StreamController<List<DownloadTask>>.broadcast();
+  final StreamController<List<DownloadTask>> _controller =
+      StreamController<List<DownloadTask>>.broadcast();
   final YouTubeService _youtubeService = YouTubeService();
   final MultiSourceSearch _multiSource = MultiSourceSearch();
 
@@ -56,7 +60,8 @@ class DownloadManager {
   Stream<List<DownloadTask>> get taskStream => _controller.stream;
   List<DownloadTask> get tasks => List.unmodifiable(_tasks);
 
-  String _taskId() => 'dl_${DateTime.now().millisecondsSinceEpoch}_${_tasks.length}';
+  String _taskId() =>
+      'dl_${DateTime.now().millisecondsSinceEpoch}_${_tasks.length}';
 
   void addTask({
     required String spotifyTrackId,
@@ -92,7 +97,8 @@ class DownloadManager {
 
   Future<void> _processQueue() async {
     while (_activeDownloads < _maxParallel) {
-      final pending = _tasks.where((t) => t.state == DownloadState.pending).toList();
+      final pending =
+          _tasks.where((t) => t.state == DownloadState.pending).toList();
       if (pending.isEmpty) break;
       _activeDownloads++;
       _downloadTrack(pending.first);
@@ -104,7 +110,9 @@ class DownloadManager {
     _notify();
     try {
       final db = DatabaseService.instance;
-      final downloadDir = Directory(await StorageManager.instance.getStorageLocation());
+      task.requestedQuality = await AudioQualityService().getDownloadQuality();
+      final downloadDir =
+          Directory(await StorageManager.instance.getStorageLocation());
       await downloadDir.create(recursive: true);
 
       // Try multi-source search first (JioSaavn, Deezer, etc.)
@@ -113,11 +121,11 @@ class DownloadManager {
       _notify();
 
       final query = '${task.artist} - ${task.title}';
-      OnlineTrack? bestTrack;
       String? streamUrl;
 
       // Search all sources in parallel
-      final allTracks = await _multiSource.searchAllSync(query, limitPerSource: 3);
+      final allTracks =
+          await _multiSource.searchAllSync(query, limitPerSource: 3);
       if (allTracks.isNotEmpty) {
         // Prioritize: JioSaavn > Deezer > YouTube (direct download)
         final priorityOrder = [
@@ -125,7 +133,8 @@ class DownloadManager {
           MusicSourceType.deezer,
         ];
         for (final sourceType in priorityOrder) {
-          final sourceTracks = allTracks.where((t) => t.source == sourceType).toList();
+          final sourceTracks =
+              allTracks.where((t) => t.source == sourceType).toList();
           if (sourceTracks.isEmpty) continue;
           for (final track in sourceTracks.take(2)) {
             if (task.cancelled) break;
@@ -135,7 +144,6 @@ class DownloadManager {
               _notify();
               final url = await _multiSource.getStreamUrl(track);
               if (url != null && url.isNotEmpty) {
-                bestTrack = track;
                 streamUrl = url;
                 break;
               }
@@ -148,7 +156,9 @@ class DownloadManager {
       // For YouTube tracks, use YouTube service download (handles throttling)
       if (streamUrl == null && !task.cancelled) {
         // Find YouTube track from search results
-        final ytTracks = allTracks.where((t) => t.source == MusicSourceType.youtube).toList();
+        final ytTracks = allTracks
+            .where((t) => t.source == MusicSourceType.youtube)
+            .toList();
         String? videoId;
         if (ytTracks.isNotEmpty) {
           videoId = ytTracks.first.id;
@@ -159,11 +169,18 @@ class DownloadManager {
           _notify();
           final videos = await _youtubeService.search(query);
           if (videos.isNotEmpty) {
-            final exactMatch = videos.where((v) =>
-                v.title.toLowerCase().contains(task.title.toLowerCase()) &&
-                v.author.toLowerCase().contains(task.artist.toLowerCase().split(',').first.trim().toLowerCase())
-            ).toList();
-            videoId = (exactMatch.isNotEmpty ? exactMatch.first : videos.first).id;
+            final exactMatch = videos
+                .where((v) =>
+                    v.title.toLowerCase().contains(task.title.toLowerCase()) &&
+                    v.author.toLowerCase().contains(task.artist
+                        .toLowerCase()
+                        .split(',')
+                        .first
+                        .trim()
+                        .toLowerCase()))
+                .toList();
+            videoId =
+                (exactMatch.isNotEmpty ? exactMatch.first : videos.first).id;
           }
         }
 
@@ -172,14 +189,19 @@ class DownloadManager {
           task.error = 'YouTube indiriliyor...';
           _notify();
           // Use YouTube service which handles throttling properly
-          final resultPath = await _youtubeService.downloadAudio(videoId, task.title);
+          final resultPath = await _youtubeService.downloadAudio(
+            videoId,
+            task.title,
+            quality: task.requestedQuality,
+          );
           if (resultPath != null) {
             task.filePath = resultPath;
             task.progress = 0.8;
             _notify();
 
             if (!task.cancelled) {
-              final importedPath = await _importDownloadedFile(resultPath, task);
+              final importedPath =
+                  await _importDownloadedFile(resultPath, task);
               if (importedPath != null) {
                 task.filePath = importedPath;
                 task.state = DownloadState.completed;
@@ -214,7 +236,8 @@ class DownloadManager {
       _notify();
 
       // Download from stream URL
-      final resultPath = await _downloadFromUrl(streamUrl, task.title, downloadDir);
+      final resultPath =
+          await _downloadFromUrl(streamUrl, task.title, downloadDir);
 
       if (resultPath == null || task.cancelled) {
         if (task.cancelled) {
@@ -261,11 +284,13 @@ class DownloadManager {
     _processQueue();
   }
 
-  Future<String?> _downloadFromUrl(String url, String title, Directory dir) async {
+  Future<String?> _downloadFromUrl(
+      String url, String title, Directory dir) async {
     try {
       final sanitized = title.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
       String safeTitle = sanitized.isEmpty ? 'download' : sanitized;
-      final filePath = '${dir.path}/${safeTitle}_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      final filePath =
+          '${dir.path}/${safeTitle}_${DateTime.now().millisecondsSinceEpoch}.m4a';
       final file = File(filePath);
       if (await file.exists()) return filePath;
 
@@ -274,7 +299,8 @@ class DownloadManager {
         ..connectionTimeout = const Duration(seconds: 120);
       try {
         final request = await client.getUrl(Uri.parse(url));
-        request.headers.set('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
+        request.headers.set('User-Agent',
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
         final response = await request.close();
         if (response.statusCode != 200) {
           return null;
@@ -297,10 +323,12 @@ class DownloadManager {
     }
   }
 
-  Future<String?> _importDownloadedFile(String filePath, DownloadTask task) async {
+  Future<String?> _importDownloadedFile(
+      String filePath, DownloadTask task) async {
     try {
       final db = DatabaseService.instance;
-      final musicDir = Directory(await StorageManager.instance.getStorageLocation());
+      final musicDir =
+          Directory(await StorageManager.instance.getStorageLocation());
       await musicDir.create(recursive: true);
 
       final ext = filePath.split('.').last;
@@ -352,11 +380,14 @@ class DownloadManager {
   }
 
   void retryTask(String taskId) {
-    final task = _tasks.where((t) => t.id == taskId && t.state == DownloadState.failed).toList();
+    final task = _tasks
+        .where((t) => t.id == taskId && t.state == DownloadState.failed)
+        .toList();
     if (task.isNotEmpty) {
       task.first.state = DownloadState.pending;
       task.first.error = null;
       task.first.progress = 0;
+      task.first.cancelled = false;
       _processQueue();
       _notify();
     }
@@ -368,6 +399,7 @@ class DownloadManager {
         task.state = DownloadState.pending;
         task.error = null;
         task.progress = 0;
+        task.cancelled = false;
       }
     }
     _processQueue();
@@ -381,6 +413,15 @@ class DownloadManager {
 
   void clearFailed() {
     _tasks.removeWhere((t) => t.state == DownloadState.failed);
+    _notify();
+  }
+
+  void clearTasks(Iterable<String> taskIds) {
+    final ids = taskIds.toSet();
+    _tasks.removeWhere((task) =>
+        ids.contains(task.id) &&
+        (task.state == DownloadState.completed ||
+            task.state == DownloadState.failed));
     _notify();
   }
 

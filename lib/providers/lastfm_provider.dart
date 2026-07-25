@@ -1,8 +1,12 @@
 import 'package:flutter/foundation.dart';
 import '../services/database_service.dart';
 import '../services/lastfm_service.dart';
+import '../services/secure_storage_service.dart';
 
 class LastFmProvider extends ChangeNotifier {
+  static const _apiSecretKey = 'lastfm_api_secret';
+  static const _sessionKeyKey = 'lastfm_session_key';
+
   LastFmService? _service;
   bool _isConnecting = false;
   String? _authToken;
@@ -23,6 +27,7 @@ class LastFmProvider extends ChangeNotifier {
   bool get isConnecting => _isConnecting;
   String? get username => _service?.session?.username;
   String? get sessionKey => _service?.session?.sessionKey;
+  String? get authUrl => _authUrl;
   String? get error => _error;
   bool get scrobbleEnabled => _scrobbleEnabled;
   DateTime? get lastScrobbledAt => _lastScrobbledAt;
@@ -30,8 +35,11 @@ class LastFmProvider extends ChangeNotifier {
   Future<void> _loadCredentials() async {
     final db = DatabaseService.instance;
     final apiKey = await db.getSetting('lastfm_api_key');
-    final apiSecret = await db.getSetting('lastfm_api_secret');
-    if (apiKey != null && apiKey.isNotEmpty && apiSecret != null && apiSecret.isNotEmpty) {
+    final apiSecret = await _readSecret(_apiSecretKey);
+    if (apiKey != null &&
+        apiKey.isNotEmpty &&
+        apiSecret != null &&
+        apiSecret.isNotEmpty) {
       _service?.setCredentials(apiKey, apiSecret);
     }
     final enabled = await db.getSetting('lastfm_scrobble_enabled');
@@ -48,8 +56,11 @@ class LastFmProvider extends ChangeNotifier {
     await _loadCredentials();
     final db = DatabaseService.instance;
     final username = await db.getSetting('lastfm_username');
-    final sessionKey = await db.getSetting('lastfm_session_key');
-    if (username != null && sessionKey != null && username.isNotEmpty && sessionKey.isNotEmpty) {
+    final sessionKey = await _readSecret(_sessionKeyKey);
+    if (username != null &&
+        sessionKey != null &&
+        username.isNotEmpty &&
+        sessionKey.isNotEmpty) {
       _service?.setSession(LastFmSession(
         username: username,
         sessionKey: sessionKey,
@@ -58,7 +69,7 @@ class LastFmProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> connect(String apiKey, String apiSecret) async {
+  Future<String?> startAuth(String apiKey, String apiSecret) async {
     _isConnecting = true;
     _error = null;
     notifyListeners();
@@ -66,42 +77,18 @@ class LastFmProvider extends ChangeNotifier {
     try {
       _service ??= LastFmService(apiKey: apiKey, apiSecret: apiSecret);
       _service!.setCredentials(apiKey, apiSecret);
-
-      final token = await _service!.getAuthToken();
-      final session = await _service!.getSession(token);
-
-      _service!.setSession(session);
-
-      final db = DatabaseService.instance;
-      await db.setSetting('lastfm_api_key', apiKey);
-      await db.setSetting('lastfm_api_secret', apiSecret);
-      await db.setSetting('lastfm_username', session.username);
-      await db.setSetting('lastfm_session_key', session.sessionKey);
-
-      _isConnecting = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _error = e.toString();
-      _isConnecting = false;
-      notifyListeners();
-      return false;
-    }
-  }
-
-  Future<void> startAuth() async {
-    if (_service == null) return;
-    _isConnecting = true;
-    _error = null;
-    notifyListeners();
-    try {
       _authToken = await _service!.getAuthToken();
       _authUrl = _service!.getAuthUrl(_authToken!);
+      final db = DatabaseService.instance;
+      await db.setSetting('lastfm_api_key', apiKey);
+      await _writeSecret(_apiSecretKey, apiSecret);
       notifyListeners();
+      return _authUrl;
     } catch (e) {
       _error = e.toString();
       _isConnecting = false;
       notifyListeners();
+      return null;
     }
   }
 
@@ -112,7 +99,9 @@ class LastFmProvider extends ChangeNotifier {
       _service!.setSession(session);
       final db = DatabaseService.instance;
       await db.setSetting('lastfm_username', session.username);
-      await db.setSetting('lastfm_session_key', session.sessionKey);
+      await _writeSecret(_sessionKeyKey, session.sessionKey);
+      _authToken = null;
+      _authUrl = null;
       _isConnecting = false;
       notifyListeners();
       return true;
@@ -124,19 +113,46 @@ class LastFmProvider extends ChangeNotifier {
     }
   }
 
+  void cancelAuth() {
+    _authToken = null;
+    _authUrl = null;
+    _isConnecting = false;
+    notifyListeners();
+  }
+
   Future<void> disconnect() async {
     _service?.setSession(null);
     final db = DatabaseService.instance;
-    await db.setSetting('lastfm_username', '');
-    await db.setSetting('lastfm_session_key', '');
-    await db.setSetting('lastfm_api_key', '');
-    await db.setSetting('lastfm_api_secret', '');
+    await db.deleteSetting('lastfm_username');
+    await db.deleteSetting('lastfm_session_key');
+    await db.deleteSetting('lastfm_api_key');
+    await db.deleteSetting('lastfm_api_secret');
+    await SecureStorageService.instance.delete(_sessionKeyKey);
+    await SecureStorageService.instance.delete(_apiSecretKey);
     _authToken = null;
     _authUrl = null;
     _error = null;
     _lastScrobbledAt = null;
     _scrobbleEnabled = true;
     notifyListeners();
+  }
+
+  Future<String?> _readSecret(String key) async {
+    final secureStorage = SecureStorageService.instance;
+    final secureValue = await secureStorage.read(key);
+    if (secureValue != null && secureValue.isNotEmpty) return secureValue;
+
+    final db = DatabaseService.instance;
+    final legacyValue = await db.getSetting(key);
+    if (legacyValue == null || legacyValue.isEmpty) return null;
+    await secureStorage.write(key, legacyValue);
+    await db.deleteSetting(key);
+    return legacyValue;
+  }
+
+  Future<void> _writeSecret(String key, String value) async {
+    await SecureStorageService.instance.write(key, value);
+    await DatabaseService.instance.deleteSetting(key);
   }
 
   Future<void> setScrobbleEnabled(bool enabled) async {
@@ -162,7 +178,8 @@ class LastFmProvider extends ChangeNotifier {
       );
       _lastScrobbledAt = DateTime.now();
       final db = DatabaseService.instance;
-      await db.setSetting('lastfm_last_scrobbled_at', _lastScrobbledAt!.toIso8601String());
+      await db.setSetting(
+          'lastfm_last_scrobbled_at', _lastScrobbledAt!.toIso8601String());
     } catch (e) {
       debugPrint('Scrobble failed: $e');
     }

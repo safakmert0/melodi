@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../core/constants.dart';
-import '../core/localization.dart';
-import '../providers/search_provider.dart';
-import '../providers/player_provider.dart';
+
 import '../providers/library_provider.dart';
-import '../providers/download_provider.dart';
-import '../models/song_model.dart';
+import '../providers/player_provider.dart';
+import '../providers/search_provider.dart';
 import '../services/music_source.dart';
-import '../services/youtube_service.dart';
-import 'settings_screen.dart';
+import '../widgets/search/search_result_tiles.dart';
+import 'source_hub_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -19,614 +16,494 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  final _searchController = TextEditingController();
-  bool _isSearching = false;
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
   MusicSourceType? _selectedSource;
+
+  bool get _hasQuery => _controller.text.trim().isNotEmpty;
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: MelodiTheme.background,
       body: SafeArea(
+        bottom: false,
         child: CustomScrollView(
+          key: const PageStorageKey('melodi-search-scroll'),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           physics: const BouncingScrollPhysics(),
           slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                      ),
-                      child: Container(
-                        width: 36, height: 36,
-                        decoration: BoxDecoration(shape: BoxShape.circle, color: MelodiTheme.containerHigh),
-                        child: const Icon(Icons.person, size: 20, color: MelodiTheme.onSurfaceVariant),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text('Melodi', style: MelodiTheme.heading(size: 20)),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.settings_rounded, color: MelodiTheme.onSurfaceVariant, size: 22),
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                      ),
-                    ),
-                  ],
+            SliverAppBar(
+              pinned: true,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              toolbarHeight: 70,
+              backgroundColor:
+                  theme.scaffoldBackgroundColor.withValues(alpha: 0.94),
+              surfaceTintColor: Colors.transparent,
+              title: Text(
+                'Keşfet',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.7,
                 ),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: Text(AppLocale.tr('search'), style: MelodiTheme.heading(size: 28)),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Container(
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: MelodiTheme.surfaceBright.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (query) {
-                      setState(() => _isSearching = query.isNotEmpty);
-                      if (query.isNotEmpty) context.read<SearchProvider>().search(query);
-                    },
-                    style: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurface, fontSize: 15),
-                    decoration: InputDecoration(
-                      hintText: AppLocale.tr('what_to_listen'),
-                      hintStyle: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurfaceVariant, fontSize: 15),
-                      prefixIcon: const Icon(Icons.search_rounded, color: MelodiTheme.onSurfaceVariant, size: 22),
-                      suffixIcon: _isSearching
-                          ? IconButton(
-                              icon: const Icon(Icons.clear_rounded, color: MelodiTheme.onSurfaceVariant, size: 20),
-                              onPressed: () { _searchController.clear(); setState(() => _isSearching = false); })
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              actions: [
+                IconButton.filledTonal(
+                  tooltip: 'Müzik kaynakları',
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const SourceHubScreen(),
                     ),
                   ),
+                  icon: const Icon(Icons.hub_rounded),
                 ),
-              ),
+                const SizedBox(width: 12),
+              ],
             ),
-            if (_isSearching)
-              Consumer<SearchProvider>(
-                builder: (context, provider, _) {
-                  return SliverList(delegate: SliverChildListDelegate([
-                    // Local results header
-                    if (provider.results.isNotEmpty) ...[
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-                        child: Text(AppLocale.tr('local_results'), style: MelodiTheme.heading(size: 18)),
-                      ),
-                      ...provider.results.map((song) => _SearchResultTile(song: song)),
-                    ],
-                    // Online results header with source filter
-                    if (provider.isSearchingOnline)
-                      const Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                      ),
-                    if (!provider.isSearchingOnline && provider.onlineResults.isNotEmpty) ...[
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-                        child: Row(
-                          children: [
-                            Icon(Icons.language, color: MelodiTheme.primaryGreen, size: 20),
-                            const SizedBox(width: 8),
-                            Text(AppLocale.tr('online_results'), style: MelodiTheme.heading(size: 18)),
-                          ],
-                        ),
-                      ),
-                      // Source filter chips
-                      _SourceFilterChips(
-                        tracks: provider.onlineResults,
-                        selectedSource: _selectedSource,
-                        onFilterChanged: (source) {
-                          setState(() => _selectedSource = source);
-                        },
-                      ),
-                      ...provider.onlineResults
-                          .where((t) => _selectedSource == null || t.source == _selectedSource)
-                          .map((track) => _OnlineResultTile(track: track)),
-                    ],
-                    // No results
-                    if (!provider.isSearching && !provider.isSearchingOnline &&
-                        provider.results.isEmpty && provider.onlineResults.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.all(48),
-                        child: Center(
-                          child: Column(
-                            children: [
-                              Icon(
-                                provider.error != null
-                                    ? Icons.cloud_off_rounded
-                                    : Icons.search_off_rounded,
-                                color: MelodiTheme.onSurfaceVariant,
-                                size: 38,
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                provider.error ?? AppLocale.tr('no_results'),
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: MelodiTheme.onSurfaceVariant),
-                              ),
-                              if (provider.error != null) ...[
-                                const SizedBox(height: 12),
-                                OutlinedButton.icon(
-                                  onPressed: () => provider.search(provider.query),
-                                  icon: const Icon(Icons.refresh_rounded),
-                                  label: Text(AppLocale.tr('retry')),
-                                ),
-                              ],
-                            ],
-                          ),
-                        )),
-                  ]));
+            SliverToBoxAdapter(child: _searchField()),
+            if (_hasQuery)
+              Consumer<SearchProvider>(builder: _searchResults)
+            else
+              _DiscoveryContent(
+                onSearchSelected: (query) {
+                  _controller.text = query;
+                  _controller.selection = TextSelection.collapsed(
+                    offset: query.length,
+                  );
+                  context.read<SearchProvider>().search(query);
+                  setState(() => _selectedSource = null);
                 },
-              )
-            else ...[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-                  child: Text(AppLocale.tr('artists'), style: MelodiTheme.heading(size: 20)),
-                ),
               ),
-              SliverToBoxAdapter(
-                child: Consumer<LibraryProvider>(
-                  builder: (context, library, _) {
-                    final artists = library.artists.take(10).toList();
-                    if (artists.isEmpty) return const SizedBox.shrink();
-                    return SizedBox(
-                      height: 130,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.only(left: 16),
-                        itemCount: artists.length,
-                        itemBuilder: (context, index) {
-                          final artist = artists[index];
-                          return GestureDetector(
-                            onTap: () {
-                              final artistSongs = library.songs
-                                  .where((s) => s.artist == artist.name)
-                                  .toList();
-                              if (artistSongs.isNotEmpty) {
-                                context.read<PlayerProvider>().playFromQueue(artistSongs, 0);
-                              }
-                            },
-                            child: Container(
-                              width: 100,
-                              margin: const EdgeInsets.only(right: 16),
-                              child: Column(
-                                children: [
-                                  Container(
-                                    width: 90, height: 90,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topLeft, end: Alignment.bottomRight,
-                                        colors: [MelodiTheme.primaryGreen.withOpacity(0.3), MelodiTheme.containerHigh],
-                                      ),
-                                    ),
-                                    child: artist.image != null
-                                        ? ClipOval(child: Image.memory(artist.image!, width: 90, height: 90, fit: BoxFit.cover))
-                                        : const Icon(Icons.person_rounded, size: 40, color: MelodiTheme.onSurfaceVariant),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(artist.name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontFamily: AppConstants.fontFamily,
-                                      color: MelodiTheme.onSurface, fontSize: 14, fontWeight: FontWeight.w500),
-                                    textAlign: TextAlign.center),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                  child: Text(AppLocale.tr('browse_all'), style: MelodiTheme.heading(size: 20)),
-                ),
-              ),
-              SliverToBoxAdapter(child: _buildGenreGrid()),
-            ],
-            const SliverPadding(padding: EdgeInsets.only(bottom: 140)),
+            const SliverPadding(padding: EdgeInsets.only(bottom: 176)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildGenreGrid() {
-    final genres = [
-      ('Pop', const Color(0xFF8D67AB)),
-      ('Rock', const Color(0xFFE8115B)),
-      ('Hip-Hop', const Color(0xFFBC462B)),
-      ('Electronic', const Color(0xFF2196F3)),
-      ('Jazz', const Color(0xFF1E3264)),
-      ('Classical', const Color(0xFF7358FF)),
-    ];
-
+  Widget _searchField() {
+    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 1.6),
-        itemCount: genres.length,
-        itemBuilder: (context, index) {
-          final g = genres[index];
-          return GestureDetector(
-            onTap: () {
-              final library = context.read<LibraryProvider>();
-              final genreSongs = library.songs
-                  .where((s) => s.genre != null && s.genre!.toLowerCase().contains(g.$1.toLowerCase()))
-                  .toList();
-              if (genreSongs.isNotEmpty) {
-                context.read<PlayerProvider>().playFromQueue(genreSongs, 0);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(AppLocale.tr('playing_genre').replaceAll('{genre}', g.$1)),
-                    backgroundColor: MelodiTheme.primaryGreen,
-                    duration: const Duration(seconds: 1),
-                  ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(AppLocale.tr('no_genre_songs').replaceAll('{genre}', g.$1)),
-                    backgroundColor: MelodiTheme.containerHigh,
-                    duration: const Duration(seconds: 1),
-                  ),
-                );
-              }
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                color: g.$2,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Stack(
-                children: [
-                  Positioned(
-                    right: -8, bottom: -8,
-                    child: Transform.rotate(
-                      angle: 0.3,
-                      child: Container(width: 56, height: 24,
-                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(4))),
-                    ),
-                  ),
-                  Positioned(
-                    left: 14, bottom: 14,
-                    child: Text(g.$1, style: const TextStyle(
-                      fontFamily: AppConstants.fontFamily, color: Colors.white,
-                      fontSize: 15, fontWeight: FontWeight.w700)),
-                  ),
-                ],
-              ),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+      child: SearchBar(
+        controller: _controller,
+        focusNode: _focusNode,
+        hintText: 'Şarkı, sanatçı, albüm veya kaynak ara',
+        leading: const Icon(Icons.search_rounded),
+        trailing: [
+          if (_hasQuery)
+            IconButton(
+              tooltip: 'Temizle',
+              onPressed: () {
+                _controller.clear();
+                context.read<SearchProvider>().clearResults();
+                setState(() {
+                  _selectedSource = null;
+                });
+              },
+              icon: const Icon(Icons.close_rounded),
             ),
-          );
+        ],
+        elevation: const WidgetStatePropertyAll(0),
+        backgroundColor: WidgetStatePropertyAll(
+          theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.72),
+        ),
+        side: WidgetStatePropertyAll(
+          BorderSide(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.07),
+          ),
+        ),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        ),
+        onChanged: (query) {
+          setState(() => _selectedSource = null);
+          context.read<SearchProvider>().search(query.trim());
+        },
+        onSubmitted: (query) {
+          final value = query.trim();
+          if (value.isNotEmpty) {
+            context.read<SearchProvider>().addRecentSearch(value);
+          }
         },
       ),
     );
   }
+
+  Widget _searchResults(
+    BuildContext context,
+    SearchProvider provider,
+    Widget? child,
+  ) {
+    final online = provider.onlineResults
+        .where((track) =>
+            _selectedSource == null || track.source == _selectedSource)
+        .toList();
+    final children = <Widget>[];
+
+    if (provider.results.isNotEmpty) {
+      children.add(
+        _ResultHeader(
+          title: 'Bu aygıtta',
+          count: provider.results.length,
+          icon: Icons.phone_iphone_rounded,
+        ),
+      );
+      children.addAll(
+        provider.results.map((song) => LocalSearchResultTile(song: song)),
+      );
+    }
+
+    if (provider.onlineResults.isNotEmpty) {
+      children.add(
+        _ResultHeader(
+          title: 'Diğer kaynaklarda',
+          count: provider.onlineResults.length,
+          icon: Icons.public_rounded,
+        ),
+      );
+      children.add(
+        SearchSourceFilters(
+          tracks: provider.onlineResults,
+          selected: _selectedSource,
+          onChanged: (value) => setState(() => _selectedSource = value),
+        ),
+      );
+      children.add(const SizedBox(height: 5));
+      children.addAll(
+        online.map((track) => OnlineSearchResultTile(track: track)),
+      );
+    }
+
+    if (provider.isSearching || provider.isSearchingOnline) {
+      children.add(
+        const Padding(
+          padding: EdgeInsets.all(28),
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        ),
+      );
+    }
+
+    if (!provider.isSearching &&
+        !provider.isSearchingOnline &&
+        provider.results.isEmpty &&
+        provider.onlineResults.isEmpty) {
+      children.add(
+        _NoResults(
+          message:
+              provider.error ?? 'Bu aramayla eşleşen bir sonuç bulunamadı.',
+          canRetry: provider.error != null,
+          onRetry: () => provider.search(provider.query),
+        ),
+      );
+    }
+
+    return SliverList(delegate: SliverChildListDelegate(children));
+  }
 }
 
-class _SearchResultTile extends StatelessWidget {
-  final SongModel song;
-  const _SearchResultTile({required this.song});
+class _ResultHeader extends StatelessWidget {
+  const _ResultHeader({
+    required this.title,
+    required this.count,
+    required this.icon,
+  });
+  final String title;
+  final int count;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Container(
-        width: 48, height: 48,
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(4), color: MelodiTheme.containerHigh),
-        child: song.albumArt != null
-            ? ClipRRect(borderRadius: BorderRadius.circular(4),
-                child: Image.memory(song.albumArt!, fit: BoxFit.cover, gaplessPlayback: true))
-            : const Icon(Icons.music_note_rounded, color: MelodiTheme.onSurfaceVariant),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 22, 16, 10),
+      child: Row(
+        children: [
+          Icon(icon, size: 19, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const Spacer(),
+          Text(
+            '$count sonuç',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ],
       ),
-      title: Text(song.title, maxLines: 1, overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurface, fontSize: 15)),
-      subtitle: Text(song.artist, maxLines: 1, overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurfaceVariant, fontSize: 13)),
-      trailing: IconButton(
-        icon: const Icon(Icons.play_circle_outline_rounded, color: MelodiTheme.onSurfaceVariant),
-        onPressed: () => context.read<PlayerProvider>().playSong(song)),
     );
   }
 }
 
-class _OnlineResultTile extends StatefulWidget {
-  final OnlineTrack track;
-  const _OnlineResultTile({required this.track});
-
-  @override
-  State<_OnlineResultTile> createState() => _OnlineResultTileState();
-}
-
-class _OnlineResultTileState extends State<_OnlineResultTile> {
-  bool _isLoadingPlay = false;
-  bool _isLoadingDownload = false;
-
-  String _formatDuration(Duration d) {
-    final m = d.inMinutes;
-    final s = d.inSeconds % 60;
-    return '$m:${s.toString().padLeft(2, '0')}';
-  }
-
-  Color _sourceColor(MusicSourceType source) {
-    switch (source) {
-      case MusicSourceType.youtube:
-        return const Color(0xFFFF0000);
-      case MusicSourceType.jiosaavn:
-        return const Color(0xFF2BC5F4);
-      case MusicSourceType.deezer:
-        return const Color(0xFFA238FF);
-      case MusicSourceType.lastfm:
-        return const Color(0xFFD51007);
-    }
-  }
+class _NoResults extends StatelessWidget {
+  const _NoResults({
+    required this.message,
+    required this.canRetry,
+    required this.onRetry,
+  });
+  final String message;
+  final bool canRetry;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    final track = widget.track;
-    return ListTile(
-      leading: Container(
-        width: 48, height: 48,
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(4), color: MelodiTheme.containerHigh),
-        child: track.thumbnailUrl != null
-            ? ClipRRect(borderRadius: BorderRadius.circular(4),
-                child: Image.network(track.thumbnailUrl!, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.music_note_rounded, color: MelodiTheme.onSurfaceVariant)))
-            : const Icon(Icons.music_note_rounded, color: MelodiTheme.onSurfaceVariant),
-      ),
-      title: Text(track.title, maxLines: 1, overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurface, fontSize: 15)),
-      subtitle: Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 64),
+      child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: _sourceColor(track.source).withOpacity(0.15),
-              borderRadius: BorderRadius.circular(4),
+          Icon(
+            canRetry ? Icons.cloud_off_rounded : Icons.search_off_rounded,
+            size: 44,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(height: 12),
+          Text(message, textAlign: TextAlign.center),
+          if (canRetry) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Tekrar dene'),
             ),
-            child: Text(track.sourceLabel, style: TextStyle(
-              color: _sourceColor(track.source), fontSize: 10, fontWeight: FontWeight.w600)),
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(track.artist, maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontFamily: AppConstants.fontFamily, color: MelodiTheme.onSurfaceVariant, fontSize: 13)),
-          ),
-          if (track.duration.inSeconds > 0) ...[
-            const SizedBox(width: 8),
-            Text(_formatDuration(track.duration), style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
           ],
         ],
       ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
+    );
+  }
+}
+
+class _DiscoveryContent extends StatelessWidget {
+  const _DiscoveryContent({required this.onSearchSelected});
+
+  final ValueChanged<String> onSearchSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<LibraryProvider>(
+      builder: (context, library, _) {
+        return SliverList.list(
+          children: [
+            if (context.watch<SearchProvider>().recentSearches.isNotEmpty)
+              _RecentSearches(
+                searches: context.watch<SearchProvider>().recentSearches,
+                onSelected: onSearchSelected,
+              ),
+            _ArtistRail(library: library),
+            _GenreGrid(library: library),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _RecentSearches extends StatelessWidget {
+  const _RecentSearches({required this.searches, required this.onSelected});
+  final List<String> searches;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (_isLoadingPlay)
-            const Padding(
-              padding: EdgeInsets.all(12),
-              child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: MelodiTheme.primaryGreen)),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.play_circle_outline_rounded, color: MelodiTheme.primaryGreen),
-              onPressed: () async {
-                if (_isLoadingPlay) return;
-                setState(() => _isLoadingPlay = true);
-                try {
-                  final searchProv = context.read<SearchProvider>();
-                  // Try with fallback across all sources
-                  final url = await searchProv.getStreamUrlWithFallback(track);
-                  if (url != null && url.isNotEmpty && context.mounted) {
-                    // For YouTube tracks, use video ID for reliable streaming
-                    final filePath = track.source == MusicSourceType.youtube
-                        ? 'youtube://${track.id}'
-                        : url;
-                    final song = SongModel(
-                      id: track.id,
-                      title: track.title,
-                      artist: track.artist,
-                      album: track.album ?? track.sourceLabel,
-                      duration: track.duration,
-                      filePath: url,
-                      fileSize: 0,
-                    );
-                    await context.read<PlayerProvider>().playSong(song);
-                  } else if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('${track.title} oynatılamadı - tüm kaynaklar başarısız'),
-                        backgroundColor: MelodiTheme.errorRed,
-                        duration: const Duration(seconds: 3),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Oynatma hatası: $e'),
-                        backgroundColor: MelodiTheme.errorRed,
-                        duration: const Duration(seconds: 3),
-                      ),
-                    );
-                  }
-                } finally {
-                  if (mounted) setState(() => _isLoadingPlay = false);
-                }
-              },
-            ),
-          if (_isLoadingDownload)
-            const Padding(
-              padding: EdgeInsets.all(12),
-              child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: MelodiTheme.onSurfaceVariant)),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.download_rounded, color: MelodiTheme.onSurfaceVariant),
-              onPressed: () async {
-                if (_isLoadingDownload) return;
-                setState(() => _isLoadingDownload = true);
-                try {
-                  final searchProv = context.read<SearchProvider>();
-                  // Resolve URL first to verify availability
-                  final url = await searchProv.getStreamUrlWithFallback(track);
-                  if (url != null && url.isNotEmpty && context.mounted) {
-                    context.read<DownloadProvider>().enqueueTrack(
-                      spotifyTrackId: track.id,
-                      title: track.title,
-                      artist: track.artist,
-                      album: track.album ?? track.sourceLabel,
-                    );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('${track.title} indiriliyor...'),
-                        backgroundColor: MelodiTheme.primaryGreen,
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  } else if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('${track.title} indirilemedi - kaynak bulunamadı'),
-                        backgroundColor: MelodiTheme.errorRed,
-                        duration: const Duration(seconds: 3),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('İndirme hatası: $e'),
-                        backgroundColor: MelodiTheme.errorRed,
-                        duration: const Duration(seconds: 3),
-                      ),
-                    );
-                  }
-                } finally {
-                  if (mounted) setState(() => _isLoadingDownload = false);
-                }
-              },
-            ),
+          Row(
+            children: [
+              const Text(
+                'Son aramalar',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: context.read<SearchProvider>().clearRecentSearches,
+                child: const Text('Temizle'),
+              ),
+            ],
+          ),
+          Wrap(
+            spacing: 8,
+            children: searches
+                .take(8)
+                .map((search) => InputChip(
+                      avatar: const Icon(Icons.history_rounded, size: 16),
+                      label: Text(search),
+                      onPressed: () => onSelected(search),
+                    ))
+                .toList(),
+          ),
         ],
       ),
     );
   }
 }
 
-class _SourceFilterChips extends StatelessWidget {
-  final List<OnlineTrack> tracks;
-  final MusicSourceType? selectedSource;
-  final Function(MusicSourceType?) onFilterChanged;
-
-  const _SourceFilterChips({
-    required this.tracks,
-    this.selectedSource,
-    required this.onFilterChanged,
-  });
-
-  Color _sourceColor(MusicSourceType source) {
-    switch (source) {
-      case MusicSourceType.youtube:
-        return const Color(0xFFFF0000);
-      case MusicSourceType.jiosaavn:
-        return const Color(0xFF2BC5F4);
-      case MusicSourceType.deezer:
-        return const Color(0xFFA238FF);
-      case MusicSourceType.lastfm:
-        return const Color(0xFFD51007);
-    }
-  }
+class _ArtistRail extends StatelessWidget {
+  const _ArtistRail({required this.library});
+  final LibraryProvider library;
 
   @override
   Widget build(BuildContext context) {
-    final sourceCounts = <MusicSourceType, int>{};
-    for (final track in tracks) {
-      sourceCounts[track.source] = (sourceCounts[track.source] ?? 0) + 1;
-    }
-    return SizedBox(
-      height: 40,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+    final artists = library.artists.take(12).toList();
+    if (artists.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 0, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GestureDetector(
-            onTap: () => onFilterChanged(null),
-            child: _buildChip('Tümü', tracks.length, MelodiTheme.primaryGreen, selectedSource == null),
+          const Text(
+            'Sanatçılarından başla',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
           ),
-          ...sourceCounts.entries.map((e) => GestureDetector(
-            onTap: () => onFilterChanged(e.key),
-            child: _buildChip(_sourceName(e.key), e.value, _sourceColor(e.key), selectedSource == e.key),
-          )),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 126,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: artists.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 14),
+              itemBuilder: (context, index) {
+                final artist = artists[index];
+                return SizedBox(
+                  width: 88,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(44),
+                    onTap: () {
+                      final songs = library.songs
+                          .where((song) => song.artist == artist.name)
+                          .toList();
+                      if (songs.isNotEmpty) {
+                        context.read<PlayerProvider>().playFromQueue(songs, 0);
+                      }
+                    },
+                    child: Column(
+                      children: [
+                        CircleAvatar(
+                          radius: 42,
+                          foregroundImage: artist.image == null
+                              ? null
+                              : MemoryImage(artist.image!),
+                          child: const Icon(Icons.person_rounded, size: 34),
+                        ),
+                        const SizedBox(height: 7),
+                        Text(
+                          artist.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.labelMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildChip(String label, int count, Color color, bool isSelected) {
-    return Container(
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: isSelected ? color.withOpacity(0.2) : color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isSelected ? color : color.withOpacity(0.3),
-          width: isSelected ? 1.5 : 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+class _GenreGrid extends StatelessWidget {
+  const _GenreGrid({required this.library});
+  final LibraryProvider library;
+
+  @override
+  Widget build(BuildContext context) {
+    final genres = library.genres.take(8).toList();
+    if (genres.isEmpty) return const SizedBox.shrink();
+    const colors = [
+      Color(0xFF8D67AB),
+      Color(0xFFE8115B),
+      Color(0xFF1E3264),
+      Color(0xFF148A68),
+      Color(0xFFBC462B),
+      Color(0xFF7358FF),
+      Color(0xFF477D95),
+      Color(0xFFB06239),
+    ];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 28, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: TextStyle(
-            color: isSelected ? color : color.withOpacity(0.8),
-            fontSize: 12, fontWeight: FontWeight.w600)),
-          const SizedBox(width: 4),
-          Text('($count)', style: TextStyle(
-            color: color.withOpacity(0.6), fontSize: 10)),
+          const Text(
+            'Türlere göz at',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 12),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 1.75,
+            ),
+            itemCount: genres.length,
+            itemBuilder: (context, index) {
+              final genre = genres[index];
+              return InkWell(
+                borderRadius: BorderRadius.circular(18),
+                onTap: () {
+                  final songs = library.songs
+                      .where((song) => genre.songIds.contains(song.id))
+                      .toList();
+                  if (songs.isNotEmpty) {
+                    context.read<PlayerProvider>().playFromQueue(songs, 0);
+                  }
+                },
+                child: Ink(
+                  padding: const EdgeInsets.all(15),
+                  decoration: BoxDecoration(
+                    color: colors[index % colors.length],
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        genre.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${genre.songCount} şarkı',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.72),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
-  }
-
-  String _sourceName(MusicSourceType source) {
-    switch (source) {
-      case MusicSourceType.youtube:
-        return 'YouTube';
-      case MusicSourceType.jiosaavn:
-        return 'JioSaavn';
-      case MusicSourceType.deezer:
-        return 'Deezer';
-      case MusicSourceType.lastfm:
-        return 'Last.fm';
-    }
   }
 }

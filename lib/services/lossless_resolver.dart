@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'database_service.dart';
 
 class LosslessTrackDetail {
@@ -74,8 +73,7 @@ class LosslessResolver {
   static const String _deezerApiBase = 'https://api.deezer.com/2.0';
   static const String _qobuzApiBase = 'https://www.qobuz.com/api.json/0.2';
   static const String _spotifyWebApi = 'https://api.spotify.com/v1';
-  static const String _squidWtfApi =
-      'https://api.services.squid.wtf';
+  static const String _squidWtfApi = 'https://api.services.squid.wtf';
 
   static const Map<String, String> _qobuzHeaders = {
     'User-Agent':
@@ -184,7 +182,8 @@ class LosslessResolver {
 
       if (searchResponse.statusCode != 200) return null;
 
-      final searchBody = jsonDecode(searchResponse.body) as Map<String, dynamic>;
+      final searchBody =
+          jsonDecode(searchResponse.body) as Map<String, dynamic>;
       final tracks = searchBody['tracks']?['items'] as List<dynamic>?;
       if (tracks == null || tracks.isEmpty) return null;
 
@@ -212,7 +211,8 @@ class LosslessResolver {
             isrc: isrc,
             durationMs: track['duration'] as int? ?? 0,
             maximumBitDepth: track['maximum_bit_depth'] as int? ?? 16,
-            maximumSamplingRate: track['maximum_sampling_rate'] as int? ?? 44100,
+            maximumSamplingRate:
+                track['maximum_sampling_rate'] as int? ?? 44100,
           );
         }
       }

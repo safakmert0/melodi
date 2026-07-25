@@ -28,12 +28,14 @@ class BluetoothService {
     _handleConnectivityResults(results);
 
     _subscription?.cancel();
-    _subscription = _connectivity.onConnectivityChanged.listen(_handleConnectivityResults);
+    _subscription =
+        _connectivity.onConnectivityChanged.listen(_handleConnectivityResults);
   }
 
   void _handleConnectivityResults(List<ConnectivityResult> results) {
     final wasConnected = _isBluetoothConnected;
-    _isBluetoothConnected = results.any((r) => r == ConnectivityResult.bluetooth);
+    _isBluetoothConnected =
+        results.any((r) => r == ConnectivityResult.bluetooth);
 
     if (_isBluetoothConnected && !wasConnected) {
       _onBluetoothConnected();
@@ -64,7 +66,8 @@ class BluetoothService {
     if (preset == null) {
       final fallbackPreset = _guessPresetForDevice(deviceName);
       await _db.setSetting(presetKey, fallbackPreset);
-      debugPrint('Auto EQ: applied fallback preset "$fallbackPreset" for "$deviceName"');
+      debugPrint(
+          'Auto EQ: applied fallback preset "$fallbackPreset" for "$deviceName"');
       return;
     }
 
@@ -74,17 +77,26 @@ class BluetoothService {
   String _guessPresetForDevice(String deviceName) {
     final lower = deviceName.toLowerCase();
 
-    if (lower.contains('airpod') || lower.contains('earbuds') || lower.contains('buds')) {
+    if (lower.contains('airpod') ||
+        lower.contains('earbuds') ||
+        lower.contains('buds')) {
       return 'bass_boost';
     }
-    if (lower.contains('speaker') || lower.contains('homepod') || lower.contains('echo')) {
+    if (lower.contains('speaker') ||
+        lower.contains('homepod') ||
+        lower.contains('echo')) {
       return 'flat';
     }
-    if (lower.contains('car') || lower.contains('auto') || lower.contains('drive')) {
+    if (lower.contains('car') ||
+        lower.contains('auto') ||
+        lower.contains('drive')) {
       return 'vocal';
     }
-    if (lower.contains('headphone') || lower.contains('headset') || lower.contains('sony') ||
-        lower.contains('bose') || lower.contains('sennheiser')) {
+    if (lower.contains('headphone') ||
+        lower.contains('headset') ||
+        lower.contains('sony') ||
+        lower.contains('bose') ||
+        lower.contains('sennheiser')) {
       return 'audiophile';
     }
 

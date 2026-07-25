@@ -52,7 +52,9 @@ class YouTubeProvider extends ChangeNotifier {
     final path = await _service.playAudio(videoId, title);
 
     _isDownloading = false;
-    _downloadProgress = path != null ? AppLocale.tr('loading_song') : AppLocale.tr('download_failed');
+    _downloadProgress = path != null
+        ? AppLocale.tr('loading_song')
+        : AppLocale.tr('download_failed');
     notifyListeners();
 
     return path;
@@ -66,7 +68,9 @@ class YouTubeProvider extends ChangeNotifier {
     final path = await _service.downloadAudio(videoId, title);
 
     _isDownloading = false;
-    _downloadProgress = path != null ? AppLocale.tr('download_complete') : AppLocale.tr('download_failed');
+    _downloadProgress = path != null
+        ? AppLocale.tr('download_complete')
+        : AppLocale.tr('download_failed');
     notifyListeners();
 
     return path;

@@ -39,7 +39,8 @@ class ResumePlayback extends ChangeNotifier {
     await db.setSetting('resume_track_id', trackId);
     await db.setSetting('resume_title', title);
     await db.setSetting('resume_artist', artist);
-    await db.setSetting('resume_position_ms', position.inMilliseconds.toString());
+    await db.setSetting(
+        'resume_position_ms', position.inMilliseconds.toString());
     await db.setSetting('resume_source', source);
     await db.setSetting('resume_saved_at', now.toIso8601String());
 

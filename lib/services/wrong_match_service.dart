@@ -1,4 +1,3 @@
-import 'dart:convert';
 import '../services/database_service.dart';
 import '../services/ytmusic_service.dart';
 import 'track_matcher.dart';
@@ -19,7 +18,8 @@ class WrongMatchService {
     ''', [spotifyTrackId, ytVideoId, DateTime.now().toIso8601String()]);
   }
 
-  Future<List<YTMusicTrack>> getAlternatives(String title, String artist) async {
+  Future<List<YTMusicTrack>> getAlternatives(
+      String title, String artist) async {
     final query = '$title ${artist.isNotEmpty ? artist : ''}'.trim();
     final results = await _ytmusic.search(query);
     results.sort((a, b) {
@@ -30,7 +30,8 @@ class WrongMatchService {
     return results.take(10).toList();
   }
 
-  Future<void> resolveAndUpdate(String spotifyTrackId, String newYtVideoId) async {
+  Future<void> resolveAndUpdate(
+      String spotifyTrackId, String newYtVideoId) async {
     await _db.rawUpdate(
       'UPDATE wrong_matches SET resolved = 1 WHERE spotifyTrackId = ?',
       [spotifyTrackId],
@@ -46,8 +47,7 @@ class WrongMatchService {
       }
     }
     matches[spotifyTrackId] = newYtVideoId;
-    await _db.setSetting('spotify_matches', matches.entries
-        .map((e) => '${e.key}=${e.value}')
-        .join(','));
+    await _db.setSetting('spotify_matches',
+        matches.entries.map((e) => '${e.key}=${e.value}').join(','));
   }
 }

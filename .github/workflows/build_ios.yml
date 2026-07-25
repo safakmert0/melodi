@@ -29,9 +29,18 @@ jobs:
           flutter pub get
           cd ios && pod install && cd ..
 
+      - name: Analyze
+        run: flutter analyze --no-fatal-warnings --no-fatal-infos
+
+      - name: Test
+        run: flutter test
+
       - name: Build unsigned .ipa
         run: |
-          flutter build ios --release --no-codesign
+          BUILD_NAME=$(sed -n 's/^version: \([^+]*\).*/\1/p' pubspec.yaml)
+          flutter build ios --release --no-codesign \
+            --build-name "$BUILD_NAME" \
+            --build-number "$GITHUB_RUN_NUMBER"
           mkdir -p build/unsigned_ipa/Payload
           cp -r build/ios/iphoneos/Runner.app build/unsigned_ipa/Payload/
           cd build/unsigned_ipa

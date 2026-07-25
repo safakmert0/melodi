@@ -67,8 +67,7 @@ class QueueManager extends ChangeNotifier {
   }
 
   void addToQueueNext(QueueItem item) {
-    final insertIndex =
-        _currentIndex >= 0 ? _currentIndex + 1 : _queue.length;
+    final insertIndex = _currentIndex >= 0 ? _currentIndex + 1 : _queue.length;
     _queue.insert(insertIndex, item);
     notifyListeners();
     _autoSave();
@@ -191,8 +190,7 @@ class QueueManager extends ChangeNotifier {
             .map((e) => QueueItem.fromJson(e as Map<String, dynamic>))
             .toList();
         _currentIndex = data['currentIndex'] as int? ?? -1;
-        _repeatMode =
-            RepeatMode.values[data['repeatMode'] as int? ?? 0];
+        _repeatMode = RepeatMode.values[data['repeatMode'] as int? ?? 0];
         _shuffleMode = data['shuffleMode'] as bool? ?? false;
       }
     } catch (_) {

@@ -25,7 +25,9 @@ class DiagnosticsService {
     final os = Platform.operatingSystem;
     final osVersion = Platform.operatingSystemVersion;
 
-    final dbVersion = (await db.rawQuery('PRAGMA user_version')).first['user_version'] as int? ?? 0;
+    final dbVersion = (await db.rawQuery('PRAGMA user_version'))
+            .first['user_version'] as int? ??
+        0;
 
     final dir = await getApplicationDocumentsDirectory();
     final dbFile = File(p.join(dir.path, 'melodi.db'));
@@ -34,10 +36,21 @@ class DiagnosticsService {
       dbSize = await dbFile.length();
     } catch (_) {}
 
-    final songCount = (await db.rawQuery('SELECT COUNT(*) as c FROM songs')).first['c'] as int? ?? 0;
-    final playlistCount = (await db.rawQuery('SELECT COUNT(*) as c FROM playlists')).first['c'] as int? ?? 0;
-    final settingsCount = (await db.rawQuery('SELECT COUNT(*) as c FROM settings')).first['c'] as int? ?? 0;
-    final errorCount = (await db.rawQuery('SELECT COUNT(*) as c FROM error_logs')).first['c'] as int? ?? 0;
+    final songCount = (await db.rawQuery('SELECT COUNT(*) as c FROM songs'))
+            .first['c'] as int? ??
+        0;
+    final playlistCount =
+        (await db.rawQuery('SELECT COUNT(*) as c FROM playlists')).first['c']
+                as int? ??
+            0;
+    final settingsCount =
+        (await db.rawQuery('SELECT COUNT(*) as c FROM settings')).first['c']
+                as int? ??
+            0;
+    final errorCount =
+        (await db.rawQuery('SELECT COUNT(*) as c FROM error_logs')).first['c']
+                as int? ??
+            0;
 
     final spotifyToken = await db.getSetting('spotify_access_token');
     final ytmusicCookie = await db.getSetting('ytmusic_cookie');
@@ -71,7 +84,8 @@ class DiagnosticsService {
     return bundle;
   }
 
-  Future<void> logError(String context, String message, [StackTrace? stack]) async {
+  Future<void> logError(String context, String message,
+      [StackTrace? stack]) async {
     try {
       final db = DatabaseService.instance;
       await db.insertErrorLog(context, message, stack?.toString());

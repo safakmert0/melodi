@@ -17,7 +17,8 @@ class LastFmSource implements MusicSource {
     try {
       final client = HttpClient()
         ..connectionTimeout = const Duration(seconds: 15);
-      final uri = Uri.parse('$_baseUrl?method=track.search&track=${Uri.encodeComponent(query)}&api_key=$_apiKey&format=json&limit=$limit');
+      final uri = Uri.parse(
+          '$_baseUrl?method=track.search&track=${Uri.encodeComponent(query)}&api_key=$_apiKey&format=json&limit=$limit');
       final request = await client.getUrl(uri);
       final response = await request.close();
       if (response.statusCode != 200) {

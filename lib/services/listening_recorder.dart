@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'database_service.dart';
 
 class ListeningRecorder {
@@ -81,22 +80,26 @@ class ListeningRecorder {
     return db.getListeningHistoryGroupedByDate(limitDays: limitDays);
   }
 
-  Future<List<Map<String, dynamic>>> getTopTracksByPeriod(int limit, String period) async {
+  Future<List<Map<String, dynamic>>> getTopTracksByPeriod(
+      int limit, String period) async {
     final db = DatabaseService.instance;
     return db.getTopTracksByPeriod(limit, period);
   }
 
-  Future<List<Map<String, dynamic>>> getTopArtistsByPeriod(int limit, String period) async {
+  Future<List<Map<String, dynamic>>> getTopArtistsByPeriod(
+      int limit, String period) async {
     final db = DatabaseService.instance;
     return db.getTopArtistsByPeriod(limit, period);
   }
 
-  Future<List<Map<String, dynamic>>> getRecentlyPlayedUnique({int limit = 20}) async {
+  Future<List<Map<String, dynamic>>> getRecentlyPlayedUnique(
+      {int limit = 20}) async {
     final db = DatabaseService.instance;
     return db.getRecentlyPlayedUnique(limit: limit);
   }
 
-  Future<List<Map<String, dynamic>>> getTracksByTimeOfDay(String timeOfDay) async {
+  Future<List<Map<String, dynamic>>> getTracksByTimeOfDay(
+      String timeOfDay) async {
     final db = DatabaseService.instance;
     return db.getTracksByTimeOfDay(timeOfDay);
   }

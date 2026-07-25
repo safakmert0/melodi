@@ -11,7 +11,8 @@ class SharingService {
   static SharingService get instance => _instance ??= SharingService._();
   SharingService._();
 
-  final StreamController<SharedMediaFile> _onShareController = StreamController<SharedMediaFile>.broadcast();
+  final StreamController<SharedMediaFile> _onShareController =
+      StreamController<SharedMediaFile>.broadcast();
   Stream<SharedMediaFile> get onShare => _onShareController.stream;
 
   void init() {}

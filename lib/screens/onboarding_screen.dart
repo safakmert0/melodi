@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -170,12 +169,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   Color _getPageColor(int page) {
     switch (page) {
-      case 0: return MelodiTheme.primaryGreen;
-      case 1: return const Color(0xFF42A5F5);
-      case 2: return const Color(0xFF64B5F6);
-      case 3: return MelodiTheme.primaryContainer;
-      case 4: return const Color(0xFF8D67AB);
-      default: return MelodiTheme.primaryGreen;
+      case 0:
+        return MelodiTheme.primaryGreen;
+      case 1:
+        return const Color(0xFF42A5F5);
+      case 2:
+        return const Color(0xFF64B5F6);
+      case 3:
+        return MelodiTheme.primaryContainer;
+      case 4:
+        return const Color(0xFF8D67AB);
+      default:
+        return MelodiTheme.primaryGreen;
     }
   }
 
@@ -210,7 +215,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             GestureDetector(
               onTap: _complete,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
@@ -544,16 +550,21 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: MelodiTheme.primaryGreen.withOpacity(0.12),
-              border: Border.all(color: MelodiTheme.primaryGreen.withOpacity(0.25)),
+              border:
+                  Border.all(color: MelodiTheme.primaryGreen.withOpacity(0.25)),
             ),
-            child: const Icon(Icons.folder_special_rounded, size: 40, color: MelodiTheme.primaryGreen),
+            child: const Icon(Icons.folder_special_rounded,
+                size: 40, color: MelodiTheme.primaryGreen),
           ),
           const SizedBox(height: 36),
-          Text('İndirme konumunu seç', style: MelodiTheme.heading(size: 30), textAlign: TextAlign.center),
+          Text('İndirme konumunu seç',
+              style: MelodiTheme.heading(size: 30),
+              textAlign: TextAlign.center),
           const SizedBox(height: 14),
           Text(
             'Çevrimdışı müziklerin kaydedileceği klasörü şimdi seçebilirsin. Daha sonra Ayarlar bölümünden değiştirebilirsin.',
-            style: MelodiTheme.body(size: 16, color: MelodiTheme.onSurfaceVariant),
+            style:
+                MelodiTheme.body(size: 16, color: MelodiTheme.onSurfaceVariant),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 28),
@@ -566,7 +577,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               border: Border.all(color: MelodiTheme.outlineVariant),
             ),
             child: Text(
-              _downloadPath.isEmpty ? 'Varsayılan uygulama klasörü kullanılacak' : _downloadPath,
+              _downloadPath.isEmpty
+                  ? 'Varsayılan uygulama klasörü kullanılacak'
+                  : _downloadPath,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
@@ -576,7 +589,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           const SizedBox(height: 14),
           FilledButton.icon(
             onPressed: () async {
-              final path = await FilePicker.platform.getDirectoryPath(dialogTitle: 'İndirme klasörünü seç');
+              final path = await FilePicker.platform
+                  .getDirectoryPath(dialogTitle: 'İndirme klasörünü seç');
               if (!mounted || path == null || path.isEmpty) return;
               await DatabaseService.instance.setSetting('download_path', path);
               setState(() => _downloadPath = path);
@@ -590,7 +604,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             ),
           ),
           const SizedBox(height: 10),
-          Text('Seçmeden devam edersen varsayılan konum kullanılır.', style: MelodiTheme.labelSm(color: MelodiTheme.textMuted), textAlign: TextAlign.center),
+          Text('Seçmeden devam edersen varsayılan konum kullanılır.',
+              style: MelodiTheme.labelSm(color: MelodiTheme.textMuted),
+              textAlign: TextAlign.center),
         ],
       ),
     );
@@ -617,7 +633,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           colors: [MelodiTheme.primaryGreen, Color(0xFF42A5F5)],
                         )
                       : null,
-                  color: isActive ? null : MelodiTheme.surfaceBright.withOpacity(0.5),
+                  color: isActive
+                      ? null
+                      : MelodiTheme.surfaceBright.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(4),
                   boxShadow: isActive
                       ? [
@@ -818,7 +836,8 @@ class _LanguageSelectorState extends State<_LanguageSelector> {
                         style: TextStyle(
                           fontFamily: AppConstants.fontFamily,
                           fontSize: 19,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          fontWeight:
+                              isSelected ? FontWeight.w700 : FontWeight.w500,
                           color: isSelected
                               ? MelodiTheme.primaryGreen
                               : MelodiTheme.onSurface,
@@ -979,62 +998,62 @@ class _ServiceCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            MelodiTheme.containerLow,
-            MelodiTheme.containerLow.withOpacity(0.5),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              MelodiTheme.containerLow,
+              MelodiTheme.containerLow.withOpacity(0.5),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: MelodiTheme.outlineVariant.withOpacity(0.2),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: iconColor.withOpacity(0.12),
+              ),
+              child: Icon(icon, size: 24, color: iconColor),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: MelodiTheme.title(
+                      size: 18,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: MelodiTheme.bodySm(
+                      size: 14,
+                      color: MelodiTheme.onSurfaceVariant.withOpacity(0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: MelodiTheme.onSurfaceVariant.withOpacity(0.4),
+            ),
           ],
         ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: MelodiTheme.outlineVariant.withOpacity(0.2),
-          width: 1,
-        ),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: iconColor.withOpacity(0.12),
-            ),
-            child: Icon(icon, size: 24, color: iconColor),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: MelodiTheme.title(
-                    size: 18,
-                    weight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: MelodiTheme.bodySm(
-                    size: 14,
-                    color: MelodiTheme.onSurfaceVariant.withOpacity(0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            Icons.arrow_forward_ios_rounded,
-            size: 16,
-            color: MelodiTheme.onSurfaceVariant.withOpacity(0.4),
-          ),
-        ],
-      ),
-    ),
     );
   }
 }

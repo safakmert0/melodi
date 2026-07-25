@@ -34,12 +34,12 @@ class DatabaseService {
   Future<Database> _initDatabase() async {
     final dir = await getApplicationDocumentsDirectory();
     final path = p.join(dir.path, 'melodi.db');
-      return await openDatabase(
-        path,
-        version: 19,
-        onCreate: _onCreate,
-        onUpgrade: _onUpgrade,
-      );
+    return await openDatabase(
+      path,
+      version: 19,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
+    );
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -105,7 +105,7 @@ class DatabaseService {
       ''');
     }
     if (oldVersion < 8) {
-    await db.execute('''
+      await db.execute('''
       CREATE TABLE IF NOT EXISTS high_res_art (
         trackId TEXT PRIMARY KEY,
         url TEXT,
@@ -113,7 +113,7 @@ class DatabaseService {
       )
     ''');
 
-    await db.execute('''
+      await db.execute('''
       CREATE TABLE IF NOT EXISTS blocked_tracks (
         trackId TEXT PRIMARY KEY,
         title TEXT,
@@ -121,7 +121,7 @@ class DatabaseService {
         blockedAt TEXT
       )
     ''');
-  }
+    }
     if (oldVersion < 9) {
       await db.execute('''
         CREATE TABLE IF NOT EXISTS wrong_matches (
@@ -208,9 +208,12 @@ class DatabaseService {
           playedAt TEXT
         )
       ''');
-      await db.execute('CREATE INDEX IF NOT EXISTS idx_listening_events_trackId ON listening_events(trackId)');
-      await db.execute('CREATE INDEX IF NOT EXISTS idx_listening_events_artist ON listening_events(artist)');
-      await db.execute('CREATE INDEX IF NOT EXISTS idx_listening_events_playedAt ON listening_events(playedAt)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_listening_events_trackId ON listening_events(trackId)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_listening_events_artist ON listening_events(artist)');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_listening_events_playedAt ON listening_events(playedAt)');
     }
     if (oldVersion < 16) {
       await db.execute('''
@@ -256,10 +259,12 @@ class DatabaseService {
     }
     if (oldVersion < 19) {
       try {
-        await db.execute('ALTER TABLE playlist_sync_state ADD COLUMN remotePlaylistId TEXT');
+        await db.execute(
+            'ALTER TABLE playlist_sync_state ADD COLUMN remotePlaylistId TEXT');
       } catch (_) {}
       try {
-        await db.execute('ALTER TABLE playlist_sync_state ADD COLUMN remoteService TEXT');
+        await db.execute(
+            'ALTER TABLE playlist_sync_state ADD COLUMN remoteService TEXT');
       } catch (_) {}
     }
   }
@@ -275,6 +280,11 @@ class DatabaseService {
     final db = await database;
     await db.insert('settings', {'key': key, 'value': value},
         conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> deleteSetting(String key) async {
+    final db = await database;
+    await db.delete('settings', where: 'key = ?', whereArgs: [key]);
   }
 
   Future<void> addSharedUrl(String url) async {
@@ -294,11 +304,12 @@ class DatabaseService {
 
   Future<void> markSharedUrlProcessed(int id) async {
     final db = await database;
-    await db.update('shared_urls', {'processed': 1}, where: 'id = ?', whereArgs: [id]);
+    await db.update('shared_urls', {'processed': 1},
+        where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> _onCreate(Database db, int version) async {
-      await db.execute('''
+    await db.execute('''
       CREATE TABLE songs (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
@@ -468,9 +479,12 @@ class DatabaseService {
       )
     ''');
 
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_listening_events_trackId ON listening_events(trackId)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_listening_events_artist ON listening_events(artist)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_listening_events_playedAt ON listening_events(playedAt)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_listening_events_trackId ON listening_events(trackId)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_listening_events_artist ON listening_events(artist)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_listening_events_playedAt ON listening_events(playedAt)');
 
     await db.execute('''
       CREATE TABLE IF NOT EXISTS file_organization (
@@ -528,10 +542,13 @@ class DatabaseService {
     final id = await db.insert('songs', song.toMap(),
         conflictAlgorithm: ConflictAlgorithm.replace);
     if (song.albumArt != null) {
-      await db.insert('album_art_cache', {
-        'songId': song.id,
-        'artwork': song.albumArt,
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
+      await db.insert(
+          'album_art_cache',
+          {
+            'songId': song.id,
+            'artwork': song.albumArt,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace);
     }
     return id;
   }
@@ -571,8 +588,8 @@ class DatabaseService {
 
   Future<List<SongModel>> getMostPlayedSongs({int limit = 20}) async {
     final db = await database;
-    final maps = await db.query('songs',
-        orderBy: 'playCount DESC', limit: limit);
+    final maps =
+        await db.query('songs', orderBy: 'playCount DESC', limit: limit);
     return maps.map((m) => SongModel.fromMap(m)).toList();
   }
 
@@ -626,16 +643,19 @@ class DatabaseService {
 
   Future<void> cacheAlbumArt(String songId, Uint8List artwork) async {
     final db = await database;
-    await db.insert('album_art_cache', {
-      'songId': songId,
-      'artwork': artwork,
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert(
+        'album_art_cache',
+        {
+          'songId': songId,
+          'artwork': artwork,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<Uint8List?> getCachedAlbumArt(String songId) async {
     final db = await database;
-    final maps = await db.query('album_art_cache',
-        where: 'songId = ?', whereArgs: [songId]);
+    final maps = await db
+        .query('album_art_cache', where: 'songId = ?', whereArgs: [songId]);
     if (maps.isEmpty) return null;
     return maps.first['artwork'] as Uint8List?;
   }
@@ -659,10 +679,13 @@ class DatabaseService {
     final batch = db.batch();
     for (final song in songs) {
       if (song.albumArt != null) {
-        batch.insert('album_art_cache', {
-          'songId': song.id,
-          'artwork': song.albumArt,
-        }, conflictAlgorithm: ConflictAlgorithm.replace);
+        batch.insert(
+            'album_art_cache',
+            {
+              'songId': song.id,
+              'artwork': song.albumArt,
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace);
       }
     }
     await batch.commit(noResult: true);
@@ -680,12 +703,17 @@ class DatabaseService {
     return maps.map((m) => PlaylistModel.fromMap(m)).toList();
   }
 
-  Future<void> updatePlaylistSongs(String playlistId, List<String> songIds) async {
+  Future<void> updatePlaylistSongs(
+      String playlistId, List<String> songIds) async {
     final db = await database;
-    await db.update('playlists', {
-      'songIds': songIds.join(','),
-      'updatedAt': DateTime.now().toIso8601String(),
-    }, where: 'id = ?', whereArgs: [playlistId]);
+    await db.update(
+        'playlists',
+        {
+          'songIds': songIds.join(','),
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [playlistId]);
   }
 
   Future<void> deletePlaylist(String id) async {
@@ -702,15 +730,16 @@ class DatabaseService {
 
   Future<Map<String, dynamic>?> getCachedLyrics(String songId) async {
     final db = await database;
-    final maps = await db.query('lyrics_cache', where: 'songId = ?', whereArgs: [songId]);
+    final maps = await db
+        .query('lyrics_cache', where: 'songId = ?', whereArgs: [songId]);
     if (maps.isEmpty) return null;
     return maps.first;
   }
 
   Future<Map<String, String>?> getCachedMix(String mixType) async {
     final db = await database;
-    final maps = await db.query('mix_cache',
-        where: 'mixType = ?', whereArgs: [mixType]);
+    final maps =
+        await db.query('mix_cache', where: 'mixType = ?', whereArgs: [mixType]);
     if (maps.isEmpty) return null;
     return {
       'data': maps.first['data'] as String,
@@ -720,25 +749,28 @@ class DatabaseService {
 
   Future<void> cacheMix(String mixType, String data) async {
     final db = await database;
-    await db.insert('mix_cache', {
-      'mixType': mixType,
-      'data': data,
-      'generatedAt': DateTime.now().toIso8601String(),
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert(
+        'mix_cache',
+        {
+          'mixType': mixType,
+          'data': data,
+          'generatedAt': DateTime.now().toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<void> cacheLyrics(String songId, Map<String, dynamic> data) async {
     final db = await database;
     data['fetchedAt'] = DateTime.now().toIso8601String();
-    await db.insert('lyrics_cache', data, conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert('lyrics_cache', data,
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<List<SongModel>> searchSongs(String query) async {
     final db = await database;
     final searchTerm = '%$query%';
     final maps = await db.query('songs',
-        where:
-            'title LIKE ? OR artist LIKE ? OR album LIKE ?',
+        where: 'title LIKE ? OR artist LIKE ? OR album LIKE ?',
         whereArgs: [searchTerm, searchTerm, searchTerm],
         orderBy: 'title ASC');
 
@@ -749,7 +781,8 @@ class DatabaseService {
       final artMaps = await db.query('album_art_cache',
           where: 'songId = ?', whereArgs: [song.id], limit: 1);
       if (artMaps.isNotEmpty && artMaps.first['artwork'] != null) {
-        songs.add(song.copyWith(albumArt: artMaps.first['artwork'] as Uint8List?));
+        songs.add(
+            song.copyWith(albumArt: artMaps.first['artwork'] as Uint8List?));
       } else {
         songs.add(song);
       }
@@ -762,7 +795,8 @@ class DatabaseService {
     return groupBy(songs, (SongModel s) => s.album);
   }
 
-  Future<void> insertErrorLog(String context, String message, String? stackTrace) async {
+  Future<void> insertErrorLog(
+      String context, String message, String? stackTrace) async {
     final db = await database;
     await db.insert('error_logs', {
       'context': context,
@@ -774,8 +808,7 @@ class DatabaseService {
 
   Future<List<Map<String, dynamic>>> getErrorLogs(int limit) async {
     final db = await database;
-    return db.query('error_logs',
-        orderBy: 'id DESC', limit: limit);
+    return db.query('error_logs', orderBy: 'id DESC', limit: limit);
   }
 
   Future<void> clearErrorLogs() async {
@@ -785,11 +818,14 @@ class DatabaseService {
 
   Future<void> insertScrobble(String videoId, String spotifyTrackId) async {
     final db = await database;
-    await db.insert('scrobble_history', {
-      'videoId': videoId,
-      'spotifyTrackId': spotifyTrackId,
-      'scrobbledAt': DateTime.now().toIso8601String(),
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert(
+        'scrobble_history',
+        {
+          'videoId': videoId,
+          'spotifyTrackId': spotifyTrackId,
+          'scrobbledAt': DateTime.now().toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<List<Map<String, dynamic>>> getRecentScrobbles(int limit) async {
@@ -800,11 +836,13 @@ class DatabaseService {
 
   Future<int> getScrobbleCount() async {
     final db = await database;
-    final result = await db.rawQuery('SELECT COUNT(*) as count FROM scrobble_history');
+    final result =
+        await db.rawQuery('SELECT COUNT(*) as count FROM scrobble_history');
     return (result.first['count'] as int?) ?? 0;
   }
 
-  Future<List<Map<String, dynamic>>> rawQuery(String sql, [List<dynamic>? args]) async {
+  Future<List<Map<String, dynamic>>> rawQuery(String sql,
+      [List<dynamic>? args]) async {
     final db = await database;
     return db.rawQuery(sql, args);
   }
@@ -863,35 +901,48 @@ class DatabaseService {
 
   Future<void> setPlaylistSyncEnabled(String playlistId, bool enabled) async {
     final db = await database;
-    await db.insert('playlist_sync_state', {
-      'playlistId': playlistId,
-      'syncEnabled': enabled ? 1 : 0,
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert(
+        'playlist_sync_state',
+        {
+          'playlistId': playlistId,
+          'syncEnabled': enabled ? 1 : 0,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<void> setAutoSync(String playlistId, bool autoSync) async {
     final db = await database;
-    await db.insert('playlist_sync_state', {
-      'playlistId': playlistId,
-      'autoSync': autoSync ? 1 : 0,
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert(
+        'playlist_sync_state',
+        {
+          'playlistId': playlistId,
+          'autoSync': autoSync ? 1 : 0,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<void> setSyncDirection(String playlistId, String direction) async {
     final db = await database;
-    await db.insert('playlist_sync_state', {
-      'playlistId': playlistId,
-      'syncDirection': direction,
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert(
+        'playlist_sync_state',
+        {
+          'playlistId': playlistId,
+          'syncDirection': direction,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  Future<void> setRemotePlaylistId(String playlistId, String remoteId, String service) async {
+  Future<void> setRemotePlaylistId(
+      String playlistId, String remoteId, String service) async {
     final db = await database;
-    await db.insert('playlist_sync_state', {
-      'playlistId': playlistId,
-      'remotePlaylistId': remoteId,
-      'remoteService': service,
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert(
+        'playlist_sync_state',
+        {
+          'playlistId': playlistId,
+          'remotePlaylistId': remoteId,
+          'remoteService': service,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<Map<String, Map<String, dynamic>>> getAllSyncStates() async {
@@ -906,7 +957,8 @@ class DatabaseService {
 
   Future<Map<String, dynamic>?> getLyrics(String trackId) async {
     final db = await database;
-    final maps = await db.query('track_lyrics', where: 'trackId = ?', whereArgs: [trackId]);
+    final maps = await db
+        .query('track_lyrics', where: 'trackId = ?', whereArgs: [trackId]);
     if (maps.isEmpty) return null;
     return maps.first;
   }
@@ -915,23 +967,28 @@ class DatabaseService {
     final db = await database;
     data['trackId'] = trackId;
     data['fetchedAt'] = DateTime.now().toIso8601String();
-    await db.insert('track_lyrics', data, conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert('track_lyrics', data,
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<String?> getHighResArtUrl(String trackId) async {
     final db = await database;
-    final maps = await db.query('high_res_art', where: 'trackId = ?', whereArgs: [trackId]);
+    final maps = await db
+        .query('high_res_art', where: 'trackId = ?', whereArgs: [trackId]);
     if (maps.isEmpty) return null;
     return maps.first['url'] as String?;
   }
 
   Future<void> saveHighResArtUrl(String trackId, String url) async {
     final db = await database;
-    await db.insert('high_res_art', {
-      'trackId': trackId,
-      'url': url,
-      'fetchedAt': DateTime.now().toIso8601String(),
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert(
+        'high_res_art',
+        {
+          'trackId': trackId,
+          'url': url,
+          'fetchedAt': DateTime.now().toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<List<Map<String, dynamic>>> getTracksMissingArt() async {
@@ -952,10 +1009,12 @@ class DatabaseService {
 
   Future<void> updateTrackImageUrl(String trackId, String imageUrl) async {
     final db = await database;
-    await db.update('songs', {'imageUrl': imageUrl}, where: 'id = ?', whereArgs: [trackId]);
+    await db.update('songs', {'imageUrl': imageUrl},
+        where: 'id = ?', whereArgs: [trackId]);
   }
 
-  Future<void> updateTrackMetadata(String trackId, Map<String, dynamic> data) async {
+  Future<void> updateTrackMetadata(
+      String trackId, Map<String, dynamic> data) async {
     final db = await database;
     await db.update('songs', data, where: 'id = ?', whereArgs: [trackId]);
   }
@@ -1035,16 +1094,15 @@ class DatabaseService {
   Future<List<Map<String, dynamic>>> getRecentPlays(int limit) async {
     final db = await database;
     return db.query('listening_events',
-        where: 'isSkip = 0',
-        orderBy: 'playedAt DESC',
-        limit: limit);
+        where: 'isSkip = 0', orderBy: 'playedAt DESC', limit: limit);
   }
 
   Future<List<Map<String, dynamic>>> getTopArtists(int limit,
       {String period = 'all'}) async {
     final db = await database;
     final where = _periodWhereClause(period);
-    final whereStr = where.isNotEmpty ? 'WHERE isSkip = 0 AND $where' : 'WHERE isSkip = 0';
+    final whereStr =
+        where.isNotEmpty ? 'WHERE isSkip = 0 AND $where' : 'WHERE isSkip = 0';
     return db.rawQuery('''
       SELECT artist, COUNT(*) as playCount
       FROM listening_events
@@ -1059,7 +1117,8 @@ class DatabaseService {
       {String period = 'all'}) async {
     final db = await database;
     final where = _periodWhereClause(period);
-    final whereStr = where.isNotEmpty ? 'WHERE isSkip = 0 AND $where' : 'WHERE isSkip = 0';
+    final whereStr =
+        where.isNotEmpty ? 'WHERE isSkip = 0 AND $where' : 'WHERE isSkip = 0';
     return db.rawQuery('''
       SELECT trackId, title, artist, COUNT(*) as playCount
       FROM listening_events
@@ -1104,7 +1163,8 @@ class DatabaseService {
     };
   }
 
-  Future<List<Map<String, dynamic>>> getListeningHistoryByDate(DateTime date) async {
+  Future<List<Map<String, dynamic>>> getListeningHistoryByDate(
+      DateTime date) async {
     final db = await database;
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
@@ -1114,7 +1174,8 @@ class DatabaseService {
         orderBy: 'playedAt ASC');
   }
 
-  Future<List<Map<String, dynamic>>> getListeningHistoryGroupedByDate({int limitDays = 30}) async {
+  Future<List<Map<String, dynamic>>> getListeningHistoryGroupedByDate(
+      {int limitDays = 30}) async {
     final db = await database;
     final startDate = DateTime.now().subtract(Duration(days: limitDays));
     final results = await db.rawQuery('''
@@ -1122,7 +1183,8 @@ class DatabaseService {
         DATE(playedAt) as date,
         COUNT(*) as totalPlays,
         COUNT(DISTINCT trackId) as uniqueTracks,
-        COUNT(DISTINCT artist) as uniqueArtists
+        COUNT(DISTINCT artist) as uniqueArtists,
+        COALESCE(SUM(CASE WHEN playedMs > 0 THEN playedMs ELSE durationMs END), 0) as totalDurationMs
       FROM listening_events
       WHERE isSkip = 0 AND playedAt >= ?
       GROUP BY DATE(playedAt)
@@ -1143,10 +1205,12 @@ class DatabaseService {
     return results.map((r) => r['date'] as String).toList();
   }
 
-  Future<List<Map<String, dynamic>>> getTopTracksByPeriod(int limit, String period) async {
+  Future<List<Map<String, dynamic>>> getTopTracksByPeriod(
+      int limit, String period) async {
     final db = await database;
     final where = _periodWhereClause(period);
-    final whereStr = where.isNotEmpty ? 'WHERE isSkip = 0 AND $where' : 'WHERE isSkip = 0';
+    final whereStr =
+        where.isNotEmpty ? 'WHERE isSkip = 0 AND $where' : 'WHERE isSkip = 0';
     return db.rawQuery('''
       SELECT trackId, title, artist, COUNT(*) as playCount
       FROM listening_events
@@ -1157,10 +1221,12 @@ class DatabaseService {
     ''', [limit]);
   }
 
-  Future<List<Map<String, dynamic>>> getTopArtistsByPeriod(int limit, String period) async {
+  Future<List<Map<String, dynamic>>> getTopArtistsByPeriod(
+      int limit, String period) async {
     final db = await database;
     final where = _periodWhereClause(period);
-    final whereStr = where.isNotEmpty ? 'WHERE isSkip = 0 AND $where' : 'WHERE isSkip = 0';
+    final whereStr =
+        where.isNotEmpty ? 'WHERE isSkip = 0 AND $where' : 'WHERE isSkip = 0';
     return db.rawQuery('''
       SELECT artist, COUNT(*) as playCount
       FROM listening_events
@@ -1171,7 +1237,8 @@ class DatabaseService {
     ''', [limit]);
   }
 
-  Future<List<Map<String, dynamic>>> getRecentlyPlayedUnique({int limit = 20}) async {
+  Future<List<Map<String, dynamic>>> getRecentlyPlayedUnique(
+      {int limit = 20}) async {
     final db = await database;
     return db.rawQuery('''
       SELECT trackId, title, artist, MAX(playedAt) as lastPlayed
@@ -1183,21 +1250,26 @@ class DatabaseService {
     ''', [limit]);
   }
 
-  Future<List<Map<String, dynamic>>> getTracksByTimeOfDay(String timeOfDay) async {
+  Future<List<Map<String, dynamic>>> getTracksByTimeOfDay(
+      String timeOfDay) async {
     final db = await database;
     String hourCondition;
     switch (timeOfDay) {
       case 'morning':
-        hourCondition = "CAST(strftime('%H', playedAt) AS INTEGER) BETWEEN 6 AND 11";
+        hourCondition =
+            "CAST(strftime('%H', playedAt) AS INTEGER) BETWEEN 6 AND 11";
         break;
       case 'afternoon':
-        hourCondition = "CAST(strftime('%H', playedAt) AS INTEGER) BETWEEN 12 AND 17";
+        hourCondition =
+            "CAST(strftime('%H', playedAt) AS INTEGER) BETWEEN 12 AND 17";
         break;
       case 'evening':
-        hourCondition = "CAST(strftime('%H', playedAt) AS INTEGER) BETWEEN 18 AND 23";
+        hourCondition =
+            "CAST(strftime('%H', playedAt) AS INTEGER) BETWEEN 18 AND 23";
         break;
       case 'night':
-        hourCondition = "CAST(strftime('%H', playedAt) AS INTEGER) BETWEEN 0 AND 5";
+        hourCondition =
+            "CAST(strftime('%H', playedAt) AS INTEGER) BETWEEN 0 AND 5";
         break;
       default:
         hourCondition = '1=1';
@@ -1214,14 +1286,18 @@ class DatabaseService {
 
   Future<void> insertFileRecord(Map<String, dynamic> record) async {
     final db = await database;
-    await db.insert('file_organization', {
-      'path': record['path'],
-      'artist': record['artist'],
-      'album': record['album'],
-      'filename': record['filename'],
-      'organizedTo': record['organizedTo'],
-      'organizedAt': record['organizedAt'] ?? DateTime.now().toIso8601String(),
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert(
+        'file_organization',
+        {
+          'path': record['path'],
+          'artist': record['artist'],
+          'album': record['album'],
+          'filename': record['filename'],
+          'organizedTo': record['organizedTo'],
+          'organizedAt':
+              record['organizedAt'] ?? DateTime.now().toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<List<Map<String, dynamic>>> getFileRecords() async {
@@ -1231,7 +1307,8 @@ class DatabaseService {
 
   Future<List<String>> getArtists() async {
     final db = await database;
-    final result = await db.rawQuery('SELECT DISTINCT artist FROM file_organization ORDER BY artist');
+    final result = await db.rawQuery(
+        'SELECT DISTINCT artist FROM file_organization ORDER BY artist');
     return result.map((r) => r['artist'] as String).toList();
   }
 
@@ -1246,7 +1323,8 @@ class DatabaseService {
 
   Future<int> getOrganizedCount() async {
     final db = await database;
-    final result = await db.rawQuery('SELECT COUNT(*) as count FROM file_organization');
+    final result =
+        await db.rawQuery('SELECT COUNT(*) as count FROM file_organization');
     return (result.first['count'] as int?) ?? 0;
   }
 
@@ -1280,35 +1358,41 @@ class DatabaseService {
     required String lastAccessedAt,
   }) async {
     final db = await database;
-    await db.insert('stream_cache', {
-      'trackId': trackId,
-      'url': url,
-      'localPath': localPath,
-      'cachedAt': cachedAt,
-      'lastAccessedAt': lastAccessedAt,
-      'size': size,
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert(
+        'stream_cache',
+        {
+          'trackId': trackId,
+          'url': url,
+          'localPath': localPath,
+          'cachedAt': cachedAt,
+          'lastAccessedAt': lastAccessedAt,
+          'size': size,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<Map<String, dynamic>?> getCacheEntry(String trackId) async {
     final db = await database;
-    final maps = await db.query('stream_cache',
-        where: 'trackId = ?', whereArgs: [trackId]);
+    final maps = await db
+        .query('stream_cache', where: 'trackId = ?', whereArgs: [trackId]);
     if (maps.isEmpty) return null;
     return maps.first;
   }
 
   Future<void> updateLastAccessed(String trackId) async {
     final db = await database;
-    await db.update('stream_cache', {
-      'lastAccessedAt': DateTime.now().toIso8601String(),
-    }, where: 'trackId = ?', whereArgs: [trackId]);
+    await db.update(
+        'stream_cache',
+        {
+          'lastAccessedAt': DateTime.now().toIso8601String(),
+        },
+        where: 'trackId = ?',
+        whereArgs: [trackId]);
   }
 
   Future<void> removeCacheEntry(String trackId) async {
     final db = await database;
-    await db.delete('stream_cache',
-        where: 'trackId = ?', whereArgs: [trackId]);
+    await db.delete('stream_cache', where: 'trackId = ?', whereArgs: [trackId]);
   }
 
   Future<List<Map<String, dynamic>>> getAllCacheEntries({
@@ -1321,8 +1405,8 @@ class DatabaseService {
 
   Future<int> getTotalCacheSize() async {
     final db = await database;
-    final result = await db.rawQuery(
-        'SELECT COALESCE(SUM(size), 0) as total FROM stream_cache');
+    final result = await db
+        .rawQuery('SELECT COALESCE(SUM(size), 0) as total FROM stream_cache');
     return (result.first['total'] as int?) ?? 0;
   }
 }

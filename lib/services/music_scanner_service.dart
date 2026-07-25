@@ -26,24 +26,36 @@ class MusicScannerService {
   }
 
   String? _getFilePath(dynamic raw) {
-    try { return raw.filePath as String?; } catch (_) {}
-    try { return raw.data as String?; } catch (_) {}
-    try { return raw.uri as String?; } catch (_) {}
+    try {
+      return raw.filePath as String?;
+    } catch (_) {}
+    try {
+      return raw.data as String?;
+    } catch (_) {}
+    try {
+      return raw.uri as String?;
+    } catch (_) {}
     return null;
   }
 
   int? _getTrackNumber(dynamic raw) {
-    try { return raw.trackNumber as int?; } catch (_) {}
+    try {
+      return raw.trackNumber as int?;
+    } catch (_) {}
     return null;
   }
 
   int? _getDiscNumber(dynamic raw) {
-    try { return raw.discNumber as int?; } catch (_) {}
+    try {
+      return raw.discNumber as int?;
+    } catch (_) {}
     return null;
   }
 
   int? _getYear(dynamic raw) {
-    try { return raw.year as int?; } catch (_) {}
+    try {
+      return raw.year as int?;
+    } catch (_) {}
     return null;
   }
 
@@ -58,7 +70,8 @@ class MusicScannerService {
         uriType: UriType.EXTERNAL,
       );
 
-      final existingPaths = _db.getAllSongs().then((s) => s.map((e) => e.filePath).toSet());
+      final existingPaths =
+          _db.getAllSongs().then((s) => s.map((e) => e.filePath).toSet());
       final paths = await existingPaths;
 
       final songs = <app.SongModel>[];
@@ -68,17 +81,41 @@ class MusicScannerService {
         if (paths.contains(filePath)) continue;
 
         String title;
-        try { title = raw.title ?? raw.displayName ?? 'Unknown'; } catch (_) { title = 'Unknown'; }
+        try {
+          title = raw.title;
+        } catch (_) {
+          title = 'Unknown';
+        }
         String artist;
-        try { artist = raw.artist ?? 'Unknown Artist'; } catch (_) { artist = 'Unknown Artist'; }
+        try {
+          artist = raw.artist ?? 'Unknown Artist';
+        } catch (_) {
+          artist = 'Unknown Artist';
+        }
         String album;
-        try { album = raw.album ?? 'Unknown Album'; } catch (_) { album = 'Unknown Album'; }
+        try {
+          album = raw.album ?? 'Unknown Album';
+        } catch (_) {
+          album = 'Unknown Album';
+        }
         int durationMs;
-        try { durationMs = raw.duration ?? 0; } catch (_) { durationMs = 0; }
+        try {
+          durationMs = raw.duration ?? 0;
+        } catch (_) {
+          durationMs = 0;
+        }
         int fileSize;
-        try { fileSize = raw.size ?? 0; } catch (_) { fileSize = 0; }
+        try {
+          fileSize = raw.size;
+        } catch (_) {
+          fileSize = 0;
+        }
         int idInt;
-        try { idInt = raw.id as int; } catch (_) { idInt = 0; }
+        try {
+          idInt = raw.id;
+        } catch (_) {
+          idInt = 0;
+        }
 
         Uint8List? artwork;
         try {
@@ -120,8 +157,18 @@ class MusicScannerService {
         type: FileType.custom,
         allowMultiple: true,
         allowedExtensions: const [
-          'mp3', 'm4a', 'flac', 'wav', 'aac', 'ogg', 'wma',
-          'alac', 'aiff', 'opus', 'ape', 'wv',
+          'mp3',
+          'm4a',
+          'flac',
+          'wav',
+          'aac',
+          'ogg',
+          'wma',
+          'alac',
+          'aiff',
+          'opus',
+          'ape',
+          'wv',
         ],
       );
 
@@ -141,7 +188,8 @@ class MusicScannerService {
   Future<List<app.SongModel>> importFromPaths(List<String> paths) async {
     try {
       var songs = await MetadataService.extractMultipleMetadata(paths);
-      final existingPaths = await _db.getAllSongs().then((s) => s.map((e) => e.filePath).toSet());
+      final existingPaths =
+          await _db.getAllSongs().then((s) => s.map((e) => e.filePath).toSet());
       songs = songs.where((s) => !existingPaths.contains(s.filePath)).toList();
       if (songs.isNotEmpty) {
         await _db.insertSongs(songs);
@@ -159,8 +207,18 @@ class MusicScannerService {
           type: FileType.custom,
           allowMultiple: true,
           allowedExtensions: const [
-            'mp3', 'm4a', 'flac', 'wav', 'aac', 'ogg', 'wma',
-            'alac', 'aiff', 'opus', 'ape', 'wv',
+            'mp3',
+            'm4a',
+            'flac',
+            'wav',
+            'aac',
+            'ogg',
+            'wma',
+            'alac',
+            'aiff',
+            'opus',
+            'ape',
+            'wv',
           ],
         );
         if (result == null || result.files.isEmpty) return [];
@@ -180,10 +238,12 @@ class MusicScannerService {
     }
   }
 
-  Future<List<app.SongModel>> importFromDirectoryPath(String directoryPath) async {
+  Future<List<app.SongModel>> importFromDirectoryPath(
+      String directoryPath) async {
     try {
       var songs = await MetadataService.scanDirectory(directoryPath);
-      final existingPaths = await _db.getAllSongs().then((s) => s.map((e) => e.filePath).toSet());
+      final existingPaths =
+          await _db.getAllSongs().then((s) => s.map((e) => e.filePath).toSet());
       songs = songs.where((s) => !existingPaths.contains(s.filePath)).toList();
       if (songs.isNotEmpty) {
         await _db.insertSongs(songs);
@@ -215,7 +275,8 @@ class MusicScannerService {
     final existingPaths = existing.map((s) => s.filePath).toSet();
     final scannedPaths = scanned.map((s) => s.filePath).toSet();
 
-    final newSongs = scanned.where((s) => !existingPaths.contains(s.filePath)).toList();
+    final newSongs =
+        scanned.where((s) => !existingPaths.contains(s.filePath)).toList();
     if (newSongs.isNotEmpty) {
       await _db.insertSongs(newSongs);
     }
@@ -224,7 +285,8 @@ class MusicScannerService {
     // (avoids deleting library when directory is temporarily inaccessible)
     if (scannedPaths.isNotEmpty) {
       final missingPaths = existingPaths.difference(scannedPaths);
-      final toRemove = existing.where((s) => missingPaths.contains(s.filePath)).toList();
+      final toRemove =
+          existing.where((s) => missingPaths.contains(s.filePath)).toList();
       for (final s in toRemove) {
         await _db.deleteSong(s.id);
       }

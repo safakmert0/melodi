@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../services/blocklist_service.dart';
 
 class BlockedTracksScreen extends StatefulWidget {
@@ -48,10 +47,11 @@ class _BlockedTracksScreenState extends State<BlockedTracksScreen> {
       if (query.isEmpty) {
         _filteredTracks = _tracks;
       } else {
-        _filteredTracks = _tracks.where((t) =>
-          t.title.toLowerCase().contains(query) ||
-          t.artist.toLowerCase().contains(query)
-        ).toList();
+        _filteredTracks = _tracks
+            .where((t) =>
+                t.title.toLowerCase().contains(query) ||
+                t.artist.toLowerCase().contains(query))
+            .toList();
       }
     });
   }
@@ -81,7 +81,8 @@ class _BlockedTracksScreenState extends State<BlockedTracksScreen> {
                 decoration: InputDecoration(
                   hintText: AppLocale.tr('search'),
                   hintStyle: TextStyle(color: MelodiTheme.textMuted),
-                  prefixIcon: Icon(Icons.search_rounded, color: MelodiTheme.textMuted, size: 20),
+                  prefixIcon: Icon(Icons.search_rounded,
+                      color: MelodiTheme.textMuted, size: 20),
                   filled: true,
                   fillColor: MelodiTheme.containerLow,
                   border: OutlineInputBorder(
@@ -144,7 +145,8 @@ class _BlockedTracksScreenState extends State<BlockedTracksScreen> {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 24),
         color: MelodiTheme.errorRed,
-        child: Icon(Icons.delete_outline_rounded, color: Colors.white, size: 24),
+        child:
+            Icon(Icons.delete_outline_rounded, color: Colors.white, size: 24),
       ),
       onDismissed: (_) => _unblockTrack(track.trackId),
       child: ListTile(
@@ -155,7 +157,8 @@ class _BlockedTracksScreenState extends State<BlockedTracksScreen> {
             color: MelodiTheme.containerLow,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(Icons.music_note_rounded, color: MelodiTheme.textMuted, size: 22),
+          child: Icon(Icons.music_note_rounded,
+              color: MelodiTheme.textMuted, size: 22),
         ),
         title: Text(
           track.title,
@@ -178,7 +181,8 @@ class _BlockedTracksScreenState extends State<BlockedTracksScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: MelodiTheme.primaryGreen.withOpacity(0.4)),
+                side: BorderSide(
+                    color: MelodiTheme.primaryGreen.withOpacity(0.4)),
               ),
             ),
             child: Text(

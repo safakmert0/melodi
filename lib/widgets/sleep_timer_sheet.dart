@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../services/playback_service.dart';
 
 class SleepTimerSheet extends StatefulWidget {
@@ -57,7 +56,11 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
               ),
             ),
             const SizedBox(height: 16),
-            Icon(Icons.timer_outlined, size: 48, color: isActive ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant),
+            Icon(Icons.timer_outlined,
+                size: 48,
+                color: isActive
+                    ? MelodiTheme.primaryGreen
+                    : MelodiTheme.onSurfaceVariant),
             const SizedBox(height: 12),
             Text(
               AppLocale.tr('sleep_timer'),
@@ -70,7 +73,8 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
             if (isActive) ...[
               const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -79,7 +83,8 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                     ],
                   ),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: MelodiTheme.primaryGreen.withOpacity(0.3)),
+                  border: Border.all(
+                      color: MelodiTheme.primaryGreen.withOpacity(0.3)),
                 ),
                 child: Column(
                   children: [
@@ -115,7 +120,8 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                   label: Text(AppLocale.tr('cancel_timer')),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: MelodiTheme.errorRed,
-                    side: BorderSide(color: MelodiTheme.errorRed.withOpacity(0.5)),
+                    side: BorderSide(
+                        color: MelodiTheme.errorRed.withOpacity(0.5)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -154,9 +160,11 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
                       ),
-                      style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15),
+                      style:
+                          TextStyle(color: MelodiTheme.onSurface, fontSize: 15),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -172,7 +180,8 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                     style: FilledButton.styleFrom(
                       backgroundColor: MelodiTheme.primaryGreen,
                       foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -195,9 +204,9 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
     final m = d.inMinutes.remainder(60);
     final s = d.inSeconds.remainder(60);
     if (h > 0) {
-      return '${h}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+      return '$h:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
     }
-    return '${m}:${s.toString().padLeft(2, '0')}';
+    return '$m:${s.toString().padLeft(2, '0')}';
   }
 }
 

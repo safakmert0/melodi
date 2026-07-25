@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import '../services/share_service.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
-import 'queue_screen.dart';
 import '../core/extensions/duration_ext.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
@@ -17,12 +16,11 @@ import '../services/audio_handler.dart';
 import '../services/lyrics_service.dart';
 import '../services/artwork_service.dart';
 import '../services/download_manager.dart';
-import '../services/playback_service.dart';
 import '../widgets/seek_bar.dart';
 import '../widgets/queue_sheet.dart';
-import '../widgets/lyrics_sheet.dart';
 import '../widgets/sleep_timer_sheet.dart';
 import '../widgets/crossfade_slider.dart';
+import 'lyrics_screen.dart';
 
 class NowPlayingScreen extends StatefulWidget {
   const NowPlayingScreen({super.key});
@@ -33,15 +31,15 @@ class NowPlayingScreen extends StatefulWidget {
 
 class _NowPlayingScreenState extends State<NowPlayingScreen> {
   final List<double> _speedOptions = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+  final PageController _surfaceController = PageController();
   bool _showVolumeSlider = false;
-  bool _showLyrics = true;
+  int _surfaceIndex = 0;
   String? _lastSongId;
 
   LyricsResult? _lyricsResult;
   List<LrcLine> _lyricsLines = [];
   bool _lyricsLoading = false;
   int _currentLineIndex = -1;
-  final ScrollController _lyricsScrollController = ScrollController();
   Timer? _lyricsTimer;
 
   @override
@@ -58,7 +56,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   @override
   void dispose() {
     _lyricsTimer?.cancel();
-    _lyricsScrollController.dispose();
+    _surfaceController.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -103,18 +101,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     if (idx != _currentLineIndex) {
       _currentLineIndex = idx;
       if (mounted) setState(() {});
-      _scrollToCurrentLine();
     }
-  }
-
-  void _scrollToCurrentLine() {
-    if (_currentLineIndex < 0 || !_lyricsScrollController.hasClients) return;
-    final offset = (_currentLineIndex * 56.0) - (MediaQuery.of(context).size.height * 0.15);
-    _lyricsScrollController.animateTo(
-      offset.clamp(0.0, _lyricsScrollController.position.maxScrollExtent),
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-    );
   }
 
   void _autoFetch(SongModel song) {
@@ -148,8 +135,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 
   Future<void> _fetchLyrics(SongModel song) async {
     // Use player's actual duration for accurate lyrics sync
-    final actualDurationMs = context.read<PlayerProvider>().duration.inMilliseconds;
-    final durationMs = actualDurationMs > 0 ? actualDurationMs : song.duration.inMilliseconds;
+    final actualDurationMs =
+        context.read<PlayerProvider>().duration.inMilliseconds;
+    final durationMs =
+        actualDurationMs > 0 ? actualDurationMs : song.duration.inMilliseconds;
     final result = await LyricsService.fetchLyrics(
       artist: song.artist,
       track: song.title,
@@ -198,9 +187,13 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     final theme = Theme.of(context);
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: theme.brightness == Brightness.dark ? Brightness.light : Brightness.dark,
+      statusBarIconBrightness: theme.brightness == Brightness.dark
+          ? Brightness.light
+          : Brightness.dark,
       systemNavigationBarColor: theme.scaffoldBackgroundColor,
-      systemNavigationBarIconBrightness: theme.brightness == Brightness.dark ? Brightness.light : Brightness.dark,
+      systemNavigationBarIconBrightness: theme.brightness == Brightness.dark
+          ? Brightness.light
+          : Brightness.dark,
     ));
     return Consumer2<PlayerProvider, LocaleNotifier>(
       builder: (context, player, locale, _) {
@@ -213,7 +206,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               backgroundColor: Colors.transparent,
               elevation: 0,
               leading: IconButton(
-                icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 28, color: Color(0xFFe5e2e1)),
+                icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                    size: 28, color: Color(0xFFe5e2e1)),
                 onPressed: () => Navigator.pop(context),
               ),
               title: Text(
@@ -231,11 +225,13 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.music_note_rounded, size: 80, color: Color(0xFFbccbb9)),
+                  const Icon(Icons.music_note_rounded,
+                      size: 80, color: Color(0xFFbccbb9)),
                   const SizedBox(height: 24),
                   Text(
                     AppLocale.tr('no_song_playing'),
-                    style: const TextStyle(color: Color(0xFFe5e2e1), fontSize: 18),
+                    style:
+                        const TextStyle(color: Color(0xFFe5e2e1), fontSize: 18),
                   ),
                 ],
               ),
@@ -247,386 +243,762 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 
         return GestureDetector(
           onVerticalDragEnd: (details) {
-            if (details.primaryVelocity != null && details.primaryVelocity! > 500) {
+            if (details.primaryVelocity != null &&
+                details.primaryVelocity! > 500) {
               Navigator.pop(context);
             }
           },
           child: Scaffold(
-          backgroundColor: Colors.transparent,
-          body: Stack(
-            fit: StackFit.expand,
-            children: [
-              if (hasArt) ...[
+            backgroundColor: Colors.transparent,
+            body: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (hasArt) ...[
+                  Positioned.fill(
+                    child: ImageFiltered(
+                      imageFilter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                      child: Image.memory(
+                        song.albumArt!,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child:
+                        Container(color: Colors.black.withValues(alpha: 0.5)),
+                  ),
+                ] else
+                  Positioned.fill(
+                      child: Container(color: const Color(0xFF131313))),
                 Positioned.fill(
-                  child: ImageFiltered(
-                    imageFilter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                    child: Image.memory(
-                      song.albumArt!,
-                      fit: BoxFit.cover,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: const Alignment(0, -0.65),
+                        radius: 1.35,
+                        colors: [
+                          MelodiTheme.primaryGreen.withValues(alpha: 0.34),
+                          const Color(0xB8121414),
+                          const Color(0xF5121414),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-                Positioned.fill(
-                  child: Container(color: Colors.black.withOpacity(0.6)),
-                ),
-              ] else
-                Positioned.fill(child: Container(color: const Color(0xFF131313))),
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: Alignment.topCenter,
-                      radius: 1.2,
-                      colors: [
-                        MelodiTheme.primaryGreen,
-                        MelodiTheme.primaryGreen.withOpacity(0.3),
-                        const Color(0xFF121414),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              // Top bar
-              Positioned(
-                top: 0, left: 0, right: 0,
-                child: SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.expand_more_rounded, size: 30, color: Colors.white),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                        Expanded(
-                          child: Column(
-                            children: [
-                              Text(
-                                AppLocale.tr('now_playing').toUpperCase(),
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.6),
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 2,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                song.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
+                // Top bar
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.expand_more_rounded,
+                                size: 30, color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.more_vert_rounded, color: Colors.white70),
-                          onPressed: () => _showOptions(context, player),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              // Main content
-              SafeArea(
-                child: Column(
-                  children: [
-                    const SizedBox(height: 8),
-                    // Album Art
-                    Expanded(
-                      flex: 4,
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: AspectRatio(
-                            aspectRatio: 1,
-                            child: Stack(
-                              alignment: Alignment.center,
+                          Expanded(
+                            child: Column(
                               children: [
-                                if (hasArt)
-                                  Positioned.fill(
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: MelodiTheme.primaryGreen.withOpacity(0.3),
-                                            blurRadius: 60,
-                                            spreadRadius: 8,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                Text(
+                                  AppLocale.tr('now_playing').toUpperCase(),
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.6),
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 2,
                                   ),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.4),
-                                        blurRadius: 30,
-                                        offset: const Offset(0, 10),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: hasArt
-                                        ? Image.memory(
-                                            song.albumArt!,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                            errorBuilder: (_, __, ___) => _buildArtFallback(),
-                                          )
-                                        : _buildArtFallback(),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  song.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                      ),
-                    ),
-                    // Synced lyrics right under album art
-                    _buildSingleLineLyrics(),
-                    const SizedBox(height: 6),
-                    // Song Title + Artist
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32),
-                      child: Column(
-                        children: [
-                          Text(
-                            song.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: theme.colorScheme.onSurface,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            song.artist,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: MelodiTheme.primaryGreen,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
+                          IconButton(
+                            icon: const Icon(Icons.more_vert_rounded,
+                                color: Colors.white70),
+                            onPressed: () => _showOptions(context, player),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    // Progress bar
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32),
-                      child: MelodiSeekBar(
-                        position: player.duration.inMilliseconds > 0
-                            ? Duration(milliseconds: player.position.inMilliseconds.clamp(0, player.duration.inMilliseconds))
-                            : player.position,
-                        duration: player.duration,
-                        bufferedPosition: player.handler.bufferedPosition,
-                        onSeek: player.seek,
-                        activeColor: MelodiTheme.primaryGreen,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    // Main controls - BIG buttons
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            Icons.shuffle_rounded,
-                            color: player.isShuffled ? MelodiTheme.primaryGreen : Colors.white54,
-                            size: 24,
-                          ),
-                          onPressed: player.toggleShuffle,
-                        ),
-                        const SizedBox(width: 20),
-                        IconButton(
-                          icon: const Icon(Icons.skip_previous_rounded, color: Colors.white, size: 40),
-                          onPressed: player.skipToPrevious,
-                        ),
-                        const SizedBox(width: 12),
-                        // Play/Pause - BIG with green glow
-                        Container(
-                          width: 76,
-                          height: 76,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: MelodiTheme.primaryGreen,
-                            boxShadow: [
-                              BoxShadow(
-                                color: MelodiTheme.primaryGreen.withOpacity(0.5),
-                                blurRadius: 24,
-                                spreadRadius: 2,
-                              ),
-                            ],
-                          ),
-                          child: IconButton(
-                            icon: Icon(
-                              player.isPlaying
-                                  ? Icons.pause_rounded
-                                  : Icons.play_arrow_rounded,
-                              color: const Color(0xFF131313),
-                              size: 42,
-                            ),
-                            onPressed: player.playPause,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        IconButton(
-                          icon: const Icon(Icons.skip_next_rounded, color: Colors.white, size: 40),
-                          onPressed: player.skipToNext,
-                        ),
-                        const SizedBox(width: 20),
-                        IconButton(
-                          icon: Icon(
-                            Icons.repeat_rounded,
-                            color: player.repeatMode != LoopStyle.off ? MelodiTheme.primaryGreen : Colors.white54,
-                            size: 24,
-                          ),
-                          onPressed: player.cycleRepeatMode,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    // Supplementary actions row - bigger icons
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _SpeedButton(
-                              player: player, speedOptions: _speedOptions, accentColor: MelodiTheme.primaryGreen),
-                          const SizedBox(width: 8),
-                          Consumer<LibraryProvider>(
-                            builder: (context, lib, _) {
-                              final isFav = lib.favorites.any((s) => s.id == song.id);
-                              return IconButton(
-                                icon: Icon(
-                                  isFav ? Icons.favorite : Icons.favorite_border,
-                                  color: isFav ? MelodiTheme.primaryGreen : Colors.white54,
-                                  size: 24,
-                                ),
-                                onPressed: () => lib.toggleFavorite(song),
-                              );
-                            },
-                          ),
-                          Consumer<DownloadProvider>(
-                            builder: (context, dl, _) {
-                              final song = context.read<PlayerProvider>().currentSong;
-                              final status = song != null
-                                  ? dl.getStatusForSong(song.title, song.artist)
-                                  : null;
-                              final isDownloaded = status == DownloadState.completed;
-                              final isDownloading = status == DownloadState.downloading || status == DownloadState.pending;
-                              return IconButton(
-                                icon: Icon(
-                                  isDownloaded
-                                      ? Icons.download_done_rounded
-                                      : isDownloading
-                                          ? Icons.hourglass_top_rounded
-                                          : Icons.download_outlined,
-                                  color: isDownloaded ? MelodiTheme.primaryGreen : Colors.white54,
-                                  size: 24,
-                                ),
-                                onPressed: isDownloaded || isDownloading
-                                    ? null
-                                    : () {
-                                        if (song != null) {
-                                          dl.enqueueTrack(
-                                            spotifyTrackId: 'youtube',
-                                            title: song.title,
-                                            artist: song.artist,
-                                            album: song.album,
-                                          );
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text('${song.title} indiriliyor...'),
-                                              backgroundColor: MelodiTheme.primaryGreen,
-                                              duration: const Duration(seconds: 2),
-                                            ),
-                                          );
-                                        }
-                                      },
-                              );
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.queue_music_rounded, color: Colors.white54, size: 24),
-                            onPressed: () => _showQueue(context),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              Icons.dark_mode_rounded,
-                              color: Colors.white54,
-                              size: 24,
-                            ),
-                            onPressed: () {
-                              showModalBottomSheet(
-                                context: context,
-                                backgroundColor: MelodiTheme.containerLow,
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                                ),
-                                builder: (_) => const SleepTimerSheet(),
-                              );
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          _VolumeBoostButton(
-                            player: player,
-                            showSlider: _showVolumeSlider,
-                            onToggle: () => setState(() => _showVolumeSlider = !_showVolumeSlider),
-                            accentColor: MelodiTheme.primaryGreen,
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (_showVolumeSlider)
+                  ),
+                ),
+                // Main content
+                SafeArea(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 58),
+                      _buildPlayerSurface(song, player, hasArt),
+                      _buildSurfaceSwitcher(),
+                      if (_surfaceIndex == 0) _buildSingleLineLyrics(),
+                      const SizedBox(height: 6),
+                      // Song Title + Artist
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 32),
-                        child: Row(
+                        child: Column(
                           children: [
-                            const Icon(Icons.volume_down_rounded, color: Colors.white54, size: 16),
-                            Expanded(
-                              child: Slider(
-                                value: player.volumeBoost.clamp(0.5, 2.0),
-                                min: 0.5,
-                                max: 2.0,
-                                onChanged: (v) => player.setVolume(v),
-                                activeColor: MelodiTheme.primaryGreen,
-                                inactiveColor: Colors.white24,
+                            Text(
+                              song.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: theme.colorScheme.onSurface,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const Icon(Icons.volume_up_rounded, color: Colors.white54, size: 16),
+                            const SizedBox(height: 4),
+                            Text(
+                              song.artist,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: MelodiTheme.primaryGreen,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                    const SizedBox(height: 8),
-                  ],
+                      const SizedBox(height: 8),
+                      // Progress bar
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: MelodiSeekBar(
+                          position: player.duration.inMilliseconds > 0
+                              ? Duration(
+                                  milliseconds: player.position.inMilliseconds
+                                      .clamp(0, player.duration.inMilliseconds))
+                              : player.position,
+                          duration: player.duration,
+                          bufferedPosition: player.handler.bufferedPosition,
+                          onSeek: player.seek,
+                          activeColor: MelodiTheme.primaryGreen,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // Main controls - BIG buttons
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              Icons.shuffle_rounded,
+                              color: player.isShuffled
+                                  ? MelodiTheme.primaryGreen
+                                  : Colors.white54,
+                              size: 24,
+                            ),
+                            onPressed: player.toggleShuffle,
+                          ),
+                          const SizedBox(width: 20),
+                          IconButton(
+                            icon: const Icon(Icons.skip_previous_rounded,
+                                color: Colors.white, size: 40),
+                            onPressed: player.skipToPrevious,
+                          ),
+                          const SizedBox(width: 12),
+                          // Play/Pause - BIG with green glow
+                          Container(
+                            width: 76,
+                            height: 76,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: MelodiTheme.primaryGreen,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: MelodiTheme.primaryGreen
+                                      .withValues(alpha: 0.5),
+                                  blurRadius: 24,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: IconButton(
+                              icon: Icon(
+                                player.isPlaying
+                                    ? Icons.pause_rounded
+                                    : Icons.play_arrow_rounded,
+                                color: const Color(0xFF131313),
+                                size: 42,
+                              ),
+                              onPressed: player.playPause,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          IconButton(
+                            icon: const Icon(Icons.skip_next_rounded,
+                                color: Colors.white, size: 40),
+                            onPressed: player.skipToNext,
+                          ),
+                          const SizedBox(width: 20),
+                          IconButton(
+                            icon: Icon(
+                              Icons.repeat_rounded,
+                              color: player.repeatMode != LoopStyle.off
+                                  ? MelodiTheme.primaryGreen
+                                  : Colors.white54,
+                              size: 24,
+                            ),
+                            onPressed: player.cycleRepeatMode,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      // Supplementary actions row - bigger icons
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _SpeedButton(
+                                player: player,
+                                speedOptions: _speedOptions,
+                                accentColor: MelodiTheme.primaryGreen),
+                            const SizedBox(width: 8),
+                            Consumer<LibraryProvider>(
+                              builder: (context, lib, _) {
+                                final isFav =
+                                    lib.favorites.any((s) => s.id == song.id);
+                                return IconButton(
+                                  icon: Icon(
+                                    isFav
+                                        ? Icons.favorite
+                                        : Icons.favorite_border,
+                                    color: isFav
+                                        ? MelodiTheme.primaryGreen
+                                        : Colors.white54,
+                                    size: 24,
+                                  ),
+                                  onPressed: () => lib.toggleFavorite(song),
+                                );
+                              },
+                            ),
+                            Consumer<DownloadProvider>(
+                              builder: (context, dl, _) {
+                                final song =
+                                    context.read<PlayerProvider>().currentSong;
+                                final status = song != null
+                                    ? dl.getStatusForSong(
+                                        song.title, song.artist)
+                                    : null;
+                                final isDownloaded =
+                                    status == DownloadState.completed;
+                                final isDownloading =
+                                    status == DownloadState.downloading ||
+                                        status == DownloadState.pending;
+                                return IconButton(
+                                  icon: Icon(
+                                    isDownloaded
+                                        ? Icons.download_done_rounded
+                                        : isDownloading
+                                            ? Icons.hourglass_top_rounded
+                                            : Icons.download_outlined,
+                                    color: isDownloaded
+                                        ? MelodiTheme.primaryGreen
+                                        : Colors.white54,
+                                    size: 24,
+                                  ),
+                                  onPressed: isDownloaded || isDownloading
+                                      ? null
+                                      : () {
+                                          if (song != null) {
+                                            dl.enqueueTrack(
+                                              spotifyTrackId: 'youtube',
+                                              title: song.title,
+                                              artist: song.artist,
+                                              album: song.album,
+                                            );
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                    '${song.title} indiriliyor...'),
+                                                backgroundColor:
+                                                    MelodiTheme.primaryGreen,
+                                                duration:
+                                                    const Duration(seconds: 2),
+                                              ),
+                                            );
+                                          }
+                                        },
+                                );
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.queue_music_rounded,
+                                  color: Colors.white54, size: 24),
+                              onPressed: () => _showQueue(context),
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                Icons.dark_mode_rounded,
+                                color: Colors.white54,
+                                size: 24,
+                              ),
+                              onPressed: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  backgroundColor: MelodiTheme.containerLow,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.vertical(
+                                        top: Radius.circular(20)),
+                                  ),
+                                  builder: (_) => const SleepTimerSheet(),
+                                );
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            _VolumeBoostButton(
+                              player: player,
+                              showSlider: _showVolumeSlider,
+                              onToggle: () => setState(
+                                  () => _showVolumeSlider = !_showVolumeSlider),
+                              accentColor: MelodiTheme.primaryGreen,
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_showVolumeSlider)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.volume_down_rounded,
+                                  color: Colors.white54, size: 16),
+                              Expanded(
+                                child: Slider(
+                                  value: player.volumeBoost.clamp(0.5, 2.0),
+                                  min: 0.5,
+                                  max: 2.0,
+                                  onChanged: (v) => player.setVolume(v),
+                                  activeColor: MelodiTheme.primaryGreen,
+                                  inactiveColor: Colors.white24,
+                                ),
+                              ),
+                              const Icon(Icons.volume_up_rounded,
+                                  color: Colors.white54, size: 16),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPlayerSurface(
+      SongModel song, PlayerProvider player, bool hasArt) {
+    return Expanded(
+      flex: 4,
+      child: PageView(
+        controller: _surfaceController,
+        onPageChanged: (index) => setState(() => _surfaceIndex = index),
+        children: [
+          _buildArtworkSurface(song, hasArt),
+          _buildLyricsSurface(player),
+          _buildQueueSurface(player),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildArtworkSurface(SongModel song, bool hasArt) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 6),
+        child: AspectRatio(
+          aspectRatio: 1,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              if (hasArt)
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color:
+                              MelodiTheme.primaryGreen.withValues(alpha: 0.26),
+                          blurRadius: 64,
+                          spreadRadius: 6,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              Hero(
+                tag: 'album_art_${song.id}',
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.42),
+                        blurRadius: 32,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: hasArt
+                        ? Image.memory(
+                            song.albumArt!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            gaplessPlayback: true,
+                            errorBuilder: (_, __, ___) => _buildArtFallback(),
+                          )
+                        : _buildArtFallback(),
+                  ),
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildLyricsSurface(PlayerProvider player) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 8, 22, 10),
+      child: Material(
+        color: Colors.black.withValues(alpha: 0.24),
+        borderRadius: BorderRadius.circular(26),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(26),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const LyricsScreen()),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.lyrics_rounded,
+                        size: 18, color: Colors.white),
+                    const SizedBox(width: 8),
+                    const Text('Canlı sözler',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700)),
+                    const Spacer(),
+                    if (_lyricsLines.isNotEmpty)
+                      Text('SENKRON',
+                          style: TextStyle(
+                              color: colors.primary,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2)),
+                    const SizedBox(width: 4),
+                    Icon(Icons.open_in_full_rounded,
+                        size: 15, color: Colors.white.withValues(alpha: 0.58)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Expanded(child: _buildLyricsSurfaceBody(player)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLyricsSurfaceBody(PlayerProvider player) {
+    if (_lyricsLoading) {
+      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+    }
+
+    if (_lyricsLines.isNotEmpty) {
+      final focus = _currentLineIndex < 0 ? 0 : _currentLineIndex;
+      var start = (focus - 2).clamp(0, _lyricsLines.length);
+      var end = (start + 6).clamp(0, _lyricsLines.length);
+      if (end - start < 6) start = (end - 6).clamp(0, end);
+      final visible = _lyricsLines.sublist(start, end);
+      return AnimatedSwitcher(
+        duration: const Duration(milliseconds: 250),
+        child: Column(
+          key: ValueKey<int>(focus),
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (var offset = 0; offset < visible.length; offset++)
+              GestureDetector(
+                onTap: () => player
+                    .seek(Duration(milliseconds: visible[offset].timestampMs)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Text(
+                    visible[offset].text.isEmpty ? '♪' : visible[offset].text,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: start + offset == focus
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.42),
+                      fontSize: start + offset == focus ? 19 : 14,
+                      height: 1.15,
+                      fontWeight: start + offset == focus
+                          ? FontWeight.w800
+                          : FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       );
-      },
+    }
+
+    final plainText = _lyricsResult?.plainText?.trim();
+    if (plainText != null && plainText.isNotEmpty) {
+      return SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Text(
+          plainText,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.86),
+            fontSize: 17,
+            height: 1.55,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.music_note_rounded,
+              size: 38, color: Colors.white.withValues(alpha: 0.52)),
+          const SizedBox(height: 12),
+          Text(
+            _lyricsResult?.instrumental == true
+                ? AppLocale.tr('instrumental')
+                : 'Bu parça için söz bulunamadı',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.64)),
+          ),
+          const SizedBox(height: 10),
+          TextButton(
+            onPressed: player.currentSong == null
+                ? null
+                : () => _fetchLyrics(player.currentSong!),
+            child: const Text('Yeniden dene'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQueueSurface(PlayerProvider player) {
+    final queue = player.queue;
+    if (queue.isEmpty) {
+      return Center(
+        child: Text('Sıra boş',
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.64))),
+      );
+    }
+    final current = player.currentIndex.clamp(0, queue.length - 1);
+    var start = (current - 2).clamp(0, queue.length);
+    var end = (start + 6).clamp(0, queue.length);
+    if (end - start < 6) start = (end - 6).clamp(0, end);
+    final indices = List<int>.generate(end - start, (i) => start + i);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 8, 22, 10),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.24),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 14, 10, 6),
+              child: Row(
+                children: [
+                  const Icon(Icons.queue_music_rounded,
+                      color: Colors.white, size: 19),
+                  const SizedBox(width: 8),
+                  Text('${queue.length} parçalık sıra',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13)),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => _showQueue(context),
+                    child: const Text('Tümünü aç'),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: indices.length,
+                itemBuilder: (context, offset) {
+                  final index = indices[offset];
+                  final song = queue[index];
+                  final active = index == current;
+                  return ListTile(
+                    dense: true,
+                    visualDensity: const VisualDensity(vertical: -2),
+                    leading: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: song.albumArt == null || song.albumArt!.isEmpty
+                          ? Container(
+                              width: 38,
+                              height: 38,
+                              color: Colors.white.withValues(alpha: 0.1),
+                              child: const Icon(Icons.music_note_rounded,
+                                  size: 18, color: Colors.white54),
+                            )
+                          : Image.memory(song.albumArt!,
+                              width: 38, height: 38, fit: BoxFit.cover),
+                    ),
+                    title: Text(song.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: active
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.white,
+                            fontSize: 13,
+                            fontWeight:
+                                active ? FontWeight.w700 : FontWeight.w500)),
+                    subtitle: Text(song.artist,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.48),
+                            fontSize: 11)),
+                    trailing: active
+                        ? Icon(Icons.equalizer_rounded,
+                            size: 18,
+                            color: Theme.of(context).colorScheme.primary)
+                        : Text('${index + 1}',
+                            style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.35),
+                                fontSize: 11)),
+                    onTap: () => player.playFromQueue(queue, index),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSurfaceSwitcher() {
+    const labels = ['Kapak', 'Sözler', 'Sırada'];
+    const icons = [
+      Icons.album_rounded,
+      Icons.lyrics_rounded,
+      Icons.queue_music_rounded,
+    ];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(28, 2, 28, 2),
+      child: Container(
+        height: 38,
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.24),
+          borderRadius: BorderRadius.circular(19),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: Row(
+          children: List.generate(labels.length, (index) {
+            final selected = index == _surfaceIndex;
+            return Expanded(
+              child: Semantics(
+                selected: selected,
+                button: true,
+                label: labels[index],
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => _surfaceController.animateToPage(
+                    index,
+                    duration: const Duration(milliseconds: 280),
+                    curve: Curves.easeOutCubic,
+                  ),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? Colors.white.withValues(alpha: 0.13)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(icons[index],
+                            size: 15,
+                            color: selected
+                                ? Colors.white
+                                : Colors.white.withValues(alpha: 0.58)),
+                        const SizedBox(width: 5),
+                        Text(
+                          labels[index],
+                          style: TextStyle(
+                            color: selected
+                                ? Colors.white
+                                : Colors.white.withValues(alpha: 0.58),
+                            fontSize: 11,
+                            fontWeight:
+                                selected ? FontWeight.w700 : FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+      ),
     );
   }
 
@@ -634,38 +1006,53 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     String line;
     bool hasTiming = false;
 
-    if (_lyricsLines.isNotEmpty && _currentLineIndex >= 0 && _currentLineIndex < _lyricsLines.length) {
+    if (_lyricsLines.isNotEmpty &&
+        _currentLineIndex >= 0 &&
+        _currentLineIndex < _lyricsLines.length) {
       line = _lyricsLines[_currentLineIndex].text;
       hasTiming = true;
     } else if (_lyricsLines.isNotEmpty) {
       line = _lyricsLines.first.text;
       hasTiming = true;
     } else if (_lyricsResult?.plainText != null) {
-      final lines = _lyricsResult!.plainText!.split('\n').where((l) => l.trim().isNotEmpty).toList();
+      final lines = _lyricsResult!.plainText!
+          .split('\n')
+          .where((l) => l.trim().isNotEmpty)
+          .toList();
       line = lines.isNotEmpty ? lines.first : '';
     } else if (_lyricsResult?.instrumental == true) {
       line = AppLocale.tr('instrumental');
     } else {
-      return SizedBox(height: 40, child: Center(
-        child: _lyricsLoading
-            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-            : Text('♪', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 20)),
-      ));
+      return SizedBox(
+          height: 40,
+          child: Center(
+            child: _lyricsLoading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : Text('♪',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 20)),
+          ));
     }
 
     if (line.isEmpty) {
-      return SizedBox(height: 40, child: Center(
-        child: Text('♪', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 20)),
-      ));
+      return SizedBox(
+          height: 40,
+          child: Center(
+            child: Text('♪',
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 20)),
+          ));
     }
 
-    final p = context.read<PlayerProvider>();
     return GestureDetector(
-      onTap: () {
-        if (_lyricsLines.isNotEmpty && _currentLineIndex >= 0) {
-          p.seek(Duration(milliseconds: _lyricsLines[_currentLineIndex].timestampMs));
-        }
-      },
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const LyricsScreen()),
+      ),
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 400),
         transitionBuilder: (child, animation) {
@@ -680,12 +1067,14 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: hasTiming ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurfaceVariant,
+              color: hasTiming
+                  ? Theme.of(context).colorScheme.onSurface
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: hasTiming ? 17 : 14,
               fontWeight: hasTiming ? FontWeight.w600 : FontWeight.w400,
               shadows: [
                 Shadow(
-                  color: Colors.black.withOpacity(0.4),
+                  color: Colors.black.withValues(alpha: 0.4),
                   blurRadius: 10,
                 ),
               ],
@@ -693,173 +1082,6 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildLyricsView(PlayerProvider player) {
-    final state = _lyricsViewState();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: state,
-    );
-  }
-
-  Widget _lyricsViewState() {
-    if (_lyricsResult == null && _lyricsLines.isEmpty) {
-      return Center(
-        child: Text(
-          '♪',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontSize: 36,
-          ),
-        ),
-      );
-    }
-
-    if (_lyricsResult?.instrumental == true) {
-      return Center(
-        child: Text(
-          AppLocale.tr('instrumental'),
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontSize: 16,
-            fontStyle: FontStyle.italic,
-          ),
-        ),
-      );
-    }
-
-    if (_lyricsLines.isNotEmpty) {
-      return _buildSyncedLyrics();
-    }
-
-    if (_lyricsResult?.plainText != null) {
-      return _buildPlainLyrics(_lyricsResult!.plainText!);
-    }
-
-    return Center(
-      child: Text(
-        AppLocale.tr('no_lyrics'),
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-          fontSize: 16,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSyncedLyrics() {
-    if (_lyricsLines.isEmpty) {
-      return Center(
-        child: Text(
-          '♪',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 36),
-        ),
-      );
-    }
-
-    final currentLine = _currentLineIndex >= 0 && _currentLineIndex < _lyricsLines.length
-        ? _lyricsLines[_currentLineIndex]
-        : null;
-    final prevLine = _currentLineIndex > 0
-        ? _lyricsLines[_currentLineIndex - 1]
-        : null;
-    final nextLine = _currentLineIndex >= 0 && _currentLineIndex < _lyricsLines.length - 1
-        ? _lyricsLines[_currentLineIndex + 1]
-        : null;
-
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (prevLine != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 4),
-            child: Text(
-              prevLine.text,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.3),
-                fontSize: 15,
-              ),
-            ),
-          ),
-        GestureDetector(
-          onTap: () {
-            if (currentLine != null) {
-              final player = context.read<PlayerProvider>();
-              player.seek(Duration(milliseconds: currentLine.timestampMs));
-            }
-          },
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            transitionBuilder: (child, animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: child,
-              );
-            },
-            child: Padding(
-              key: ValueKey(currentLine?.timestampMs ?? 0),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              child: Text(
-                currentLine?.text ?? '',
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  shadows: [
-                    Shadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-        if (nextLine != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 4),
-            child: Text(
-              nextLine.text,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.3),
-                fontSize: 15,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildPlainLyrics(String text) {
-    final lines = text.split('\n');
-    return ListView.builder(
-      itemCount: lines.length,
-      itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 16),
-          child: Text(
-            lines[index].trim(),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontSize: 14,
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -888,23 +1110,30 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: MelodiTheme.containerLow,
-        title: Text(song.title,
-            style: TextStyle(color: MelodiTheme.onSurface)),
+        title: Text(song.title, style: TextStyle(color: MelodiTheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _infoRow(AppLocale.tr('artist_label'), song.artist),
             _infoRow(AppLocale.tr('album_label'), song.album),
-            if (song.genre != null) _infoRow(AppLocale.tr('genre_label'), song.genre!),
-            if (song.year != null) _infoRow(AppLocale.tr('year_label'), '${song.year}'),
-            if (song.trackNumber != null) _infoRow(AppLocale.tr('track_label'), '${song.trackNumber}'),
-            if (song.bitrate != null) _infoRow(AppLocale.tr('bitrate_label'), '${song.bitrate} kbps'),
-            _infoRow(AppLocale.tr('duration_label'), song.duration.toFormattedString()),
-            _infoRow(AppLocale.tr('file_label'),
-              song.filePath.startsWith('youtube://') ? 'YouTube Streaming' :
-              song.filePath.startsWith('http') ? 'Online Streaming' :
-              song.filePath.split('/').last),
+            if (song.genre != null)
+              _infoRow(AppLocale.tr('genre_label'), song.genre!),
+            if (song.year != null)
+              _infoRow(AppLocale.tr('year_label'), '${song.year}'),
+            if (song.trackNumber != null)
+              _infoRow(AppLocale.tr('track_label'), '${song.trackNumber}'),
+            if (song.bitrate != null)
+              _infoRow(AppLocale.tr('bitrate_label'), '${song.bitrate} kbps'),
+            _infoRow(AppLocale.tr('duration_label'),
+                song.duration.toFormattedString()),
+            _infoRow(
+                AppLocale.tr('file_label'),
+                song.filePath.startsWith('youtube://')
+                    ? 'YouTube Streaming'
+                    : song.filePath.startsWith('http')
+                        ? 'Online Streaming'
+                        : song.filePath.split('/').last),
           ],
         ),
         actions: [
@@ -932,8 +1161,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
           ),
           Expanded(
             child: Text(value,
-                style: TextStyle(
-                    color: MelodiTheme.onSurface, fontSize: 13)),
+                style: TextStyle(color: MelodiTheme.onSurface, fontSize: 13)),
           ),
         ],
       ),
@@ -945,7 +1173,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       await ShareService.instance.shareSong(song);
     } catch (e) {
       debugPrint('Share error: $e');
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocale.tr('share')),
@@ -957,9 +1185,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   }
 
   void _showSleepTimer(BuildContext context, PlayerProvider player) {
-    final durations = [
-      5, 10, 15, 30, 45, 60, 90, 120
-    ];
+    final durations = [5, 10, 15, 30, 45, 60, 90, 120];
     showModalBottomSheet(
       context: context,
       backgroundColor: MelodiTheme.containerLow,
@@ -991,10 +1217,19 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                   : '$minutes ${AppLocale.tr('min')}';
               final isSelected = minutes == player.sleepTimerMinutes;
               return ListTile(
-                leading: Icon(Icons.timer_outlined, color: isSelected ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant),
+                leading: Icon(Icons.timer_outlined,
+                    color: isSelected
+                        ? MelodiTheme.primaryGreen
+                        : MelodiTheme.onSurfaceVariant),
                 title: Text(label,
-                    style: TextStyle(color: isSelected ? MelodiTheme.primaryGreen : MelodiTheme.onSurface)),
-                trailing: isSelected ? Icon(Icons.check, color: MelodiTheme.primaryGreen, size: 20) : null,
+                    style: TextStyle(
+                        color: isSelected
+                            ? MelodiTheme.primaryGreen
+                            : MelodiTheme.onSurface)),
+                trailing: isSelected
+                    ? Icon(Icons.check,
+                        color: MelodiTheme.primaryGreen, size: 20)
+                    : null,
                 onTap: () {
                   final timerDuration = Duration(minutes: minutes);
                   player.handler.setSleepTimer(timerDuration);
@@ -1053,32 +1288,35 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               ),
             ),
             ListTile(
-              leading: Icon(Icons.playlist_add, color: MelodiTheme.onSurfaceVariant),
+              leading:
+                  Icon(Icons.playlist_add, color: MelodiTheme.onSurfaceVariant),
               title: Text(AppLocale.tr('add_to_playlist'),
                   style: TextStyle(color: MelodiTheme.onSurface)),
               onTap: () {
                 Navigator.pop(context);
-                _showAddToPlaylist(context, song!);
+                _showAddToPlaylist(context, song);
               },
             ),
             ListTile(
-              leading: Icon(Icons.info_outline, color: MelodiTheme.onSurfaceVariant),
+              leading:
+                  Icon(Icons.info_outline, color: MelodiTheme.onSurfaceVariant),
               title: Text(AppLocale.tr('song_info'),
                   style: TextStyle(color: MelodiTheme.onSurface)),
               onTap: () {
                 Navigator.pop(context);
-                _showSongInfo(context, song!);
+                _showSongInfo(context, song);
               },
             ),
             ListTile(
-              leading: Icon(Icons.share_outlined, color: MelodiTheme.onSurfaceVariant),
+              leading: Icon(Icons.share_outlined,
+                  color: MelodiTheme.onSurfaceVariant),
               title: Text(AppLocale.tr('share'),
                   style: TextStyle(color: MelodiTheme.onSurface)),
               subtitle: Text(AppLocale.tr('share_file'),
                   style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
               onTap: () {
                 Navigator.pop(context);
-                _shareSong(context, song!);
+                _shareSong(context, song);
               },
             ),
             ListTile(
@@ -1091,7 +1329,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.swap_horiz_rounded, color: MelodiTheme.onSurfaceVariant),
+              leading: Icon(Icons.swap_horiz_rounded,
+                  color: MelodiTheme.onSurfaceVariant),
               title: Text(AppLocale.tr('crossfade'),
                   style: TextStyle(color: MelodiTheme.onSurface)),
               onTap: () {
@@ -1100,7 +1339,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                   context: context,
                   backgroundColor: MelodiTheme.containerLow,
                   shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(20)),
                   ),
                   builder: (_) => SafeArea(
                     child: Padding(
@@ -1177,7 +1417,7 @@ class _SpeedButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Colors.white24),
         ),
@@ -1187,7 +1427,9 @@ class _SpeedButton extends StatelessWidget {
             Icon(Icons.speed, color: Colors.white70, size: 16),
             const SizedBox(width: 4),
             Text(
-              '${currentSpeed.toStringAsFixed(2)}x'.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), ''),
+              '${currentSpeed.toStringAsFixed(2)}x'
+                  .replaceAll(RegExp(r'0+$'), '')
+                  .replaceAll(RegExp(r'\.$'), ''),
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 15,
@@ -1221,7 +1463,9 @@ class _VolumeBoostButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: showSlider ? accentColor.withOpacity(0.2) : Colors.white.withOpacity(0.1),
+          color: showSlider
+              ? accentColor.withValues(alpha: 0.2)
+              : Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: showSlider ? accentColor : Colors.white24,

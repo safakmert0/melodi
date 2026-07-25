@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../services/download_manager.dart';
 import '../services/notification_service.dart';
-import '../services/library_health_service.dart';
 import '../providers/library_provider.dart';
 
 class DownloadProvider extends ChangeNotifier {
@@ -12,11 +11,14 @@ class DownloadProvider extends ChangeNotifier {
 
   List<DownloadTask> _tasks = [];
   List<DownloadTask> get tasks => _tasks;
-  List<String> _notifiedCompleted = [];
-  List<String> _notifiedFailed = [];
+  final List<String> _notifiedCompleted = [];
+  final List<String> _notifiedFailed = [];
 
-  List<DownloadTask> get activeDownloads =>
-      _tasks.where((t) => t.state == DownloadState.downloading || t.state == DownloadState.pending).toList();
+  List<DownloadTask> get activeDownloads => _tasks
+      .where((t) =>
+          t.state == DownloadState.downloading ||
+          t.state == DownloadState.pending)
+      .toList();
 
   List<DownloadTask> get completedDownloads =>
       _tasks.where((t) => t.state == DownloadState.completed).toList();
@@ -33,16 +35,16 @@ class DownloadProvider extends ChangeNotifier {
   DownloadProvider() {
     _manager.onDownloadComplete = _onDownloadComplete;
     _subscription = _manager.taskStream.listen((tasks) {
-      final prevCompleted = completedCount;
-      final prevFailed = failedCount;
       _tasks = tasks;
       notifyListeners();
       for (final t in tasks) {
-        if (t.state == DownloadState.completed && !_notifiedCompleted.contains(t.id)) {
+        if (t.state == DownloadState.completed &&
+            !_notifiedCompleted.contains(t.id)) {
           _notifiedCompleted.add(t.id);
           NotificationService.instance.showDownloadComplete(t.title);
         }
-        if (t.state == DownloadState.failed && !_notifiedFailed.contains(t.id)) {
+        if (t.state == DownloadState.failed &&
+            !_notifiedFailed.contains(t.id)) {
           _notifiedFailed.add(t.id);
           NotificationService.instance.showDownloadFailed(t.title);
         }
@@ -105,8 +107,22 @@ class DownloadProvider extends ChangeNotifier {
 
   void cancelTask(String taskId) => _manager.cancelTask(taskId);
   void cancelAll() => _manager.cancelAll();
+  void cancelTasks(Iterable<String> taskIds) {
+    for (final id in taskIds) {
+      _manager.cancelTask(id);
+    }
+  }
+
   void retryTask(String taskId) => _manager.retryTask(taskId);
   void retryAllFailed() => _manager.retryAllFailed();
+  void retryTasks(Iterable<String> taskIds) {
+    for (final id in taskIds) {
+      _manager.retryTask(id);
+    }
+  }
+
+  void clearTasks(Iterable<String> taskIds) => _manager.clearTasks(taskIds);
+
   void clearCompleted() {
     _manager.clearCompleted();
     _notifiedCompleted.clear();

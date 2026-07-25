@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'package:path_provider/path_provider.dart';
@@ -84,18 +83,19 @@ class DownloadProgress {
   });
 
   String get progressLabel => '${(progress * 100).toStringAsFixed(1)}%';
-  
+
   String get sizeLabel {
     if (totalBytes == null) return '';
     if (totalBytes! < 1024) return '$totalBytes B';
-    if (totalBytes! < 1024 * 1024) return '${(totalBytes! / 1024).toStringAsFixed(1)} KB';
+    if (totalBytes! < 1024 * 1024)
+      return '${(totalBytes! / 1024).toStringAsFixed(1)} KB';
     return '${(totalBytes! / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 }
 
 class YtDlpService {
   YoutubeExplode? _yt;
-  final StreamController<DownloadProgress> _progressController = 
+  final StreamController<DownloadProgress> _progressController =
       StreamController<DownloadProgress>.broadcast();
 
   static const Duration _timeout = Duration(seconds: 30);
@@ -119,13 +119,14 @@ class YtDlpService {
 
   Future<String?> extractVideoId(String input) async {
     final trimmed = input.trim();
-    
+
     if (RegExp(r'^[a-zA-Z0-9_-]{11}$').hasMatch(trimmed)) {
       return trimmed;
     }
 
     final patterns = [
-      RegExp(r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})'),
+      RegExp(
+          r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})'),
       RegExp(r'youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})'),
     ];
 
@@ -154,14 +155,14 @@ class YtDlpService {
     try {
       final results = await _client.search.search(query).timeout(_timeout);
       final videos = <YtDlpVideo>[];
-      
+
       for (final video in results) {
         if (video.duration != null && video.duration!.inSeconds > 0) {
           videos.add(YtDlpVideo.fromVideo(video));
         }
         if (videos.length >= limit) break;
       }
-      
+
       return videos;
     } catch (e) {
       debugPrint('YtDlpService search error: $e');
@@ -171,15 +172,14 @@ class YtDlpService {
 
   Future<List<AudioFormat>> getAvailableFormats(String videoId) async {
     final formats = <AudioFormat>[];
-    
+
     for (final client in _clients) {
       try {
         final manifest = await _client.videos.streams
-            .getManifest(videoId, ytClients: [client])
-            .timeout(_timeout);
-        
+            .getManifest(videoId, ytClients: [client]).timeout(_timeout);
+
         final audioStreams = manifest.audioOnly;
-        
+
         for (final stream in audioStreams) {
           formats.add(AudioFormat(
             container: stream.container.name,
@@ -189,7 +189,7 @@ class YtDlpService {
             streamInfo: stream,
           ));
         }
-        
+
         if (formats.isNotEmpty) break;
       } catch (e) {
         debugPrint('YtDlpService getAvailableFormats $client error: $e');
@@ -226,14 +226,14 @@ class YtDlpService {
 
       final sanitized = title.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
       String safeTitle = sanitized.isEmpty ? videoId : sanitized;
-      
+
       final dir = await getApplicationDocumentsDirectory();
       final downloadDir = Directory('${dir.path}/yt_downloads');
       await downloadDir.create(recursive: true);
-      
+
       final filePath = p.join(downloadDir.path, '${safeTitle}_$videoId.m4a');
       final file = File(filePath);
-      
+
       if (await file.exists()) {
         final len = await file.length();
         if (len > 1000) return filePath;
@@ -246,7 +246,7 @@ class YtDlpService {
       try {
         final request = await httpClient.getUrl(stream.url);
         request.headers.set('User-Agent', _userAgent);
-        
+
         final response = await request.close();
         if (response.statusCode != 200) {
           debugPrint('YtDlpService download HTTP ${response.statusCode}');
@@ -265,12 +265,10 @@ class YtDlpService {
           if (onProgress != null) {
             final elapsed = DateTime.now().difference(startTime);
             final speed = downloadedBytes / elapsed.inSeconds;
-            final progress = totalBytes != null 
-                ? downloadedBytes / totalBytes 
-                : 0.0;
-            
+            final progress = downloadedBytes / totalBytes;
+
             Duration? estimatedTime;
-            if (totalBytes != null && speed > 0) {
+            if (speed > 0) {
               final remaining = (totalBytes - downloadedBytes) / speed;
               estimatedTime = Duration(seconds: remaining.toInt());
             }
@@ -289,8 +287,8 @@ class YtDlpService {
         httpClient.close();
 
         final len = await file.length();
-        debugPrint('YtDlpService: downloaded ${len} bytes');
-        
+        debugPrint('YtDlpService: downloaded $len bytes');
+
         if (len < 1000) {
           await file.delete();
           debugPrint('YtDlpService: file too small, deleted');
@@ -309,8 +307,10 @@ class YtDlpService {
   }
 
   String _formatSpeed(double bytesPerSecond) {
-    if (bytesPerSecond < 1024) return '${bytesPerSecond.toStringAsFixed(0)} B/s';
-    if (bytesPerSecond < 1024 * 1024) return '${(bytesPerSecond / 1024).toStringAsFixed(1)} KB/s';
+    if (bytesPerSecond < 1024)
+      return '${bytesPerSecond.toStringAsFixed(0)} B/s';
+    if (bytesPerSecond < 1024 * 1024)
+      return '${(bytesPerSecond / 1024).toStringAsFixed(1)} KB/s';
     return '${(bytesPerSecond / (1024 * 1024)).toStringAsFixed(1)} MB/s';
   }
 
@@ -319,7 +319,7 @@ class YtDlpService {
       final playlistId = _extractPlaylistId(playlistUrl);
       if (playlistId == null) return [];
 
-      final playlist = await _client.playlists.get(playlistId).timeout(_timeout);
+      await _client.playlists.get(playlistId).timeout(_timeout);
       final videos = <YtDlpVideo>[];
 
       await for (final video in _client.playlists.getVideos(playlistId)) {

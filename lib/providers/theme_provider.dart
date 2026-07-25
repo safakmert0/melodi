@@ -197,7 +197,8 @@ class ThemeProvider extends ChangeNotifier {
         break;
     }
     _syncIsLightMode();
-    await DatabaseService.instance.setSetting('theme_mode', _themeMode.index.toString());
+    await DatabaseService.instance
+        .setSetting('theme_mode', _themeMode.index.toString());
     notifyListeners();
   }
 

@@ -25,7 +25,8 @@ class _YTMusicWebViewLoginState extends State<YTMusicWebViewLogin> {
         onPageFinished: _onPageFinished,
       ))
       ..loadRequest(Uri.parse('https://music.youtube.com'));
-    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) => _checkCookies());
+    _pollTimer =
+        Timer.periodic(const Duration(seconds: 3), (_) => _checkCookies());
   }
 
   @override
@@ -49,7 +50,9 @@ class _YTMusicWebViewLoginState extends State<YTMusicWebViewLogin> {
         _pollTimer?.cancel();
         widget.onCookieObtained(cookieString);
       }
-    } catch (e) { debugPrint('YT Music cookie extraction failed: $e'); }
+    } catch (e) {
+      debugPrint('YT Music cookie extraction failed: $e');
+    }
   }
 
   @override

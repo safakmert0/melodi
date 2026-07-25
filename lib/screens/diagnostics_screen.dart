@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../services/diagnostics_service.dart';
 import '../providers/spotify_provider.dart';
 import '../providers/ytmusic_provider.dart';
@@ -67,7 +66,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
     features.add({
       'name': 'Çevrimiçi Oynatma',
       'status': 'partial',
-      'description': 'YouTube şarkılarını doğrudan streaming ile çalma (bazen kesinti olabilir)',
+      'description':
+          'YouTube şarkılarını doğrudan streaming ile çalma (bazen kesinti olabilir)',
     });
 
     // Download
@@ -109,7 +109,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
     features.add({
       'name': 'Çalma Listesi Senkronizasyonu',
       'status': 'partial',
-      'description': 'Spotify/YTMusic ile çalma listesi eşzamanlama (oturum gerekli)',
+      'description':
+          'Spotify/YTMusic ile çalma listesi eşzamanlama (oturum gerekli)',
     });
 
     // Background playback
@@ -194,12 +195,14 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                   children: [
                     _SectionTitle(AppLocale.tr('app_info')),
                     _InfoRow(
-                      label: '${AppLocale.tr('version')} ${AppConstants.appVersion}',
+                      label:
+                          '${AppLocale.tr('version')} ${AppConstants.appVersion}',
                       value: 'Build ${AppConstants.buildNumber}',
                     ),
                     _InfoRow(
                       label: 'Platform',
-                      value: '${_bundle!['platform']} ${_bundle!['platformVersion']}',
+                      value:
+                          '${_bundle!['platform']} ${_bundle!['platformVersion']}',
                     ),
                     const SizedBox(height: 16),
                     _SectionTitle(AppLocale.tr('storage')),
@@ -230,14 +233,18 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                               value: spotify.isConnected
                                   ? 'Connected (${spotify.username ?? ''})'
                                   : 'Not Connected',
-                              valueColor: spotify.isConnected ? Colors.green : MelodiTheme.textMuted,
+                              valueColor: spotify.isConnected
+                                  ? Colors.green
+                                  : MelodiTheme.textMuted,
                             ),
                             _InfoRow(
                               label: 'YouTube Music',
                               value: ytmusic.isConnected
                                   ? 'Connected'
                                   : 'Not Connected',
-                              valueColor: ytmusic.isConnected ? Colors.green : MelodiTheme.textMuted,
+                              valueColor: ytmusic.isConnected
+                                  ? Colors.green
+                                  : MelodiTheme.textMuted,
                             ),
                           ],
                         );
@@ -263,7 +270,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                               ? 'Kısmi'
                               : 'Çalışmıyor';
                       return Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 4),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: MelodiTheme.containerLow,
@@ -298,7 +306,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: statusColor.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(8),
@@ -320,22 +329,27 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                     _SectionTitle(AppLocale.tr('error_logs')),
                     if (_errors.isEmpty)
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         child: Text(
                           'No errors logged',
-                          style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
+                          style: TextStyle(
+                              color: MelodiTheme.onSurfaceVariant,
+                              fontSize: 14),
                         ),
                       )
                     else
                       ...List.generate(_errors.length, (i) {
                         final error = _errors[i];
                         return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 4),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: MelodiTheme.containerLow,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: MelodiTheme.outlineVariant),
+                            border:
+                                Border.all(color: MelodiTheme.outlineVariant),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,9 +357,11 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                               Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: MelodiTheme.errorRed.withOpacity(0.15),
+                                      color: MelodiTheme.errorRed
+                                          .withOpacity(0.15),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
@@ -369,7 +385,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                     ),
                                   ),
                                   Text(
-                                    _formatTimestamp(error['createdAt'] as String? ?? ''),
+                                    _formatTimestamp(
+                                        error['createdAt'] as String? ?? ''),
                                     style: TextStyle(
                                       color: MelodiTheme.textMuted,
                                       fontSize: 15,
@@ -388,10 +405,12 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                               if (error['stackTrace'] != null &&
-                                  (error['stackTrace'] as String).isNotEmpty) ...[
+                                  (error['stackTrace'] as String)
+                                      .isNotEmpty) ...[
                                 const SizedBox(height: 4),
                                 GestureDetector(
-                                  onTap: () => _showStackTrace(context, error['stackTrace'] as String),
+                                  onTap: () => _showStackTrace(
+                                      context, error['stackTrace'] as String),
                                   child: Text(
                                     'View stack trace',
                                     style: TextStyle(
@@ -414,11 +433,13 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                           width: double.infinity,
                           child: OutlinedButton.icon(
                             onPressed: _clearLogs,
-                            icon: const Icon(Icons.delete_sweep_rounded, size: 18),
+                            icon: const Icon(Icons.delete_sweep_rounded,
+                                size: 18),
                             label: Text(AppLocale.tr('clear_logs')),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: MelodiTheme.errorRed,
-                              side: BorderSide(color: MelodiTheme.errorRed.withOpacity(0.5)),
+                              side: BorderSide(
+                                  color: MelodiTheme.errorRed.withOpacity(0.5)),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -509,7 +530,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    if (bytes < 1024 * 1024 * 1024)
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 

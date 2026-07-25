@@ -1,13 +1,10 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../providers/player_provider.dart';
 import '../services/lyrics_service.dart';
-import '../widgets/seek_bar.dart';
 import '../core/extensions/duration_ext.dart';
 import '../services/audio_handler.dart';
 
@@ -65,7 +62,8 @@ class _LyricsScreenState extends State<LyricsScreen> {
 
   void _scrollToCurrentLine() {
     if (_currentLineIndex < 0 || !_scrollController.hasClients) return;
-    final offset = (_currentLineIndex * 56.0) - (MediaQuery.of(context).size.height * 0.35);
+    final offset = (_currentLineIndex * 56.0) -
+        (MediaQuery.of(context).size.height * 0.35);
     _scrollController.animateTo(
       offset.clamp(0.0, _scrollController.position.maxScrollExtent),
       duration: const Duration(milliseconds: 300),
@@ -110,11 +108,14 @@ class _LyricsScreenState extends State<LyricsScreen> {
                   children: [
                     SafeArea(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         child: Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 32),
+                              icon: const Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  size: 32),
                               color: MelodiTheme.onSurface,
                               onPressed: () => Navigator.of(context).pop(),
                             ),
@@ -123,7 +124,8 @@ class _LyricsScreenState extends State<LyricsScreen> {
                                 children: [
                                   Text(
                                     AppLocale.tr('lyrics'),
-                                    style: MelodiTheme.label(size: 10, letterSpacing: 1.5),
+                                    style: MelodiTheme.label(
+                                        size: 10, letterSpacing: 1.5),
                                   ),
                                   Text(
                                     song.title,
@@ -170,7 +172,8 @@ class _LyricsScreenState extends State<LyricsScreen> {
                               controller: _scrollController,
                               physics: const BouncingScrollPhysics(),
                               padding: EdgeInsets.symmetric(
-                                vertical: MediaQuery.of(context).size.height * 0.3,
+                                vertical:
+                                    MediaQuery.of(context).size.height * 0.3,
                                 horizontal: 24,
                               ),
                               itemCount: _lyricsLines.length,
@@ -190,10 +193,12 @@ class _LyricsScreenState extends State<LyricsScreen> {
                                       letterSpacing: -0.8,
                                       color: isActive
                                           ? MelodiTheme.onSurface
-                                          : MelodiTheme.onSurface.withOpacity(0.2),
+                                          : MelodiTheme.onSurface
+                                              .withOpacity(0.2),
                                     ),
                                     child: Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 8),
                                       child: Text(line.text),
                                     ),
                                   ),
@@ -229,19 +234,25 @@ class _LyricsScreenState extends State<LyricsScreen> {
                                 child: SliderTheme(
                                   data: SliderThemeData(
                                     activeTrackColor: MelodiTheme.onSurface,
-                                    inactiveTrackColor: MelodiTheme.surfaceBright,
+                                    inactiveTrackColor:
+                                        MelodiTheme.surfaceBright,
                                     thumbColor: MelodiTheme.onSurface,
                                     trackHeight: 2,
-                                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
-                                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
+                                    thumbShape: const RoundSliderThumbShape(
+                                        enabledThumbRadius: 4),
+                                    overlayShape: const RoundSliderOverlayShape(
+                                        overlayRadius: 10),
                                   ),
                                   child: Slider(
                                     value: player.duration.inMilliseconds > 0
-                                        ? player.position.inMilliseconds / player.duration.inMilliseconds
+                                        ? player.position.inMilliseconds /
+                                            player.duration.inMilliseconds
                                         : 0.0,
                                     onChanged: (value) {
                                       final pos = Duration(
-                                        milliseconds: (value * player.duration.inMilliseconds).round(),
+                                        milliseconds: (value *
+                                                player.duration.inMilliseconds)
+                                            .round(),
                                       );
                                       player.seek(pos);
                                     },
@@ -264,7 +275,9 @@ class _LyricsScreenState extends State<LyricsScreen> {
                               IconButton(
                                 icon: Icon(
                                   Icons.shuffle,
-                                  color: player.isShuffled ? MelodiTheme.primaryGreen : MelodiTheme.onSurfaceVariant,
+                                  color: player.isShuffled
+                                      ? MelodiTheme.primaryGreen
+                                      : MelodiTheme.onSurfaceVariant,
                                 ),
                                 iconSize: 28,
                                 onPressed: player.toggleShuffle,
@@ -284,7 +297,9 @@ class _LyricsScreenState extends State<LyricsScreen> {
                                 ),
                                 child: IconButton(
                                   icon: Icon(
-                                    player.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                    player.isPlaying
+                                        ? Icons.pause_rounded
+                                        : Icons.play_arrow_rounded,
                                     color: MelodiTheme.background,
                                   ),
                                   iconSize: 28,

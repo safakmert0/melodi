@@ -28,9 +28,8 @@ class ArtistCard extends StatelessWidget {
               child: CircleAvatar(
                 radius: 58,
                 backgroundColor: MelodiTheme.surfaceHigh,
-                backgroundImage: artist.image != null
-                    ? MemoryImage(artist.image!)
-                    : null,
+                backgroundImage:
+                    artist.image != null ? MemoryImage(artist.image!) : null,
                 child: artist.image == null
                     ? Icon(
                         Icons.person_rounded,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../services/playback_service.dart';
 
 class CrossfadeSlider extends StatefulWidget {
@@ -69,8 +68,10 @@ class _CrossfadeSliderState extends State<CrossfadeSlider> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('0s', style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
-              Text('12s', style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
+              Text('0s',
+                  style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
+              Text('12s',
+                  style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
             ],
           ),
         ),

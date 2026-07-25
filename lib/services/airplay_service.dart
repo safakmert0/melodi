@@ -61,7 +61,8 @@ class AirPlayService {
       });
       if (result == true) {
         _currentDeviceId = deviceId;
-        await DatabaseService.instance.setSetting('last_airplay_device', deviceId);
+        await DatabaseService.instance
+            .setSetting('last_airplay_device', deviceId);
         return true;
       }
       return false;

@@ -28,7 +28,8 @@ class SyncProvider extends ChangeNotifier {
     await loadPreferences();
     final spotifyConnected = _service.isSpotifyConnected;
     final ytConnected = _service.isYTMusicConnected;
-    if ((spotifyConnected || ytConnected) && _service.state != SyncState.syncing) {
+    if ((spotifyConnected || ytConnected) &&
+        _service.state != SyncState.syncing) {
       await triggerSync();
     }
   }

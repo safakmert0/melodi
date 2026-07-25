@@ -53,7 +53,8 @@ class AudioQualityService {
     int? autoDeleteDays,
   }) async {
     if (keepDownloads != null) {
-      await _db.setSetting('keep_downloads_after_playing', keepDownloads.toString());
+      await _db.setSetting(
+          'keep_downloads_after_playing', keepDownloads.toString());
     }
     if (autoDeleteDays != null) {
       await _db.setSetting('auto_delete_days', autoDeleteDays.toString());

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../models/song_model.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
@@ -57,7 +56,8 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
         _artist = artist;
         _albums = albums;
         _topTracks = topTracks;
-        _related = related.where((a) => a.id != widget.artistId).take(10).toList();
+        _related =
+            related.where((a) => a.id != widget.artistId).take(10).toList();
         _isLoading = false;
       });
     }
@@ -93,7 +93,8 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                       padding: const EdgeInsets.all(32),
                       child: Text(AppLocale.tr('no_songs'),
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
+                          style:
+                              TextStyle(color: MelodiTheme.onSurfaceVariant)),
                     ),
                   )
                 else
@@ -144,9 +145,13 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                             final songs = _topTracks.map((t) {
                               // Search local library by title + artist
                               final localMatch = library.songs.firstWhere(
-                                (s) => s.title.toLowerCase() == t.name.toLowerCase() &&
-                                       s.artist.toLowerCase().contains(t.artist.toLowerCase()),
-                                orElse: () => DiscoveredTrackToSongModel(t),
+                                (s) =>
+                                    s.title.toLowerCase() ==
+                                        t.name.toLowerCase() &&
+                                    s.artist
+                                        .toLowerCase()
+                                        .contains(t.artist.toLowerCase()),
+                                orElse: () => discoveredTrackToSongModel(t),
                               );
                               return localMatch;
                             }).toList();
@@ -178,7 +183,8 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                       padding: const EdgeInsets.all(32),
                       child: Text(AppLocale.tr('no_albums_found'),
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
+                          style:
+                              TextStyle(color: MelodiTheme.onSurfaceVariant)),
                     ),
                   )
                 else
@@ -346,9 +352,11 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                   final spotify = context.read<SpotifyProvider>();
                   bool success;
                   if (_isFollowing) {
-                    success = await spotify.service.unfollowArtist(widget.artistId);
+                    success =
+                        await spotify.service.unfollowArtist(widget.artistId);
                   } else {
-                    success = await spotify.service.followArtist(widget.artistId);
+                    success =
+                        await spotify.service.followArtist(widget.artistId);
                   }
                   if (success) {
                     setState(() => _isFollowing = !_isFollowing);
@@ -369,23 +377,23 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                   }
                 },
               ),
-              if (_topTracks.isNotEmpty)
-                const SizedBox(width: 12),
+              if (_topTracks.isNotEmpty) const SizedBox(width: 12),
               if (_topTracks.isNotEmpty)
                 OutlinedButton.icon(
                   onPressed: () {
                     final library = context.read<LibraryProvider>();
                     final songs = _topTracks.map((t) {
                       final localMatch = library.songs.firstWhere(
-                        (s) => s.title.toLowerCase() == t.name.toLowerCase() &&
-                               s.artist.toLowerCase().contains(t.artist.toLowerCase()),
-                        orElse: () => DiscoveredTrackToSongModel(t),
+                        (s) =>
+                            s.title.toLowerCase() == t.name.toLowerCase() &&
+                            s.artist
+                                .toLowerCase()
+                                .contains(t.artist.toLowerCase()),
+                        orElse: () => discoveredTrackToSongModel(t),
                       );
                       return localMatch;
                     }).toList();
-                    context
-                        .read<PlayerProvider>()
-                        .playFromQueue(songs, 0);
+                    context.read<PlayerProvider>().playFromQueue(songs, 0);
                   },
                   icon: const Icon(Icons.shuffle_rounded, size: 18),
                   label: Text(AppLocale.tr('play')),
@@ -415,7 +423,7 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
   }
 }
 
-SongModel DiscoveredTrackToSongModel(DiscoveredTrack track) {
+SongModel discoveredTrackToSongModel(DiscoveredTrack track) {
   return SongModel(
     id: 'spotify:${track.id}',
     title: track.name,
@@ -446,12 +454,11 @@ class _FollowButton extends StatelessWidget {
         size: 18,
       ),
       label: Text(
-        isFollowing ? AppLocale.tr('following') : AppLocale.tr('follow') ?? 'Follow',
+        isFollowing ? AppLocale.tr('following') : AppLocale.tr('follow'),
       ),
       style: FilledButton.styleFrom(
-        backgroundColor: isFollowing
-            ? MelodiTheme.surfaceHigh
-            : MelodiTheme.primaryGreen,
+        backgroundColor:
+            isFollowing ? MelodiTheme.surfaceHigh : MelodiTheme.primaryGreen,
         foregroundColor: isFollowing ? MelodiTheme.onSurface : Colors.black,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
@@ -544,10 +551,8 @@ class _AlbumGridCard extends StatelessWidget {
                           child: Icon(Icons.album_rounded,
                               size: 40, color: MelodiTheme.textMuted),
                         ),
-                        errorWidget: (_, __, ___) => Icon(
-                            Icons.album_rounded,
-                            size: 40,
-                            color: MelodiTheme.textMuted),
+                        errorWidget: (_, __, ___) => Icon(Icons.album_rounded,
+                            size: 40, color: MelodiTheme.textMuted),
                       )
                     : Icon(Icons.album_rounded,
                         size: 40, color: MelodiTheme.textMuted),
