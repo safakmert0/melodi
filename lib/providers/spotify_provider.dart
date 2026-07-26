@@ -21,6 +21,7 @@ class SpotifyProvider extends ChangeNotifier {
   bool _isInitialized = false;
   String? _error;
   final Map<String, String> _matchedTrackIds = {};
+  final Map<String, List<SpotifyTrackItem>> _playlistTrackCache = {};
 
   SpotifyService get service => _service;
   bool get isConnected => _service.isConnected;
@@ -173,6 +174,7 @@ class SpotifyProvider extends ChangeNotifier {
     _username = null;
     _playlists = [];
     _likedSongs = [];
+    _playlistTrackCache.clear();
     _error = null;
 
     final db = DatabaseService.instance;
@@ -251,7 +253,17 @@ class SpotifyProvider extends ChangeNotifier {
         return [];
       }
 
-      _playlists = await _service.getUserPlaylists();
+      final refreshedPlaylists = await _service.getUserPlaylists();
+      if (refreshedPlaylists.isEmpty && _playlists.isNotEmpty) {
+        _error =
+            'Spotify çalma listeleri yenilenemedi; kayıtlı liste korunuyor.';
+        notifyListeners();
+        return _playlists;
+      }
+      _playlists = refreshedPlaylists;
+      final playlistIds = _playlists.map((playlist) => playlist.id).toSet();
+      _playlistTrackCache
+          .removeWhere((playlistId, _) => !playlistIds.contains(playlistId));
       await _savePlaylists();
       notifyListeners();
       return _playlists;
@@ -262,6 +274,51 @@ class SpotifyProvider extends ChangeNotifier {
     } finally {
       _isImportingPlaylists = false;
       notifyListeners();
+    }
+  }
+
+  List<SpotifyTrackItem>? cachedPlaylistTracks(String playlistId) {
+    final tracks = _playlistTrackCache[playlistId];
+    return tracks == null ? null : List.unmodifiable(tracks);
+  }
+
+  Future<List<SpotifyTrackItem>> loadPlaylistTracks(
+    SpotifyPlaylistItem playlist, {
+    bool refresh = false,
+  }) async {
+    final cached = _playlistTrackCache[playlist.id];
+    if (!refresh && cached != null) return List.unmodifiable(cached);
+
+    _error = null;
+    try {
+      if (_service.isExpiringSoon && _spDc != null) {
+        final refreshed = await _service.refreshAccessToken();
+        if (refreshed != null) {
+          _username = refreshed.username;
+          await _saveSession(refreshed);
+        }
+      }
+
+      final tracks = await _service.getPlaylistTracks(playlist.id);
+      if (tracks.isNotEmpty || playlist.trackCount == 0) {
+        _playlistTrackCache[playlist.id] = List.from(tracks);
+        final index = _playlists.indexWhere((item) => item.id == playlist.id);
+        if (index >= 0 && _playlists[index].trackCount != tracks.length) {
+          _playlists[index] = _playlists[index].copyWith(
+            trackCount: tracks.length,
+          );
+          await _savePlaylists();
+        }
+        notifyListeners();
+      } else {
+        _error = 'Spotify çalma listesi şarkıları alınamadı.';
+        notifyListeners();
+      }
+      return List.unmodifiable(tracks);
+    } catch (error) {
+      _error = error.toString();
+      notifyListeners();
+      rethrow;
     }
   }
 

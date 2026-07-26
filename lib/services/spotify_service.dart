@@ -148,6 +148,21 @@ class SpotifyPlaylistItem {
     this.imageUrl,
     this.trackCount = 0,
   });
+
+  SpotifyPlaylistItem copyWith({
+    String? name,
+    String? ownerId,
+    String? imageUrl,
+    int? trackCount,
+  }) {
+    return SpotifyPlaylistItem(
+      id: id,
+      name: name ?? this.name,
+      ownerId: ownerId ?? this.ownerId,
+      imageUrl: imageUrl ?? this.imageUrl,
+      trackCount: trackCount ?? this.trackCount,
+    );
+  }
 }
 
 class SpotifyTrackItem {

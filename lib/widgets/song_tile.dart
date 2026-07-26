@@ -22,6 +22,7 @@ class SongTile extends StatelessWidget {
   final VoidCallback? onPlayNext;
   final VoidCallback? onViewAlbum;
   final VoidCallback? onViewArtist;
+  final VoidCallback? onDownload;
   final Widget? trailing;
   final bool showArtwork;
   final bool showFavorite;
@@ -40,6 +41,7 @@ class SongTile extends StatelessWidget {
     this.onPlayNext,
     this.onViewAlbum,
     this.onViewArtist,
+    this.onDownload,
     this.trailing,
     this.showArtwork = true,
     this.showFavorite = true,
@@ -50,6 +52,12 @@ class SongTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canDownload = onDownload != null ||
+        song.filePath.startsWith('spotify://') ||
+        song.filePath.startsWith('youtube://') ||
+        song.filePath.startsWith('http://') ||
+        song.filePath.startsWith('https://');
+
     return ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
@@ -175,6 +183,9 @@ class SongTile extends StatelessWidget {
                               () => _showAddToPlaylistSheet(context))
                           .call();
                       break;
+                    case 'download':
+                      (onDownload ?? () => _downloadSong(context, song)).call();
+                      break;
                     case 'share':
                       _shareSong(context, song);
                       break;
@@ -211,6 +222,15 @@ class SongTile extends StatelessWidget {
                       dense: true,
                     ),
                   ),
+                  if (canDownload)
+                    PopupMenuItem(
+                      value: 'download',
+                      child: ListTile(
+                        leading: const Icon(Icons.download_rounded),
+                        title: Text(AppLocale.tr('download')),
+                        dense: true,
+                      ),
+                    ),
                   const PopupMenuDivider(),
                   PopupMenuItem(
                     value: 'share',
@@ -252,6 +272,41 @@ class SongTile extends StatelessWidget {
       builder: (_) => AddToPlaylistSheet(
         song: song,
         playlists: playlists,
+      ),
+    );
+  }
+
+  void _downloadSong(BuildContext context, SongModel song) {
+    final downloads = context.read<DownloadProvider>();
+    final status = downloads.getStatusForSong(song.title, song.artist);
+    if (status == DownloadState.completed ||
+        status == DownloadState.pending ||
+        status == DownloadState.downloading) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocale.tr('download_already_queued'))),
+      );
+      return;
+    }
+
+    final spotifyId = song.id.startsWith('spotify:')
+        ? song.id.replaceFirst('spotify:', '')
+        : song.id;
+    final sourceVideoId = song.filePath.startsWith('youtube://')
+        ? song.filePath.replaceFirst('youtube://', '')
+        : RegExp(r'^[A-Za-z0-9_-]{11}$').hasMatch(song.id)
+            ? song.id
+            : null;
+    downloads.enqueueTrack(
+      spotifyTrackId: spotifyId,
+      title: song.title,
+      artist: song.artist,
+      album: song.album,
+      sourceVideoId: sourceVideoId,
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("${song.title} · ${AppLocale.tr('download_queued')}"),
+        backgroundColor: MelodiTheme.primaryGreen,
       ),
     );
   }

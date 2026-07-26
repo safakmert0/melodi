@@ -43,6 +43,7 @@ import 'storage_screen.dart';
 import '../widgets/ytmusic_webview_login.dart';
 import 'backend_settings_screen.dart';
 import 'source_hub_screen.dart';
+import 'spotify_playlist_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -3635,6 +3636,18 @@ class _SpotifySettingsPage extends StatefulWidget {
 
 class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final spotify = context.read<SpotifyProvider>();
+      if (spotify.isConnected && !spotify.isImportingPlaylists) {
+        spotify.importPlaylists();
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: MelodiTheme.background,
@@ -3769,29 +3782,39 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                   const SizedBox(height: 12),
                   ...spotify.playlists.map((playlist) => ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: MelodiTheme.containerHigh,
-                            borderRadius: BorderRadius.circular(8),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => SpotifyPlaylistScreen(
+                              playlist: playlist,
+                            ),
                           ),
-                          child: playlist.imageUrl != null
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
-                                    playlist.imageUrl!,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Icon(
-                                      Icons.queue_music_rounded,
-                                      color: MelodiTheme.onSurfaceVariant,
+                        ),
+                        leading: Hero(
+                          tag: 'spotify-playlist-${playlist.id}',
+                          child: Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: MelodiTheme.containerHigh,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: playlist.imageUrl != null
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(
+                                      playlist.imageUrl!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Icon(
+                                        Icons.queue_music_rounded,
+                                        color: MelodiTheme.onSurfaceVariant,
+                                      ),
                                     ),
+                                  )
+                                : Icon(
+                                    Icons.queue_music_rounded,
+                                    color: MelodiTheme.onSurfaceVariant,
                                   ),
-                                )
-                              : Icon(
-                                  Icons.queue_music_rounded,
-                                  color: MelodiTheme.onSurfaceVariant,
-                                ),
+                          ),
                         ),
                         title: Text(
                           playlist.name,

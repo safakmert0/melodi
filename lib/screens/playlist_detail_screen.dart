@@ -8,12 +8,14 @@ import '../services/database_service.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/playlist_provider.dart';
+import '../providers/download_provider.dart';
 import '../widgets/song_tile.dart';
 import '../widgets/wrong_match_button.dart';
 import '../providers/spotify_provider.dart';
 import '../providers/ytmusic_provider.dart';
 import '../providers/sync_provider.dart';
 import '../services/track_matcher.dart';
+import '../services/download_manager.dart';
 import '../widgets/playlist_sync_settings.dart';
 
 class PlaylistDetailScreen extends StatefulWidget {
@@ -310,6 +312,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                 const SizedBox(height: 12),
                                 SizedBox(
                                   height: 36,
+                                  width: double.infinity,
                                   child: FilledButton.icon(
                                     onPressed: () => context
                                         .read<PlayerProvider>()
@@ -326,6 +329,31 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                     ),
                                   ),
                                 ),
+                                if (_songs.any(_isRemoteSong)) ...[
+                                  const SizedBox(height: 8),
+                                  SizedBox(
+                                    height: 36,
+                                    width: double.infinity,
+                                    child: OutlinedButton.icon(
+                                      onPressed: _downloadPlaylist,
+                                      icon: const Icon(
+                                        Icons.download_for_offline_rounded,
+                                        size: 18,
+                                      ),
+                                      label: Text(AppLocale.tr('download_all')),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: MelodiTheme.onSurface,
+                                        side: BorderSide(
+                                          color: MelodiTheme.outlineVariant,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -441,6 +469,55 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                     ),
                   ],
                 ),
+    );
+  }
+
+  bool _isRemoteSong(SongModel song) =>
+      song.filePath.startsWith('spotify://') ||
+      song.filePath.startsWith('youtube://') ||
+      song.filePath.startsWith('http://') ||
+      song.filePath.startsWith('https://');
+
+  void _downloadPlaylist() {
+    final downloads = context.read<DownloadProvider>();
+    final seenSourceIds = <String>{};
+    final queued = <Map<String, String>>[];
+
+    for (final song in _songs.where(_isRemoteSong)) {
+      final status = downloads.getStatusForSong(song.title, song.artist);
+      if (status != null && status != DownloadState.failed) continue;
+
+      var sourceId = song.id;
+      for (final prefix in const ['spotify:', 'youtube:']) {
+        if (sourceId.startsWith(prefix)) {
+          sourceId = sourceId.substring(prefix.length);
+          break;
+        }
+      }
+      if (!seenSourceIds.add(sourceId)) continue;
+      queued.add({
+        'id': sourceId,
+        'title': song.title,
+        'artist': song.artist,
+        if (song.album.isNotEmpty) 'album': song.album,
+      });
+    }
+
+    if (queued.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocale.tr('download_already_queued'))),
+      );
+      return;
+    }
+
+    downloads.enqueuePlaylist(queued);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          "${queued.length} ${AppLocale.tr('songs').toLowerCase()} · ${AppLocale.tr('download_queued')}",
+        ),
+        backgroundColor: MelodiTheme.primaryGreen,
+      ),
     );
   }
 

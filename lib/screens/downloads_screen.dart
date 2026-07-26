@@ -12,6 +12,7 @@ import '../services/download_manager.dart';
 import '../services/storage_manager.dart';
 import '../widgets/downloads/download_components.dart';
 import 'audio_quality_screen.dart';
+import 'now_playing_screen.dart';
 import 'settings_screen.dart';
 
 class DownloadsScreen extends StatefulWidget {
@@ -308,7 +309,18 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
             fileSize: await file.length(),
           );
       if (!mounted) return;
-      await context.read<PlayerProvider>().playSong(song);
+      final playback = context.read<PlayerProvider>().playSong(song);
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const NowPlayingScreen()),
+      );
+      playback.catchError((Object error, StackTrace stackTrace) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Oynatma hatası: $error')),
+          );
+        }
+      });
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
