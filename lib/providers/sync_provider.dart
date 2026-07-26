@@ -11,6 +11,8 @@ class SyncProvider extends ChangeNotifier {
   SyncState get state => _service.state;
   String? get lastError => _service.lastError;
 
+  Future<void> Function()? onSyncCompleted;
+
   SyncProvider() {
     _service.onStateChanged = (_) {
       if (hasListeners) notifyListeners();
@@ -54,8 +56,13 @@ class SyncProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> triggerSync() async {
-    await _service.triggerManualSync();
+  Future<void> triggerSync({
+    List<SpotifyPlaylistItem>? spotifyPlaylists,
+  }) async {
+    await _service.triggerManualSync(spotifyPlaylists: spotifyPlaylists);
+    if (_service.state == SyncState.completed) {
+      await onSyncCompleted?.call();
+    }
     notifyListeners();
   }
 

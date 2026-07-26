@@ -260,7 +260,11 @@ class SpotifyProvider extends ChangeNotifier {
         notifyListeners();
         return _playlists;
       }
-      _playlists = refreshedPlaylists;
+      final merged = <String, SpotifyPlaylistItem>{
+        for (final playlist in _playlists) playlist.id: playlist,
+        for (final playlist in refreshedPlaylists) playlist.id: playlist,
+      };
+      _playlists = merged.values.toList(growable: false);
       final playlistIds = _playlists.map((playlist) => playlist.id).toSet();
       _playlistTrackCache
           .removeWhere((playlistId, _) => !playlistIds.contains(playlistId));

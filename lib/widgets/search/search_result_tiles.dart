@@ -205,6 +205,7 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
             imageUrl: track.thumbnailUrl,
             sourceVideoId:
                 track.source == MusicSourceType.youtube ? track.id : null,
+            expectedDurationMs: track.duration.inMilliseconds,
           );
       _message('${track.title} indirme kuyruğuna eklendi');
     } catch (error) {

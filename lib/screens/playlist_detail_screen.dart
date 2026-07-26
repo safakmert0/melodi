@@ -499,6 +499,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
         'id': sourceId,
         'title': song.title,
         'artist': song.artist,
+        'durationMs': song.duration.inMilliseconds.toString(),
         if (song.album.isNotEmpty) 'album': song.album,
       });
     }

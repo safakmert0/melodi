@@ -17,6 +17,7 @@ import '../services/audio_handler.dart';
 import '../services/lyrics_service.dart';
 import '../services/artwork_service.dart';
 import '../services/download_manager.dart';
+import '../services/database_service.dart';
 import '../widgets/seek_bar.dart';
 import '../widgets/queue_sheet.dart';
 import '../widgets/sleep_timer_sheet.dart';
@@ -34,8 +35,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   final List<double> _speedOptions = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
   final PageController _surfaceController = PageController();
   bool _showVolumeSlider = false;
-  int _surfaceIndex = 0;
   String? _lastSongId;
+  int _lyricsOffsetMs = 0;
 
   LyricsResult? _lyricsResult;
   List<LrcLine> _lyricsLines = [];
@@ -72,25 +73,23 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       final player = context.read<PlayerProvider>();
       final pos = player.position;
       final dur = player.duration;
-      // Clamp position to duration for accurate sync
       final clampedMs = dur.inMilliseconds > 0
           ? pos.inMilliseconds.clamp(0, dur.inMilliseconds)
           : pos.inMilliseconds;
       if (_lyricsLines.isNotEmpty) {
-        _updateCurrentLine(clampedMs);
+        final lyricPosition = LyricsTiming.lyricPositionMs(
+          playbackPositionMs: clampedMs,
+          manualOffsetMs: _lyricsOffsetMs,
+          playbackDurationMs: dur.inMilliseconds,
+          lyricsDurationMs: _lyricsResult?.durationMs ?? 0,
+        );
+        _updateCurrentLine(lyricPosition);
       }
     });
   }
 
   void _updateCurrentLine(int positionMs) {
-    int idx = -1;
-    for (int i = 0; i < _lyricsLines.length; i++) {
-      if (_lyricsLines[i].timestampMs <= positionMs) {
-        idx = i;
-      } else {
-        break;
-      }
-    }
+    var idx = LyricsTiming.findLineIndex(_lyricsLines, positionMs);
     // If at end of song and no line matched, show last line
     if (idx == -1 && _lyricsLines.isNotEmpty) {
       final player = context.read<PlayerProvider>();
@@ -112,6 +111,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     _lyricsLines = [];
     _lyricsLoading = true;
     _currentLineIndex = -1;
+    _lyricsOffsetMs = 0;
+    _loadLyricsOffset(song);
     // Delay lyrics fetch to ensure player has loaded the song duration
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted && (song.lyrics == null || song.lyrics!.isEmpty)) {
@@ -124,6 +125,9 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
           _lyricsResult = LyricsResult(syncedLrc: text);
           _lyricsLoading = false;
           setState(() {});
+          // Refresh from cache/API as well so LRCLIB's source duration can
+          // correct small timing drift in embedded synchronized lyrics.
+          _fetchLyrics(song);
         } else {
           // Embedded/plain lyrics are still a useful fallback, but they must
           // not prevent a synchronized LRCLIB lookup.
@@ -136,6 +140,13 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     if (song.albumArt == null) {
       Future.microtask(() => _fetchArtwork(song));
     }
+  }
+
+  Future<void> _loadLyricsOffset(SongModel song) async {
+    final raw =
+        await DatabaseService.instance.getSetting('lyrics_offset_${song.id}');
+    if (!mounted || _lastSongId != song.id) return;
+    setState(() => _lyricsOffsetMs = int.tryParse(raw ?? '') ?? 0);
   }
 
   Future<void> _fetchLyrics(SongModel song) async {
@@ -344,7 +355,6 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                     children: [
                       const SizedBox(height: 58),
                       _buildPlayerSurface(song, player, hasArt),
-                      _buildSurfaceSwitcher(),
                       const SizedBox(height: 6),
                       // Song Title + Artist
                       Padding(
@@ -539,6 +549,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                               artist: song.artist,
                                               album: song.album,
                                               sourceVideoId: sourceVideoId,
+                                              expectedDurationMs:
+                                                  song.duration.inMilliseconds,
                                             );
                                             ScaffoldMessenger.of(context)
                                                 .showSnackBar(
@@ -630,7 +642,6 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       flex: 4,
       child: PageView(
         controller: _surfaceController,
-        onPageChanged: (index) => setState(() => _surfaceIndex = index),
         children: [
           _buildArtworkSurface(song, hasArt),
           _buildLyricsSurface(player),
@@ -953,78 +964,6 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     );
   }
 
-  Widget _buildSurfaceSwitcher() {
-    const labels = ['Kapak', 'Sözler', 'Sırada'];
-    const icons = [
-      Icons.album_rounded,
-      Icons.lyrics_rounded,
-      Icons.queue_music_rounded,
-    ];
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 2, 28, 2),
-      child: Container(
-        height: 38,
-        padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.24),
-          borderRadius: BorderRadius.circular(19),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        ),
-        child: Row(
-          children: List.generate(labels.length, (index) {
-            final selected = index == _surfaceIndex;
-            return Expanded(
-              child: Semantics(
-                selected: selected,
-                button: true,
-                label: labels[index],
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () => _surfaceController.animateToPage(
-                    index,
-                    duration: const Duration(milliseconds: 280),
-                    curve: Curves.easeOutCubic,
-                  ),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? Colors.white.withValues(alpha: 0.13)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(icons[index],
-                            size: 15,
-                            color: selected
-                                ? Colors.white
-                                : Colors.white.withValues(alpha: 0.58)),
-                        const SizedBox(width: 5),
-                        Text(
-                          labels[index],
-                          style: TextStyle(
-                            color: selected
-                                ? Colors.white
-                                : Colors.white.withValues(alpha: 0.58),
-                            fontSize: 11,
-                            fontWeight:
-                                selected ? FontWeight.w700 : FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
-      ),
-    );
-  }
-
   Widget _buildSingleLineLyrics() {
     String line;
     bool hasTiming = false;
@@ -1054,9 +993,18 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     }
 
     return GestureDetector(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const LyricsScreen()),
-      ),
+      onTap: () async {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => LyricsScreen(
+              lyricsDurationMs: _lyricsResult?.durationMs ?? 0,
+            ),
+          ),
+        );
+        if (!mounted) return;
+        final song = context.read<PlayerProvider>().currentSong;
+        if (song != null) await _loadLyricsOffset(song);
+      },
       child: Container(
         height: 52,
         margin: const EdgeInsets.symmetric(horizontal: 28),
@@ -1087,27 +1035,35 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                     Icon(Icons.lyrics_rounded, size: 17, color: Colors.white70),
               ),
             Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 320),
-                transitionBuilder: (child, animation) =>
-                    FadeTransition(opacity: animation, child: child),
-                child: FittedBox(
-                  key: ValueKey(
-                      'lyric_${_currentLineIndex}_${_lyricsLines.length}_$line'),
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.center,
-                  child: Text(
-                    line,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    softWrap: false,
-                    style: TextStyle(
-                      color: hasTiming ? Colors.white : Colors.white70,
-                      fontSize: hasTiming ? 16 : 13,
-                      fontWeight: hasTiming ? FontWeight.w700 : FontWeight.w500,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 320),
+                    transitionBuilder: (child, animation) =>
+                        FadeTransition(opacity: animation, child: child),
+                    child: SizedBox(
+                      key: ValueKey(
+                          'lyric_${_currentLineIndex}_${_lyricsLines.length}_$line'),
+                      width: constraints.maxWidth,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.center,
+                        child: Text(
+                          line,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          softWrap: false,
+                          style: TextStyle(
+                            color: hasTiming ? Colors.white : Colors.white70,
+                            fontSize: hasTiming ? 16 : 13,
+                            fontWeight:
+                                hasTiming ? FontWeight.w700 : FontWeight.w500,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
             ),
             const Padding(

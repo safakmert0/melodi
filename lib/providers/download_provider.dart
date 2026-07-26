@@ -92,6 +92,7 @@ class DownloadProvider extends ChangeNotifier {
     String? album,
     String? imageUrl,
     String? sourceVideoId,
+    int expectedDurationMs = 0,
   }) {
     _manager.addTask(
       spotifyTrackId: spotifyTrackId,
@@ -100,6 +101,7 @@ class DownloadProvider extends ChangeNotifier {
       album: album,
       imageUrl: imageUrl,
       sourceVideoId: sourceVideoId,
+      expectedDurationMs: expectedDurationMs,
     );
   }
 

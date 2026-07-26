@@ -9,6 +9,9 @@ import 'multi_source_search.dart';
 import 'music_source.dart';
 import 'storage_manager.dart';
 import 'audio_quality_service.dart';
+import 'track_matcher.dart';
+import 'lyrics_service.dart';
+import 'lyrics_embedding_service.dart';
 
 enum DownloadState { pending, downloading, completed, failed }
 
@@ -20,6 +23,7 @@ class DownloadTask {
   final String artist;
   final String? album;
   final String? imageUrl;
+  final int expectedDurationMs;
   DownloadState state;
   double progress;
   String? error;
@@ -35,6 +39,7 @@ class DownloadTask {
     required this.artist,
     this.album,
     this.imageUrl,
+    this.expectedDurationMs = 0,
     this.state = DownloadState.pending,
     this.progress = 0,
     this.error,
@@ -73,6 +78,7 @@ class DownloadManager {
     String? album,
     String? imageUrl,
     String? sourceVideoId,
+    int expectedDurationMs = 0,
   }) {
     final task = DownloadTask(
       id: _taskId(),
@@ -82,6 +88,7 @@ class DownloadManager {
       artist: artist,
       album: album,
       imageUrl: imageUrl,
+      expectedDurationMs: expectedDurationMs,
     );
     _tasks.add(task);
     _processQueue();
@@ -96,8 +103,71 @@ class DownloadManager {
         artist: t['artist']!,
         album: t['album'],
         imageUrl: t['imageUrl'],
+        expectedDurationMs: int.tryParse(t['durationMs'] ?? '') ?? 0,
       );
     }
+  }
+
+  bool isDurationCompatible(Duration candidate, int expectedMs) {
+    if (expectedMs <= 0 || candidate.inMilliseconds <= 0) return true;
+    final toleranceMs = (expectedMs * 0.15).round().clamp(20000, 60000);
+    return (candidate.inMilliseconds - expectedMs).abs() <= toleranceMs;
+  }
+
+  List<OnlineTrack> _rankOnlineTracks(
+      Iterable<OnlineTrack> tracks, DownloadTask task) {
+    final candidates = tracks
+        .where((track) =>
+            isDurationCompatible(track.duration, task.expectedDurationMs))
+        .toList();
+    candidates.sort((a, b) {
+      final aScore = TrackMatcher.scoreWithDuration(
+        task.title,
+        task.artist,
+        task.expectedDurationMs,
+        a.title,
+        a.artist,
+        a.duration.inMilliseconds,
+      );
+      final bScore = TrackMatcher.scoreWithDuration(
+        task.title,
+        task.artist,
+        task.expectedDurationMs,
+        b.title,
+        b.artist,
+        b.duration.inMilliseconds,
+      );
+      return bScore.compareTo(aScore);
+    });
+    return candidates;
+  }
+
+  List<YouTubeVideo> _rankYouTubeVideos(
+      Iterable<YouTubeVideo> videos, DownloadTask task) {
+    final candidates = videos
+        .where((video) =>
+            isDurationCompatible(video.duration, task.expectedDurationMs))
+        .toList();
+    candidates.sort((a, b) {
+      final aScore = TrackMatcher.scoreWithDuration(
+        task.title,
+        task.artist,
+        task.expectedDurationMs,
+        a.title,
+        a.author,
+        a.duration.inMilliseconds,
+      );
+      final bScore = TrackMatcher.scoreWithDuration(
+        task.title,
+        task.artist,
+        task.expectedDurationMs,
+        b.title,
+        b.author,
+        b.duration.inMilliseconds,
+      );
+      return bScore.compareTo(aScore);
+    });
+    return candidates;
   }
 
   Future<void> _processQueue() async {
@@ -139,8 +209,10 @@ class DownloadManager {
           MusicSourceType.jiosaavn,
         ];
         for (final sourceType in priorityOrder) {
-          final sourceTracks =
-              allTracks.where((t) => t.source == sourceType).toList();
+          final sourceTracks = _rankOnlineTracks(
+            allTracks.where((track) => track.source == sourceType),
+            task,
+          );
           if (sourceTracks.isEmpty) continue;
           for (final track in sourceTracks.take(2)) {
             if (task.cancelled) break;
@@ -162,9 +234,10 @@ class DownloadManager {
       // For YouTube tracks, use YouTube service download (handles throttling)
       if (streamUrl == null && !task.cancelled) {
         // Find YouTube track from search results
-        final ytTracks = allTracks
-            .where((t) => t.source == MusicSourceType.youtube)
-            .toList();
+        final ytTracks = _rankOnlineTracks(
+          allTracks.where((track) => track.source == MusicSourceType.youtube),
+          task,
+        );
         String? videoId = task.sourceVideoId;
         if (videoId == null && ytTracks.isNotEmpty) {
           videoId = ytTracks.first.id;
@@ -174,19 +247,9 @@ class DownloadManager {
           task.error = 'YouTube aranıyor...';
           _notify();
           final videos = await _youtubeService.search(query);
-          if (videos.isNotEmpty) {
-            final exactMatch = videos
-                .where((v) =>
-                    v.title.toLowerCase().contains(task.title.toLowerCase()) &&
-                    v.author.toLowerCase().contains(task.artist
-                        .toLowerCase()
-                        .split(',')
-                        .first
-                        .trim()
-                        .toLowerCase()))
-                .toList();
-            videoId =
-                (exactMatch.isNotEmpty ? exactMatch.first : videos.first).id;
+          final rankedVideos = _rankYouTubeVideos(videos, task);
+          if (rankedVideos.isNotEmpty) {
+            videoId = rankedVideos.first.id;
           }
         }
 
@@ -229,7 +292,7 @@ class DownloadManager {
                   onDownloadComplete?.call();
                 } else {
                   task.state = DownloadState.failed;
-                  task.error = 'İndirilen dosya bulunamadı';
+                  task.error ??= 'İndirilen dosya bulunamadı';
                 }
               }
             }
@@ -305,7 +368,7 @@ class DownloadManager {
             onDownloadComplete?.call();
           } else {
             task.state = DownloadState.failed;
-            task.error = 'İndirilen dosya bulunamadı';
+            task.error ??= 'İndirilen dosya bulunamadı';
           }
         }
       } else {
@@ -327,9 +390,10 @@ class DownloadManager {
     required String query,
   }) async {
     try {
-      final ytTracks = searchResults
-          .where((track) => track.source == MusicSourceType.youtube)
-          .toList();
+      final ytTracks = _rankOnlineTracks(
+        searchResults.where((track) => track.source == MusicSourceType.youtube),
+        task,
+      );
       String? videoId = task.sourceVideoId;
       videoId ??= ytTracks.isEmpty ? null : ytTracks.first.id;
       if (videoId == null) {
@@ -337,18 +401,9 @@ class DownloadManager {
         task.error = 'YouTube yedek kaynağı aranıyor...';
         _notify();
         final videos = await _youtubeService.search(query);
-        if (videos.isNotEmpty) {
-          final title = task.title.toLowerCase();
-          final artist = task.artist.toLowerCase().split(',').first.trim();
-          final exact = videos.where((video) {
-            final videoTitle = video.title.toLowerCase();
-            final author = video.author.toLowerCase();
-            return videoTitle.contains(title) &&
-                (artist.isEmpty ||
-                    author.contains(artist) ||
-                    videoTitle.contains(artist));
-          }).toList();
-          videoId = (exact.isNotEmpty ? exact.first : videos.first).id;
+        final rankedVideos = _rankYouTubeVideos(videos, task);
+        if (rankedVideos.isNotEmpty) {
+          videoId = rankedVideos.first.id;
         }
       }
       if (videoId == null || task.cancelled) return null;
@@ -426,9 +481,48 @@ class DownloadManager {
         counter++;
       }
 
-      await File(filePath).rename(destPath);
+      final sourceFile = File(filePath);
+      var metadata = await MetadataService.extractMetadata(filePath);
+      await sourceFile.rename(destPath);
 
-      final metadata = await MetadataService.extractMetadata(destPath);
+      task.progress = 0.86;
+      task.error = 'Senkronize sözler ekleniyor...';
+      _notify();
+
+      LyricsResult? lyricsResult;
+      try {
+        lyricsResult = await LyricsService.fetchLyrics(
+          artist: task.artist,
+          track: task.title,
+          album: task.album,
+          durationMs: task.expectedDurationMs > 0
+              ? task.expectedDurationMs
+              : metadata?.duration.inMilliseconds,
+          preferSynced: true,
+        );
+      } catch (error) {
+        debugPrint('Downloaded lyrics lookup failed: $error');
+      }
+      final lyricsText = lyricsResult?.syncedLrc ?? lyricsResult?.plainText;
+
+      final processed = await LyricsEmbeddingService.embedAndNormalize(
+        filePath: destPath,
+        lyrics: lyricsText,
+        expectedDurationMs: task.expectedDurationMs,
+      );
+      if (processed) {
+        metadata = await MetadataService.extractMetadata(destPath) ?? metadata;
+      }
+
+      if (metadata != null &&
+          !isDurationCompatible(metadata.duration, task.expectedDurationMs)) {
+        task.error =
+            'Kaynak süresi parça süresiyle uyuşmuyor; farklı kaynak deneyin';
+        final invalidFile = File(destPath);
+        if (await invalidFile.exists()) await invalidFile.delete();
+        return null;
+      }
+
       if (metadata != null) {
         final placeholderId = 'spotify:${task.spotifyTrackId}';
         SongModel? placeholder = await db.getSongById(placeholderId);
@@ -458,6 +552,7 @@ class DownloadManager {
           filePath: destPath,
           albumArt: placeholder?.albumArt ?? metadata.albumArt,
           fileSize: await File(destPath).length(),
+          lyrics: lyricsText ?? placeholder?.lyrics ?? metadata.lyrics,
         );
         await db.insertSong(normalized);
       }

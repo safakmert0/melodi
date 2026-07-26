@@ -24,6 +24,7 @@ class SpotifyTrackMapper {
       'id': track.id,
       'title': track.name,
       'artist': artistLabel(track),
+      'durationMs': track.durationMs.toString(),
       if (track.albumName != null && track.albumName!.isNotEmpty)
         'album': track.albumName!,
       if (track.albumImageUrl != null && track.albumImageUrl!.isNotEmpty)

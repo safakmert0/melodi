@@ -84,7 +84,9 @@ class SyncService {
     };
   }
 
-  Future<void> triggerManualSync() async {
+  Future<void> triggerManualSync({
+    List<SpotifyPlaylistItem>? spotifyPlaylists,
+  }) async {
     _setState(SyncState.syncing);
     _lastError = null;
     try {
@@ -101,7 +103,7 @@ class SyncService {
 
       // Pull: Spotify playlists → local
       if (_spotify != null && _spotify!.isConnected) {
-        await _pullSpotifyPlaylists();
+        await _pullSpotifyPlaylists(remotePlaylists: spotifyPlaylists);
         await _syncSpotifyLikedSongs();
       }
 
@@ -118,60 +120,99 @@ class SyncService {
     }
   }
 
-  Future<void> _pullSpotifyPlaylists() async {
-    final remotePlaylists = await _spotify!.getUserPlaylists();
+  Future<void> _pullSpotifyPlaylists({
+    List<SpotifyPlaylistItem>? remotePlaylists,
+  }) async {
+    final remote = remotePlaylists ?? await _spotify!.getUserPlaylists();
     final existingPlaylists = await _db.getAllPlaylists();
-    final byName = {
-      for (final playlist in existingPlaylists) playlist.name: playlist
-    };
+    final syncStates = await _db.getAllSyncStates();
+    final byRemoteId = <String, PlaylistModel>{};
+    final byName = <String, List<PlaylistModel>>{};
+    final claimedLocalIds = <String>{};
+
+    for (final playlist in existingPlaylists) {
+      byName.putIfAbsent(playlist.name, () => []).add(playlist);
+      final state = syncStates[playlist.id];
+      if (state?['remoteService'] == 'spotify') {
+        final remoteId = state?['remotePlaylistId']?.toString();
+        if (remoteId != null && remoteId.isNotEmpty) {
+          byRemoteId[remoteId] = playlist;
+        }
+      }
+    }
+
     final localSongs = await _db.getAllSongs();
     final localById = {for (final song in localSongs) song.id: song};
     final cachedArtwork = await _db.getAllCachedAlbumArts();
     final artworkScheduled = <String>{};
     final artworkJobs = <Future<void>>[];
 
-    // v4.1 briefly created empty, unprefixed shell playlists before the real
-    // sync. Remove only those known shells so user-created lists stay intact.
-    final remoteNames =
-        remotePlaylists.map((playlist) => playlist.name).toSet();
+    // Remove only the empty, unprefixed shells created by the short-lived
+    // legacy importer. User-created playlists and real Spotify mirrors stay.
+    final remoteNames = remote.map((playlist) => playlist.name).toSet();
     for (final playlist in existingPlaylists) {
       if (playlist.description == 'Spotify' &&
           playlist.songIds.isEmpty &&
           remoteNames.contains(playlist.name)) {
         await _db.deletePlaylist(playlist.id);
-        byName.remove(playlist.name);
       }
     }
 
-    for (final rp in remotePlaylists) {
-      final playlistName = 'Spotify — ${rp.name}';
-      final existing = byName[playlistName];
+    for (final remotePlaylist in remote) {
+      try {
+        final playlistName = 'Spotify — ${remotePlaylist.name}';
+        PlaylistModel? existing = byRemoteId[remotePlaylist.id];
 
-      final tracks = await _spotify!.getPlaylistTracks(rp.id);
-      if (tracks.isEmpty && rp.trackCount > 0) {
-        debugPrint(
-            'Spotify playlist ${rp.name} returned no tracks; keeping local copy');
-        continue;
-      }
-      final matchedIds = <String>[];
-
-      for (final track in tracks) {
-        final placeholderId = 'spotify:${track.id}';
-        final knownPlaceholder = localById[placeholderId];
-        if (knownPlaceholder != null) {
-          matchedIds.add(knownPlaceholder.id);
-          if (track.albumImageUrl != null &&
-              !cachedArtwork.containsKey(knownPlaceholder.id) &&
-              artworkScheduled.add(knownPlaceholder.id)) {
-            artworkJobs.add(
-              _cacheSpotifyArtwork(knownPlaceholder.id, track.albumImageUrl!),
-            );
-            if (artworkJobs.length >= 6) {
-              await Future.wait(artworkJobs);
-              artworkJobs.clear();
+        if (existing == null) {
+          final legacyCandidates = byName[playlistName] ?? const [];
+          for (final candidate in legacyCandidates) {
+            final state = syncStates[candidate.id];
+            final mappedRemoteId = state?['remotePlaylistId']?.toString();
+            if (!claimedLocalIds.contains(candidate.id) &&
+                (mappedRemoteId == null ||
+                    mappedRemoteId.isEmpty ||
+                    mappedRemoteId == remotePlaylist.id)) {
+              existing = candidate;
+              break;
             }
           }
-        } else {
+        }
+        if (existing != null) claimedLocalIds.add(existing.id);
+
+        List<SpotifyTrackItem> tracks = const [];
+        try {
+          tracks = await _spotify!.getPlaylistTracks(remotePlaylist.id);
+        } catch (error) {
+          debugPrint(
+              'Spotify playlist tracks failed for ${remotePlaylist.id}: $error');
+        }
+
+        // A transient Spotify response must not make the whole playlist vanish.
+        // Keep its last known songs (or create an empty visible shell) and retry
+        // on the next sync.
+        final matchedIds = tracks.isEmpty && remotePlaylist.trackCount > 0
+            ? <String>[...?existing?.songIds]
+            : <String>[];
+
+        for (final track in tracks) {
+          final placeholderId = 'spotify:${track.id}';
+          final knownPlaceholder = localById[placeholderId];
+          if (knownPlaceholder != null) {
+            matchedIds.add(knownPlaceholder.id);
+            if (track.albumImageUrl != null &&
+                !cachedArtwork.containsKey(knownPlaceholder.id) &&
+                artworkScheduled.add(knownPlaceholder.id)) {
+              artworkJobs.add(
+                _cacheSpotifyArtwork(knownPlaceholder.id, track.albumImageUrl!),
+              );
+              if (artworkJobs.length >= 6) {
+                await Future.wait(artworkJobs);
+                artworkJobs.clear();
+              }
+            }
+            continue;
+          }
+
           double bestScore = 0.65;
           String? bestId;
           for (final local in localSongs) {
@@ -216,27 +257,34 @@ class SyncService {
             }
           }
         }
-      }
 
-      String localId;
-      if (existing != null) {
-        final updated = existing.copyWith(songIds: matchedIds);
-        await _db.insertPlaylist(updated);
-        byName[playlistName] = updated;
-        localId = existing.id;
-      } else {
-        localId = Uuid().v4();
-        final newPlaylist = PlaylistModel(
-          id: localId,
-          name: playlistName,
-          description: 'Synced from Spotify',
-          songIds: matchedIds,
-        );
-        await _db.insertPlaylist(newPlaylist);
-        byName[playlistName] = newPlaylist;
+        final PlaylistModel localPlaylist;
+        if (existing != null) {
+          localPlaylist = existing.copyWith(
+            name: playlistName,
+            description: 'Synced from Spotify',
+            songIds: matchedIds,
+          );
+        } else {
+          localPlaylist = PlaylistModel(
+            id: const Uuid().v4(),
+            name: playlistName,
+            description: 'Synced from Spotify',
+            songIds: matchedIds,
+          );
+        }
+        await _db.insertPlaylist(localPlaylist);
+        await _db.setRemotePlaylistId(
+            localPlaylist.id, remotePlaylist.id, 'spotify');
+        byRemoteId[remotePlaylist.id] = localPlaylist;
+        byName.putIfAbsent(playlistName, () => []).add(localPlaylist);
+        claimedLocalIds.add(localPlaylist.id);
+      } catch (error, stackTrace) {
+        debugPrint(
+            'Spotify playlist sync failed for ${remotePlaylist.id}: $error\n$stackTrace');
       }
-      await _db.setRemotePlaylistId(localId, rp.id, 'spotify');
     }
+
     if (artworkJobs.isNotEmpty) await Future.wait(artworkJobs);
   }
 

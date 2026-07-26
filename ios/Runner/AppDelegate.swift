@@ -9,6 +9,7 @@ import WebKit
   private var carPlayHandler: CarPlayHandler?
   private var voiceControlHandler: VoiceControlHandler?
   private var widgetHandler: WidgetHandler?
+  private var lyricsMetadataWriterHandler: LyricsMetadataWriterHandler?
 
   override func application(
     _ application: UIApplication,
@@ -54,6 +55,7 @@ import WebKit
     carPlayHandler = CarPlayHandler(messenger: messenger)
     voiceControlHandler = VoiceControlHandler(messenger: messenger)
     widgetHandler = WidgetHandler(messenger: messenger)
+    lyricsMetadataWriterHandler = LyricsMetadataWriterHandler(messenger: messenger)
 
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)

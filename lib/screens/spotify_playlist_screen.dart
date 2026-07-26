@@ -364,6 +364,7 @@ class _SpotifyPlaylistScreenState extends State<SpotifyPlaylistScreen> {
       artist: data['artist']!,
       album: data['album'],
       imageUrl: data['imageUrl'],
+      expectedDurationMs: int.tryParse(data['durationMs'] ?? '') ?? 0,
     );
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

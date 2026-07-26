@@ -570,14 +570,22 @@ class SpotifyService {
     String? folderUri,
   }) async {
     try {
+      final playlists = <SpotifyPlaylistItem>[];
+      final seenPlaylists = <String>{};
+
+      // Cookie-backed sessions can expose a partial Web API view depending on
+      // granted scopes. Merge it with Spotify's library graph instead of
+      // returning early after the first successful (but incomplete) response.
       if (_accessToken != null && _accessToken!.isNotEmpty) {
         final webApi = await _tryGetUserPlaylistsViaWebApi(_accessToken!);
-        if (webApi != null) return webApi;
+        if (webApi != null) {
+          for (final playlist in webApi) {
+            if (seenPlaylists.add(playlist.id)) playlists.add(playlist);
+          }
+        }
       }
 
       final pageSize = limit.clamp(1, 50);
-      final playlists = <SpotifyPlaylistItem>[];
-      final seenPlaylists = <String>{};
       final pendingFolders = <String?>[folderUri];
       final seenFolders = <String>{};
 

@@ -27,11 +27,20 @@ class LrcParser {
     caseSensitive: false,
   );
   static final RegExp _timestamp =
-      RegExp(r'^(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?$');
+      RegExp(r'^(\d{1,3}):(\d{2})(?:\.(\d{1,3}))?$');
+  static final RegExp _offset =
+      RegExp(r'^\[offset:([+-]?\d+)\]\s*$', caseSensitive: false);
 
   static List<LrcLine> parse(String body) {
     if (body.trim().isEmpty) return [];
     final out = <LrcLine>[];
+    var offsetMs = 0;
+    for (final rawLine in body.split('\n')) {
+      final match = _offset.firstMatch(rawLine.trim());
+      if (match != null) {
+        offsetMs = int.tryParse(match.group(1)!) ?? 0;
+      }
+    }
     for (final rawLine in body.split('\n')) {
       final line = rawLine.trimRight();
       if (line.isEmpty) continue;
@@ -52,7 +61,7 @@ class LrcParser {
       final text = line.substring(idx).trimRight();
       if (text.isEmpty) continue;
       for (final ms in timestamps) {
-        out.add(LrcLine(ms, text));
+        out.add(LrcLine((ms + offsetMs).clamp(0, 1 << 31), text));
       }
     }
     out.sort((a, b) => a.timestampMs.compareTo(b.timestampMs));
@@ -74,17 +83,67 @@ class LrcParser {
   }
 }
 
+class LyricsTiming {
+  const LyricsTiming._();
+
+  static double _durationScale(int playbackDurationMs, int lyricsDurationMs) {
+    if (playbackDurationMs <= 0 || lyricsDurationMs <= 0) return 1;
+    final ratio = lyricsDurationMs / playbackDurationMs;
+    return ratio >= 0.85 && ratio <= 1.15 ? ratio : 1;
+  }
+
+  static int lyricPositionMs({
+    required int playbackPositionMs,
+    int manualOffsetMs = 0,
+    int playbackDurationMs = 0,
+    int lyricsDurationMs = 0,
+  }) {
+    final adjusted = (playbackPositionMs - manualOffsetMs).clamp(0, 1 << 31);
+    return (adjusted * _durationScale(playbackDurationMs, lyricsDurationMs))
+        .round();
+  }
+
+  static int playbackPositionMs({
+    required int lyricPositionMs,
+    int manualOffsetMs = 0,
+    int playbackDurationMs = 0,
+    int lyricsDurationMs = 0,
+  }) {
+    final scale = _durationScale(playbackDurationMs, lyricsDurationMs);
+    return ((lyricPositionMs / scale).round() + manualOffsetMs)
+        .clamp(0, 1 << 31);
+  }
+
+  static int findLineIndex(List<LrcLine> lines, int positionMs) {
+    var low = 0;
+    var high = lines.length - 1;
+    var found = -1;
+    while (low <= high) {
+      final middle = low + ((high - low) >> 1);
+      if (lines[middle].timestampMs <= positionMs) {
+        found = middle;
+        low = middle + 1;
+      } else {
+        high = middle - 1;
+      }
+    }
+    return found;
+  }
+}
+
 class LyricsResult {
   final String? plainText;
   final String? syncedLrc;
   final bool instrumental;
   final String? source;
+  final int? durationMs;
 
   const LyricsResult({
     this.plainText,
     this.syncedLrc,
     this.instrumental = false,
     this.source,
+    this.durationMs,
   });
 }
 
@@ -282,6 +341,9 @@ class LyricsService {
       syncedLrc: syncedLrc,
       instrumental: instrumental,
       source: 'lrclib',
+      durationMs: data['duration'] is num
+          ? ((data['duration'] as num) * 1000).round()
+          : null,
     );
   }
 
@@ -297,6 +359,7 @@ class LyricsService {
         syncedLrc: row['syncedLrc'] as String?,
         instrumental: (row['instrumental'] as int?) == 1,
         source: row['source'] as String?,
+        durationMs: row['durationMs'] as int?,
       );
     } catch (_) {
       return null;
@@ -314,6 +377,7 @@ class LyricsService {
             'syncedLrc': result.syncedLrc,
             'instrumental': result.instrumental ? 1 : 0,
             'source': result.source,
+            'durationMs': result.durationMs,
             'fetchedAt': DateTime.now().toIso8601String(),
           },
           conflictAlgorithm: ConflictAlgorithm.replace);

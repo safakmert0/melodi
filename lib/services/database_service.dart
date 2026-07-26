@@ -36,7 +36,7 @@ class DatabaseService {
     final path = p.join(dir.path, 'melodi.db');
     return await openDatabase(
       path,
-      version: 19,
+      version: 20,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -267,6 +267,12 @@ class DatabaseService {
             'ALTER TABLE playlist_sync_state ADD COLUMN remoteService TEXT');
       } catch (_) {}
     }
+    if (oldVersion < 20) {
+      try {
+        await db
+            .execute('ALTER TABLE lyrics_cache ADD COLUMN durationMs INTEGER');
+      } catch (_) {}
+    }
   }
 
   Future<String?> getSetting(String key) async {
@@ -371,6 +377,7 @@ class DatabaseService {
         syncedLrc TEXT,
         instrumental INTEGER DEFAULT 0,
         source TEXT,
+        durationMs INTEGER,
         fetchedAt TEXT NOT NULL
       )
     ''');

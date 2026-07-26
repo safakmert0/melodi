@@ -7,9 +7,13 @@ import '../providers/player_provider.dart';
 import '../services/lyrics_service.dart';
 import '../core/extensions/duration_ext.dart';
 import '../services/audio_handler.dart';
+import '../services/database_service.dart';
+import '../models/song_model.dart';
 
 class LyricsScreen extends StatefulWidget {
-  const LyricsScreen({super.key});
+  final int lyricsDurationMs;
+
+  const LyricsScreen({super.key, this.lyricsDurationMs = 0});
 
   @override
   State<LyricsScreen> createState() => _LyricsScreenState();
@@ -18,8 +22,10 @@ class LyricsScreen extends StatefulWidget {
 class _LyricsScreenState extends State<LyricsScreen> {
   List<LrcLine> _lyricsLines = [];
   int _currentLineIndex = -1;
-  final ScrollController _scrollController = ScrollController();
+  final PageController _pageController = PageController(viewportFraction: 0.22);
   Timer? _timer;
+  String? _activeSongId;
+  int _manualOffsetMs = 0;
 
   @override
   void initState() {
@@ -30,45 +36,87 @@ class _LyricsScreenState extends State<LyricsScreen> {
   @override
   void dispose() {
     _timer?.cancel();
-    _scrollController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
   void _startTimer() {
-    _timer = Timer.periodic(const Duration(milliseconds: 250), (_) {
+    _timer = Timer.periodic(const Duration(milliseconds: 100), (_) {
       if (!mounted) return;
       final player = context.read<PlayerProvider>();
+      final song = player.currentSong;
+      if (song == null) return;
+      if (_activeSongId != song.id) {
+        _prepareSong(song);
+      }
       if (_lyricsLines.isNotEmpty) {
-        _updateCurrentLine(player.position.inMilliseconds);
+        _updateCurrentLine(player);
       }
     });
   }
 
-  void _updateCurrentLine(int positionMs) {
-    int idx = -1;
-    for (int i = 0; i < _lyricsLines.length; i++) {
-      if (_lyricsLines[i].timestampMs <= positionMs) {
-        idx = i;
-      } else {
-        break;
-      }
+  void _prepareSong(SongModel song) {
+    _activeSongId = song.id;
+    _currentLineIndex = -1;
+    final text = song.lyrics;
+    if (text == null || text.trim().isEmpty) {
+      _lyricsLines = [];
+    } else {
+      final parsed = LrcParser.parse(text);
+      _lyricsLines =
+          parsed.isNotEmpty ? parsed : <LrcLine>[LrcLine(0, text.trim())];
     }
-    if (idx != _currentLineIndex) {
-      _currentLineIndex = idx;
-      if (mounted) setState(() {});
-      _scrollToCurrentLine();
-    }
+    DatabaseService.instance.getSetting('lyrics_offset_${song.id}').then((raw) {
+      if (!mounted || _activeSongId != song.id) return;
+      _manualOffsetMs = int.tryParse(raw ?? '') ?? 0;
+      _updateCurrentLine(context.read<PlayerProvider>());
+    });
+    if (mounted) setState(() {});
   }
 
-  void _scrollToCurrentLine() {
-    if (_currentLineIndex < 0 || !_scrollController.hasClients) return;
-    final offset = (_currentLineIndex * 56.0) -
-        (MediaQuery.of(context).size.height * 0.35);
-    _scrollController.animateTo(
-      offset.clamp(0.0, _scrollController.position.maxScrollExtent),
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
+  void _updateCurrentLine(PlayerProvider player) {
+    final lyricPosition = LyricsTiming.lyricPositionMs(
+      playbackPositionMs: player.position.inMilliseconds,
+      manualOffsetMs: _manualOffsetMs,
+      playbackDurationMs: player.duration.inMilliseconds,
+      lyricsDurationMs: widget.lyricsDurationMs,
     );
+    final index = LyricsTiming.findLineIndex(_lyricsLines, lyricPosition);
+    if (index == _currentLineIndex) return;
+    _currentLineIndex = index;
+    if (mounted) setState(() {});
+    _centerCurrentLine();
+  }
+
+  void _centerCurrentLine() {
+    if (_currentLineIndex < 0 || !_pageController.hasClients) return;
+    _pageController.animateToPage(
+      _currentLineIndex,
+      duration: const Duration(milliseconds: 360),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  Future<void> _adjustOffset(int deltaMs) async {
+    final song = context.read<PlayerProvider>().currentSong;
+    if (song == null) return;
+    setState(() {
+      _manualOffsetMs = (_manualOffsetMs + deltaMs).clamp(-5000, 5000);
+    });
+    await DatabaseService.instance
+        .setSetting('lyrics_offset_${song.id}', _manualOffsetMs.toString());
+    if (mounted) _updateCurrentLine(context.read<PlayerProvider>());
+  }
+
+  void _seekToLine(LrcLine line) {
+    final player = context.read<PlayerProvider>();
+    final position = LyricsTiming.playbackPositionMs(
+      lyricPositionMs: line.timestampMs,
+      manualOffsetMs: _manualOffsetMs,
+      playbackDurationMs: player.duration.inMilliseconds,
+      lyricsDurationMs: widget.lyricsDurationMs,
+    );
+    player.seek(Duration(milliseconds: position));
   }
 
   @override
@@ -168,38 +216,57 @@ class _LyricsScreenState extends State<LyricsScreen> {
                                 ),
                               ),
                             )
-                          : ListView.builder(
-                              controller: _scrollController,
+                          : PageView.builder(
+                              controller: _pageController,
+                              scrollDirection: Axis.vertical,
                               physics: const BouncingScrollPhysics(),
-                              padding: EdgeInsets.symmetric(
-                                vertical:
-                                    MediaQuery.of(context).size.height * 0.3,
-                                horizontal: 24,
-                              ),
+                              padEnds: true,
                               itemCount: _lyricsLines.length,
                               itemBuilder: (context, index) {
                                 final line = _lyricsLines[index];
                                 final isActive = index == _currentLineIndex;
-                                return AnimatedScale(
-                                  scale: isActive ? 1.05 : 1.0,
-                                  duration: const Duration(milliseconds: 300),
-                                  child: AnimatedDefaultTextStyle(
-                                    duration: const Duration(milliseconds: 300),
-                                    style: TextStyle(
-                                      fontFamily: AppConstants.fontFamily,
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.w800,
-                                      height: 1.2,
-                                      letterSpacing: -0.8,
-                                      color: isActive
-                                          ? MelodiTheme.onSurface
-                                          : MelodiTheme.onSurface
-                                              .withOpacity(0.2),
+                                return InkWell(
+                                  onTap: () => _seekToLine(line),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 6,
                                     ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 8),
-                                      child: Text(line.text),
+                                    child: LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        return AnimatedScale(
+                                          scale: isActive ? 1.0 : 0.94,
+                                          duration:
+                                              const Duration(milliseconds: 280),
+                                          child: FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            alignment: Alignment.centerLeft,
+                                            child: SizedBox(
+                                              width: constraints.maxWidth,
+                                              child: AnimatedDefaultTextStyle(
+                                                duration: const Duration(
+                                                    milliseconds: 280),
+                                                style: TextStyle(
+                                                  fontFamily:
+                                                      AppConstants.fontFamily,
+                                                  fontSize: isActive ? 27 : 23,
+                                                  fontWeight: FontWeight.w800,
+                                                  height: 1.15,
+                                                  letterSpacing: -0.7,
+                                                  color: isActive
+                                                      ? MelodiTheme.onSurface
+                                                      : MelodiTheme.onSurface
+                                                          .withOpacity(0.22),
+                                                ),
+                                                child: Text(
+                                                  line.text,
+                                                  textAlign: TextAlign.left,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ),
                                 );
@@ -220,6 +287,36 @@ class _LyricsScreenState extends State<LyricsScreen> {
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              IconButton(
+                                tooltip: '-0.5 sn',
+                                onPressed: () => _adjustOffset(-500),
+                                icon: const Icon(Icons.fast_rewind_rounded),
+                                color: MelodiTheme.onSurfaceVariant,
+                              ),
+                              TextButton(
+                                onPressed: () =>
+                                    _adjustOffset(-_manualOffsetMs),
+                                child: Text(
+                                  '${(_manualOffsetMs / 1000).toStringAsFixed(1)} sn',
+                                  style: TextStyle(
+                                    color: _manualOffsetMs == 0
+                                        ? MelodiTheme.onSurfaceVariant
+                                        : MelodiTheme.primaryGreen,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: '+0.5 sn',
+                                onPressed: () => _adjustOffset(500),
+                                icon: const Icon(Icons.fast_forward_rounded),
+                                color: MelodiTheme.onSurfaceVariant,
+                              ),
+                            ],
+                          ),
                           Row(
                             children: [
                               Text(

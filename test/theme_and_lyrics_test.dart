@@ -38,4 +38,41 @@ void main() {
     expect(lines.first.text, 'Birinci');
     expect(lines.last.text, 'Nakarat');
   });
+
+  test('LRC parser applies the embedded offset tag', () {
+    final lines = LrcParser.parse(
+      '''[offset:-500]
+[00:01.000]Erken
+[00:02.000]Sonraki''',
+    );
+
+    expect(lines.map((line) => line.timestampMs), orderedEquals([500, 1500]));
+  });
+
+  test('lyrics timing scales source duration and applies manual correction',
+      () {
+    final lyricPosition = LyricsTiming.lyricPositionMs(
+      playbackPositionMs: 60000,
+      manualOffsetMs: 500,
+      playbackDurationMs: 240000,
+      lyricsDurationMs: 242000,
+    );
+    final lines = <LrcLine>[
+      const LrcLine(0, 'A'),
+      const LrcLine(59000, 'B'),
+      const LrcLine(61000, 'C'),
+    ];
+
+    expect(lyricPosition, 59996);
+    expect(LyricsTiming.findLineIndex(lines, lyricPosition), 1);
+    expect(
+      LyricsTiming.playbackPositionMs(
+        lyricPositionMs: lyricPosition,
+        manualOffsetMs: 500,
+        playbackDurationMs: 240000,
+        lyricsDurationMs: 242000,
+      ),
+      closeTo(60000, 1),
+    );
+  });
 }

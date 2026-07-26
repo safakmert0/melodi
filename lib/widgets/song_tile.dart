@@ -302,6 +302,7 @@ class SongTile extends StatelessWidget {
       artist: song.artist,
       album: song.album,
       sourceVideoId: sourceVideoId,
+      expectedDurationMs: song.duration.inMilliseconds,
     );
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

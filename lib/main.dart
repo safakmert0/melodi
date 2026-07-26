@@ -290,8 +290,14 @@ class MelodiApp extends StatelessWidget {
             final sync = SyncProvider();
             final spotify = ctx.read<SpotifyProvider>();
             final ytmusic = ctx.read<YTMusicProvider>();
+            final playlists = ctx.read<PlaylistProvider>();
+            final library = ctx.read<LibraryProvider>();
             sync.setServices(
                 spotify: spotify.service, ytmusic: ytmusic.service);
+            sync.onSyncCompleted = () async {
+              await playlists.loadPlaylists();
+              await library.loadAll();
+            };
             // Delay sync init to allow SpotifyProvider/YTMusicProvider to finish loading
             Future.delayed(const Duration(seconds: 5), () {
               if (spotify.isConnected || ytmusic.isConnected) {

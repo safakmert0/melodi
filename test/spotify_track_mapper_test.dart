@@ -32,6 +32,7 @@ void main() {
       'id': 'track-42',
       'title': 'Test Song',
       'artist': 'Artist A, Artist B',
+      'durationMs': '183000',
       'album': 'Test Album',
       'imageUrl': 'https://example.com/art.jpg',
     });

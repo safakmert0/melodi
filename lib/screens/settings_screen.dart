@@ -3692,14 +3692,18 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                             final playlistProvider =
                                 context.read<PlaylistProvider>();
                             final syncProvider = context.read<SyncProvider>();
+                            final libraryProvider =
+                                context.read<LibraryProvider>();
                             final playlists = await spotify.importPlaylists();
                             if (!mounted) return;
                             // The sync service creates/updates the real lists
                             // with all paged tracks; no empty shell lists.
-                            await syncProvider.triggerSync();
+                            await syncProvider.triggerSync(
+                              spotifyPlaylists: playlists,
+                            );
                             await playlistProvider.loadPlaylists();
                             if (!mounted) return;
-                            await context.read<LibraryProvider>().loadAll();
+                            await libraryProvider.loadAll();
                             if (!mounted ||
                                 messenger == null ||
                                 !messenger.mounted) {

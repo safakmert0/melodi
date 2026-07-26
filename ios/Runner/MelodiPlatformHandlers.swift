@@ -1,6 +1,7 @@
 import Flutter
 import UIKit
 import AVFAudio
+import AVFoundation
 import MediaPlayer
 
 // MARK: - AirPlay Handler
@@ -269,6 +270,130 @@ class WidgetHandler: NSObject {
 
         default:
             result(FlutterMethodNotImplemented)
+        }
+    }
+}
+// MARK: - Downloaded media metadata writer
+class LyricsMetadataWriterHandler: NSObject {
+    private let channel: FlutterMethodChannel
+
+    init(messenger: FlutterBinaryMessenger) {
+        channel = FlutterMethodChannel(
+            name: "com.melodi/metadata_writer",
+            binaryMessenger: messenger
+        )
+        super.init()
+        channel.setMethodCallHandler(handle)
+    }
+
+    private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard call.method == "embedLyrics",
+              let arguments = call.arguments as? [String: Any],
+              let path = arguments["path"] as? String else {
+            result(FlutterMethodNotImplemented)
+            return
+        }
+
+        let lyrics = arguments["lyrics"] as? String
+        let expectedDurationMs =
+            (arguments["expectedDurationMs"] as? NSNumber)?.doubleValue ?? 0
+        process(
+            path: path,
+            lyrics: lyrics,
+            expectedDurationMs: expectedDurationMs,
+            result: result
+        )
+    }
+
+    private func process(
+        path: String,
+        lyrics: String?,
+        expectedDurationMs: Double,
+        result: @escaping FlutterResult
+    ) {
+        let sourceURL = URL(fileURLWithPath: path)
+        guard sourceURL.pathExtension.lowercased() == "m4a" else {
+            result(false)
+            return
+        }
+
+        let asset = AVURLAsset(url: sourceURL)
+        guard let exporter = AVAssetExportSession(
+            asset: asset,
+            presetName: AVAssetExportPresetPassthrough
+        ) else {
+            result(false)
+            return
+        }
+
+        let temporaryURL = sourceURL.deletingLastPathComponent()
+            .appendingPathComponent(".melodi-\(UUID().uuidString).m4a")
+        try? FileManager.default.removeItem(at: temporaryURL)
+
+        exporter.outputURL = temporaryURL
+        exporter.outputFileType = .m4a
+        exporter.shouldOptimizeForNetworkUse = false
+
+        var metadata = asset.metadata.filter {
+            $0.identifier != .iTunesMetadataLyrics
+        }
+        if let lyrics, !lyrics.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let lyricsItem = AVMutableMetadataItem()
+            lyricsItem.identifier = .iTunesMetadataLyrics
+            lyricsItem.value = lyrics as NSString
+            metadata.append(lyricsItem)
+        }
+        exporter.metadata = metadata
+
+        if expectedDurationMs > 0 {
+            let expectedSeconds = expectedDurationMs / 1000.0
+            let actualSeconds = CMTimeGetSeconds(asset.duration)
+            let tolerance = min(max(expectedSeconds * 0.15, 20), 60)
+            if actualSeconds.isFinite &&
+                actualSeconds > expectedSeconds + tolerance {
+                exporter.timeRange = CMTimeRange(
+                    start: .zero,
+                    duration: CMTime(seconds: expectedSeconds, preferredTimescale: 600)
+                )
+            }
+        }
+
+        exporter.exportAsynchronously {
+            let succeeded = exporter.status == .completed
+            if succeeded {
+                do {
+                    _ = try FileManager.default.replaceItemAt(
+                        sourceURL,
+                        withItemAt: temporaryURL,
+                        backupItemName: nil,
+                        options: []
+                    )
+                } catch {
+                    try? FileManager.default.removeItem(at: temporaryURL)
+                    DispatchQueue.main.async {
+                        result(FlutterError(
+                            code: "metadata_replace_failed",
+                            message: error.localizedDescription,
+                            details: nil
+                        ))
+                    }
+                    return
+                }
+            } else {
+                try? FileManager.default.removeItem(at: temporaryURL)
+            }
+
+            DispatchQueue.main.async {
+                if succeeded {
+                    result(true)
+                } else {
+                    result(FlutterError(
+                        code: "metadata_export_failed",
+                        message: exporter.error?.localizedDescription,
+                        details: nil
+                    ))
+                }
+            }
         }
     }
 }
