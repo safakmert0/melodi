@@ -19,6 +19,7 @@ class DownloadTask {
   final String id;
   final String spotifyTrackId;
   final String? sourceVideoId;
+  final String? directUrl;
   final String title;
   final String artist;
   final String? album;
@@ -35,6 +36,7 @@ class DownloadTask {
     required this.id,
     required this.spotifyTrackId,
     this.sourceVideoId,
+    this.directUrl,
     required this.title,
     required this.artist,
     this.album,
@@ -78,12 +80,14 @@ class DownloadManager {
     String? album,
     String? imageUrl,
     String? sourceVideoId,
+    String? directUrl,
     int expectedDurationMs = 0,
   }) {
     final task = DownloadTask(
       id: _taskId(),
       spotifyTrackId: spotifyTrackId,
       sourceVideoId: sourceVideoId,
+      directUrl: directUrl,
       title: title,
       artist: artist,
       album: album,
@@ -103,6 +107,7 @@ class DownloadManager {
         artist: t['artist']!,
         album: t['album'],
         imageUrl: t['imageUrl'],
+        directUrl: t['directUrl'],
         expectedDurationMs: int.tryParse(t['durationMs'] ?? '') ?? 0,
       );
     }
@@ -197,15 +202,19 @@ class DownloadManager {
       _notify();
 
       final query = '${task.artist} - ${task.title}';
-      String? streamUrl;
+      String? streamUrl = task.directUrl;
+      List<OnlineTrack> allTracks = const [];
 
-      // Search all sources in parallel
-      final allTracks =
-          await _multiSource.searchAllSync(query, limitPerSource: 3);
+      // A user-owned server can provide the exact file. Preserve that source
+      // instead of matching the metadata to an unrelated public upload.
+      if (streamUrl == null || streamUrl.isEmpty) {
+        allTracks = await _multiSource.searchAllSync(query, limitPerSource: 3);
+      }
       if (allTracks.isNotEmpty) {
         // JioSaavn can expose a full media URL. YouTube is handled separately
         // by YouTubeService so throttling/signature changes are supported.
         final priorityOrder = [
+          MusicSourceType.navidrome,
           MusicSourceType.jiosaavn,
         ];
         for (final sourceType in priorityOrder) {
@@ -428,10 +437,6 @@ class DownloadManager {
     try {
       final sanitized = title.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
       String safeTitle = sanitized.isEmpty ? 'download' : sanitized;
-      final filePath =
-          '${dir.path}/${safeTitle}_${DateTime.now().millisecondsSinceEpoch}.m4a';
-      final file = File(filePath);
-      if (await file.exists()) return filePath;
 
       final client = HttpClient()
         ..userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)'
@@ -444,6 +449,11 @@ class DownloadManager {
         if (response.statusCode != 200) {
           return null;
         }
+        final extension = _downloadExtension(url, response.headers.contentType);
+        final filePath =
+            '${dir.path}/${safeTitle}_${DateTime.now().millisecondsSinceEpoch}.$extension';
+        final file = File(filePath);
+        if (await file.exists()) return filePath;
         final sink = file.openWrite();
         await response.pipe(sink);
         await sink.close();
@@ -460,6 +470,26 @@ class DownloadManager {
       debugPrint('Download from URL error: $e');
       return null;
     }
+  }
+
+  String _downloadExtension(String url, ContentType? contentType) {
+    final mime = contentType?.mimeType.toLowerCase();
+    if (mime == 'audio/flac' || mime == 'audio/x-flac') return 'flac';
+    if (mime == 'audio/mpeg' || mime == 'audio/mp3') return 'mp3';
+    if (mime == 'audio/mp4' || mime == 'audio/x-m4a') return 'm4a';
+    if (mime == 'audio/aac') return 'aac';
+    if (mime == 'audio/ogg') return 'ogg';
+    if (mime == 'audio/opus') return 'opus';
+    if (mime == 'audio/wav' || mime == 'audio/x-wav') return 'wav';
+
+    final suffix = Uri.tryParse(url)
+        ?.pathSegments
+        .lastOrNull
+        ?.split('.')
+        .last
+        .toLowerCase();
+    const supported = {'flac', 'mp3', 'm4a', 'aac', 'ogg', 'opus', 'wav'};
+    return supported.contains(suffix) ? suffix! : 'm4a';
   }
 
   Future<String?> _importDownloadedFile(
@@ -524,7 +554,11 @@ class DownloadManager {
       }
 
       if (metadata != null) {
-        final placeholderId = 'spotify:${task.spotifyTrackId}';
+        final placeholderId = task.spotifyTrackId.startsWith('navidrome:')
+            ? task.spotifyTrackId
+            : task.spotifyTrackId.startsWith('spotify:')
+                ? task.spotifyTrackId
+                : 'spotify:${task.spotifyTrackId}';
         SongModel? placeholder = await db.getSongById(placeholderId);
         if (placeholder == null) {
           final titleKey = _matchKey(task.title);
@@ -544,7 +578,10 @@ class DownloadManager {
           }
         }
         final normalized = metadata.copyWith(
-          id: placeholder?.id ?? metadata.id,
+          id: placeholder?.id ??
+              (task.spotifyTrackId.startsWith('navidrome:')
+                  ? task.spotifyTrackId
+                  : metadata.id),
           title: task.title,
           artist: task.artist,
           album:

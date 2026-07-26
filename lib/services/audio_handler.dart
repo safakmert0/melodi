@@ -10,12 +10,14 @@ import 'database_service.dart';
 import 'track_matcher.dart';
 import 'youtube_audio_source.dart';
 import 'ytmusic_service.dart';
+import 'navidrome_service.dart';
 
 class AudioPlayerHandler extends BaseAudioHandler
     with SeekHandler, QueueHandler {
   final AudioPlayer _player = AudioPlayer();
   final DatabaseService _db = DatabaseService.instance;
   late final TrackMatcher _trackMatcher = TrackMatcher(YTMusicService().search);
+  final NavidromeService _navidrome = NavidromeService.instance;
 
   List<SongModel> _queue = [];
   List<SongModel> _originalQueue = [];
@@ -630,6 +632,64 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (!song.filePath.startsWith('spotify://')) return song;
 
     final spotifyId = song.filePath.replaceFirst('spotify://', '');
+
+    // Spotify supplies library metadata, not downloadable audio. When the
+    // user owns the same track on a connected personal server, prefer that
+    // exact title/artist/duration match before trying a public resolver.
+    try {
+      if (await _navidrome.isConfigured()) {
+        final candidates = await _navidrome.search(
+          '${song.artist} - ${song.title}',
+          limit: 8,
+        );
+        candidates.sort((a, b) {
+          final aScore = TrackMatcher.scoreWithDuration(
+            song.title,
+            song.artist,
+            song.duration.inMilliseconds,
+            a.title,
+            a.artist,
+            a.duration.inMilliseconds,
+          );
+          final bScore = TrackMatcher.scoreWithDuration(
+            song.title,
+            song.artist,
+            song.duration.inMilliseconds,
+            b.title,
+            b.artist,
+            b.duration.inMilliseconds,
+          );
+          return bScore.compareTo(aScore);
+        });
+        if (candidates.isNotEmpty) {
+          final best = candidates.first;
+          final score = TrackMatcher.scoreWithDuration(
+            song.title,
+            song.artist,
+            song.duration.inMilliseconds,
+            best.title,
+            best.artist,
+            best.duration.inMilliseconds,
+          );
+          if (score >= 0.72 && best.streamUrl != null) {
+            final artwork = song.albumArt ??
+                await _navidrome.fetchArtwork(best.thumbnailUrl);
+            final resolved = song.copyWith(
+              filePath: best.streamUrl,
+              album: best.album ?? song.album,
+              duration:
+                  best.duration > Duration.zero ? best.duration : song.duration,
+              albumArt: artwork,
+            );
+            _replaceSongInQueues(resolved);
+            return resolved;
+          }
+        }
+      }
+    } catch (error) {
+      debugPrint('Navidrome Spotify match failed: $error');
+    }
+
     final cached = await _db.getCachedMatch(spotifyId);
     var videoId = cached?['ytVideoId']?.toString();
     if (videoId == null || videoId.isEmpty) {

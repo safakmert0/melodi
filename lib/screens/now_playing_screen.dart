@@ -23,6 +23,7 @@ import '../widgets/queue_sheet.dart';
 import '../widgets/sleep_timer_sheet.dart';
 import '../widgets/crossfade_slider.dart';
 import 'lyrics_screen.dart';
+import 'cover_flow_screen.dart';
 
 class NowPlayingScreen extends StatefulWidget {
   const NowPlayingScreen({super.key});
@@ -197,6 +198,14 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       lib.cacheArtwork(song.id, result);
       if (mounted) setState(() {});
     }
+  }
+
+  void _openCoverFlow() {
+    final player = context.read<PlayerProvider>();
+    if (player.queue.isEmpty) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const CoverFlowScreen()),
+    );
   }
 
   @override
@@ -679,32 +688,53 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                           ),
                         ),
                       ),
-                    Hero(
-                      tag: 'album_art_${song.id}',
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.42),
-                              blurRadius: 32,
-                              offset: const Offset(0, 12),
-                            ),
-                          ],
+                    GestureDetector(
+                      onTap: _openCoverFlow,
+                      child: Hero(
+                        tag: 'album_art_${song.id}',
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.42),
+                                blurRadius: 32,
+                                offset: const Offset(0, 12),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: hasArt
+                                ? Image.memory(
+                                    song.albumArt!,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    gaplessPlayback: true,
+                                    errorBuilder: (_, __, ___) =>
+                                        _buildArtFallback(),
+                                  )
+                                : _buildArtFallback(),
+                          ),
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: hasArt
-                              ? Image.memory(
-                                  song.albumArt!,
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  gaplessPlayback: true,
-                                  errorBuilder: (_, __, ___) =>
-                                      _buildArtFallback(),
-                                )
-                              : _buildArtFallback(),
+                      ),
+                    ),
+                    Positioned(
+                      right: 10,
+                      bottom: 10,
+                      child: IgnorePointer(
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.58),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.view_carousel_rounded,
+                            color: Colors.white,
+                            size: 19,
+                          ),
                         ),
                       ),
                     ),

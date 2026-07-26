@@ -1223,7 +1223,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _SettingsHubEntry(
         section: 'Kaynaklar',
         title: 'Müzik kaynakları',
-        subtitle: 'Spotify, YouTube Music ve çevrim içi kataloglar',
+        subtitle: 'Spotify, YouTube Music ve kişisel sunucu',
         icon: Icons.hub_outlined,
         color: const Color(0xFF2EC4B6),
         onTap: () => open(const SourceHubScreen()),
@@ -1435,7 +1435,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _SettingsHubEntry(
         section: 'Kaynaklar ve hesaplar',
         title: 'Müzik kaynakları',
-        subtitle: 'Tüm katalogları ve yeteneklerini gör',
+        subtitle: 'Kataloglar, hesaplar ve kişisel sunucu',
         icon: Icons.hub_outlined,
         color: const Color(0xFF2EC4B6),
         onTap: () => open(const SourceHubScreen()),

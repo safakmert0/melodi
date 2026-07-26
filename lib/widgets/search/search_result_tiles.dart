@@ -13,6 +13,7 @@ Color musicSourceColor(MusicSourceType source) => switch (source) {
       MusicSourceType.jiosaavn => const Color(0xFF2BC5B4),
       MusicSourceType.deezer => const Color(0xFFA970FF),
       MusicSourceType.lastfm => const Color(0xFFD51007),
+      MusicSourceType.navidrome => const Color(0xFF6C8CFF),
     };
 
 class LocalSearchResultTile extends StatelessWidget {
@@ -206,6 +207,7 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
             sourceVideoId:
                 track.source == MusicSourceType.youtube ? track.id : null,
             expectedDurationMs: track.duration.inMilliseconds,
+            directUrl: url,
           );
       _message('${track.title} indirme kuyruğuna eklendi');
     } catch (error) {
@@ -310,5 +312,6 @@ class SearchSourceFilters extends StatelessWidget {
         MusicSourceType.jiosaavn => 'JioSaavn',
         MusicSourceType.deezer => 'Deezer',
         MusicSourceType.lastfm => 'Last.fm',
+        MusicSourceType.navidrome => 'Navidrome',
       };
 }

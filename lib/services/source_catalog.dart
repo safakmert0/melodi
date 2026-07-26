@@ -13,6 +13,7 @@ class SourceCatalog {
     required bool youtubeMusicConnected,
     bool spotifyExpired = false,
     bool youtubeMusicExpired = false,
+    bool navidromeConnected = false,
   }) {
     return [
       const SourceDescriptor(
@@ -21,6 +22,25 @@ class SourceCatalog {
         description: 'İçe aktarılan ve indirilen müzikler',
         status: SourceStatus.available,
         capabilities: {
+          SourceCapability.search,
+          SourceCapability.playback,
+          SourceCapability.library,
+          SourceCapability.playlists,
+          SourceCapability.likes,
+          SourceCapability.lyrics,
+          SourceCapability.downloads,
+          SourceCapability.lossless,
+        },
+      ),
+      SourceDescriptor(
+        kind: SourceKind.navidrome,
+        name: 'Navidrome / Subsonic',
+        description: 'Kendi sunucundan kayıpsız oynatma ve çevrimdışı indirme',
+        status: navidromeConnected
+            ? SourceStatus.connected
+            : SourceStatus.unavailable,
+        requiresAccount: true,
+        capabilities: const {
           SourceCapability.search,
           SourceCapability.playback,
           SourceCapability.library,

@@ -6,6 +6,7 @@ enum SourceKind {
   deezer,
   jioSaavn,
   lastFm,
+  navidrome,
 }
 
 enum SourceCapability {

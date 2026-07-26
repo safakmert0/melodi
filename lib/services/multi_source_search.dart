@@ -5,6 +5,7 @@ import 'sources/youtube_source.dart';
 import 'sources/jiosaavn_source.dart';
 import 'sources/deezer_source.dart';
 import 'sources/lastfm_source.dart';
+import 'sources/navidrome_source.dart';
 
 class MultiSourceSearch {
   static final MultiSourceSearch _instance = MultiSourceSearch._();
@@ -12,6 +13,7 @@ class MultiSourceSearch {
   MultiSourceSearch._();
 
   final List<MusicSource> _sources = [
+    NavidromeSource(),
     YouTubeMusicSource(),
     JioSaavnSource(),
     DeezerSource(),
@@ -84,7 +86,8 @@ class MultiSourceSearch {
 
   /// Try to get stream URL with fallback across all sources.
   /// Preview-only catalogue results are resolved against a full-track source.
-  /// Priority: the track's own full source first, then YouTube > JioSaavn.
+  /// Priority: the track's own full source first, then the user's personal
+  /// Navidrome library, YouTube and JioSaavn.
   Future<String?> getStreamUrlWithFallback(OnlineTrack track,
       {String? query}) async {
     // 1. Try the track's own source only if it can provide a full track.
@@ -106,11 +109,12 @@ class MultiSourceSearch {
     final fallbackOrder = _sources
         .where((s) => s.type != track.source && s.type.supportsFullTrack)
         .toList();
-    // YouTube is the broadest catalogue, JioSaavn is the full-stream fallback.
+    // Prefer the user's own server, then broad public full-track sources.
     fallbackOrder.sort((a, b) {
       const priority = {
-        MusicSourceType.youtube: 0,
-        MusicSourceType.jiosaavn: 1,
+        MusicSourceType.navidrome: 0,
+        MusicSourceType.youtube: 1,
+        MusicSourceType.jiosaavn: 2,
       };
       return (priority[a.type] ?? 99).compareTo(priority[b.type] ?? 99);
     });

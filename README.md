@@ -20,11 +20,13 @@
 |---|---|
 | 🎶 **All Audio Formats** | MP3, M4A, FLAC, WAV, AAC, OGG, WMA, ALAC, AIFF, OPUS, APE |
 | 📂 **Local Music Scan** | Apple Music library + Files app import |
-| 🎨 **Spotify-Like UI** | Dark theme, smooth animations, modern design |
+| 🎨 **Apple Music-Like UI** | Premium light/dark themes, live lyrics and 3D Cover Flow |
 | ▶️ **Now Playing** | Full-screen player with album art, seek bar, queue |
 | 📋 **Playlists** | Create, edit, reorder, delete |
 | ❤️ **Favorites** | Mark songs as favorites |
-| 🔍 **Search** | Search by song, artist, album |
+| 🔍 **Unified Search** | Search the device, Navidrome/Subsonic and supported online sources |
+| 🌐 **Personal Server** | Secure HTTPS Navidrome/Subsonic playback, playlists and offline downloads |
+| 🔗 **Spotify Library** | Import playlists and match owned server tracks by title, artist and duration |
 | 🔀 **Queue** | Add to queue, reorder, shuffle, repeat |
 | 📱 **Lock Screen** | Background playback with lock screen controls |
 | 🗄️ **SQLite Database** | Persistent storage for songs, playlists, favorites |

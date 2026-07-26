@@ -5,10 +5,52 @@ import '../core/melodi_design.dart';
 import '../models/source_descriptor.dart';
 import '../providers/connection_provider.dart';
 import '../services/source_catalog.dart';
+import '../services/navidrome_service.dart';
+import 'navidrome_settings_screen.dart';
 import 'settings_screen.dart';
 
-class SourceHubScreen extends StatelessWidget {
+class SourceHubScreen extends StatefulWidget {
   const SourceHubScreen({super.key});
+
+  @override
+  State<SourceHubScreen> createState() => _SourceHubScreenState();
+}
+
+class _SourceHubScreenState extends State<SourceHubScreen> {
+  bool _navidromeConnected = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNavidromeStatus();
+  }
+
+  Future<void> _loadNavidromeStatus() async {
+    final connected = await NavidromeService.instance.isConfigured();
+    if (mounted) setState(() => _navidromeConnected = connected);
+  }
+
+  Future<void> _refresh(ConnectionProvider connection) async {
+    await Future.wait([
+      connection.refreshStatus(),
+      _loadNavidromeStatus(),
+    ]);
+  }
+
+  Future<void> _openSource(
+    BuildContext context,
+    SourceDescriptor source,
+  ) async {
+    if (!source.requiresAccount) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => source.kind == SourceKind.navidrome
+            ? const NavidromeSettingsScreen()
+            : const SettingsScreen(),
+      ),
+    );
+    if (source.kind == SourceKind.navidrome) await _loadNavidromeStatus();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,6 +60,7 @@ class SourceHubScreen extends StatelessWidget {
       spotifyExpired: connection.spotifyExpired,
       youtubeMusicConnected: connection.ytMusicConnected,
       youtubeMusicExpired: connection.ytMusicExpired,
+      navidromeConnected: _navidromeConnected,
     );
 
     return Scaffold(
@@ -26,13 +69,13 @@ class SourceHubScreen extends StatelessWidget {
         actions: [
           IconButton(
             tooltip: 'Yenile',
-            onPressed: connection.refreshStatus,
+            onPressed: () => _refresh(connection),
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: connection.refreshStatus,
+        onRefresh: () => _refresh(connection),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),
@@ -57,7 +100,10 @@ class SourceHubScreen extends StatelessWidget {
             ),
             const SizedBox(height: 22),
             for (final source in sources) ...[
-              _SourceCard(source: source),
+              _SourceCard(
+                source: source,
+                onTap: () => _openSource(context, source),
+              ),
               const SizedBox(height: 12),
             ],
           ],
@@ -68,20 +114,17 @@ class SourceHubScreen extends StatelessWidget {
 }
 
 class _SourceCard extends StatelessWidget {
-  const _SourceCard({required this.source});
+  const _SourceCard({required this.source, required this.onTap});
 
   final SourceDescriptor source;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return MelodiPanel(
       emphasized: source.status == SourceStatus.connected,
-      onTap: source.requiresAccount
-          ? () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              )
-          : null,
+      onTap: source.requiresAccount ? onTap : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -146,6 +189,7 @@ class _SourceIcon extends StatelessWidget {
       SourceKind.deezer => (Icons.equalizer_rounded, const Color(0xFFA970FF)),
       SourceKind.jioSaavn => (Icons.waves_rounded, const Color(0xFF2BC5B4)),
       SourceKind.lastFm => (Icons.insights_rounded, const Color(0xFFD51007)),
+      SourceKind.navidrome => (Icons.dns_rounded, const Color(0xFF6C8CFF)),
     };
     return Container(
       width: 46,

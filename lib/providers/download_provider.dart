@@ -92,6 +92,7 @@ class DownloadProvider extends ChangeNotifier {
     String? album,
     String? imageUrl,
     String? sourceVideoId,
+    String? directUrl,
     int expectedDurationMs = 0,
   }) {
     _manager.addTask(
@@ -101,6 +102,7 @@ class DownloadProvider extends ChangeNotifier {
       album: album,
       imageUrl: imageUrl,
       sourceVideoId: sourceVideoId,
+      directUrl: directUrl,
       expectedDurationMs: expectedDurationMs,
     );
   }
