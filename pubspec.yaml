@@ -1,7 +1,7 @@
 name: melodi
 description: A source-aware music library, streaming companion, downloader, and local player for iOS and Android.
 publish_to: 'none'
-version: 4.2.2+10
+version: 4.2.3+11
 
 environment:
   sdk: ^3.2.0
@@ -84,6 +84,8 @@ dependency_overrides:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/app_icon.png
   fonts:
     - family: BeVietnamPro
       fonts:

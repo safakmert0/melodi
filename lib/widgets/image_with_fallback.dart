@@ -37,26 +37,47 @@ class ArtworkImage extends StatelessWidget {
 
   Widget _buildFallback() {
     return fallback ??
-        Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(borderRadius),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                MelodiTheme.containerLow,
-                MelodiTheme.surfaceHigh,
-              ],
+        MelodiArtworkFallback(
+          size: size,
+          borderRadius: borderRadius,
+        );
+  }
+}
+
+class MelodiArtworkFallback extends StatelessWidget {
+  const MelodiArtworkFallback({
+    super.key,
+    this.size,
+    this.borderRadius = 8,
+  });
+
+  final double? size;
+  final double borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    final dimension = size ?? double.infinity;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: Image.asset(
+        'assets/images/app_icon.png',
+        width: dimension,
+        height: dimension,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => ColoredBox(
+          color: MelodiTheme.containerLow,
+          child: SizedBox(
+            width: dimension,
+            height: dimension,
+            child: Icon(
+              Icons.music_note_rounded,
+              size: size == null ? 72 : size! * 0.45,
+              color: MelodiTheme.onSurfaceVariant,
             ),
           ),
-          child: Icon(
-            Icons.music_note_rounded,
-            size: size * 0.45,
-            color: MelodiTheme.onSurfaceVariant,
-          ),
-        );
+        ),
+      ),
+    );
   }
 }
 

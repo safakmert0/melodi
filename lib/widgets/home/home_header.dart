@@ -19,103 +19,98 @@ class HomeHeader extends StatelessWidget {
       connection.ytMusicConnected,
     ].where((connected) => connected).length;
 
-    return SliverAppBar(
-      pinned: true,
-      stretch: true,
-      expandedHeight: 176,
-      toolbarHeight: 64,
-      leadingWidth: 108,
-      backgroundColor: theme.scaffoldBackgroundColor.withValues(alpha: 0.94),
-      surfaceTintColor: Colors.transparent,
-      leading: Padding(
-        padding: const EdgeInsets.only(left: 8),
-        child: Row(
-          children: [
-            _HeaderButton(
-              tooltip: connectedCount == 0
-                  ? 'Müzik kaynaklarını bağla'
-                  : '$connectedCount hesap bağlı',
-              icon:
-                  connectedCount == 0 ? Icons.hub_outlined : Icons.hub_rounded,
-              badge: connectedCount == 0 ? null : '$connectedCount',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const SourceHubScreen(),
+    return SliverToBoxAdapter(
+      child: ColoredBox(
+        color: theme.scaffoldBackgroundColor,
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    _HeaderButton(
+                      tooltip: connectedCount == 0
+                          ? 'Müzik kaynaklarını bağla'
+                          : '$connectedCount hesap bağlı',
+                      icon: connectedCount == 0
+                          ? Icons.hub_outlined
+                          : Icons.hub_rounded,
+                      badge: connectedCount == 0 ? null : '$connectedCount',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const SourceHubScreen(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Tooltip(
+                      message: 'Profil',
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const ProfileScreen(),
+                          ),
+                        ),
+                        child: Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [
+                                theme.colorScheme.primary,
+                                theme.colorScheme.secondary,
+                              ],
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.person_rounded,
+                            color: Colors.white,
+                            size: 21,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    _HeaderButton(
+                      tooltip: 'Ayarlar',
+                      icon: Icons.settings_rounded,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const SettingsScreen(),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ),
-            InkWell(
-              customBorder: const CircleBorder(),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const ProfileScreen(),
-                ),
-              ),
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      theme.colorScheme.primary,
-                      theme.colorScheme.secondary,
-                    ],
+                const SizedBox(height: 18),
+                Text(
+                  _greeting(),
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.1,
                   ),
                 ),
-                child: const Icon(
-                  Icons.person_rounded,
-                  color: Colors.white,
-                  size: 19,
+                const SizedBox(height: 3),
+                Text(
+                  _headline(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.headlineLarge?.copyWith(
+                    fontSize: 31,
+                    letterSpacing: -1.4,
+                  ),
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      flexibleSpace: FlexibleSpaceBar(
-        collapseMode: CollapseMode.parallax,
-        background: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 104, 18, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _greeting(),
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.1,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                _headline(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.headlineLarge?.copyWith(
-                  fontSize: 31,
-                  letterSpacing: -1.4,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: _HeaderButton(
-            tooltip: 'Ayarlar',
-            icon: Icons.settings_rounded,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const SettingsScreen(),
-              ),
+              ],
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 
@@ -168,7 +163,7 @@ class _HeaderButton extends StatelessWidget {
         IconButton(
           tooltip: tooltip,
           onPressed: onTap,
-          icon: Icon(icon, size: 21),
+          icon: Icon(icon, size: 22),
         ),
         if (badge != null)
           Positioned(

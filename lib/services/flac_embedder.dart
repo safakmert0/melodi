@@ -286,6 +286,13 @@ class FlacEmbedder {
       final fileBytes = await file.readAsBytes();
 
       final tags = <String, String>{};
+      for (final block in blocks) {
+        if (block.type == _blockTypeVorbisComment) {
+          tags.addAll(FlacVorbisComment.decode(block.data).tags);
+          break;
+        }
+      }
+
       if (title != null) tags['TITLE'] = title;
       if (artist != null) tags['ARTIST'] = artist;
       if (album != null) tags['ALBUM'] = album;
@@ -317,7 +324,9 @@ class FlacEmbedder {
           ));
           replacedComment = true;
         } else if (block.type == _blockTypePicture) {
-          // Existing pictures are replaced below when new cover art exists.
+          if (coverArt == null) {
+            newBlocks.add(block);
+          }
         } else if (block.type != _blockTypePadding) {
           newBlocks.add(block);
         }

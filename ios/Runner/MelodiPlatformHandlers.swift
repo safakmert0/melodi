@@ -287,7 +287,7 @@ class LyricsMetadataWriterHandler: NSObject {
     }
 
     private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard call.method == "embedLyrics",
+        guard call.method == "embedLyrics" || call.method == "embedArtwork",
               let arguments = call.arguments as? [String: Any],
               let path = arguments["path"] as? String else {
             result(FlutterMethodNotImplemented)
@@ -295,11 +295,13 @@ class LyricsMetadataWriterHandler: NSObject {
         }
 
         let lyrics = arguments["lyrics"] as? String
+        let coverArt = (arguments["coverArt"] as? FlutterStandardTypedData)?.data
         let expectedDurationMs =
             (arguments["expectedDurationMs"] as? NSNumber)?.doubleValue ?? 0
         process(
             path: path,
             lyrics: lyrics,
+            coverArt: coverArt,
             expectedDurationMs: expectedDurationMs,
             result: result
         )
@@ -308,6 +310,7 @@ class LyricsMetadataWriterHandler: NSObject {
     private func process(
         path: String,
         lyrics: String?,
+        coverArt: Data?,
         expectedDurationMs: Double,
         result: @escaping FlutterResult
     ) {
@@ -334,14 +337,32 @@ class LyricsMetadataWriterHandler: NSObject {
         exporter.outputFileType = .m4a
         exporter.shouldOptimizeForNetworkUse = false
 
-        var metadata = asset.metadata.filter {
-            $0.identifier != .iTunesMetadataLyrics
+        var metadata = asset.metadata.filter { item in
+            if lyrics != nil && item.identifier == .iTunesMetadataLyrics {
+                return false
+            }
+            if coverArt != nil &&
+                (item.identifier == .commonIdentifierArtwork ||
+                 item.identifier == .iTunesMetadataCoverArt) {
+                return false
+            }
+            return true
         }
         if let lyrics, !lyrics.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             let lyricsItem = AVMutableMetadataItem()
             lyricsItem.identifier = .iTunesMetadataLyrics
             lyricsItem.value = lyrics as NSString
             metadata.append(lyricsItem)
+        }
+        if let coverArt, !coverArt.isEmpty {
+            let artworkItem = AVMutableMetadataItem()
+            artworkItem.identifier = .commonIdentifierArtwork
+            artworkItem.value = coverArt as NSData
+            let pngSignature: [UInt8] = [0x89, 0x50, 0x4E, 0x47]
+            artworkItem.dataType = coverArt.starts(with: pngSignature)
+                ? kCMMetadataBaseDataType_PNG as String
+                : kCMMetadataBaseDataType_JPEG as String
+            metadata.append(artworkItem)
         }
         exporter.metadata = metadata
 

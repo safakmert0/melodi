@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/melodi_design.dart';
 import '../../models/song_model.dart';
+import '../image_with_fallback.dart';
 
 enum LibrarySourceFilter { all, device, spotify, youtube }
 
@@ -550,18 +551,25 @@ class _Artwork extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final fallback = Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        gradient: gradient,
-        color: gradient == null ? colors.surfaceContainerHighest : null,
-        borderRadius: BorderRadius.circular(radius),
-      ),
-      child: Icon(icon,
-          size: size.isFinite ? size * 0.38 : 40,
-          color: gradient == null ? colors.onSurfaceVariant : Colors.white),
-    );
+    final fallback = gradient == null && icon == Icons.music_note_rounded
+        ? MelodiArtworkFallback(
+            size: size.isFinite ? size : null,
+            borderRadius: radius,
+          )
+        : Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              gradient: gradient,
+              color: gradient == null ? colors.surfaceContainerHighest : null,
+              borderRadius: BorderRadius.circular(radius),
+            ),
+            child: Icon(
+              icon,
+              size: size.isFinite ? size * 0.38 : 40,
+              color: gradient == null ? colors.onSurfaceVariant : Colors.white,
+            ),
+          );
     if (bytes == null || bytes!.isEmpty) return fallback;
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),

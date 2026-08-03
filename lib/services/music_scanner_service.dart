@@ -6,6 +6,8 @@ import 'package:file_picker/file_picker.dart';
 import '../models/song_model.dart' as app;
 import 'metadata_service.dart';
 import 'database_service.dart';
+import 'artwork_service.dart';
+import 'artwork_embedding_service.dart';
 
 enum ScanSource { mediaLibrary, filePicker, directory, all }
 
@@ -144,8 +146,9 @@ class MusicScannerService {
         ));
       }
 
-      await _db.insertSongs(songs);
-      return songs;
+      final enriched = await _enrichMissingArtwork(songs);
+      await _db.insertSongs(enriched);
+      return enriched;
     } catch (e) {
       return [];
     }
@@ -191,6 +194,7 @@ class MusicScannerService {
       final existingPaths =
           await _db.getAllSongs().then((s) => s.map((e) => e.filePath).toSet());
       songs = songs.where((s) => !existingPaths.contains(s.filePath)).toList();
+      songs = await _enrichMissingArtwork(songs);
       if (songs.isNotEmpty) {
         await _db.insertSongs(songs);
       }
@@ -198,6 +202,40 @@ class MusicScannerService {
     } catch (e) {
       return [];
     }
+  }
+
+  Future<List<app.SongModel>> _enrichMissingArtwork(
+      List<app.SongModel> songs) async {
+    final enriched = <app.SongModel>[];
+    for (final song in songs) {
+      if (song.albumArt != null && song.albumArt!.isNotEmpty) {
+        enriched.add(song);
+        continue;
+      }
+
+      final artwork = await ArtworkService.fetchArtwork(
+        title: song.title,
+        artist: song.artist,
+        album: song.album,
+        duration: song.duration,
+      );
+      if (artwork == null || artwork.isEmpty) {
+        enriched.add(song);
+        continue;
+      }
+
+      await ArtworkEmbeddingService.embedCoverArt(
+        filePath: song.filePath,
+        artwork: artwork,
+      );
+      var fileSize = song.fileSize;
+      try {
+        final file = File(song.filePath);
+        if (await file.exists()) fileSize = await file.length();
+      } catch (_) {}
+      enriched.add(song.copyWith(albumArt: artwork, fileSize: fileSize));
+    }
+    return enriched;
   }
 
   Future<List<app.SongModel>> importFromDirectory() async {
@@ -245,6 +283,7 @@ class MusicScannerService {
       final existingPaths =
           await _db.getAllSongs().then((s) => s.map((e) => e.filePath).toSet());
       songs = songs.where((s) => !existingPaths.contains(s.filePath)).toList();
+      songs = await _enrichMissingArtwork(songs);
       if (songs.isNotEmpty) {
         await _db.insertSongs(songs);
       }
@@ -275,8 +314,9 @@ class MusicScannerService {
     final existingPaths = existing.map((s) => s.filePath).toSet();
     final scannedPaths = scanned.map((s) => s.filePath).toSet();
 
-    final newSongs =
+    var newSongs =
         scanned.where((s) => !existingPaths.contains(s.filePath)).toList();
+    newSongs = await _enrichMissingArtwork(newSongs);
     if (newSongs.isNotEmpty) {
       await _db.insertSongs(newSongs);
     }

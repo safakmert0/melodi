@@ -20,6 +20,7 @@ import '../services/download_manager.dart';
 import '../services/database_service.dart';
 import '../widgets/seek_bar.dart';
 import '../widgets/queue_sheet.dart';
+import '../widgets/image_with_fallback.dart';
 import '../widgets/sleep_timer_sheet.dart';
 import '../widgets/crossfade_slider.dart';
 import 'lyrics_screen.dart';
@@ -184,12 +185,14 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   }
 
   Future<void> _fetchArtwork(SongModel song) async {
-    if (song.album.isEmpty) return;
     final result = await ArtworkService.fetchArtwork(
+      title: song.title,
       artist: song.artist,
       album: song.album,
+      duration: song.duration,
     );
     if (result != null && mounted) {
+      if (_lastSongId != song.id) return;
       final updated = song.copyWith(albumArt: result);
       context.read<PlayerProvider>().updateCurrentSong(updated);
       final lib = context.read<LibraryProvider>();
@@ -1122,22 +1125,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   }
 
   Widget _buildArtFallback() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF201f1f),
-            Color(0xFF2a2a2a),
-          ],
-        ),
-      ),
-      child: const Icon(
-        Icons.music_note_rounded,
-        size: 80,
-        color: Color(0xFFbccbb9),
-      ),
+    return const MelodiArtworkFallback(
+      borderRadius: 0,
     );
   }
 

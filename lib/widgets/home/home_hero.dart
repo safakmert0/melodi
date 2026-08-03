@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/melodi_design.dart';
 import '../../providers/library_provider.dart';
 import '../../providers/player_provider.dart';
+import '../image_with_fallback.dart';
 
 class HomeContinueListening extends StatelessWidget {
   const HomeContinueListening({super.key, required this.library});
@@ -39,18 +40,7 @@ class HomeContinueListening extends StatelessWidget {
                   if (song.albumArt != null)
                     Image.memory(song.albumArt!, fit: BoxFit.cover)
                   else
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            theme.colorScheme.primary,
-                            theme.colorScheme.tertiary,
-                          ],
-                        ),
-                      ),
-                    ),
+                    const MelodiArtworkFallback(borderRadius: 0),
                   const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
