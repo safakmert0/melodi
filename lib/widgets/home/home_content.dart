@@ -8,10 +8,8 @@ import '../../models/song_model.dart';
 import '../../providers/library_provider.dart';
 import '../../providers/player_provider.dart';
 import '../../providers/playlist_provider.dart';
-import '../../screens/downloads_screen.dart';
-import '../../screens/library_health_screen.dart';
-import '../../screens/listening_history_screen.dart';
-import '../../screens/mixes_screen.dart';
+import '../../screens/library_screen.dart';
+import '../library/library_components.dart';
 import '../image_with_fallback.dart';
 import 'home_hero.dart';
 import 'home_rails.dart';
@@ -38,7 +36,7 @@ class HomeContent extends StatelessWidget {
         _QuickPicks(library: library),
         HomeAlbumRail(library: library),
         if (playlists.playlists.isNotEmpty)
-          HomePlaylistRail(playlists: playlists),
+          HomePlaylistRail(playlists: playlists, library: library),
         _RecentlyAdded(library: library),
         const SizedBox(height: 176),
       ],
@@ -63,21 +61,31 @@ class _QuickActions extends StatelessWidget {
         color: const Color(0xFFFF4D78),
         value: '${library.favorites.length}',
         label: 'Favori',
-        onTap: () => _open(context, const ListeningHistoryScreen()),
+        onTap: () => _open(
+          context,
+          const LibraryScreen(favoritesOnly: true),
+        ),
       ),
       _ActionData(
         icon: Icons.download_done_rounded,
         color: const Color(0xFF32D583),
-        value: '${library.songs.length}',
+        value:
+            '${library.songs.where(LibrarySourceFilter.device.matches).length}',
         label: 'Aygıtta',
-        onTap: () => _open(context, const DownloadsScreen()),
+        onTap: () => _open(
+          context,
+          const LibraryScreen(initialSource: LibrarySourceFilter.device),
+        ),
       ),
       _ActionData(
         icon: Icons.queue_music_rounded,
         color: const Color(0xFF7C9DFF),
         value: '$playlistCount',
         label: 'Liste',
-        onTap: () => _open(context, const MixesScreen()),
+        onTap: () => _open(
+          context,
+          const LibraryScreen(initialContent: LibraryContentFilter.playlists),
+        ),
       ),
       _ActionData(
         icon: Icons.schedule_rounded,
@@ -86,7 +94,7 @@ class _QuickActions extends StatelessWidget {
             ? '${totalMinutes ~/ 60} sa'
             : '$totalMinutes dk',
         label: 'Müzik',
-        onTap: () => _open(context, const LibraryHealthScreen()),
+        onTap: () => _open(context, const LibraryScreen()),
       ),
     ];
 
@@ -210,8 +218,7 @@ class _QuickPicks extends StatelessWidget {
             borderRadius: BorderRadius.circular(15),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
-              onTap: () =>
-                  context.read<PlayerProvider>().playFromQueue(songs, index),
+              onTap: () => context.read<PlayerProvider>().playSong(song),
               child: Row(
                 children: [
                   ArtworkImage(

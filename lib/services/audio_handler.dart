@@ -454,7 +454,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       switch (decision.action) {
         case PlaybackCompletionAction.replayCurrent:
           await _player.seek(Duration.zero);
-          await _player.play();
+          _playWithoutBlocking();
           break;
         case PlaybackCompletionAction.playIndex:
           _currentIndex = decision.nextIndex!;
@@ -530,8 +530,6 @@ class AudioPlayerHandler extends BaseAudioHandler
       // Restore equalizer settings for new track
       await _restoreEqualizerSettings();
 
-      await _player.play();
-
       // Crossfade: monitor position and trigger next track early
       if (_crossfadeDuration > Duration.zero && _queue.length > 1) {
         _crossfadeSubscription = _player.positionStream.listen((position) {
@@ -579,6 +577,7 @@ class AudioPlayerHandler extends BaseAudioHandler
       await _db.updatePlayCount(song.id);
       _isInitialized = true;
       _broadcastState();
+      _playWithoutBlocking();
     } catch (e, stackTrace) {
       debugPrint('Playback failed for ${song.title}: $e\n$stackTrace');
       await _db.insertErrorLog('playback', e.toString(), stackTrace.toString());
@@ -792,7 +791,18 @@ class AudioPlayerHandler extends BaseAudioHandler
             duration > Duration.zero &&
             _player.position >= duration - const Duration(milliseconds: 300));
     if (isAtEnd) await _player.seek(Duration.zero);
-    await _player.play();
+    _playWithoutBlocking();
+  }
+
+  void _playWithoutBlocking() {
+    unawaited(_player.play().catchError((Object error, StackTrace stackTrace) {
+      debugPrint('Playback start failed: $error\n$stackTrace');
+      unawaited(_db.insertErrorLog(
+        'playback_start',
+        error.toString(),
+        stackTrace.toString(),
+      ));
+    }));
   }
 
   @override

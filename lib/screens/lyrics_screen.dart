@@ -108,6 +108,14 @@ class _LyricsScreenState extends State<LyricsScreen> {
     if (mounted) _updateCurrentLine(context.read<PlayerProvider>());
   }
 
+  double _fontSizeForLine(String text, {required bool isActive}) {
+    final length = text.trim().length;
+    if (length > 110) return isActive ? 19 : 17;
+    if (length > 78) return isActive ? 21 : 18;
+    if (length > 52) return isActive ? 23 : 20;
+    return isActive ? 27 : 23;
+  }
+
   void _seekToLine(LrcLine line) {
     final player = context.read<PlayerProvider>();
     final position = LyricsTiming.playbackPositionMs(
@@ -232,41 +240,39 @@ class _LyricsScreenState extends State<LyricsScreen> {
                                       horizontal: 24,
                                       vertical: 6,
                                     ),
-                                    child: LayoutBuilder(
-                                      builder: (context, constraints) {
-                                        return AnimatedScale(
-                                          scale: isActive ? 1.0 : 0.94,
-                                          duration:
-                                              const Duration(milliseconds: 280),
-                                          child: FittedBox(
-                                            fit: BoxFit.scaleDown,
-                                            alignment: Alignment.centerLeft,
-                                            child: SizedBox(
-                                              width: constraints.maxWidth,
-                                              child: AnimatedDefaultTextStyle(
-                                                duration: const Duration(
-                                                    milliseconds: 280),
-                                                style: TextStyle(
-                                                  fontFamily:
-                                                      AppConstants.fontFamily,
-                                                  fontSize: isActive ? 27 : 23,
-                                                  fontWeight: FontWeight.w800,
-                                                  height: 1.15,
-                                                  letterSpacing: -0.7,
-                                                  color: isActive
-                                                      ? MelodiTheme.onSurface
-                                                      : MelodiTheme.onSurface
-                                                          .withOpacity(0.22),
-                                                ),
-                                                child: Text(
-                                                  line.text,
-                                                  textAlign: TextAlign.left,
-                                                ),
-                                              ),
-                                            ),
+                                    child: AnimatedScale(
+                                      scale: isActive ? 1.0 : 0.96,
+                                      alignment: Alignment.centerLeft,
+                                      duration:
+                                          const Duration(milliseconds: 280),
+                                      child: AnimatedDefaultTextStyle(
+                                        duration:
+                                            const Duration(milliseconds: 280),
+                                        style: TextStyle(
+                                          fontFamily: AppConstants.fontFamily,
+                                          fontSize: _fontSizeForLine(
+                                            line.text,
+                                            isActive: isActive,
                                           ),
-                                        );
-                                      },
+                                          fontWeight: FontWeight.w800,
+                                          height: 1.12,
+                                          letterSpacing: -0.55,
+                                          color: isActive
+                                              ? MelodiTheme.onSurface
+                                              : MelodiTheme.onSurface
+                                                  .withOpacity(0.22),
+                                        ),
+                                        child: Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            line.text,
+                                            maxLines: 4,
+                                            softWrap: true,
+                                            overflow: TextOverflow.visible,
+                                            textAlign: TextAlign.left,
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 );

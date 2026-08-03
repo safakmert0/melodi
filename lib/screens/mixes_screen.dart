@@ -149,7 +149,6 @@ class _MixesScreenState extends State<MixesScreen> {
           _SectionHeader(
             title: AppLocale.tr('daily_mix'),
             subtitle: '${mixProvider.dailyMix.length} ${AppLocale.tr('songs')}',
-            onRegenerate: () => mixProvider.refreshDailyMix(),
           ),
           SizedBox(
             height: 180,
@@ -183,7 +182,6 @@ class _MixesScreenState extends State<MixesScreen> {
             title: AppLocale.tr('release_radar'),
             subtitle:
                 '${mixProvider.releaseRadar.length} ${AppLocale.tr('songs')}',
-            onRegenerate: () => mixProvider.refreshReleaseRadar(),
           ),
           ListView.builder(
             shrinkWrap: true,
@@ -217,7 +215,6 @@ class _MixesScreenState extends State<MixesScreen> {
             title: AppLocale.tr('discover_weekly'),
             subtitle:
                 '${mixProvider.discoverWeekly.length} ${AppLocale.tr('songs')}',
-            onRegenerate: () => mixProvider.refreshDiscoverWeekly(),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -340,12 +337,10 @@ class _MixesScreenState extends State<MixesScreen> {
 class _SectionHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
-  final VoidCallback? onRegenerate;
 
   const _SectionHeader({
     required this.title,
     this.subtitle,
-    this.onRegenerate,
   });
 
   @override
@@ -380,34 +375,6 @@ class _SectionHeader extends StatelessWidget {
               ],
             ),
           ),
-          if (onRegenerate != null)
-            GestureDetector(
-              onTap: onRegenerate,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: MelodiTheme.primaryGreen.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.refresh_rounded,
-                        size: 14, color: MelodiTheme.primaryGreen),
-                    const SizedBox(width: 4),
-                    Text(
-                      AppLocale.tr('regenerate'),
-                      style: TextStyle(
-                        color: MelodiTheme.primaryGreen,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
         ],
       ),
     );

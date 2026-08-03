@@ -29,6 +29,7 @@ class SongTile extends StatelessWidget {
   final double artworkSize;
   final Widget? wrongMatchButton;
   final double? confidence;
+  final bool showFileSize;
 
   const SongTile({
     super.key,
@@ -48,7 +49,18 @@ class SongTile extends StatelessWidget {
     this.artworkSize = 48,
     this.wrongMatchButton,
     this.confidence,
+    this.showFileSize = false,
   });
+
+  String _fileSizeLabel(int bytes) {
+    if (bytes >= 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+    }
+    if (bytes >= 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    return '${(bytes / 1024).toStringAsFixed(0)} KB';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,15 +98,34 @@ class SongTile extends StatelessWidget {
               ],
             )
           : null,
-      title: Text(
-        song.title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: isPlaying ? MelodiTheme.primaryGreen : MelodiTheme.onSurface,
-          fontWeight: isPlaying ? FontWeight.w600 : FontWeight.normal,
-          fontSize: 15,
-        ),
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              song.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: isPlaying
+                    ? MelodiTheme.primaryGreen
+                    : MelodiTheme.onSurface,
+                fontWeight: isPlaying ? FontWeight.w600 : FontWeight.normal,
+                fontSize: 15,
+              ),
+            ),
+          ),
+          if (showFileSize && song.fileSize > 0) ...[
+            const SizedBox(width: 8),
+            Text(
+              _fileSizeLabel(song.fileSize),
+              style: TextStyle(
+                color: MelodiTheme.textMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ],
       ),
       subtitle: Row(
         children: [
@@ -296,7 +327,7 @@ class SongTile extends StatelessWidget {
         : RegExp(r'^[A-Za-z0-9_-]{11}$').hasMatch(song.id)
             ? song.id
             : null;
-    downloads.enqueueTrack(
+    final queued = downloads.enqueueTrack(
       spotifyTrackId: spotifyId,
       title: song.title,
       artist: song.artist,
@@ -304,6 +335,12 @@ class SongTile extends StatelessWidget {
       sourceVideoId: sourceVideoId,
       expectedDurationMs: song.duration.inMilliseconds,
     );
+    if (!queued) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocale.tr('download_already_queued'))),
+      );
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text("${song.title} · ${AppLocale.tr('download_queued')}"),

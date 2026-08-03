@@ -129,14 +129,41 @@ class SyncService {
     final byRemoteId = <String, PlaylistModel>{};
     final byName = <String, List<PlaylistModel>>{};
     final claimedLocalIds = <String>{};
+    final groupedByRemoteId = <String, List<PlaylistModel>>{};
 
     for (final playlist in existingPlaylists) {
+      final state = syncStates[playlist.id];
+      if (state?['remoteService'] != 'spotify') continue;
+      final remoteId = state?['remotePlaylistId']?.toString();
+      if (remoteId == null || remoteId.isEmpty) continue;
+      groupedByRemoteId.putIfAbsent(remoteId, () => []).add(playlist);
+    }
+
+    final duplicateLocalIds = <String>{};
+    for (final entry in groupedByRemoteId.entries) {
+      final candidates = entry.value
+        ..sort((left, right) {
+          final songCount = right.songIds.length.compareTo(left.songIds.length);
+          if (songCount != 0) return songCount;
+          return right.updatedAt.compareTo(left.updatedAt);
+        });
+      byRemoteId[entry.key] = candidates.first;
+      for (final duplicate in candidates.skip(1)) {
+        duplicateLocalIds.add(duplicate.id);
+        await _db.deletePlaylist(duplicate.id);
+      }
+    }
+
+    final survivingPlaylists = existingPlaylists
+        .where((playlist) => !duplicateLocalIds.contains(playlist.id))
+        .toList();
+    for (final playlist in survivingPlaylists) {
       byName.putIfAbsent(playlist.name, () => []).add(playlist);
       final state = syncStates[playlist.id];
       if (state?['remoteService'] == 'spotify') {
         final remoteId = state?['remotePlaylistId']?.toString();
         if (remoteId != null && remoteId.isNotEmpty) {
-          byRemoteId[remoteId] = playlist;
+          byRemoteId.putIfAbsent(remoteId, () => playlist);
         }
       }
     }
@@ -177,7 +204,25 @@ class SyncService {
             }
           }
         }
-        if (existing != null) claimedLocalIds.add(existing.id);
+        if (existing != null) {
+          final staleMirrors =
+              (byName[playlistName] ?? const []).where((candidate) {
+            if (candidate.id == existing!.id) return false;
+            final state = syncStates[candidate.id];
+            final mappedRemoteId = state?['remotePlaylistId']?.toString();
+            return mappedRemoteId == null ||
+                mappedRemoteId.isEmpty ||
+                mappedRemoteId == remotePlaylist.id;
+          }).toList();
+          for (final duplicate in staleMirrors) {
+            await _db.deletePlaylist(duplicate.id);
+            claimedLocalIds.add(duplicate.id);
+          }
+          byName[playlistName] = (byName[playlistName] ?? const [])
+              .where((candidate) => !staleMirrors.contains(candidate))
+              .toList();
+          claimedLocalIds.add(existing.id);
+        }
 
         List<SpotifyTrackItem> tracks = const [];
         try {

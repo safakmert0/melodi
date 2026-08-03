@@ -137,8 +137,13 @@ class HomeAlbumRail extends StatelessWidget {
 }
 
 class HomePlaylistRail extends StatelessWidget {
-  const HomePlaylistRail({super.key, required this.playlists});
+  const HomePlaylistRail({
+    super.key,
+    required this.playlists,
+    required this.library,
+  });
   final PlaylistProvider playlists;
+  final LibraryProvider library;
 
   @override
   Widget build(BuildContext context) {
@@ -158,6 +163,15 @@ class HomePlaylistRail extends StatelessWidget {
           separatorBuilder: (_, __) => const SizedBox(width: 10),
           itemBuilder: (context, index) {
             final playlist = items[index];
+            final coverSongs = library.songs
+                .where((song) =>
+                    playlist.songIds.contains(song.id) &&
+                    song.albumArt != null &&
+                    song.albumArt!.isNotEmpty)
+                .toList();
+            final artwork = coverSongs.isEmpty
+                ? playlist.artwork
+                : coverSongs.first.albumArt;
             return SizedBox(
               width: 210,
               child: MelodiPanel(
@@ -168,19 +182,11 @@ class HomePlaylistRail extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
-                        gradient: LinearGradient(
-                          colors: [
-                            Theme.of(context).colorScheme.primary,
-                            Theme.of(context).colorScheme.tertiary,
-                          ],
-                        ),
-                      ),
-                      child: const Icon(Icons.queue_music_rounded),
+                    ArtworkImage(
+                      imageBytes: artwork,
+                      title: playlist.name,
+                      size: 52,
+                      borderRadius: 14,
                     ),
                     const SizedBox(width: 12),
                     Expanded(

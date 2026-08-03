@@ -362,7 +362,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                 SafeArea(
                   child: Column(
                     children: [
-                      const SizedBox(height: 58),
+                      const SizedBox(height: 48),
                       _buildPlayerSurface(song, player, hasArt),
                       const SizedBox(height: 6),
                       // Song Title + Artist
@@ -552,7 +552,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                                         .hasMatch(song.id)
                                                     ? song.id
                                                     : null;
-                                            dl.enqueueTrack(
+                                            final queued = dl.enqueueTrack(
                                               spotifyTrackId: spotifyId,
                                               title: song.title,
                                               artist: song.artist,
@@ -564,10 +564,14 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                             ScaffoldMessenger.of(context)
                                                 .showSnackBar(
                                               SnackBar(
-                                                content: Text(
-                                                    '${song.title} indiriliyor...'),
-                                                backgroundColor:
-                                                    MelodiTheme.primaryGreen,
+                                                content: Text(queued
+                                                    ? '${song.title} indiriliyor...'
+                                                    : 'Bu şarkı zaten indirilmiş veya sırada'),
+                                                backgroundColor: queued
+                                                    ? MelodiTheme.primaryGreen
+                                                    : Theme.of(context)
+                                                        .colorScheme
+                                                        .surfaceContainerHighest,
                                                 duration:
                                                     const Duration(seconds: 2),
                                               ),
@@ -647,8 +651,13 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 
   Widget _buildPlayerSurface(
       SongModel song, PlayerProvider player, bool hasArt) {
-    return Expanded(
-      flex: 4,
+    final screen = MediaQuery.sizeOf(context);
+    final preferredHeight = screen.width + 16;
+    final compactHeight = screen.height * 0.48;
+    final surfaceHeight =
+        preferredHeight < compactHeight ? preferredHeight : compactHeight;
+    return SizedBox(
+      height: surfaceHeight,
       child: PageView(
         controller: _surfaceController,
         children: [
@@ -666,7 +675,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
         Expanded(
           child: Center(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(28, 4, 28, 8),
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 2),
               child: AspectRatio(
                 aspectRatio: 1,
                 child: Stack(
@@ -760,7 +769,11 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
         child: InkWell(
           borderRadius: BorderRadius.circular(26),
           onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (_) => const LyricsScreen()),
+            MaterialPageRoute<void>(
+              builder: (_) => LyricsScreen(
+                lyricsDurationMs: _lyricsResult?.durationMs ?? 0,
+              ),
+            ),
           ),
           child: Padding(
             padding: const EdgeInsets.all(20),

@@ -143,10 +143,18 @@ class PlayerProvider extends ChangeNotifier {
         song.filePath.startsWith('https://');
     if (!isRemote) {
       final storedSongs = await _db.getAllSongs();
-      final index = storedSongs.indexWhere((item) => item.id == song.id);
-      if (index >= 0 && storedSongs.length > 1) {
+      final playableLocalSongs = storedSongs.where((item) {
+        final path = item.filePath.toLowerCase();
+        final remote = path.startsWith('spotify://') ||
+            path.startsWith('youtube://') ||
+            path.startsWith('http://') ||
+            path.startsWith('https://');
+        return !remote && File(item.filePath).existsSync();
+      }).toList();
+      final index = playableLocalSongs.indexWhere((item) => item.id == song.id);
+      if (index >= 0 && playableLocalSongs.length > 1) {
         final artwork = await _db.getAllCachedAlbumArts();
-        final queue = storedSongs
+        final queue = playableLocalSongs
             .map((item) => item.id == song.id
                 ? song
                 : artwork[item.id] == null

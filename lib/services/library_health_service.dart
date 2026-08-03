@@ -62,11 +62,11 @@ class LibraryHealthService {
 
   static const Duration _cacheDuration = Duration(hours: 1);
 
-  Future<void> scanLibrary() async {
+  Future<void> scanLibrary({bool force = false}) async {
     if (_isScanning) return;
     _isScanning = true;
 
-    final cached = await _getCachedScan();
+    final cached = force ? null : await _getCachedScan();
     if (cached != null) {
       _issues = cached;
       _lastScanAt = DateTime.now();
@@ -351,49 +351,61 @@ class LibraryHealthService {
   }
 
   Future<bool> fixIssue(String issueId) async {
-    final issue = _issues.where((i) => i.id == issueId).toList();
-    if (issue.isEmpty || !issue.first.autoFixable) return false;
+    final matches = _issues.where((issue) => issue.id == issueId).toList();
+    if (matches.isEmpty || !matches.first.autoFixable) return false;
 
-    final iss = issue.first;
-
-    if (iss.category == 'Album Art' && iss.data.containsKey('trackId')) {
+    final issue = matches.first;
+    var fixed = false;
+    if (issue.category == 'Album Art') {
       await MetadataService.backfillAlbumArt();
-      _issues.remove(iss);
-      await invalidateCache();
-      return true;
-    }
-
-    if (iss.category == 'Metadata') {
+      fixed = true;
+    } else if (issue.category == 'Metadata') {
       await MetadataService.backfillTrackMetadata();
-      _issues.remove(iss);
-      await invalidateCache();
-      return true;
-    }
-
-    if (iss.category == 'Downloads' && iss.data.containsKey('tracks')) {
-      final tracks = iss.data['tracks'] as List<dynamic>;
-      for (final t in tracks) {
-        final taskId = (t as Map<String, dynamic>)['taskId'] as String?;
-        if (taskId != null) {
-          DownloadManager().retryTask(taskId);
-        }
+      fixed = true;
+    } else if (issue.category == 'Downloads' &&
+        issue.data.containsKey('tracks')) {
+      final tracks = issue.data['tracks'] as List<dynamic>;
+      for (final track in tracks) {
+        final taskId = (track as Map<String, dynamic>)['taskId'] as String?;
+        if (taskId != null) DownloadManager().retryTask(taskId);
       }
-      _issues.remove(iss);
-      await invalidateCache();
-      return true;
+      fixed = true;
     }
 
-    return false;
+    if (!fixed) return false;
+    await invalidateCache();
+    await scanLibrary(force: true);
+    return true;
   }
 
   Future<int> fixAllIssues() async {
-    int fixed = 0;
-    final fixable = _issues.where((i) => i.autoFixable).toList();
-    for (final issue in fixable) {
-      final success = await fixIssue(issue.id);
-      if (success) fixed++;
+    final fixable = _issues.where((issue) => issue.autoFixable).toList();
+    if (fixable.isEmpty) return 0;
+
+    if (fixable.any((issue) => issue.category == 'Album Art')) {
+      await MetadataService.backfillAlbumArt();
     }
-    return fixed;
+    if (fixable.any((issue) => issue.category == 'Metadata')) {
+      await MetadataService.backfillTrackMetadata();
+    }
+    final downloadIssues = fixable
+        .where((issue) =>
+            issue.category == 'Downloads' && issue.data.containsKey('tracks'))
+        .toList();
+    final retriedTaskIds = <String>{};
+    for (final issue in downloadIssues) {
+      final tracks = issue.data['tracks'] as List<dynamic>;
+      for (final track in tracks) {
+        final taskId = (track as Map<String, dynamic>)['taskId'] as String?;
+        if (taskId != null && retriedTaskIds.add(taskId)) {
+          DownloadManager().retryTask(taskId);
+        }
+      }
+    }
+
+    await invalidateCache();
+    await scanLibrary(force: true);
+    return fixable.length;
   }
 
   int getFixableCount() {

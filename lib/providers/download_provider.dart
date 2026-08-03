@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../services/download_manager.dart';
 import '../services/notification_service.dart';
@@ -85,7 +86,7 @@ class DownloadProvider extends ChangeNotifier {
     return match.first.error;
   }
 
-  void enqueueTrack({
+  bool enqueueTrack({
     required String spotifyTrackId,
     required String title,
     required String artist,
@@ -95,7 +96,23 @@ class DownloadProvider extends ChangeNotifier {
     String? directUrl,
     int expectedDurationMs = 0,
   }) {
-    _manager.addTask(
+    final normalizedTitle = title.trim().toLowerCase();
+    final normalizedArtist = artist.trim().toLowerCase();
+    final alreadyDownloaded = _libraryProvider?.songs.any((song) {
+          final path = song.filePath.toLowerCase();
+          final isRemote = path.startsWith('spotify://') ||
+              path.startsWith('youtube://') ||
+              path.startsWith('http://') ||
+              path.startsWith('https://');
+          return !isRemote &&
+              song.title.trim().toLowerCase() == normalizedTitle &&
+              song.artist.trim().toLowerCase() == normalizedArtist &&
+              (song.fileSize > 0 || File(song.filePath).existsSync());
+        }) ??
+        false;
+    if (alreadyDownloaded) return false;
+
+    return _manager.addTask(
       spotifyTrackId: spotifyTrackId,
       title: title,
       artist: artist,
@@ -107,8 +124,22 @@ class DownloadProvider extends ChangeNotifier {
     );
   }
 
-  void enqueuePlaylist(List<Map<String, String>> tracks) {
-    _manager.addTasks(tracks);
+  int enqueuePlaylist(List<Map<String, String>> tracks) {
+    var queued = 0;
+    for (final track in tracks) {
+      if (enqueueTrack(
+        spotifyTrackId: track['id'] ?? '',
+        title: track['title'] ?? '',
+        artist: track['artist'] ?? '',
+        album: track['album'],
+        imageUrl: track['imageUrl'],
+        directUrl: track['directUrl'],
+        expectedDurationMs: int.tryParse(track['durationMs'] ?? '') ?? 0,
+      )) {
+        queued++;
+      }
+    }
+    return queued;
   }
 
   void cancelTask(String taskId) => _manager.cancelTask(taskId);

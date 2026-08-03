@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -19,16 +20,32 @@ import 'profile_screen.dart';
 import 'source_hub_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
-  const LibraryScreen({super.key});
+  const LibraryScreen({
+    super.key,
+    this.initialSource = LibrarySourceFilter.all,
+    this.initialContent = LibraryContentFilter.songs,
+    this.favoritesOnly = false,
+  });
+
+  final LibrarySourceFilter initialSource;
+  final LibraryContentFilter initialContent;
+  final bool favoritesOnly;
 
   @override
   State<LibraryScreen> createState() => _LibraryScreenState();
 }
 
 class _LibraryScreenState extends State<LibraryScreen> {
-  LibrarySourceFilter _source = LibrarySourceFilter.all;
-  LibraryContentFilter _content = LibraryContentFilter.songs;
+  late LibrarySourceFilter _source;
+  late LibraryContentFilter _content;
   bool _isGridView = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _source = widget.initialSource;
+    _content = widget.initialContent;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +55,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
         bottom: false,
         child: Consumer2<LibraryProvider, PlaylistProvider>(
           builder: (context, library, playlists, _) {
-            final songs = library.songs.where(_source.matches).toList();
+            final sourceSongs =
+                widget.favoritesOnly ? library.favorites : library.songs;
+            final songs = sourceSongs.where(_source.matches).toList();
+            final playableSongs = songs.where(_canQueue).toList();
             final totalMinutes = songs.fold<int>(
               0,
               (total, song) => total + song.duration.inMinutes,
@@ -72,16 +92,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       totalMinutes: totalMinutes,
                       isScanning: library.isScanning,
                       scanProgress: library.scanProgress,
-                      onPlayAll: songs.isEmpty
+                      onPlayAll: playableSongs.isEmpty
                           ? null
                           : () => context
                               .read<PlayerProvider>()
-                              .playFromQueue(songs, 0),
-                      onShuffle: songs.isEmpty
+                              .playFromQueue(playableSongs, 0),
+                      onShuffle: playableSongs.isEmpty
                           ? null
                           : () {
-                              final shuffled = List<SongModel>.from(songs)
-                                ..shuffle(Random());
+                              final shuffled =
+                                  List<SongModel>.from(playableSongs)
+                                    ..shuffle(Random());
                               context
                                   .read<PlayerProvider>()
                                   .playFromQueue(shuffled, 0);
@@ -123,6 +144,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
         ),
       ),
     );
+  }
+
+  bool _canQueue(SongModel song) {
+    final path = song.filePath.toLowerCase();
+    final isRemote = path.startsWith('spotify://') ||
+        path.startsWith('youtube://') ||
+        path.startsWith('http://') ||
+        path.startsWith('https://');
+    return isRemote || File(song.filePath).existsSync();
   }
 
   List<Widget> _buildContent({
@@ -184,8 +214,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 subtitle: song.artist,
                 icon: Icons.music_note_rounded,
                 artwork: song.albumArt,
-                onTap: () =>
-                    context.read<PlayerProvider>().playFromQueue(songs, index),
+                onTap: () => context.read<PlayerProvider>().playSong(song),
               );
             },
           ),
@@ -203,7 +232,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
             key: ValueKey(song.id),
             song: song,
             isPlaying: player.currentSong?.id == song.id,
-            onTap: () => player.playFromQueue(songs, index),
+            onTap: () => player.playSong(song),
+            showFileSize: true,
           );
         },
       ),

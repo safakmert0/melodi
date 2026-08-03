@@ -725,7 +725,14 @@ class DatabaseService {
 
   Future<void> deletePlaylist(String id) async {
     final db = await database;
-    await db.delete('playlists', where: 'id = ?', whereArgs: [id]);
+    await db.transaction((txn) async {
+      await txn.delete(
+        'playlist_sync_state',
+        where: 'playlistId = ?',
+        whereArgs: [id],
+      );
+      await txn.delete('playlists', where: 'id = ?', whereArgs: [id]);
+    });
   }
 
   Future<void> clearAllData() async {

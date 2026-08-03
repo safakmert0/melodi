@@ -22,22 +22,61 @@ class HomeHeader extends StatelessWidget {
     return SliverAppBar(
       pinned: true,
       stretch: true,
-      expandedHeight: 154,
+      expandedHeight: 148,
       toolbarHeight: 64,
-      titleSpacing: 18,
+      leadingWidth: 108,
       backgroundColor: theme.scaffoldBackgroundColor.withValues(alpha: 0.94),
       surfaceTintColor: Colors.transparent,
-      title: Text(
-        'MELODI',
-        style: theme.textTheme.labelLarge?.copyWith(
-          fontWeight: FontWeight.w900,
-          letterSpacing: 2.3,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 8),
+        child: Row(
+          children: [
+            _HeaderButton(
+              tooltip: connectedCount == 0
+                  ? 'Müzik kaynaklarını bağla'
+                  : '$connectedCount hesap bağlı',
+              icon:
+                  connectedCount == 0 ? Icons.hub_outlined : Icons.hub_rounded,
+              badge: connectedCount == 0 ? null : '$connectedCount',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const SourceHubScreen(),
+                ),
+              ),
+            ),
+            InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const ProfileScreen(),
+                ),
+              ),
+              child: Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      theme.colorScheme.primary,
+                      theme.colorScheme.secondary,
+                    ],
+                  ),
+                ),
+                child: const Icon(
+                  Icons.person_rounded,
+                  color: Colors.white,
+                  size: 19,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.parallax,
         background: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 78, 18, 10),
+          padding: const EdgeInsets.fromLTRB(18, 72, 18, 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -64,44 +103,15 @@ class HomeHeader extends StatelessWidget {
         ),
       ),
       actions: [
-        _HeaderButton(
-          tooltip: connectedCount == 0
-              ? 'Müzik kaynaklarını bağla'
-              : '$connectedCount hesap bağlı',
-          icon: connectedCount == 0 ? Icons.hub_outlined : Icons.hub_rounded,
-          badge: connectedCount == 0 ? null : '$connectedCount',
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (_) => const SourceHubScreen()),
-          ),
-        ),
-        _HeaderButton(
-          tooltip: 'Ayarlar',
-          icon: Icons.tune_rounded,
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
-          ),
-        ),
         Padding(
-          padding: const EdgeInsets.only(left: 2, right: 12),
-          child: InkWell(
-            customBorder: const CircleBorder(),
+          padding: const EdgeInsets.only(right: 8),
+          child: _HeaderButton(
+            tooltip: 'Ayarlar',
+            icon: Icons.settings_rounded,
             onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
-            ),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [
-                    theme.colorScheme.primary,
-                    theme.colorScheme.secondary,
-                  ],
-                ),
+              MaterialPageRoute<void>(
+                builder: (_) => const SettingsScreen(),
               ),
-              child: const Icon(Icons.person_rounded,
-                  color: Colors.white, size: 20),
             ),
           ),
         ),
@@ -132,7 +142,7 @@ class HomeHeader extends StatelessWidget {
   static String _headline() {
     if (AppLocale.currentLocale == 'en') return 'What will move you?';
     if (AppLocale.currentLocale == 'de') return 'Was bewegt dich?';
-    return 'Bugün neye kapılacaksın?';
+    return 'Bugün ne dinleyeceksin?';
   }
 }
 

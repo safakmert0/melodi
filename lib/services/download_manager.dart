@@ -58,7 +58,9 @@ class DownloadManager {
 
   final List<DownloadTask> _tasks = [];
   int _activeDownloads = 0;
-  static const int _maxParallel = 8;
+  // A single transfer is substantially more stable on iOS where several
+  // extractors/transcoders would otherwise compete for memory and bandwidth.
+  static const int _maxParallel = 1;
   final StreamController<List<DownloadTask>> _controller =
       StreamController<List<DownloadTask>>.broadcast();
   final YouTubeService _youtubeService = YouTubeService();
@@ -73,7 +75,7 @@ class DownloadManager {
   String _taskId() =>
       'dl_${DateTime.now().millisecondsSinceEpoch}_${_tasks.length}';
 
-  void addTask({
+  bool addTask({
     required String spotifyTrackId,
     required String title,
     required String artist,
@@ -83,6 +85,14 @@ class DownloadManager {
     String? directUrl,
     int expectedDurationMs = 0,
   }) {
+    final normalizedTitle = title.trim().toLowerCase();
+    final normalizedArtist = artist.trim().toLowerCase();
+    final alreadyQueued = _tasks.any((task) =>
+        task.title.trim().toLowerCase() == normalizedTitle &&
+        task.artist.trim().toLowerCase() == normalizedArtist &&
+        task.state != DownloadState.failed);
+    if (alreadyQueued) return false;
+
     final task = DownloadTask(
       id: _taskId(),
       spotifyTrackId: spotifyTrackId,
@@ -97,6 +107,7 @@ class DownloadManager {
     _tasks.add(task);
     _processQueue();
     _notify();
+    return true;
   }
 
   void addTasks(List<Map<String, String>> tracks) {
