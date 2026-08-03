@@ -361,6 +361,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                 // Main content
                 SafeArea(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const SizedBox(height: 48),
                       _buildPlayerSurface(song, player, hasArt),

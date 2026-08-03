@@ -22,7 +22,7 @@ class HomeHeader extends StatelessWidget {
     return SliverAppBar(
       pinned: true,
       stretch: true,
-      expandedHeight: 148,
+      expandedHeight: 176,
       toolbarHeight: 64,
       leadingWidth: 108,
       backgroundColor: theme.scaffoldBackgroundColor.withValues(alpha: 0.94),
@@ -76,7 +76,7 @@ class HomeHeader extends StatelessWidget {
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.parallax,
         background: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 72, 18, 8),
+          padding: const EdgeInsets.fromLTRB(18, 104, 18, 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

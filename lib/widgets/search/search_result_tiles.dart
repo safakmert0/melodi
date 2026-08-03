@@ -153,32 +153,43 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
   Future<void> _play() async {
     if (_playing) return;
     setState(() => _playing = true);
+    final attemptedUrls = <String>{};
+    final searchProvider = context.read<SearchProvider>();
+    final playerProvider = context.read<PlayerProvider>();
+    Object? lastError;
     try {
-      final url = await context
-          .read<SearchProvider>()
-          .getStreamUrlWithFallback(widget.track);
-      if (!mounted) return;
-      if (url == null || url.isEmpty) {
-        _message('${widget.track.title} için çalışan kaynak bulunamadı',
-            error: true);
-        return;
+      for (var attempt = 0; attempt < 3; attempt++) {
+        final url = await searchProvider.getStreamUrlWithFallback(
+          widget.track,
+          excludedUrls: attemptedUrls,
+          forPlayback: true,
+        );
+        if (!mounted) return;
+        if (url == null || url.isEmpty) break;
+        attemptedUrls.add(url);
+
+        final track = widget.track;
+        final song = SongModel(
+          id: track.id,
+          title: track.title,
+          artist: track.artist,
+          album: track.album ?? track.sourceLabel,
+          duration: track.duration,
+          filePath: url,
+          fileSize: 0,
+        );
+        try {
+          await playerProvider.playSong(song);
+          return;
+        } catch (error) {
+          lastError = error;
+        }
       }
-      final track = widget.track;
-      final song = SongModel(
-        id: track.id,
-        title: track.title,
-        artist: track.artist,
-        album: track.album ?? track.sourceLabel,
-        duration: track.duration,
-        // The resolver already returned a signed, playable media URL. Feeding
-        // that URL directly to just_audio lets AVPlayer perform native range
-        // requests instead of resolving the YouTube manifest a second time.
-        filePath: url,
-        fileSize: 0,
-      );
-      await context.read<PlayerProvider>().playSong(song);
-    } catch (error) {
-      if (mounted) _message('Oynatma hatası: $error', error: true);
+
+      if (!mounted) return;
+      final detail = lastError == null ? '' : ': $lastError';
+      _message('Oynatma başarısız; erişilebilen kaynaklar denendi$detail',
+          error: true);
     } finally {
       if (mounted) setState(() => _playing = false);
     }

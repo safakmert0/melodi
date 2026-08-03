@@ -83,8 +83,17 @@ class SearchProvider extends ChangeNotifier {
     return await _multiSource.getStreamUrl(track);
   }
 
-  Future<String?> getStreamUrlWithFallback(OnlineTrack track) async {
-    return await _multiSource.getStreamUrlWithFallback(track, query: _query);
+  Future<String?> getStreamUrlWithFallback(
+    OnlineTrack track, {
+    Set<String> excludedUrls = const {},
+    bool forPlayback = false,
+  }) async {
+    return await _multiSource.getStreamUrlWithFallback(
+      track,
+      query: _query,
+      excludedUrls: excludedUrls,
+      preferStableYouTubeReference: forPlayback,
+    );
   }
 
   void addRecentSearch(String query) {

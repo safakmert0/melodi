@@ -88,8 +88,27 @@ class MultiSourceSearch {
   /// Preview-only catalogue results are resolved against a full-track source.
   /// Priority: the track's own full source first, then the user's personal
   /// Navidrome library, YouTube and JioSaavn.
-  Future<String?> getStreamUrlWithFallback(OnlineTrack track,
-      {String? query}) async {
+  Future<String?> getStreamUrlWithFallback(
+    OnlineTrack track, {
+    String? query,
+    Set<String> excludedUrls = const {},
+    bool preferStableYouTubeReference = false,
+  }) async {
+    Future<String?> resolve(MusicSource source, OnlineTrack candidate) async {
+      final url = preferStableYouTubeReference &&
+              source.type == MusicSourceType.youtube &&
+              candidate.id.trim().isNotEmpty
+          ? 'youtube://${candidate.id.trim()}'
+          : await source.getStreamUrl(candidate);
+      final normalized = url?.trim();
+      if (normalized == null ||
+          normalized.isEmpty ||
+          excludedUrls.contains(normalized)) {
+        return null;
+      }
+      return normalized;
+    }
+
     // 1. Try the track's own source only if it can provide a full track.
     final primarySource = _sources.firstWhere(
       (s) => s.type == track.source,
@@ -97,8 +116,8 @@ class MultiSourceSearch {
     );
     if (primarySource.type.supportsFullTrack) {
       try {
-        final url = await primarySource.getStreamUrl(track);
-        if (url != null && url.isNotEmpty) return url;
+        final url = await resolve(primarySource, track);
+        if (url != null) return url;
       } catch (_) {}
     }
 
@@ -126,8 +145,8 @@ class MultiSourceSearch {
             (a, b) => _matchScore(b, track).compareTo(_matchScore(a, track)));
         for (final result in results) {
           if (_matchScore(result, track) < 2) continue;
-          final url = await source.getStreamUrl(result);
-          if (url != null && url.isNotEmpty) return url;
+          final url = await resolve(source, result);
+          if (url != null) return url;
         }
       } catch (_) {}
     }
