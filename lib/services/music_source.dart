@@ -1,13 +1,14 @@
 import 'dart:typed_data';
 
-enum MusicSourceType { youtube, jiosaavn, deezer, lastfm, navidrome }
+enum MusicSourceType { youtube, jiosaavn, deezer, lastfm, navidrome, hifi }
 
 extension MusicSourceTypeCapabilities on MusicSourceType {
   /// Whether the public source can resolve a complete playable track.
   bool get supportsFullTrack =>
       this == MusicSourceType.youtube ||
       this == MusicSourceType.jiosaavn ||
-      this == MusicSourceType.navidrome;
+      this == MusicSourceType.navidrome ||
+      this == MusicSourceType.hifi;
 
   bool get isPreviewCatalogue => this == MusicSourceType.deezer;
 }
@@ -47,6 +48,8 @@ class OnlineTrack {
         return 'Last.fm';
       case MusicSourceType.navidrome:
         return 'Navidrome';
+      case MusicSourceType.hifi:
+        return 'Hi-Fi';
     }
   }
 }

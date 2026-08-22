@@ -6,6 +6,7 @@ import 'sources/jiosaavn_source.dart';
 import 'sources/deezer_source.dart';
 import 'sources/lastfm_source.dart';
 import 'sources/navidrome_source.dart';
+import 'sources/hifi_source.dart';
 
 class MultiSourceSearch {
   static final MultiSourceSearch _instance = MultiSourceSearch._();
@@ -14,6 +15,7 @@ class MultiSourceSearch {
 
   final List<MusicSource> _sources = [
     NavidromeSource(),
+    HiFiSource(),
     YouTubeMusicSource(),
     JioSaavnSource(),
     DeezerSource(),
