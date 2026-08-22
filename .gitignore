@@ -14,3 +14,14 @@ ios/Flutter/Generated.xcconfig
 ios/Flutter/flutter_export_environment.sh
 *.ipa
 *.apk
+
+# Yerel derleme çıktıları
+release*/
+build_output/
+
+# Dahili geliştirme dosyaları
+.opencode/
+tool/
+BUILD_INSTRUCTIONS.txt
+build_ipa.sh
+assets/fonts/*.zip

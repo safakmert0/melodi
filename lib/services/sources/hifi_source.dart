@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../../models/extension.dart';
 import '../database_service.dart';
+import '../extension_service.dart';
 import '../music_source.dart';
 
 /// Sunucu tarafındaki Melodi backend'i üzerinden çalışan lossless kaynak.
@@ -25,6 +27,12 @@ class HiFiSource implements MusicSource {
   String get name => 'Hi-Fi';
 
   Future<String> baseUrl() async {
+    // Etkin lossless eklentisi varsa adresi eklenti belirler.
+    try {
+      final endpoint =
+          await ExtensionService.instance.resolveEndpoint(ExtensionKind.hifi);
+      if (endpoint != null && endpoint.isNotEmpty) return endpoint;
+    } catch (_) {}
     try {
       final saved = await DatabaseService.instance.getSetting(_baseUrlKey);
       if (saved != null && saved.isNotEmpty) return saved;

@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/melodi_design.dart';
+import '../models/extension.dart';
 import '../models/source_descriptor.dart';
 import '../providers/connection_provider.dart';
+import '../services/extension_service.dart';
 import '../services/source_catalog.dart';
 import '../services/navidrome_service.dart';
+import 'extension_store_screen.dart';
 import 'navidrome_settings_screen.dart';
 import 'settings_screen.dart';
 
@@ -18,12 +21,33 @@ class SourceHubScreen extends StatefulWidget {
 
 class _SourceHubScreenState extends State<SourceHubScreen> {
   bool _navidromeConnected = false;
+  List<InstalledExtension> _extensions = const [];
 
   @override
   void initState() {
     super.initState();
     _loadNavidromeStatus();
+    _loadExtensions();
+    ExtensionService.instance.addListener(_onExtensionsChanged);
   }
+
+  @override
+  void dispose() {
+    ExtensionService.instance.removeListener(_onExtensionsChanged);
+    super.dispose();
+  }
+
+  void _onExtensionsChanged() {
+    if (mounted) setState(() => _extensions = _activeExtensions());
+  }
+
+  Future<void> _loadExtensions() async {
+    await ExtensionService.instance.ensureLoaded();
+    if (mounted) setState(() => _extensions = _activeExtensions());
+  }
+
+  List<InstalledExtension> _activeExtensions() =>
+      ExtensionService.instance.installed.where((e) => e.enabled).toList();
 
   Future<void> _loadNavidromeStatus() async {
     final connected = await NavidromeService.instance.isConfigured();
@@ -34,6 +58,7 @@ class _SourceHubScreenState extends State<SourceHubScreen> {
     await Future.wait([
       connection.refreshStatus(),
       _loadNavidromeStatus(),
+      _loadExtensions(),
     ]);
   }
 
@@ -41,13 +66,18 @@ class _SourceHubScreenState extends State<SourceHubScreen> {
     BuildContext context,
     SourceDescriptor source,
   ) async {
-    if (!source.requiresAccount) return;
+    Widget? target;
+    switch (source.kind) {
+      case SourceKind.extension:
+        target = const ExtensionStoreScreen();
+      case SourceKind.navidrome:
+        target = const NavidromeSettingsScreen();
+      default:
+        if (source.requiresAccount) target = const SettingsScreen();
+    }
+    if (target == null) return;
     await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => source.kind == SourceKind.navidrome
-            ? const NavidromeSettingsScreen()
-            : const SettingsScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => target!),
     );
     if (source.kind == SourceKind.navidrome) await _loadNavidromeStatus();
   }
@@ -61,6 +91,7 @@ class _SourceHubScreenState extends State<SourceHubScreen> {
       youtubeMusicConnected: connection.ytMusicConnected,
       youtubeMusicExpired: connection.ytMusicExpired,
       navidromeConnected: _navidromeConnected,
+      extensions: _extensions,
     );
 
     return Scaffold(
@@ -106,8 +137,61 @@ class _SourceHubScreenState extends State<SourceHubScreen> {
               ),
               const SizedBox(height: 12),
             ],
+            const SizedBox(height: 4),
+            _StoreCta(onTap: () => _openStore(context)),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _openStore(BuildContext context) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const ExtensionStoreScreen()),
+    );
+  }
+}
+
+class _StoreCta extends StatelessWidget {
+  const _StoreCta({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return MelodiPanel(
+      onTap: onTap,
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Icon(Icons.extension_rounded,
+                color: theme.colorScheme.primary, size: 25),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Eklenti mağazası',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text('Topluluk sağlayıcılarını bağlantı ile ekle',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant)),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right_rounded,
+              color: theme.colorScheme.onSurfaceVariant),
+        ],
       ),
     );
   }
@@ -190,6 +274,10 @@ class _SourceIcon extends StatelessWidget {
       SourceKind.jioSaavn => (Icons.waves_rounded, const Color(0xFF2BC5B4)),
       SourceKind.lastFm => (Icons.insights_rounded, const Color(0xFFD51007)),
       SourceKind.navidrome => (Icons.dns_rounded, const Color(0xFF6C8CFF)),
+      SourceKind.extension => (
+          Icons.extension_rounded,
+          const Color(0xFF32D583)
+        ),
     };
     return Container(
       width: 46,

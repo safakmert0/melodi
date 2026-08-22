@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import '../models/extension.dart';
 import 'database_service.dart';
+import 'extension_service.dart';
 
 class BackendVideo {
   final String id;
@@ -104,8 +106,21 @@ class BackendApiService {
     } catch (_) {}
   }
 
-  Future<bool> checkConnection() async {
+  /// Etkin bir backend eklentisi varsa adresi eklenti belirler.
+  /// Manuel girilen adres yalnızca eklenti yokken kullanılır.
+  Future<void> _resolveEndpointOverride() async {
     await _ensureInitialized();
+    try {
+      final endpoint = await ExtensionService.instance
+          .resolveEndpoint(ExtensionKind.backend);
+      if (endpoint != null && endpoint.isNotEmpty) {
+        _baseUrl = endpoint;
+      }
+    } catch (_) {}
+  }
+
+  Future<bool> checkConnection() async {
+    await _resolveEndpointOverride();
     if (_baseUrl.isEmpty) return false;
     try {
       final response = await http
@@ -119,6 +134,7 @@ class BackendApiService {
   }
 
   Future<List<BackendVideo>> search(String query, {int limit = 20}) async {
+    await _resolveEndpointOverride();
     try {
       final response = await http
           .post(
@@ -145,6 +161,7 @@ class BackendApiService {
   }
 
   Future<Map<String, dynamic>> getVideoInfo(String videoId) async {
+    await _resolveEndpointOverride();
     try {
       final response = await http
           .get(
@@ -174,6 +191,7 @@ class BackendApiService {
     String title, {
     Function(DownloadProgress)? onProgress,
   }) async {
+    await _resolveEndpointOverride();
     try {
       final url = '$_baseUrl/api/download';
 
@@ -237,6 +255,7 @@ class BackendApiService {
   }
 
   Future<List<BackendVideo>> getPlaylist(String playlistId) async {
+    await _resolveEndpointOverride();
     try {
       final response = await http
           .get(

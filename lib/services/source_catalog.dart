@@ -1,3 +1,4 @@
+import '../models/extension.dart';
 import '../models/source_descriptor.dart';
 
 /// A single source of truth for what each Melodi integration can do.
@@ -14,6 +15,7 @@ class SourceCatalog {
     bool spotifyExpired = false,
     bool youtubeMusicExpired = false,
     bool navidromeConnected = false,
+    List<InstalledExtension> extensions = const [],
   }) {
     return [
       const SourceDescriptor(
@@ -125,7 +127,63 @@ class SourceCatalog {
           SourceCapability.scrobble,
         },
       ),
+      // Eklenti mağazasından kurulan topluluk sağlayıcıları.
+      for (final extension in extensions)
+        if (extension.enabled)
+          SourceDescriptor(
+            kind: SourceKind.extension,
+            name: extension.manifest.name,
+            description: extension.manifest.description.isEmpty
+                ? 'Topluluk eklentisi · ${extension.manifest.kind.label}'
+                : extension.manifest.description,
+            status: SourceStatus.available,
+            capabilities: _capabilitiesFor(extension.manifest),
+          ),
     ];
+  }
+
+  static Set<SourceCapability> _capabilitiesFor(ExtensionManifest manifest) {
+    final parsed = <SourceCapability>{};
+    for (final raw in manifest.capabilities) {
+      switch (raw) {
+        case 'search':
+          parsed.add(SourceCapability.search);
+        case 'playback' || 'stream':
+          parsed.add(SourceCapability.playback);
+        case 'library':
+          parsed.add(SourceCapability.library);
+        case 'playlists' || 'playlist':
+          parsed.add(SourceCapability.playlists);
+        case 'likes':
+          parsed.add(SourceCapability.likes);
+        case 'recommendations':
+          parsed.add(SourceCapability.recommendations);
+        case 'lyrics':
+          parsed.add(SourceCapability.lyrics);
+        case 'scrobble':
+          parsed.add(SourceCapability.scrobble);
+        case 'downloads' || 'download':
+          parsed.add(SourceCapability.downloads);
+        case 'lossless' || 'flac':
+          parsed.add(SourceCapability.lossless);
+      }
+    }
+    switch (manifest.kind) {
+      case ExtensionKind.backend:
+        parsed.addAll({
+          SourceCapability.search,
+          SourceCapability.playback,
+          SourceCapability.downloads,
+        });
+      case ExtensionKind.hifi:
+        parsed.addAll({
+          SourceCapability.search,
+          SourceCapability.playback,
+          SourceCapability.downloads,
+          SourceCapability.lossless,
+        });
+    }
+    return parsed;
   }
 
   static SourceStatus _accountStatus(bool connected, bool expired) {

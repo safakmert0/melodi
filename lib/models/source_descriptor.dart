@@ -7,6 +7,7 @@ enum SourceKind {
   jioSaavn,
   lastFm,
   navidrome,
+  extension,
 }
 
 enum SourceCapability {

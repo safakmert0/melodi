@@ -42,6 +42,7 @@ import 'library_health_screen.dart';
 import 'storage_screen.dart';
 import '../widgets/ytmusic_webview_login.dart';
 import 'backend_settings_screen.dart';
+import 'extension_store_screen.dart';
 import 'source_hub_screen.dart';
 import 'spotify_playlist_screen.dart';
 
@@ -1475,6 +1476,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         icon: Icons.cloud_outlined,
         color: const Color(0xFF4D96FF),
         onTap: () => open(const _StreamingSettingsPage()),
+      ),
+      _SettingsHubEntry(
+        section: 'Kaynaklar ve hesaplar',
+        title: 'Eklenti mağazası',
+        subtitle: 'Topluluk sağlayıcılarını bağlantı ile kur',
+        icon: Icons.extension_rounded,
+        color: const Color(0xFF32D583),
+        onTap: () => open(const ExtensionStoreScreen()),
       ),
       _SettingsHubEntry(
         section: 'Kaynaklar ve hesaplar',
