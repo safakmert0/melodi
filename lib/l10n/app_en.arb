@@ -1,0 +1,20 @@
+{
+  "appTitle": "Melodi",
+  "home": "Home",
+  "search": "Search",
+  "library": "Library",
+  "playlists": "Playlists",
+  "settings": "Settings",
+  "download": "Download",
+  "playingNow": "Playing Now",
+  "offline": "Offline",
+  "online": "Online",
+  "error": "Error",
+  "retry": "Retry",
+  "cancel": "Cancel",
+  "save": "Save",
+  "delete": "Delete",
+  "edit": "Edit",
+  "add": "Add",
+  "remove": "Remove"
+}

@@ -1,0 +1,20 @@
+{
+  "appTitle": "Melodi",
+  "home": "Ana Sayfa",
+  "search": "Ara",
+  "library": "Kütüphane",
+  "playlists": "Çalma Listeleri",
+  "settings": "Ayarlar",
+  "download": "İndir",
+  "playingNow": "Şu An Çalıyor",
+  "offline": "Çevrimdışı",
+  "online": "Çevrimiçi",
+  "error": "Hata",
+  "retry": "Tekrar Dene",
+  "cancel": "İptal",
+  "save": "Kaydet",
+  "delete": "Sil",
+  "edit": "Düzenle",
+  "add": "Ekle",
+  "remove": "Kaldır"
+}
