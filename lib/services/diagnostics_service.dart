@@ -54,7 +54,6 @@ class DiagnosticsService {
 
     final spotifyToken = await db.getSetting('spotify_access_token');
     final ytmusicCookie = await db.getSetting('ytmusic_cookie');
-    final lastfmSession = await db.getSetting('lastfm_session_key');
 
     final errors = await db.getErrorLogs(10);
 
@@ -74,7 +73,6 @@ class DiagnosticsService {
       'services': {
         'spotifyConnected': spotifyToken != null && spotifyToken.isNotEmpty,
         'ytmusicConnected': ytmusicCookie != null && ytmusicCookie.isNotEmpty,
-        'lastfmConnected': lastfmSession != null && lastfmSession.isNotEmpty,
       },
       'recentErrors': errors,
       'generatedAt': DateTime.now().toIso8601String(),

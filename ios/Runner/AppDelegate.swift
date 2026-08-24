@@ -10,6 +10,7 @@ import WebKit
   private var voiceControlHandler: VoiceControlHandler?
   private var widgetHandler: WidgetHandler?
   private var lyricsMetadataWriterHandler: LyricsMetadataWriterHandler?
+  private var ffmpegRingtoneHandler: FFmpegRingtoneHandler?
 
   override func application(
     _ application: UIApplication,
@@ -56,6 +57,7 @@ import WebKit
     voiceControlHandler = VoiceControlHandler(messenger: messenger)
     widgetHandler = WidgetHandler(messenger: messenger)
     lyricsMetadataWriterHandler = LyricsMetadataWriterHandler(messenger: messenger)
+    ffmpegRingtoneHandler = FFmpegRingtoneHandler(messenger: messenger)
 
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)

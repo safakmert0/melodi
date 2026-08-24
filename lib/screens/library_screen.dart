@@ -18,6 +18,7 @@ import 'create_playlist_screen.dart';
 import 'playlist_detail_screen.dart';
 import 'profile_screen.dart';
 import 'source_hub_screen.dart';
+import 'video_tools_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({
@@ -599,7 +600,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
               subtitle: 'Spotify, YouTube Music ve diğerleri',
               action: _LibraryAddAction.sources,
             ),
-            SizedBox(height: 8),
+            _AddActionTile(
+              icon: Icons.video_file_rounded,
+              title: 'Videodan Zil Sesi Oluştur',
+              subtitle: 'Video dosyasından ses çıkarıp zil sesi yap',
+              action: _LibraryAddAction.videoTools,
+            ),
+            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -612,6 +619,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
     }
     if (action == _LibraryAddAction.sources) {
       _open(const SourceHubScreen());
+      return;
+    }
+    if (action == _LibraryAddAction.videoTools) {
+      _open(const VideoToolsScreen());
       return;
     }
 
@@ -628,6 +639,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           break;
         case _LibraryAddAction.playlist:
         case _LibraryAddAction.sources:
+        case _LibraryAddAction.videoTools:
           break;
       }
       if (mounted) {
@@ -713,4 +725,4 @@ class _CollectionEntry {
   final VoidCallback onTap;
 }
 
-enum _LibraryAddAction { playlist, files, folder, scan, sources }
+enum _LibraryAddAction { playlist, files, folder, scan, sources, videoTools }

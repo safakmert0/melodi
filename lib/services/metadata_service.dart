@@ -6,7 +6,8 @@ import '../models/song_model.dart';
 import '../core/constants.dart';
 import 'database_service.dart';
 import 'spotify_service.dart';
-import 'ytmusic_service.dart';
+import 'sources/youtube_music_source.dart';
+import 'music_source.dart';
 
 class MetadataService {
   static final Set<String> _supportedExtensions =
@@ -139,7 +140,7 @@ class MetadataService {
 
   static Future<int> backfillAlbumArt({
     SpotifyService? spotifyService,
-    YTMusicService? ytmusicService,
+    YouTubeMusicSource? ytmusicSource,
   }) async {
     final tracks = await _db.getTracksMissingArt();
     int updated = 0;
@@ -158,8 +159,8 @@ class MetadataService {
         }
       }
 
-      if (imageUrl == null && ytmusicService != null) {
-        final results = await ytmusicService.search('$artist $title');
+      if (imageUrl == null && ytmusicSource != null) {
+        final results = await ytmusicSource.search('$artist $title', limit: 5);
         if (results.isNotEmpty) {
           imageUrl = results.first.thumbnailUrl;
         }
@@ -175,7 +176,7 @@ class MetadataService {
   }
 
   static Future<int> backfillLyrics({
-    YTMusicService? ytmusicService,
+    YouTubeMusicSource? ytmusicSource,
   }) async {
     final db = await _db.database;
     final tracks = await db.rawQuery('''
@@ -190,53 +191,11 @@ class MetadataService {
       final title = track['title'] as String? ?? '';
       final artist = track['artist'] as String? ?? '';
 
-      if (ytmusicService != null) {
-        final results = await ytmusicService.search('$artist $title');
+      if (ytmusicSource != null) {
+        final results = await ytmusicSource.search('$artist $title', limit: 5);
         if (results.isNotEmpty) {
-          final videoId = results.first.videoId;
-          final playerData = await ytmusicService.client.player(videoId);
-          if (playerData != null) {
-            final captions = playerData['captions'] as Map<String, dynamic>?;
-            final playerCaptionsTracklistRenderer =
-                captions?['playerCaptionsTracklistRenderer']
-                    as Map<String, dynamic>?;
-            final captionTracks =
-                playerCaptionsTracklistRenderer?['captionTracks']
-                    as List<dynamic>?;
-            if (captionTracks != null && captionTracks.isNotEmpty) {
-              for (final ct in captionTracks) {
-                final baseUrl =
-                    (ct as Map<String, dynamic>)['baseUrl'] as String?;
-                if (baseUrl != null) {
-                  try {
-                    final uri = Uri.parse('$baseUrl&fmt=srv3');
-                    final client = HttpClient()
-                      ..connectionTimeout = const Duration(seconds: 10);
-                    try {
-                      final request = await client.getUrl(uri);
-                      final response = await request.close();
-                      if (response.statusCode == 200) {
-                        final xml =
-                            await response.transform(utf8.decoder).join();
-                        final lyrics = _parseTimedText(xml);
-                        if (lyrics.isNotEmpty) {
-                          await _db.saveLyrics(trackId, {
-                            'lyrics': lyrics['plainText'],
-                            'syncedLyrics': lyrics['syncedLrc'],
-                            'source': 'ytmusic',
-                          });
-                          updated++;
-                        }
-                      }
-                    } finally {
-                      client.close();
-                    }
-                  } catch (_) {}
-                  if (updated > 0) break;
-                }
-              }
-            }
-          }
+          // Note: Piped/Backend don't provide lyrics directly
+          // Lyrics would need to come from a separate lyrics service
         }
       }
     }
@@ -248,6 +207,7 @@ class MetadataService {
     final buffer = StringBuffer();
     final lrcLines = StringBuffer();
     final regExp = RegExp(r'<p t="(\d+)"[^>]*>(.*?)</p>');
+
     final matches = regExp.allMatches(xml);
 
     for (final match in matches) {
@@ -315,10 +275,10 @@ class MetadataService {
 
     if (spotifyService == null || !spotifyService.isConnected) return null;
 
-    final token = await spotifyService.getClientCredentialsToken();
-    if (token == null) return null;
-
     try {
+      final token = await spotifyService.getClientCredentialsToken();
+      if (token == null) return null;
+
       final url = '${SpotifyAuthConfig.webApiBase}/tracks/$spotifyTrackId';
       final client = HttpClient()
         ..connectionTimeout = const Duration(seconds: 10);
@@ -384,18 +344,17 @@ class MetadataService {
       _db.getHighResArtUrl(trackId).then((url) {
         if (url != null) enriched['imageUrl'] = url;
       });
-    }
     return enriched;
   }
 
   static Future<int> backfillAll({
     SpotifyService? spotifyService,
-    YTMusicService? ytmusicService,
+    YouTubeMusicSource? ytmusicSource,
   }) async {
     int total = 0;
     total += await backfillAlbumArt(
-        spotifyService: spotifyService, ytmusicService: ytmusicService);
-    total += await backfillLyrics(ytmusicService: ytmusicService);
+        spotifyService: spotifyService, ytmusicSource: ytmusicSource);
+    total += await backfillLyrics(ytmusicSource: ytmusicSource);
     total += await backfillTrackMetadata(spotifyService: spotifyService);
     return total;
   }

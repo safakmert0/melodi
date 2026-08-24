@@ -81,6 +81,11 @@ class DownloadProgress {
 }
 
 class BackendApiService {
+  BackendApiService._();
+  static final BackendApiService _instance = BackendApiService._();
+  factory BackendApiService() => _instance;
+  static BackendApiService get instance => _instance;
+
   String _baseUrl = '';
   final StreamController<DownloadProgress> _progressController =
       StreamController<DownloadProgress>.broadcast();
@@ -93,6 +98,19 @@ class BackendApiService {
   }
 
   String get baseUrl => _baseUrl;
+
+  /// Etkin bir backend eklentisi ya da kayıtlı manuel adres varsa döndürür.
+  Future<String?> resolveEndpoint() async {
+    await _resolveEndpointOverride();
+    return _baseUrl.isEmpty ? null : _baseUrl;
+  }
+
+  /// Sunucu üzerinden ses akışı adresi; backend yoksa null döner.
+  Future<String?> streamUrl(String videoId) async {
+    final base = await resolveEndpoint();
+    if (base == null) return null;
+    return '$base/api/stream/$videoId';
+  }
 
   Future<void> _ensureInitialized() async {
     if (_initialized) return;
@@ -111,12 +129,27 @@ class BackendApiService {
   Future<void> _resolveEndpointOverride() async {
     await _ensureInitialized();
     try {
-      final endpoint = await ExtensionService.instance
-          .resolveEndpoint(ExtensionKind.backend);
+      final endpoint = await ExtensionService.instance.resolveEndpoint(
+        ExtensionKind.backend,
+        protocol: ExtensionProtocol.ytdlpBackend.wireName,
+      );
       if (endpoint != null && endpoint.isNotEmpty) {
         _baseUrl = endpoint;
       }
     } catch (_) {}
+  }
+
+  /// Verilen adrese doğrudan health-check yapar (ayar ekranı kullanır).
+  static Future<bool> testConnection(String url) async {
+    try {
+      final response = await http
+          .get(Uri.parse('$url/'))
+          .timeout(const Duration(seconds: 8));
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('Backend test connection error: $e');
+      return false;
+    }
   }
 
   Future<bool> checkConnection() async {

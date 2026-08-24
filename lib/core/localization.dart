@@ -125,17 +125,8 @@ class AppLocale {
       'spotify_connected_as': 'Connected as',
       'enter_spotify_username': 'Spotify username (optional)',
       'connect_spotify': 'Connect Spotify library',
-      'lastfm_description':
-          'Scrobble your plays to Last.fm automatically. Connect your Last.fm account to track your listening history.',
-      'connect_lastfm': 'Connect Last.fm',
-      'authorize_lastfm': 'Authorize Last.fm',
-      'lastfm_auth_instructions':
-          '1. Tap the button below to open last.fm\n2. Log in and click "Yes, allow access"\n3. Come back and tap "I authorized"',
       'i_authorized': 'I Authorized',
       'auth_failed_try_again': 'Authorization failed. Please try again.',
-      'lastfm_authorize_prompt':
-          'Authorize Melodi in the browser, then return here to finish connecting.',
-      'lastfm_authorization_complete': 'I authorized Melodi',
       'presets': 'Presets',
       'default_playback_speed': 'Default Playback Speed',
       'volume_boost': 'Volume Boost',
@@ -352,11 +343,6 @@ class AppLocale {
       'classical': 'Classical',
       'vocal': 'Vocal',
       'custom_eq': 'Custom',
-      'lastfm': 'Last.fm',
-      'lastfm_connect': 'Connect Last.fm',
-      'lastfm_scrobbling': 'Last.fm Scrobbling',
-      'lastfm_api_key': 'API Key',
-      'lastfm_api_secret': 'API Secret',
       'blocklist': 'Blocked Tracks',
       'block_track': 'Block',
       'unblock': 'Unblock',
@@ -475,7 +461,6 @@ class AppLocale {
       'connect_for_scrobbling': 'Track your listening history',
       'spotify_subtitle': 'Import playlists & liked songs',
       'youtube_subtitle': 'Sync your music library',
-      'lastfm_subtitle': 'Scrobble & discover new music',
       // Greetings
       'good_morning': 'Good Morning',
       'good_afternoon': 'Good Afternoon',
@@ -687,18 +672,9 @@ class AppLocale {
       'spotify_connected_as': 'Bağlandı:',
       'enter_spotify_username': 'Spotify kullanıcı adı (isteğe bağlı)',
       'connect_spotify': 'Spotify kitaplığını bağla',
-      'lastfm_description':
-          'Çaldıklarınızı otomatik olarak Last.fm\'e gönderin. Dinleme geçmişinizi takip etmek için Last.fm hesabınızı bağlayın.',
-      'connect_lastfm': 'Last.fm\'e Bağlan',
-      'authorize_lastfm': 'Last.fm\'i Yetkilendir',
-      'lastfm_auth_instructions':
-          '1. Aşağıdaki butona tıklayarak last.fm\'i açın\n2. Giriş yapın ve "Yes, allow access" deyin\n3. Geri gelin ve "Yetkilendirdim" deyin',
       'i_authorized': 'Yetkilendirdim',
       'auth_failed_try_again':
           'Yetkilendirme başarısız. Lütfen tekrar deneyin.',
-      'lastfm_authorize_prompt':
-          'Tarayıcıda Melodi’ye izin verin, ardından bağlantıyı tamamlamak için buraya dönün.',
-      'lastfm_authorization_complete': 'Melodi’ye izin verdim',
       'presets': 'Ön Ayarlar',
       'default_playback_speed': 'Varsayılan Oynatma Hızı',
       'volume_boost': 'Ses Güçlendirme',
@@ -916,11 +892,6 @@ class AppLocale {
       'classical': 'Klasik',
       'vocal': 'Vokal',
       'custom_eq': 'Özel',
-      'lastfm': 'Last.fm',
-      'lastfm_connect': 'Last.fm Bağlan',
-      'lastfm_scrobbling': 'Last.fm Scrobbling',
-      'lastfm_api_key': 'API Anahtarı',
-      'lastfm_api_secret': 'API Secret',
       'blocklist': 'Engellenen Parçalar',
       'block_track': 'Engelle',
       'unblock': 'Engeli Kaldır',
@@ -1039,7 +1010,6 @@ class AppLocale {
       'connect_for_scrobbling': 'Dinleme geçmişinizi takip edin',
       'spotify_subtitle': 'Çalma listeleri ve beğenilen şarkılar',
       'youtube_subtitle': 'Müzik kütüphanenizi senkronize edin',
-      'lastfm_subtitle': 'Scrobble ve yeni müzik keşfedin',
       // Greetings
       'good_morning': 'Günaydın',
       'good_afternoon': 'İyi Günler',
@@ -1254,18 +1224,9 @@ class AppLocale {
       'spotify_connected_as': 'Verbunden als',
       'enter_spotify_username': 'Spotify-Benutzername (optional)',
       'connect_spotify': 'Spotify-Mediathek verbinden',
-      'lastfm_description':
-          'Sende deine Plays automatisch an Last.fm. Verbinde dein Last.fm-Konto, um deinen Hörverlauf zu verfolgen.',
-      'connect_lastfm': 'Mit Last.fm verbinden',
-      'authorize_lastfm': 'Last.fm autorisieren',
-      'lastfm_auth_instructions':
-          '1. Öffne last.fm mit dem Button unten\n2. Melde dich an und klicke "Yes, allow access"\n3. Komm zurück und tippe auf "Autorisiert"',
       'i_authorized': 'Autorisiert',
       'auth_failed_try_again':
           'Autorisierung fehlgeschlagen. Bitte versuche es erneut.',
-      'lastfm_authorize_prompt':
-          'Autorisiere Melodi im Browser und kehre dann hierher zurück, um die Verbindung abzuschließen.',
-      'lastfm_authorization_complete': 'Ich habe Melodi autorisiert',
       'presets': 'Voreinstellungen',
       'default_playback_speed': 'Standard-Wiedergabegeschwindigkeit',
       'volume_boost': 'Lautstärkeverstärkung',
@@ -1485,11 +1446,6 @@ class AppLocale {
       'bass_boost': 'Bass Boost',
       'vocal': 'Gesang',
       'custom_eq': 'Benutzerdefiniert',
-      'lastfm': 'Last.fm',
-      'lastfm_connect': 'Last.fm verbinden',
-      'lastfm_scrobbling': 'Last.fm Scrobbling',
-      'lastfm_api_key': 'API-Schlüssel',
-      'lastfm_api_secret': 'API-Geheimnis',
       'blocklist': 'Blockierte Titel',
       'block_track': 'Blockieren',
       'unblock': 'Entblocken',
@@ -1608,7 +1564,6 @@ class AppLocale {
       'connect_for_scrobbling': 'Hörverlauf verfolgen',
       'spotify_subtitle': 'Playlists & Lieder importieren',
       'youtube_subtitle': 'Musikbibliothek synchronisieren',
-      'lastfm_subtitle': 'Scrobble & neue Musik entdecken',
       // Greetings
       'good_morning': 'Guten Morgen',
       'good_afternoon': 'Guten Tag',

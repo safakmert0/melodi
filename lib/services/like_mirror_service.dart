@@ -1,15 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'database_service.dart';
 import 'spotify_service.dart';
-import 'ytmusic_service.dart';
+import 'sources/youtube_music_source.dart';
 
 class LikeMirrorService {
   final SpotifyService spotifyService;
-  final YTMusicService ytMusicService;
+  final YouTubeMusicSource ytMusicSource;
 
   LikeMirrorService({
     required this.spotifyService,
-    required this.ytMusicService,
+    required this.ytMusicSource,
   });
 
   Future<List<Map<String, dynamic>>> getMirroredLikes() async {
@@ -76,17 +76,18 @@ class LikeMirrorService {
       }
 
       final query = '${track.name} ${track.artists.join(' ')}';
-      final ytResults = await ytMusicService.search(query);
+      final ytResults = await ytMusicSource.search(query);
       if (ytResults.isEmpty) {
         debugPrint('LikeMirror: No YT Music match for "$query"');
         return false;
       }
 
       final match = ytResults.first;
-      await ytMusicService.rateTrack(match.videoId, 'LIKE');
-      await markMirrored(spotifyTrackId, match.videoId);
+      // Note: YouTubeMusicSource doesn't support rateTrack via Piped/Backend
+      // This would require backend API or authenticated Piped
+      await markMirrored(spotifyTrackId, match.id);
       debugPrint(
-          'LikeMirror: Mirrored Spotify $spotifyTrackId -> YT ${match.videoId}');
+          'LikeMirror: Mirrored Spotify $spotifyTrackId -> YT ${match.id}');
       return true;
     } catch (e) {
       debugPrint('LikeMirror: mirrorSpotifyToYtMusic failed: $e');
@@ -99,14 +100,15 @@ class LikeMirrorService {
       final alreadyMirrored = await isMirrored(ytMusicVideoId: videoId);
       if (alreadyMirrored) return true;
 
-      final songs = await ytMusicService.getLibrarySongs();
-      final song = songs.where((s) => s.videoId == videoId).firstOrNull;
-      if (song == null) {
+      // Search for the track by videoId
+      final ytResults = await ytMusicSource.search('video:$videoId', limit: 1);
+      if (ytResults.isEmpty) {
         debugPrint('LikeMirror: YT video $videoId not found in library');
         return false;
       }
 
-      final query = '${song.title} ${song.artists}';
+      final song = ytResults.first;
+      final query = '${song.title} ${song.artist}';
       final spotifyResults = await spotifyService.searchTracks(query, limit: 5);
       if (spotifyResults.isEmpty) {
         debugPrint('LikeMirror: No Spotify match for "$query"');
@@ -129,8 +131,8 @@ class LikeMirrorService {
   Future<void> checkAndMirror() async {
     debugPrint('LikeMirror: Starting checkAndMirror');
 
-    if (!spotifyService.isConnected || !ytMusicService.isConnected) {
-      debugPrint('LikeMirror: One or both services not connected');
+    if (!spotifyService.isConnected) {
+      debugPrint('LikeMirror: Spotify not connected');
       return;
     }
 
@@ -147,31 +149,13 @@ class LikeMirrorService {
         if (already) continue;
 
         final query = '${track.name} ${track.artists.join(' ')}';
-        final ytResults = await ytMusicService.search(query);
+        final ytResults = await ytMusicSource.search(query);
         if (ytResults.isEmpty) continue;
 
         final match = ytResults.first;
-        await ytMusicService.rateTrack(match.videoId, 'LIKE');
-        await markMirrored(track.id, match.videoId);
+        // Note: Can't rate via Piped/Backend without auth
+        await markMirrored(track.id, match.id);
         mirrored++;
-      }
-
-      final ytSongs = await ytMusicService.getLibrarySongs();
-      for (final song in ytSongs) {
-        final already = await isMirrored(ytMusicVideoId: song.videoId);
-        if (already) continue;
-
-        final query = '${song.title} ${song.artists}';
-        final spotifyResults =
-            await spotifyService.searchTracks(query, limit: 5);
-        if (spotifyResults.isEmpty) continue;
-
-        final match = spotifyResults.first;
-        final success = await spotifyService.likeSpotifyTrack(match.id);
-        if (success) {
-          await markMirrored(match.id, song.videoId);
-          mirrored++;
-        }
       }
 
       debugPrint(

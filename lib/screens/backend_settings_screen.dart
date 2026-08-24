@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
+import '../services/backend_api_service.dart';
+import '../services/database_service.dart';
+import '../services/extension_service.dart';
 
 class BackendSettingsScreen extends StatefulWidget {
   const BackendSettingsScreen({super.key});
@@ -9,10 +12,33 @@ class BackendSettingsScreen extends StatefulWidget {
 }
 
 class _BackendSettingsScreenState extends State<BackendSettingsScreen> {
-  final TextEditingController _urlController =
-      TextEditingController(text: 'http://localhost:8000');
+  final TextEditingController _urlController = TextEditingController();
   bool _isChecking = false;
-  bool _isConnected = false;
+  bool? _isConnected;
+  String? _activeExtensionUrl;
+
+  static const String _urlKey = 'backend_api_url';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedState();
+  }
+
+  Future<void> _loadSavedState() async {
+    try {
+      final saved =
+          await DatabaseService.instance.getSetting(_urlKey);
+      if (saved != null && saved.isNotEmpty && mounted) {
+        setState(() => _urlController.text = saved);
+      }
+    } catch (_) {}
+    try {
+      final endpoint = await ExtensionService.instance
+          .resolveActiveBackendEndpoint();
+      if (mounted) setState(() => _activeExtensionUrl = endpoint);
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -20,23 +46,56 @@ class _BackendSettingsScreenState extends State<BackendSettingsScreen> {
     super.dispose();
   }
 
+  String? _normalizeUrl(String raw) {
+    var url = raw.trim();
+    if (url.isEmpty) return null;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'http://$url';
+    }
+    while (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    final uri = Uri.tryParse(url);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) return null;
+    return url;
+  }
+
   Future<void> _checkConnection() async {
-    setState(() => _isChecking = true);
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() {
-      _isChecking = false;
-      _isConnected = false;
-    });
-    if (mounted) {
+    final url = _normalizeUrl(_urlController.text);
+    if (url == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text(_isConnected ? 'Backend connected!' : 'Connection failed'),
-          backgroundColor:
-              _isConnected ? MelodiTheme.primaryGreen : MelodiTheme.errorRed,
-        ),
+            content: const Text('Geçerli bir http(s) adresi gir'),
+            backgroundColor: MelodiTheme.errorRed),
       );
+      return;
     }
+
+    setState(() {
+      _isChecking = true;
+      _isConnected = null;
+    });
+
+    // Manuel adres kaydedilir; etkin eklenti varsa o adres önceliklidir.
+    BackendApiService.instance.setBaseUrl(url);
+    try {
+      await DatabaseService.instance.setSetting(_urlKey, url);
+    } catch (_) {}
+
+    final ok = await BackendApiService.testConnection(url);
+    if (!mounted) return;
+    setState(() {
+      _isChecking = false;
+      _isConnected = ok;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok
+            ? 'Backend bağlantısı başarılı'
+            : 'Bağlantı başarısız - sunucu çalışıyor mu?'),
+        backgroundColor: ok ? MelodiTheme.primaryGreen : MelodiTheme.errorRed,
+      ),
+    );
   }
 
   @override
@@ -109,17 +168,27 @@ class _BackendSettingsScreenState extends State<BackendSettingsScreen> {
                         height: 12,
                         decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: _isConnected
-                                ? MelodiTheme.primaryGreen
-                                : MelodiTheme.errorRed),
+                            color: _isConnected == null
+                                ? MelodiTheme.textMuted
+                                : _isConnected!
+                                    ? MelodiTheme.primaryGreen
+                                    : MelodiTheme.errorRed),
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        _isConnected ? 'Connected' : 'Not Connected',
+                        _isChecking
+                            ? 'Checking...'
+                            : _isConnected == null
+                                ? 'Not tested yet'
+                                : _isConnected!
+                                    ? 'Connected'
+                                    : 'Not Connected',
                         style: TextStyle(
-                            color: _isConnected
-                                ? MelodiTheme.primaryGreen
-                                : MelodiTheme.errorRed,
+                            color: _isConnected == null
+                                ? MelodiTheme.onSurfaceVariant
+                                : _isConnected!
+                                    ? MelodiTheme.primaryGreen
+                                    : MelodiTheme.errorRed,
                             fontSize: 14),
                       ),
                       const Spacer(),
@@ -130,6 +199,14 @@ class _BackendSettingsScreenState extends State<BackendSettingsScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2)),
                     ],
                   ),
+                  if (_activeExtensionUrl != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      'Etkin eklenti önceliklidir: $_activeExtensionUrl',
+                      style: TextStyle(
+                          color: MelodiTheme.primaryGreen, fontSize: 12),
+                    ),
+                  ],
                 ],
               ),
             ),

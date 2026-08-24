@@ -1,0 +1,201 @@
+name: iOS Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v4.5.0)'
+        required: true
+        type: string
+
+env:
+  FLUTTER_VERSION: '3.24.0'
+  XCODE_VERSION: '16.0'
+
+jobs:
+  build-ios:
+    name: Build iOS
+    runs-on: macos-latest
+    timeout-minutes: 60
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+      
+      - name: Cache Flutter dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            ${{ runner.tool_cache }}/flutter
+          key: flutter-${{ runner.os }}-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            flutter-${{ runner.os }}-
+      
+      - name: Get dependencies
+        run: flutter pub get
+        working-directory: ./melodi-app
+      
+      - name: Generate localization files
+        run: flutter gen-l10n
+        working-directory: ./melodi-app
+      
+      - name: Setup Ruby/Bundler for CocoaPods
+        run: |
+          gem install bundler
+          bundle install
+        working-directory: ./melodi-app/ios
+      
+      - name: Install CocoaPods dependencies
+        run: bundle exec pod install --repo-update
+        working-directory: ./melodi-app/ios
+      
+      - name: Set up code signing
+        run: |
+          echo "${{ secrets.IOS_CERTIFICATE }}" | base64 --decode > certificate.p12
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import certificate.p12 -k build.keychain -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+          rm certificate.p12
+        env:
+          IOS_CERTIFICATE: ${{ secrets.IOS_CERTIFICATE }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+      
+      - name: Update provisioning profile
+        run: |
+          echo "${{ secrets.IOS_PROVISIONING_PROFILE }}" | base64 --decode > Melodi.mobileprovision
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp Melodi.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+        env:
+          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+      
+      - name: Build iOS Release
+        run: |
+          flutter build ios --release \
+            --build-name=${{ github.ref_name }} \
+            --build-number=${{ github.run_number }}
+        working-directory: ./melodi-app
+      
+      - name: Create IPA
+        run: |
+          xcodebuild -workspace melodi-app/ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -archivePath build/Runner.xcarchive \
+            -archivePath build/Runner.xcarchive \
+            -allowProvisioningUpdates \
+            archive
+          
+          xcodebuild -exportArchive \
+            -archivePath build/Runner.xcarchive \
+            -exportPath build/ios \
+            -exportOptionsPlist melodi-app/ios/ExportOptions.plist \
+            -allowProvisioningUpdates
+        working-directory: ./melodi-app/ios
+      
+      - name: Upload IPA as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: melodi-ios-${{ github.ref_name }}
+          path: melodi-app/ios/build/ios/*.ipa
+          retention-days: 30
+      
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: melodi-app/ios/build/ios/*.ipa
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+      
+      - name: Cache Flutter dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            ${{ runner.tool_cache }}/flutter
+          key: flutter-${{ runner.os }}-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            flutter-${{ runner.os }}-
+      
+      - name: Get dependencies
+        run: flutter pub get
+        working-directory: ./melodi-app
+      
+      - name: Generate localization files
+        run: flutter gen-l10n
+        working-directory: ./melodi-app
+      
+      - name: Build Android Release
+        run: |
+          flutter build apk --release \
+            --build-name=${{ github.ref_name }} \
+            --build-number=${{ github.run_number }}
+        working-directory: ./melodi-app
+      
+      - name: Build App Bundle
+        run: |
+          flutter build appbundle --release \
+            --build-name=${{ github.ref_name }} \
+            --build-number=${{ github.run_number }}
+        working-directory: ./melodi-app
+      
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: melodi-android-${{ github.ref_name }}
+          path: melodi-app/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+      
+      - name: Upload App Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: melodi-aab-${{ github.ref_name }}
+          path: melodi-app/build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
+      
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            melodi-app/build/app/outputs/flutter-apk/app-release.apk
+            melodi-app/build/app/outputs/bundle/release/app-release.aab
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -83,15 +83,38 @@ class ExtensionService extends ChangeNotifier {
   /// Bir tür için öncelik sırasına göre ilk etkin eklentinin uç noktasını
   /// döndürür. Etkin eklenti yoksa null: hizmet kendi kayıtlı/kurumsal
   /// adresine düşer (manuel giriş "gelişmiş" seçenek olarak yaşar).
-  Future<String?> resolveEndpoint(ExtensionKind kind) async {
+  ///
+  /// [protocol] verilirse yalnızca o protokoldeki eklentiler dikkate alınır.
+  Future<String?> resolveEndpoint(ExtensionKind kind, {String? protocol}) async {
     await ensureLoaded();
     for (final ext in _installed) {
       if (ext.enabled && ext.manifest.kind == kind) {
+        if (protocol != null && ext.manifest.protocol.wireName != protocol) {
+          continue;
+        }
         return ext.manifest.baseUrl;
       }
     }
     return null;
   }
+
+  /// Bir tür+protokol kombinasyonundaki TÜM etkin eklenti adresleri,
+  /// öncelik sırasıyla.
+  Future<List<String>> resolveEndpoints(
+      ExtensionKind kind, ExtensionProtocol protocol) async {
+    await ensureLoaded();
+    return [
+      for (final ext in _installed)
+        if (ext.enabled &&
+            ext.manifest.kind == kind &&
+            ext.manifest.protocol == protocol)
+          ext.manifest.baseUrl,
+    ];
+  }
+
+  /// Etkin yt-dlp backend eklentisinin uç noktası; yoksa null.
+  Future<String?> resolveActiveBackendEndpoint() => resolveEndpoint(
+      ExtensionKind.backend, protocol: ExtensionProtocol.ytdlpBackend.wireName);
 
   // -------------------------------------------------------------------------
   // Depolar

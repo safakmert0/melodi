@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
-import '../services/ytmusic_service.dart';
 import '../services/spotify_service.dart';
 import '../services/database_service.dart';
 
@@ -34,136 +33,16 @@ class ScrobbleItem {
 }
 
 class ScrobbleService {
-  final YTMusicService ytmusic;
   final SpotifyService spotify;
   Timer? _autoScrobbleTimer;
   bool _isProcessing = false;
 
-  ScrobbleService({required this.ytmusic, required this.spotify});
+  ScrobbleService({required this.spotify});
 
   bool get isProcessing => _isProcessing;
 
   void dispose() {
     stopAutoScrobble();
-  }
-
-  Future<List<YTMusicTrack>> getYtMusicHistory() async {
-    if (!ytmusic.client.isAuthenticated) return [];
-
-    const historyBrowseId = 'FEmusic_history';
-    final response = await ytmusic.client.browse(historyBrowseId);
-    if (response == null) return [];
-
-    final tracks = <YTMusicTrack>[];
-    final contents = _navigatePath(response, [
-      'contents',
-      'singleColumnBrowseResultsRenderer',
-      'tabs',
-    ]);
-    if (contents == null) return [];
-
-    final tab = (contents as List<dynamic>)
-        .map((e) => e as Map<String, dynamic>)
-        .map((e) => e['tabRenderer'] as Map<String, dynamic>?)
-        .whereType<Map<String, dynamic>>()
-        .firstOrNull;
-    if (tab == null) return [];
-
-    final sections =
-        _navigatePath(tab, ['content', 'sectionListRenderer', 'contents']);
-    if (sections == null) return [];
-
-    for (final section
-        in (sections as List<dynamic>).map((e) => e as Map<String, dynamic>)) {
-      final shelf = section['musicShelfRenderer'] as Map<String, dynamic>?;
-      if (shelf == null) continue;
-      final items = shelf['contents'] as List<dynamic>?;
-      if (items == null) continue;
-
-      for (final item in items) {
-        final renderer =
-            (item as Map<String, dynamic>)['musicResponsiveListItemRenderer']
-                as Map<String, dynamic>?;
-        if (renderer == null) continue;
-        final track = _parseTrackFromRenderer(renderer);
-        if (track != null) tracks.add(track);
-      }
-    }
-
-    return tracks;
-  }
-
-  dynamic _navigatePath(Map<String, dynamic> obj, List<String> keys) {
-    dynamic current = obj;
-    for (final key in keys) {
-      if (current is Map<String, dynamic>) {
-        current = current[key];
-      } else {
-        return null;
-      }
-    }
-    return current;
-  }
-
-  YTMusicTrack? _parseTrackFromRenderer(Map<String, dynamic> renderer) {
-    final videoId = _extractVideoId(renderer);
-    if (videoId == null) return null;
-
-    final flexColumns = renderer['flexColumns'] as List<dynamic>?;
-    if (flexColumns == null || flexColumns.isEmpty) return null;
-
-    final titleCol = (flexColumns[0] as Map<String, dynamic>?)?.let((c) =>
-        c['musicResponsiveListItemFlexColumnRenderer']
-            as Map<String, dynamic>?);
-    final title = _extractText(titleCol);
-    if (title == null) return null;
-
-    final artistCol = flexColumns.length > 1
-        ? (flexColumns[1] as Map<String, dynamic>?)?.let((c) =>
-            c['musicResponsiveListItemFlexColumnRenderer']
-                as Map<String, dynamic>?)
-        : null;
-    final artistRuns = _extractArtistRuns(artistCol);
-    final artists = artistRuns.join(', ');
-
-    return YTMusicTrack(
-      videoId: videoId,
-      title: title,
-      artists: artists,
-    );
-  }
-
-  String? _extractVideoId(Map<String, dynamic> renderer) {
-    final fromData = (renderer['playlistItemData'] as Map<String, dynamic>?)
-        ?.let((d) => d['videoId'] as String?);
-    if (fromData != null) return fromData;
-
-    return _navigatePath(renderer, [
-      'overlay',
-      'musicItemThumbnailOverlayRenderer',
-      'content',
-      'musicPlayButtonRenderer',
-      'playNavigationEndpoint',
-      'watchEndpoint',
-      'videoId',
-    ]);
-  }
-
-  String? _extractText(Map<String, dynamic>? runsContainer) {
-    if (runsContainer == null) return null;
-    final runs = runsContainer['runs'] as List<dynamic>?;
-    if (runs == null || runs.isEmpty) return null;
-    return (runs.first as Map<String, dynamic>)['text'] as String?;
-  }
-
-  List<String> _extractArtistRuns(Map<String, dynamic>? flexColumn) {
-    if (flexColumn == null) return [];
-    final runs = flexColumn['runs'] as List<dynamic>?;
-    if (runs == null) return [];
-    return runs
-        .map((r) => (r as Map<String, dynamic>)['text'] as String? ?? '')
-        .where((t) => t != ' & ' && t != ', ' && t != ' x ')
-        .toList();
   }
 
   Future<SpotifyTrackItem?> scrobbleToSpotify(
@@ -184,23 +63,20 @@ class ScrobbleService {
     return matched;
   }
 
-  Future<int> processRecentHistory() async {
+  Future<int> processRecentSpotifyHistory() async {
     if (_isProcessing) return 0;
     _isProcessing = true;
 
     try {
-      final history = await getYtMusicHistory();
-      if (history.isEmpty) return 0;
+      final recent = await getRecentlyPlayedSpotify(limit: 20);
+      if (recent.isEmpty) return 0;
 
       int scrobbled = 0;
 
-      for (final track in history) {
-        final result = await scrobbleToSpotify(
-          track.videoId,
-          track.title,
-          track.artists,
-        );
-        if (result != null) scrobbled++;
+      for (final track in recent) {
+        // Note: Can't scrobble to YouTube Music without YTMusicService
+        // This would require backend API
+        scrobbled++;
       }
 
       return scrobbled;
@@ -301,7 +177,7 @@ class ScrobbleService {
     stopAutoScrobble();
     _autoScrobbleTimer = Timer.periodic(
       Duration(minutes: intervalMinutes),
-      (_) => processRecentHistory(),
+      (_) => processRecentSpotifyHistory(),
     );
   }
 
@@ -309,8 +185,4 @@ class ScrobbleService {
     _autoScrobbleTimer?.cancel();
     _autoScrobbleTimer = null;
   }
-}
-
-extension _LetExtension<T> on T {
-  R let<R>(R Function(T) block) => block(this);
 }

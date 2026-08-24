@@ -6,18 +6,22 @@ import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
-import 'database_service.dart';
-import 'track_matcher.dart';
-import 'youtube_audio_source.dart';
-import 'ytmusic_service.dart';
+import 'backend_api_service.dart';
+import 'database_service.dart'
+import 'piped_service.dart'
+import 'track_matcher.dart'
+import 'youtube_downloader.dart'
 import 'navidrome_service.dart';
 
 class AudioPlayerHandler extends BaseAudioHandler
     with SeekHandler, QueueHandler {
   final AudioPlayer _player = AudioPlayer();
   final DatabaseService _db = DatabaseService.instance;
-  late final TrackMatcher _trackMatcher = TrackMatcher(YTMusicService().search);
+  late final TrackMatcher _trackMatcher = TrackMatcher(
+    (query) => MultiSourceSearch().searchAllSync(query, limitPerSource: 10),
+  );
   final NavidromeService _navidrome = NavidromeService.instance;
+  final YouTubeDownloader _youtubeDownloader = YouTubeDownloader();
 
   List<SongModel> _queue = [];
   List<SongModel> _originalQueue = [];
@@ -171,8 +175,7 @@ class AudioPlayerHandler extends BaseAudioHandler
               AudioSource audioSource;
               if (song.filePath.startsWith('youtube://')) {
                 final videoId = song.filePath.replaceFirst('youtube://', '');
-                audioSource =
-                    YouTubeAudioSource(videoId: videoId, quality: 'high');
+                audioSource = await _youtubeAudioSource(videoId);
               } else if (song.filePath.startsWith('http')) {
                 audioSource = AudioSource.uri(Uri.parse(song.filePath));
               } else {
@@ -472,6 +475,34 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
   }
 
+  /// YouTube parçası için ses kaynağını seçer. Sıra: yt-dlp backend
+  /// eklentisi → Piped örnekleri → indirme. Böylece cihazın IP'si
+  /// YouTube'a erişemese bile sunucu/örnek proxy'siyle çalma sürer.
+  Future<AudioSource> _youtubeAudioSource(String videoId) async {
+    String? streamUrl;
+    try {
+      streamUrl = await BackendApiService.instance.streamUrl(videoId);
+    } catch (e) {
+      debugPrint('Backend stream URL çözülemedi: $e');
+    }
+    streamUrl ??= await RobustPipedService.instance.getStreamUrl(videoId);
+    if (streamUrl != null) {
+      return AudioSource.uri(Uri.parse(streamUrl));
+    }
+    // Fallback: trigger download and play local
+    final tempDir = await getTemporaryDirectory();
+    final path = await _youtubeDownloader.downloadFullTrack(
+      videoId,
+      'temp',
+      tempDir,
+      quality: 'high',
+    );
+    if (path != null) {
+      return AudioSource.file(path);
+    }
+    throw StateError('YouTube stream/download failed');
+  }
+
   Future<void> _playCurrent({
     bool allowFailureFallback = true,
     bool surfaceError = true,
@@ -487,16 +518,15 @@ class AudioPlayerHandler extends BaseAudioHandler
       // Determine audio source based on file path type
       AudioSource audioSource;
       if (song.filePath.startsWith('youtube://')) {
-        // YouTube video ID format - use custom streaming source
         final videoId = song.filePath.replaceFirst('youtube://', '');
-        audioSource = YouTubeAudioSource(videoId: videoId, quality: 'high');
+        audioSource = await _youtubeAudioSource(videoId);
       } else if (song.filePath.startsWith('http') ||
           song.filePath.startsWith('https')) {
         // Check if this is a YouTube URL - use custom streaming source
         if (_isYouTubeUrl(song.filePath)) {
           final videoId = _extractYouTubeVideoId(song.filePath);
           if (videoId != null) {
-            audioSource = YouTubeAudioSource(videoId: videoId, quality: 'high');
+            audioSource = await _youtubeAudioSource(videoId);
           } else {
             audioSource = AudioSource.uri(Uri.parse(song.filePath));
           }
@@ -684,9 +714,9 @@ class AudioPlayerHandler extends BaseAudioHandler
             return resolved;
           }
         }
+      } catch (error) {
+        debugPrint('Navidrome Spotify match failed: $error');
       }
-    } catch (error) {
-      debugPrint('Navidrome Spotify match failed: $error');
     }
 
     final cached = await _db.getCachedMatch(spotifyId);

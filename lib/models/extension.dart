@@ -30,6 +30,27 @@ extension ExtensionKindX on ExtensionKind {
   }
 }
 
+/// Eklentinin konuştuğu protokol.
+///
+/// - [ytdlpBackend]: Melodi'nin kendi FastAPI yt-dlp sunucu sözleşmesi.
+/// - [piped]: Herkese açık Piped örneklerinin API sözleşmesi.
+enum ExtensionProtocol {
+  ytdlpBackend('yt-dlp-backend'),
+  piped('piped');
+
+  const ExtensionProtocol(this.wireName);
+  final String wireName;
+
+  static ExtensionProtocol? tryParse(Object? value) {
+    final raw = value?.toString().trim().toLowerCase();
+    if (raw == null || raw.isEmpty || raw == ytdlpBackend.wireName) {
+      return ExtensionProtocol.ytdlpBackend;
+    }
+    if (raw == piped.wireName) return ExtensionProtocol.piped;
+    return null;
+  }
+}
+
 class ExtensionManifest {
   const ExtensionManifest({
     required this.id,
@@ -39,6 +60,7 @@ class ExtensionManifest {
     required this.author,
     required this.kind,
     required this.baseUrl,
+    this.protocol = ExtensionProtocol.ytdlpBackend,
     this.homepage,
     this.minAppVersion,
     this.capabilities = const [],
@@ -51,6 +73,7 @@ class ExtensionManifest {
   final String author;
   final ExtensionKind kind;
   final String baseUrl;
+  final ExtensionProtocol protocol;
   final String? homepage;
   final String? minAppVersion;
   final List<String> capabilities;
@@ -83,6 +106,12 @@ class ExtensionManifest {
         .where((c) => c.isNotEmpty)
         .toList(growable: false);
 
+    final protocol = ExtensionProtocol.tryParse(json['protocol']);
+    if (json['protocol'] != null && protocol == null) {
+      throw const FormatException(
+          'manifest: "protocol" alanı yt-dlp-backend veya piped olmalı');
+    }
+
     return ExtensionManifest(
       id: id,
       name: name,
@@ -91,6 +120,8 @@ class ExtensionManifest {
       author: json['author']?.toString().trim() ?? 'Bilinmeyen',
       kind: kind,
       baseUrl: baseUrl,
+      protocol:
+          protocol ?? ExtensionProtocol.ytdlpBackend,
       homepage: _optionalUrl(json['homepage']),
       minAppVersion: json['minAppVersion']?.toString().trim(),
       capabilities: capabilities,
@@ -105,6 +136,7 @@ class ExtensionManifest {
         'author': author,
         'kind': kind.wireName,
         'baseUrl': baseUrl,
+        'protocol': protocol.wireName,
         if (homepage != null) 'homepage': homepage,
         if (minAppVersion != null) 'minAppVersion': minAppVersion,
         'capabilities': capabilities,

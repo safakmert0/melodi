@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'music_source.dart';
-import 'sources/youtube_source.dart';
+import 'sources/youtube_music_source.dart';
 import 'sources/jiosaavn_source.dart';
 import 'sources/deezer_source.dart';
-import 'sources/lastfm_source.dart';
 import 'sources/navidrome_source.dart';
 import 'sources/hifi_source.dart';
+import 'sources/apple_music_source.dart';
+import 'sources/soundcloud_source.dart';
 
 class MultiSourceSearch {
   static final MultiSourceSearch _instance = MultiSourceSearch._();
@@ -19,7 +20,8 @@ class MultiSourceSearch {
     YouTubeMusicSource(),
     JioSaavnSource(),
     DeezerSource(),
-    LastFmSource(),
+    AppleMusicSource(),
+    SoundCloudSource(),
   ];
 
   List<MusicSource> get sources => List.unmodifiable(_sources);
@@ -136,6 +138,8 @@ class MultiSourceSearch {
         MusicSourceType.navidrome: 0,
         MusicSourceType.youtube: 1,
         MusicSourceType.jiosaavn: 2,
+        MusicSourceType.appleMusic: 3,
+        MusicSourceType.soundcloud: 4,
       };
       return (priority[a.type] ?? 99).compareTo(priority[b.type] ?? 99);
     });

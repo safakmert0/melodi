@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../services/sync_service.dart';
 import '../services/spotify_service.dart';
-import '../services/ytmusic_service.dart';
+import '../services/sources/youtube_music_source.dart';
 
 class SyncProvider extends ChangeNotifier {
   final SyncService _service = SyncService();
@@ -21,9 +21,9 @@ class SyncProvider extends ChangeNotifier {
 
   void setServices({
     SpotifyService? spotify,
-    YTMusicService? ytmusic,
+    YouTubeMusicSource? ytmusicSource,
   }) {
-    _service.setServices(spotify: spotify, ytmusic: ytmusic);
+    _service.setServices(spotify: spotify, ytmusicSource: ytmusicSource);
   }
 
   Future<void> init() async {

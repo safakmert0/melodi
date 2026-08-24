@@ -2,11 +2,11 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../services/database_service.dart';
 import '../services/spotify_service.dart';
-import '../services/ytmusic_service.dart';
+import '../services/sources/youtube_music_source.dart';
 
 class ConnectionProvider extends ChangeNotifier {
   final SpotifyService _spotifyService;
-  final YTMusicService _ytmusicService;
+  final YouTubeMusicSource _ytmusicSource;
   Timer? _timer;
 
   bool _spotifyConnected = false;
@@ -24,9 +24,9 @@ class ConnectionProvider extends ChangeNotifier {
 
   ConnectionProvider({
     required SpotifyService spotifyService,
-    required YTMusicService ytmusicService,
+    required YouTubeMusicSource ytmusicSource,
   })  : _spotifyService = spotifyService,
-        _ytmusicService = ytmusicService;
+        _ytmusicSource = ytmusicSource;
 
   Future<void> init() async {
     try {
@@ -60,28 +60,20 @@ class ConnectionProvider extends ChangeNotifier {
       _spotifyExpired = false;
     }
 
-    _ytMusicConnected = _ytmusicService.isConnected;
-    if (_ytMusicConnected) {
-      try {
-        final response = await _ytmusicService.client
-            .browse('FEmusic_liked_playlists')
-            .timeout(const Duration(seconds: 10));
-        if (response == null) {
-          _ytMusicExpired = true;
-          _ytMusicConnected = false;
-        } else {
-          _ytMusicExpired = false;
-        }
-      } catch (_) {
-        _ytMusicExpired = true;
-        _ytMusicConnected = false;
-      }
-    } else {
-      _ytMusicExpired = false;
-    }
+    _ytMusicConnected = await _checkYTMusicConnection();
+    _ytMusicExpired = !_ytMusicConnected;
 
     await _saveState();
     notifyListeners();
+  }
+
+  Future<bool> _checkYTMusicConnection() async {
+    try {
+      final results = await _ytmusicSource.search('test', limit: 1);
+      return results.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> refreshStatus() async {

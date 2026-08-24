@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../services/database_service.dart';
-import '../services/ytmusic_service.dart';
+import '../services/sources/youtube_music_source.dart';
 
 class DiscoveredAlbum {
   final String id;
@@ -121,7 +121,7 @@ class DiscoveredArtist {
 
 class AlbumDiscoveryService {
   final DatabaseService _db = DatabaseService.instance;
-  final YTMusicService _ytmusic = YTMusicService();
+  final YouTubeMusicSource _ytmusic = YouTubeMusicSource();
 
   static const String _webApiBase = 'https://api.spotify.com/v1';
   static const String _clientId = '5f573c9620494bae87890c0f08a60293';
@@ -216,8 +216,7 @@ class AlbumDiscoveryService {
       if (DateTime.now().difference(cachedAt).inHours < 6) {
         final list = jsonDecode(cached['data']!) as List<dynamic>;
         return list
-            .map((e) =>
-                DiscoveredAlbum.fromSpotifyJson(e as Map<String, dynamic>))
+            .map((e) => DiscoveredAlbum.fromSpotifyJson(e as Map<String, dynamic>))
             .toList();
       }
     }
@@ -327,8 +326,8 @@ class AlbumDiscoveryService {
     return DiscoveredArtist.fromSpotifyJson(json);
   }
 
-  Future<List<YTMusicTrack>> getAlbumsFromYTMusic(String artistName) async {
+  Future<List<OnlineTrack>> getAlbumsFromYTMusic(String artistName) async {
     final query = '$artistName album';
-    return await _ytmusic.search(query);
+    return await _ytmusic.search(query, limit: 50);
   }
 }

@@ -1,7 +1,8 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'database_service.dart';
-import 'ytmusic_service.dart';
+import 'multi_source_search.dart';
+import 'music_source.dart';
 
 class MatchResult {
   final String ytVideoId;
@@ -26,9 +27,7 @@ class MatchResult {
 }
 
 class TrackMatcher {
-  final Future<List<YTMusicTrack>> Function(String query) _searchFn;
-
-  TrackMatcher(this._searchFn);
+  final MultiSourceSearch _multiSource = MultiSourceSearch();
 
   String normalizeTitle(String title) {
     final normalized = _normalizeUnicode(title);
@@ -242,10 +241,18 @@ class TrackMatcher {
 
     for (final query in queries) {
       try {
-        final tracks = await _searchFn(query);
-        for (final track in tracks) {
-          if (seen.add(track.videoId)) {
-            results.add(track.toJson());
+        final tracks = await _multiSource.searchAllSync(query, limitPerSource: 10);
+        final ytTracks = tracks.where((t) => t.source == MusicSourceType.youtube);
+        for (final track in ytTracks) {
+          if (seen.add(track.id)) {
+            results.add({
+              'videoId': track.id,
+              'title': track.title,
+              'artists': track.artist,
+              'album': track.album,
+              'durationMs': track.duration.inMilliseconds,
+              'thumbnailUrl': track.thumbnailUrl,
+            });
           }
         }
       } catch (e) {
@@ -313,7 +320,7 @@ class TrackMatcher {
 
   static double score(String queryTitle, String queryArtist, String targetTitle,
       String targetArtist) {
-    final matcher = TrackMatcher((_) async => []);
+    final matcher = TrackMatcher();
     final normQueryTitle = matcher.normalizeTitle(queryTitle);
     final normQueryArtist = matcher.normalizeArtist(queryArtist);
     final normTargetTitle = matcher.normalizeTitle(targetTitle);
@@ -348,5 +355,9 @@ class TrackMatcher {
     }
 
     return base;
+  }
+
+  void dispose() {
+    _multiSource.dispose();
   }
 }

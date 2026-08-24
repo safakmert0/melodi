@@ -273,6 +273,244 @@ class WidgetHandler: NSObject {
         }
     }
 }
+// MARK: - FFmpeg & Ringtone Handler
+class FFmpegRingtoneHandler: NSObject {
+    private let channel: FlutterMethodChannel
+    private let fileManager = FileManager.default
+
+    init(messenger: FlutterBinaryMessenger) {
+        channel = FlutterMethodChannel(
+            name: "com.melodi/ffmpeg_ringtone",
+            binaryMessenger: messenger
+        )
+        super.init()
+        channel.setMethodCallHandler(handle)
+    }
+
+    private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        switch call.method {
+        case "extractAudio":
+            guard let args = call.arguments as? [String: Any],
+                  let inputPath = args["inputPath"] as? String,
+                  let outputPath = args["outputPath"] as? String else {
+                result(FlutterMethodNotImplemented)
+                return
+            }
+            let startTime = (args["startTime"] as? Double) ?? 0
+            let duration = (args["duration"] as? Double) ?? 30
+            let outputFormat = (args["outputFormat"] as? String) ?? "m4a"
+            extractAudio(
+                inputPath: inputPath,
+                outputPath: outputPath,
+                startTime: startTime,
+                duration: duration,
+                outputFormat: outputFormat,
+                result: result
+            )
+
+        case "saveAsRingtone":
+            guard let args = call.arguments as? [String: Any],
+                  let audioPath = args["audioPath"] as? String,
+                  let ringtoneName = args["ringtoneName"] as? String else {
+                result(FlutterMethodNotImplemented)
+                return
+            }
+            let startTime = (args["startTime"] as? Double) ?? 0
+            let duration = (args["duration"] as? Double) ?? 30
+            saveAsRingtone(
+                audioPath: audioPath,
+                ringtoneName: ringtoneName,
+                startTime: startTime,
+                duration: duration,
+                result: result
+            )
+
+        case "getVideoDuration":
+            guard let args = call.arguments as? [String: Any],
+                  let videoPath = args["videoPath"] as? String else {
+                result(FlutterMethodNotImplemented)
+                return
+            }
+            getVideoDuration(videoPath: videoPath, result: result)
+
+        default:
+            result(FlutterMethodNotImplemented)
+        }
+    }
+
+    private func extractAudio(
+        inputPath: String,
+        outputPath: String,
+        startTime: Double,
+        duration: Double,
+        outputFormat: String,
+        result: @escaping FlutterResult
+    ) {
+        let inputURL = URL(fileURLWithPath: inputPath)
+        let outputURL = URL(fileURLWithPath: outputPath)
+
+        guard fileManager.fileExists(atPath: inputPath) else {
+            DispatchQueue.main.async {
+                result(FlutterError(code: "file_not_found", message: "Input video not found", details: nil))
+            }
+            return
+        }
+
+        let asset = AVURLAsset(url: inputURL)
+
+        // Check if duration exceeds asset duration
+        let assetDuration = CMTimeGetSeconds(asset.duration)
+        if assetDuration.isNaN || assetDuration.isInfinite {
+            DispatchQueue.main.async {
+                result(FlutterError(code: "invalid_duration", message: "Could not determine video duration", details: nil))
+            }
+            return
+        }
+
+        let actualDuration = min(duration, max(0, assetDuration - startTime))
+        let endTime = startTime + actualDuration
+
+        if actualDuration <= 0 {
+            DispatchQueue.main.async {
+                result(FlutterError(code: "invalid_range", message: "Invalid time range", details: nil))
+            }
+            return
+        }
+
+        guard let exporter = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A) else {
+            DispatchQueue.main.async {
+                result(FlutterError(code: "exporter_failed", message: "Could not create exporter", details: nil))
+            }
+            return
+        }
+
+        exporter.outputURL = outputURL
+        exporter.outputFileType = .m4a
+        exporter.shouldOptimizeForNetworkUse = false
+
+        let timeRange = CMTimeRange(
+            start: CMTime(seconds: startTime, preferredTimescale: 600),
+            duration: CMTime(seconds: actualDuration, preferredTimescale: 600)
+        )
+        exporter.timeRange = timeRange
+
+        exporter.exportAsynchronously {
+            let success = exporter.status == .completed
+            if success {
+                DispatchQueue.main.async {
+                    result(["outputPath": outputPath, "duration": actualDuration])
+                }
+            } else {
+                try? self.fileManager.removeItem(at: outputURL)
+                DispatchQueue.main.async {
+                    result(FlutterError(
+                        code: "export_failed",
+                        message: exporter.error?.localizedDescription ?? "Unknown error",
+                        details: nil
+                    ))
+                }
+            }
+        }
+    }
+
+    private func saveAsRingtone(
+        audioPath: String,
+        ringtoneName: String,
+        startTime: Double,
+        duration: Double,
+        result: @escaping FlutterResult
+    ) {
+        let sourceURL = URL(fileURLWithPath: audioPath)
+
+        guard fileManager.fileExists(atPath: audioPath) else {
+            DispatchQueue.main.async {
+                result(FlutterError(code: "file_not_found", message: "Audio file not found", details: nil))
+            }
+            return
+        }
+
+        // For iOS, we need to export as .m4r (AAC format, max 30 seconds)
+        // First, trim if needed
+        let asset = AVURLAsset(url: sourceURL)
+        let assetDuration = CMTimeGetSeconds(asset.duration)
+
+        let actualDuration = min(duration, max(0, assetDuration - startTime))
+        let maxRingtoneDuration = 30.0 // iOS limit
+        let finalDuration = min(actualDuration, maxRingtoneDuration)
+
+        guard let exporter = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A) else {
+            DispatchQueue.main.async {
+                result(FlutterError(code: "exporter_failed", message: "Could not create exporter", details: nil))
+            }
+            return
+        }
+
+        let documentsPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let ringtoneURL = documentsPath.appendingPathComponent("\(ringtoneName).m4r")
+
+        // Remove existing file
+        try? fileManager.removeItem(at: ringtoneURL)
+
+        exporter.outputURL = ringtoneURL
+        exporter.outputFileType = .m4a
+        exporter.shouldOptimizeForNetworkUse = false
+
+        let timeRange = CMTimeRange(
+            start: CMTime(seconds: startTime, preferredTimescale: 600),
+            duration: CMTime(seconds: finalDuration, preferredTimescale: 600)
+        )
+        exporter.timeRange = timeRange
+
+        exporter.exportAsynchronously {
+            guard exporter.status == .completed else {
+                try? self.fileManager.removeItem(at: ringtoneURL)
+                DispatchQueue.main.async {
+                    result(FlutterError(
+                        code: "export_failed",
+                        message: exporter.error?.localizedDescription ?? "Ringtone export failed",
+                        details: nil
+                    ))
+                }
+                return
+            }
+
+            // Now we need to save it to the Ringtones library
+            // This requires using the UIDocumentPickerViewController or shared container
+            // For simplicity, we return the path and let the Flutter side handle sharing
+            DispatchQueue.main.async {
+                result([
+                    "ringtonePath": ringtoneURL.path,
+                    "duration": finalDuration,
+                    "name": ringtoneName
+                ])
+            }
+        }
+    }
+
+    private func getVideoDuration(videoPath: String, result: @escaping FlutterResult) {
+        let url = URL(fileURLWithPath: videoPath)
+        guard fileManager.fileExists(atPath: videoPath) else {
+            DispatchQueue.main.async {
+                result(FlutterError(code: "file_not_found", message: "Video file not found", details: nil))
+            }
+            return
+        }
+
+        let asset = AVURLAsset(url: url)
+        let duration = CMTimeGetSeconds(asset.duration)
+
+        if duration.isNaN || duration.isInfinite {
+            DispatchQueue.main.async {
+                result(FlutterError(code: "invalid_duration", message: "Could not determine duration", details: nil))
+            }
+        } else {
+            DispatchQueue.main.async {
+                result(["duration": duration])
+            }
+        }
+    }
+}
+
 // MARK: - Downloaded media metadata writer
 class LyricsMetadataWriterHandler: NSObject {
     private let channel: FlutterMethodChannel

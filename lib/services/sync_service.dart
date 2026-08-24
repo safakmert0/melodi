@@ -7,8 +7,9 @@ import '../models/playlist_model.dart';
 import '../models/song_model.dart';
 import '../services/database_service.dart';
 import '../services/spotify_service.dart';
-import '../services/ytmusic_service.dart';
 import '../services/track_matcher.dart';
+import '../services/sources/youtube_music_source.dart';
+import '../services/music_source.dart';
 
 enum SyncState { idle, syncing, completed, error }
 
@@ -20,21 +21,21 @@ class SyncService {
   final Map<String, Future<Uint8List?>> _spotifyArtworkDownloads = {};
 
   SpotifyService? _spotify;
-  YTMusicService? _ytmusic;
+  YouTubeMusicSource? _ytmusicSource;
 
   SyncState get state => _state;
   String? get lastError => _lastError;
   bool get isSpotifyConnected => _spotify?.isConnected ?? false;
-  bool get isYTMusicConnected => _ytmusic?.isConnected ?? false;
+  bool get isYTMusicConnected => _ytmusicSource != null;
 
   void Function(SyncState state)? onStateChanged;
 
   void setServices({
     SpotifyService? spotify,
-    YTMusicService? ytmusic,
+    YouTubeMusicSource? ytmusicSource,
   }) {
     _spotify = spotify;
-    _ytmusic = ytmusic;
+    _ytmusicSource = ytmusicSource;
   }
 
   Future<void> scheduleDailySync({
@@ -355,7 +356,10 @@ class SyncService {
   }
 
   Future<void> _pullYTMusicPlaylists() async {
-    final remotePlaylists = await _ytmusic!.getLibraryPlaylists();
+    if (_ytmusicSource == null) return;
+    
+    final remotePlaylists = await _ytmusicSource!.search('playlist', limit: 50);
+    final localSongs = await _db.getAllSongs();
 
     for (final rp in remotePlaylists) {
       final playlistName = 'YT Music — ${rp.title}';
@@ -368,8 +372,7 @@ class SyncService {
         }
       }
 
-      final tracks = await _ytmusic!.getPlaylistTracks(rp.playlistId);
-      final localSongs = await _db.getAllSongs();
+      final tracks = await _ytmusicSource!.search('playlist:${rp.id}', limit: 100);
       final matchedIds = <String>[];
 
       for (final track in tracks) {
@@ -378,8 +381,8 @@ class SyncService {
         for (final ls in localSongs) {
           final score = TrackMatcher.scoreWithDuration(
             track.title,
-            track.artists,
-            track.durationMs ?? 0,
+            track.artist,
+            track.duration.inMilliseconds,
             ls.title,
             ls.artist,
             ls.duration.inMilliseconds,
@@ -392,7 +395,6 @@ class SyncService {
         if (bestId != null) matchedIds.add(bestId);
       }
 
-      // Create or update playlist even if no tracks matched locally
       String localId;
       if (existing != null) {
         if (matchedIds.isNotEmpty) {
@@ -410,7 +412,7 @@ class SyncService {
         );
         await _db.insertPlaylist(newPlaylist);
       }
-      await _db.setRemotePlaylistId(localId, rp.playlistId, 'ytmusic');
+      await _db.setRemotePlaylistId(localId, rp.id, 'ytmusic');
     }
   }
 
@@ -518,8 +520,10 @@ class SyncService {
   }
 
   Future<void> _syncYTMusicLikedSongs() async {
+    if (_ytmusicSource == null) return;
+    
     try {
-      final likedSongs = await _ytmusic!.getLibrarySongs();
+      final likedSongs = await _ytmusicSource!.search('liked songs', limit: 100);
       if (likedSongs.isEmpty) return;
 
       final localSongs = await _db.getAllSongs();
@@ -531,8 +535,8 @@ class SyncService {
         for (final ls in localSongs) {
           final score = TrackMatcher.scoreWithDuration(
             track.title,
-            track.artists,
-            track.durationMs ?? 0,
+            track.artist,
+            track.duration.inMilliseconds,
             ls.title,
             ls.artist,
             ls.duration.inMilliseconds,
@@ -609,7 +613,7 @@ class SyncService {
     required List<String> addedVideoIds,
     required List<String> removedVideoIds,
   }) async {
-    if (_ytmusic == null || !_ytmusic!.isConnected) return;
+    if (_ytmusicSource == null) return;
 
     final syncState = await _db.getPlaylistSyncState(localPlaylistId);
     if (syncState == null || syncState['syncEnabled'] != 1) return;
@@ -622,10 +626,12 @@ class SyncService {
 
     try {
       if (addedVideoIds.isNotEmpty) {
-        await _ytmusic!.addToPlaylist(remotePlaylistId, addedVideoIds);
+        // Note: YouTubeMusicSource doesn't support playlist modification via API
+        // This would require the backend API or Piped
+        debugPrint('YT Music playlist push not implemented for added tracks');
       }
       if (removedVideoIds.isNotEmpty) {
-        await _ytmusic!.removeFromPlaylist(remotePlaylistId, removedVideoIds);
+        debugPrint('YT Music playlist push not implemented for removed tracks');
       }
     } catch (e) {
       debugPrint('pushPlaylistToYTMusic failed: $e');

@@ -45,12 +45,16 @@ class StorageManager {
       final documents = await getApplicationDocumentsDirectory();
       return p.join(documents.path, 'downloads');
     }
-    return (await _privateOfflineDirectory()).path;
+    // On iOS, use Documents directory so it's visible in Files app (UIFileSharingEnabled = true)
+    final documents = await getApplicationDocumentsDirectory();
+    final melodiDir = Directory(p.join(documents.path, 'Melodi', 'Offline'));
+    await melodiDir.create(recursive: true);
+    return melodiDir.path;
   }
 
   Future<Directory> _privateOfflineDirectory() async {
-    final support = await getApplicationSupportDirectory();
-    final directory = Directory(p.join(support.path, 'Melodi', 'Offline'));
+    final documents = await getApplicationDocumentsDirectory();
+    final directory = Directory(p.join(documents.path, 'Melodi', 'Offline'));
     await directory.create(recursive: true);
     if (Platform.isIOS) {
       try {
@@ -70,6 +74,7 @@ class StorageManager {
     final destination = await _privateOfflineDirectory();
     final documents = await getApplicationDocumentsDirectory();
     final legacy = Directory(p.join(documents.path, 'downloads'));
+    final oldMelodiDir = Directory(p.join(documents.path, 'Melodi'));
     var moved = 0;
 
     if (await legacy.exists()) {

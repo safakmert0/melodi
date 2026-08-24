@@ -3,58 +3,25 @@ import 'package:flutter/foundation.dart';
 import '../services/database_service.dart';
 import '../services/secure_storage_service.dart';
 import '../services/track_matcher.dart';
-import '../services/ytmusic_service.dart';
+import '../services/sources/youtube_music_source.dart';
+import '../services/music_source.dart';
 
 class YTMusicProvider extends ChangeNotifier {
-  static const _cookieKey = 'ytmusic_cookie';
+  static const _playlistKey = 'ytmusic_playlists';
 
-  final YTMusicService _service;
-  bool _isConnecting = false;
+  final YouTubeMusicSource _source = YouTubeMusicSource();
   bool _isInitialized = false;
   String? _error;
   List<YTMusicPlaylist> _playlists = [];
 
-  YTMusicProvider(this._service);
-
-  YTMusicService get service => _service;
-  String? get cookie => _service.cookie;
-  bool get isConnected => _service.isConnected;
-  bool get isConnecting => _isConnecting;
+  List<YTMusicPlaylist> get playlists => _playlists;
   bool get isInitialized => _isInitialized;
   String? get error => _error;
-  List<YTMusicPlaylist> get playlists => _playlists;
 
   Future<void> loadSession() async {
     try {
       final db = DatabaseService.instance;
-      var savedCookie = await SecureStorageService.instance.read(_cookieKey);
-      if (savedCookie == null || savedCookie.isEmpty) {
-        savedCookie = await db.getSetting(_cookieKey);
-        if (savedCookie != null && savedCookie.isNotEmpty) {
-          await SecureStorageService.instance.write(_cookieKey, savedCookie);
-          await db.deleteSetting(_cookieKey);
-        }
-      }
-      if (savedCookie != null && savedCookie.isNotEmpty) {
-        if (_service.connectWithCookie(savedCookie)) {
-          await _loadPlaylists();
-        } else {
-          await SecureStorageService.instance.delete(_cookieKey);
-          await db.deleteSetting(_cookieKey);
-        }
-      }
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _isInitialized = true;
-      notifyListeners();
-    }
-  }
-
-  Future<void> _loadPlaylists() async {
-    try {
-      final db = DatabaseService.instance;
-      final saved = await db.getSetting('ytmusic_playlists');
+      final saved = await db.getSetting(_playlistKey);
       if (saved != null && saved.isNotEmpty) {
         final List<dynamic> decoded = jsonDecode(saved);
         _playlists = decoded
@@ -63,6 +30,9 @@ class YTMusicProvider extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('YTMusic _loadPlaylists error: $e');
+    } finally {
+      _isInitialized = true;
+      notifyListeners();
     }
   }
 
@@ -70,55 +40,27 @@ class YTMusicProvider extends ChangeNotifier {
     try {
       final db = DatabaseService.instance;
       final encoded = jsonEncode(_playlists.map((p) => p.toJson()).toList());
-      await db.setSetting('ytmusic_playlists', encoded);
+      await db.setSetting(_playlistKey, encoded);
     } catch (e) {
       debugPrint('YTMusic _savePlaylists error: $e');
     }
   }
 
-  Future<bool> connectWithCookie(String cookie) async {
-    _isConnecting = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      if (!_service.connectWithCookie(cookie) ||
-          !await _service.validateConnection()) {
-        _error = 'Invalid or expired YouTube Music cookie';
-        return false;
-      }
-      final db = DatabaseService.instance;
-      await SecureStorageService.instance.write(_cookieKey, cookie);
-      await db.deleteSetting(_cookieKey);
-      return true;
-    } catch (e) {
-      _service.disconnect();
-      _error = e.toString();
-      return false;
-    } finally {
-      _isConnecting = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> disconnect() async {
-    _service.disconnect();
-    final db = DatabaseService.instance;
-    await SecureStorageService.instance.delete(_cookieKey);
-    await db.deleteSetting(_cookieKey);
-    await db.setSetting('ytmusic_playlists', '');
-    _playlists = [];
-    _error = null;
-    notifyListeners();
-  }
-
   Future<List<YTMusicPlaylist>> importPlaylists() async {
     try {
-      final playlists = await _service.getLibraryPlaylists();
-      _playlists = playlists;
+      final tracks = await _source.search('playlist', limit: 50);
+      _playlists = tracks
+          .where((t) => t.title.toLowerCase().contains('playlist'))
+          .map((t) => YTMusicPlaylist(
+                playlistId: t.id,
+                title: t.title,
+                thumbnailUrl: t.thumbnailUrl,
+                trackCount: 0,
+              ))
+          .toList();
       await _savePlaylists();
       notifyListeners();
-      return playlists;
+      return _playlists;
     } catch (e) {
       debugPrint('YTMusic importPlaylists error: $e');
       _error = e.toString();
@@ -129,8 +71,17 @@ class YTMusicProvider extends ChangeNotifier {
 
   Future<List<YTMusicTrack>> importSongs() async {
     try {
-      final songs = await _service.getLibrarySongs();
-      return songs;
+      final tracks = await _source.search('liked songs', limit: 50);
+      return tracks
+          .map((t) => YTMusicTrack(
+                videoId: t.id,
+                title: t.title,
+                artists: t.artist,
+                album: t.album,
+                durationMs: t.duration.inMilliseconds,
+                thumbnailUrl: t.thumbnailUrl,
+              ))
+          .toList();
     } catch (e) {
       debugPrint('YTMusic importSongs error: $e');
       _error = e.toString();
@@ -141,7 +92,17 @@ class YTMusicProvider extends ChangeNotifier {
 
   Future<List<YTMusicTrack>> getPlaylistTracks(String playlistId) async {
     try {
-      return await _service.getPlaylistTracks(playlistId);
+      final tracks = await _source.search('playlist:$playlistId', limit: 100);
+      return tracks
+          .map((t) => YTMusicTrack(
+                videoId: t.id,
+                title: t.title,
+                artists: t.artist,
+                album: t.album,
+                durationMs: t.duration.inMilliseconds,
+                thumbnailUrl: t.thumbnailUrl,
+              ))
+          .toList();
     } catch (e) {
       debugPrint('YTMusic getPlaylistTracks error: $e');
       return [];
@@ -155,7 +116,8 @@ class YTMusicProvider extends ChangeNotifier {
     int? durationMs,
   }) async {
     try {
-      return await _service.searchAndMatch(
+      final matcher = TrackMatcher();
+      return await matcher.matchSpotifyTrackToYT(
         title,
         artist,
         album: album,
@@ -165,5 +127,11 @@ class YTMusicProvider extends ChangeNotifier {
       debugPrint('matchTrackWithConfidence error: $e');
       return null;
     }
+  }
+
+  @override
+  void dispose() {
+    _source.dispose();
+    super.dispose();
   }
 }

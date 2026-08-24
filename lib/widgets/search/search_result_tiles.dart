@@ -12,7 +12,6 @@ Color musicSourceColor(MusicSourceType source) => switch (source) {
       MusicSourceType.youtube => const Color(0xFFFF453A),
       MusicSourceType.jiosaavn => const Color(0xFF2BC5B4),
       MusicSourceType.deezer => const Color(0xFFA970FF),
-      MusicSourceType.lastfm => const Color(0xFFD51007),
       MusicSourceType.navidrome => const Color(0xFF6C8CFF),
       MusicSourceType.hifi => const Color(0xFF1ED760),
     };
@@ -323,7 +322,6 @@ class SearchSourceFilters extends StatelessWidget {
         MusicSourceType.youtube => 'YouTube',
         MusicSourceType.jiosaavn => 'JioSaavn',
         MusicSourceType.deezer => 'Deezer',
-        MusicSourceType.lastfm => 'Last.fm',
         MusicSourceType.navidrome => 'Navidrome',
         MusicSourceType.hifi => 'Hi-Fi',
       };

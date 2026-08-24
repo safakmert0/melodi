@@ -1,10 +1,10 @@
 import '../services/database_service.dart';
-import '../services/ytmusic_service.dart';
+import '../services/sources/youtube_music_source.dart';
 import 'track_matcher.dart';
 
 class WrongMatchService {
   final DatabaseService _db = DatabaseService.instance;
-  final YTMusicService _ytmusic = YTMusicService();
+  final YouTubeMusicSource _ytmusic = YouTubeMusicSource();
 
   Future<void> flagWrongMatch(String spotifyTrackId, String ytVideoId) async {
     final existing = await _db.rawQuery(
@@ -18,13 +18,13 @@ class WrongMatchService {
     ''', [spotifyTrackId, ytVideoId, DateTime.now().toIso8601String()]);
   }
 
-  Future<List<YTMusicTrack>> getAlternatives(
+  Future<List<OnlineTrack>> getAlternatives(
       String title, String artist) async {
     final query = '$title ${artist.isNotEmpty ? artist : ''}'.trim();
-    final results = await _ytmusic.search(query);
+    final results = await _ytmusic.search(query, limit: 20);
     results.sort((a, b) {
-      final aScore = TrackMatcher.score(title, artist, a.title, a.artists);
-      final bScore = TrackMatcher.score(title, artist, b.title, b.artists);
+      final aScore = TrackMatcher.score(title, artist, a.title, a.artist);
+      final bScore = TrackMatcher.score(title, artist, b.title, b.artist);
       return bScore.compareTo(aScore);
     });
     return results.take(10).toList();

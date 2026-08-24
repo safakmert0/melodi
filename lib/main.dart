@@ -8,6 +8,7 @@ import 'core/constants.dart';
 import 'core/localization.dart';
 import 'services/audio_handler.dart';
 import 'services/database_service.dart';
+import 'services/extension_service.dart';
 import 'services/diagnostics_service.dart';
 import 'services/crash_reporter.dart';
 import 'services/logger_service.dart';
@@ -17,7 +18,6 @@ import 'providers/playlist_provider.dart';
 import 'providers/search_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/youtube_provider.dart';
-import 'services/ytmusic_service.dart';
 import 'providers/ytmusic_provider.dart';
 import 'providers/spotify_provider.dart';
 import 'providers/mix_provider.dart';
@@ -25,9 +25,8 @@ import 'providers/sync_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/metadata_provider.dart';
 import 'providers/scrobble_provider.dart';
-import 'providers/lastfm_provider.dart';
 import 'providers/connection_provider.dart';
-import 'providers/download_provider.dart';
+import 'providers/download_provider.dart'
 import 'providers/like_mirror_provider.dart';
 import 'services/scrobble_service.dart';
 import 'services/like_mirror_service.dart';
@@ -74,6 +73,23 @@ Future<void> main() async {
       await db.database;
     } catch (e) {
       AppLogger.e('Database init failed: $e');
+    }
+    try {
+      await RobustPipedService.instance.initialize();
+      AppLogger.i('RobustPipedService initialized');
+    } catch (e) {
+      AppLogger.e('RobustPipedService init failed: $e');
+    }
+    try {
+      await HLSDownloaderService.instance.downloadHLS(
+        hlsManifestUrl: '', // dummy to initialize
+        videoId: 'init',
+        title: '',
+        artist: '',
+      );
+      AppLogger.i('HLSDownloaderService initialized');
+    } catch (e) {
+      AppLogger.e('HLSDownloaderService init failed: $e');
     }
     try {
       final migration = await StorageManager.instance.migrateLegacyDownloads();
@@ -222,6 +238,15 @@ class _AppEntryState extends State<_AppEntry> {
   void initState() {
     super.initState();
     _checkOnboarding();
+    _refreshExtensions();
+  }
+
+  /// Kurulu eklentileri depo sürümleriyle arka planda günceller; sunucu
+  /// adresi değişirse (ör. tunnel yenilendiğinde) manifestler tazelenir.
+  Future<void> _refreshExtensions() async {
+    try {
+      await ExtensionService.instance.updateAll();
+    } catch (_) {}
   }
 
   Future<void> _checkOnboarding() async {
@@ -274,10 +299,7 @@ class MelodiApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => LocaleNotifier()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()..loadSettings()),
         ChangeNotifierProvider(create: (_) => SpotifyProvider()..init()),
-        ChangeNotifierProvider(create: (_) {
-          final service = YTMusicService();
-          return YTMusicProvider(service)..loadSession();
-        }),
+        ChangeNotifierProvider(create: (_) => YouTubeMusicProvider()..loadSession()),
         ChangeNotifierProvider(
           create: (ctx) {
             final spotify = ctx.read<SpotifyProvider>();
@@ -293,7 +315,7 @@ class MelodiApp extends StatelessWidget {
             final playlists = ctx.read<PlaylistProvider>();
             final library = ctx.read<LibraryProvider>();
             sync.setServices(
-                spotify: spotify.service, ytmusic: ytmusic.service);
+                spotify: spotify.service, ytmusicSource: ytmusic.source);
             sync.onSyncCompleted = () async {
               await playlists.loadPlaylists();
               await library.loadAll();
@@ -312,20 +334,19 @@ class MelodiApp extends StatelessWidget {
             final ytmusic = ctx.read<YTMusicProvider>();
             final spotify = ctx.read<SpotifyProvider>();
             final service = ScrobbleService(
-                ytmusic: ytmusic.service, spotify: spotify.service);
+                spotify: spotify.service);
             final provider = ScrobbleProvider(service: service);
             provider.init();
             return provider;
           },
         ),
-        ChangeNotifierProvider(create: (_) => LastFmProvider()..loadSession()),
         ChangeNotifierProvider(
           create: (ctx) {
             final spotify = ctx.read<SpotifyProvider>();
             final ytmusic = ctx.read<YTMusicProvider>();
             final provider = ConnectionProvider(
               spotifyService: spotify.service,
-              ytmusicService: ytmusic.service,
+              ytmusicSource: ytmusic.source,
             );
             provider.init();
             return provider;
@@ -337,7 +358,7 @@ class MelodiApp extends StatelessWidget {
             final ytmusic = ctx.read<YTMusicProvider>();
             return MetadataProvider(
                 spotifyService: spotify.service,
-                ytmusicService: ytmusic.service);
+                ytmusicSource: ytmusic.source);
           },
         ),
         ChangeNotifierProvider(
@@ -346,7 +367,7 @@ class MelodiApp extends StatelessWidget {
             final ytmusic = ctx.read<YTMusicProvider>();
             final service = LikeMirrorService(
                 spotifyService: spotify.service,
-                ytMusicService: ytmusic.service);
+                ytMusicSource: ytmusic.source);
             final provider = LikeMirrorProvider(service);
             provider.init();
             return provider;

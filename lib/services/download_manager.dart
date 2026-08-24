@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../models/song_model.dart';
+import 'backend_api_service.dart';
 import 'database_service.dart';
-import 'youtube_service.dart';
+import 'piped_service.dart';
+import 'youtube_downloader.dart';
 import 'metadata_service.dart';
 import 'multi_source_search.dart';
 import 'music_source.dart';
@@ -58,12 +60,10 @@ class DownloadManager {
 
   final List<DownloadTask> _tasks = [];
   int _activeDownloads = 0;
-  // A single transfer is substantially more stable on iOS where several
-  // extractors/transcoders would otherwise compete for memory and bandwidth.
   static const int _maxParallel = 1;
   final StreamController<List<DownloadTask>> _controller =
       StreamController<List<DownloadTask>>.broadcast();
-  final YouTubeService _youtubeService = YouTubeService();
+  final YouTubeDownloader _youtubeDownloader = YouTubeDownloader();
   final MultiSourceSearch _multiSource = MultiSourceSearch();
 
   /// Callback when a download completes - triggers library refresh
@@ -158,34 +158,6 @@ class DownloadManager {
     return candidates;
   }
 
-  List<YouTubeVideo> _rankYouTubeVideos(
-      Iterable<YouTubeVideo> videos, DownloadTask task) {
-    final candidates = videos
-        .where((video) =>
-            isDurationCompatible(video.duration, task.expectedDurationMs))
-        .toList();
-    candidates.sort((a, b) {
-      final aScore = TrackMatcher.scoreWithDuration(
-        task.title,
-        task.artist,
-        task.expectedDurationMs,
-        a.title,
-        a.author,
-        a.duration.inMilliseconds,
-      );
-      final bScore = TrackMatcher.scoreWithDuration(
-        task.title,
-        task.artist,
-        task.expectedDurationMs,
-        b.title,
-        b.author,
-        b.duration.inMilliseconds,
-      );
-      return bScore.compareTo(aScore);
-    });
-    return candidates;
-  }
-
   Future<void> _processQueue() async {
     while (_activeDownloads < _maxParallel) {
       final pending =
@@ -206,8 +178,6 @@ class DownloadManager {
           Directory(await StorageManager.instance.getStorageLocation());
       await downloadDir.create(recursive: true);
 
-      // Try full-track sources first. Deezer catalogue entries are deliberately
-      // excluded because its public URL is only a 30-second preview.
       task.progress = 0.05;
       task.error = 'Kaynaklar aranıyor...';
       _notify();
@@ -216,14 +186,10 @@ class DownloadManager {
       String? streamUrl = task.directUrl;
       List<OnlineTrack> allTracks = const [];
 
-      // A user-owned server can provide the exact file. Preserve that source
-      // instead of matching the metadata to an unrelated public upload.
       if (streamUrl == null || streamUrl.isEmpty) {
         allTracks = await _multiSource.searchAllSync(query, limitPerSource: 3);
       }
       if (allTracks.isNotEmpty) {
-        // JioSaavn can expose a full media URL. YouTube is handled separately
-        // by YouTubeService so throttling/signature changes are supported.
         final priorityOrder = [
           MusicSourceType.navidrome,
           MusicSourceType.jiosaavn,
@@ -251,9 +217,7 @@ class DownloadManager {
         }
       }
 
-      // For YouTube tracks, use YouTube service download (handles throttling)
       if (streamUrl == null && !task.cancelled) {
-        // Find YouTube track from search results
         final ytTracks = _rankOnlineTracks(
           allTracks.where((track) => track.source == MusicSourceType.youtube),
           task,
@@ -262,27 +226,30 @@ class DownloadManager {
         if (videoId == null && ytTracks.isNotEmpty) {
           videoId = ytTracks.first.id;
         } else if (videoId == null) {
-          // Fallback: search YouTube directly
           task.progress = 0.1;
           task.error = 'YouTube aranıyor...';
           _notify();
-          final videos = await _youtubeService.search(query);
-          final rankedVideos = _rankYouTubeVideos(videos, task);
-          if (rankedVideos.isNotEmpty) {
-            videoId = rankedVideos.first.id;
+          final searchResults = await _multiSource.searchAllSync(
+            query,
+            limitPerSource: 5,
+          );
+          final ytResults = searchResults
+              .where((t) => t.source == MusicSourceType.youtube)
+              .toList();
+          if (ytResults.isNotEmpty) {
+            videoId = ytResults.first.id;
           }
         }
 
         if (videoId != null) {
           task.progress = 0.15;
-          task.error = 'YouTube indiriliyor...';
+          task.error = 'YouTube indiriliyor (Backend/Piped)...';
           _notify();
-          // Use YouTube service which handles throttling properly
-          final resultPath = await _youtubeService.downloadAudio(
+          final resultPath = await _youtubeDownloader.downloadFullTrack(
             videoId,
             task.title,
+            downloadDir,
             quality: task.requestedQuality,
-            destinationDirectory: downloadDir.path,
           );
           if (resultPath != null) {
             task.filePath = resultPath;
@@ -336,12 +303,9 @@ class DownloadManager {
       task.progress = 0.3;
       _notify();
 
-      // Download from stream URL
       var resultPath =
           await _downloadFromUrl(streamUrl, task.title, downloadDir);
 
-      // A provider URL can expire or reject a direct request. Fall back to the
-      // dedicated YouTube downloader before marking the task as failed.
       if (resultPath == null && !task.cancelled) {
         resultPath = await _downloadFromYouTube(
           task: task,
@@ -420,22 +384,26 @@ class DownloadManager {
         task.progress = 0.15;
         task.error = 'YouTube yedek kaynağı aranıyor...';
         _notify();
-        final videos = await _youtubeService.search(query);
-        final rankedVideos = _rankYouTubeVideos(videos, task);
-        if (rankedVideos.isNotEmpty) {
-          videoId = rankedVideos.first.id;
+        final searchResults = await _multiSource.searchAllSync(
+          query,
+          limitPerSource: 5,
+        );
+        final ytResults = searchResults
+            .where((t) => t.source == MusicSourceType.youtube)
+            .toList();
+        if (ytResults.isNotEmpty) {
+          videoId = ytResults.first.id;
         }
       }
       if (videoId == null || task.cancelled) return null;
       task.progress = 0.2;
       task.error = 'YouTube yedek kaynağından indiriliyor...';
       _notify();
-      return _youtubeService.downloadAudio(
+      return await _youtubeDownloader.downloadFullTrack(
         videoId,
         task.title,
+        Directory(await StorageManager.instance.getStorageLocation()),
         quality: task.requestedQuality,
-        destinationDirectory:
-            await StorageManager.instance.getStorageLocation(),
       );
     } catch (error) {
       debugPrint('YouTube fallback download error: $error');
@@ -690,7 +658,6 @@ class DownloadManager {
 
   void dispose() {
     _controller.close();
-    _youtubeService.dispose();
     _multiSource.dispose();
   }
 }

@@ -6,7 +6,6 @@ void main() {
     test('preview catalogues cannot be treated as full tracks', () {
       expect(MusicSourceType.deezer.isPreviewCatalogue, isTrue);
       expect(MusicSourceType.deezer.supportsFullTrack, isFalse);
-      expect(MusicSourceType.lastfm.supportsFullTrack, isFalse);
     });
 
     test('full-track resolvers remain playable', () {

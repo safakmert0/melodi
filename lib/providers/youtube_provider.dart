@@ -1,17 +1,18 @@
 import 'package:flutter/foundation.dart';
 import '../core/localization.dart';
-import '../services/youtube_service.dart';
+import '../services/sources/youtube_music_source.dart';
+import '../services/music_source.dart';
 
 class YouTubeProvider extends ChangeNotifier {
-  final YouTubeService _service = YouTubeService();
+  final YouTubeMusicSource _source = YouTubeMusicSource();
 
-  List<YouTubeVideo> _results = [];
+  List<OnlineTrack> _results = [];
   bool _isSearching = false;
   String _query = '';
   bool _isDownloading = false;
   String? _downloadProgress;
 
-  List<YouTubeVideo> get results => _results;
+  List<OnlineTrack> get results => _results;
   bool get isSearching => _isSearching;
   String get query => _query;
   bool get isDownloading => _isDownloading;
@@ -29,7 +30,7 @@ class YouTubeProvider extends ChangeNotifier {
     _query = query;
     notifyListeners();
 
-    _results = await _service.search(query);
+    _results = await _source.search(query);
     _isSearching = false;
     notifyListeners();
   }
@@ -40,8 +41,14 @@ class YouTubeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> getAudioUrl(String videoId) async {
-    return await _service.getAudioUrl(videoId);
+  Future<String?> getStreamUrl(String videoId) async {
+    return await _source.getStreamUrl(OnlineTrack(
+      id: videoId,
+      title: '',
+      artist: '',
+      duration: Duration.zero,
+      source: MusicSourceType.youtube,
+    ));
   }
 
   Future<String?> playAudio(String videoId, String title) async {
@@ -49,7 +56,12 @@ class YouTubeProvider extends ChangeNotifier {
     _downloadProgress = '${AppLocale.tr('loading_song')} $title';
     notifyListeners();
 
-    final path = await _service.playAudio(videoId, title);
+    final path = await DownloadManager().addTask(
+      spotifyTrackId: 'youtube:$videoId',
+      title: title,
+      artist: '',
+      sourceVideoId: videoId,
+    ) ? 'started' : null;
 
     _isDownloading = false;
     _downloadProgress = path != null
@@ -65,7 +77,12 @@ class YouTubeProvider extends ChangeNotifier {
     _downloadProgress = '${AppLocale.tr('downloading')} $title';
     notifyListeners();
 
-    final path = await _service.downloadAudio(videoId, title);
+    final path = await DownloadManager().addTask(
+      spotifyTrackId: 'youtube:$videoId',
+      title: title,
+      artist: '',
+      sourceVideoId: videoId,
+    ) ? 'started' : null;
 
     _isDownloading = false;
     _downloadProgress = path != null
@@ -78,7 +95,7 @@ class YouTubeProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _service.dispose();
+    _source.dispose();
     super.dispose();
   }
 }

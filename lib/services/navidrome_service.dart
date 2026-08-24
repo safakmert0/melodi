@@ -222,6 +222,70 @@ class NavidromeService {
         .toString();
   }
 
+  Future<bool> createPlaylist(String name, List<String> trackIds) async {
+    try {
+      if (trackIds.isEmpty) return false;
+      final response = await _request(
+        'createPlaylist',
+        parameters: {
+          'name': name,
+          'songId': trackIds.map((id) => id.replaceFirst('navidrome:', '')).join(','),
+        },
+      );
+      return response['playlist'] != null;
+    } catch (e) {
+      debugPrint('Create Navidrome playlist error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> addToPlaylist(String playlistId, List<String> trackIds) async {
+    try {
+      if (trackIds.isEmpty) return false;
+      await _request(
+        'updatePlaylist',
+        parameters: {
+          'playlistId': playlistId,
+          'songIdToAdd': trackIds.map((id) => id.replaceFirst('navidrome:', '')).join(','),
+        },
+      );
+      return true;
+    } catch (e) {
+      debugPrint('Add to Navidrome playlist error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> removeFromPlaylist(String playlistId, List<String> trackIds) async {
+    try {
+      if (trackIds.isEmpty) return false;
+      await _request(
+        'updatePlaylist',
+        parameters: {
+          'playlistId': playlistId,
+          'songIdToRemove': trackIds.map((id) => id.replaceFirst('navidrome:', '')).join(','),
+        },
+      );
+      return true;
+    } catch (e) {
+      debugPrint('Remove from Navidrome playlist error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deletePlaylist(String playlistId) async {
+    try {
+      await _request(
+        'deletePlaylist',
+        parameters: {'id': playlistId},
+      );
+      return true;
+    } catch (e) {
+      debugPrint('Delete Navidrome playlist error: $e');
+      return false;
+    }
+  }
+
   List<OnlineTrack> _parseSongs(dynamic raw) {
     if (raw is! List) return const [];
     return raw
