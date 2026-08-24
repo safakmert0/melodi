@@ -40,22 +40,6 @@ jobs:
         run: pod install --repo-update
         working-directory: ./ios
       
-      - name: Patch Xcode project for unsigned build
-        run: |
-          cd ios
-          # Find all pbxproj files and patch DEVELOPMENT_TEAM to dummy value
-          for proj in Runner.xcodeproj/project.pbxproj; do
-            # Remove any existing DEVELOPMENT_TEAM lines
-            sed -i '' '/DEVELOPMENT_TEAM/d' "$proj"
-            # Add dummy DEVELOPMENT_TEAM after every PROVISIONING_PROFILE_SPECIFIER line
-            sed -i '' '/PROVISIONING_PROFILE_SPECIFIER/a\
-            DEVELOPMENT_TEAM = ABCD1234EF;\' "$proj"
-            # Also add to buildSettings blocks that don't have it
-            sed -i '' '/buildSettings {/a\
-            DEVELOPMENT_TEAM = ABCD1234EF;\' "$proj"
-          done
-          echo "Patched DEVELOPMENT_TEAM"
-      
       - name: Build iOS (unsigned)
         run: |
           flutter build ios --release \
