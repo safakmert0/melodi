@@ -51,14 +51,8 @@ jobs:
       - name: Generate localization files
         run: flutter gen-l10n
       
-      - name: Setup Ruby/Bundler for CocoaPods
-        run: |
-          gem install bundler
-          bundle install
-        working-directory: ./ios
-      
       - name: Install CocoaPods dependencies
-        run: bundle exec pod install --repo-update
+        run: pod install --repo-update
         working-directory: ./ios
       
       - name: Build iOS Release (No Code Signing)
