@@ -1,4 +1,4 @@
-name: iOS Build & Release (Unsigned IPA)
+name: iOS Build & Release
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
         working-directory: .
     
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -40,41 +40,48 @@ jobs:
         run: pod install --repo-update
         working-directory: ./ios
       
-      - name: Build iOS via xcodebuild (NO flutter build ios)
+      - name: Patch Xcode project for unsigned build
         run: |
-          xcodebuild clean build \
-            -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -derivedDataPath ios/build \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            ENABLE_BITCODE=NO \
-            DEVELOPMENT_TEAM="" \
-            PROVISIONING_PROFILE_SPECIFIER=""
-        working-directory: .
+          cd ios
+          # Find all pbxproj files and patch DEVELOPMENT_TEAM to dummy value
+          for proj in Runner.xcodeproj/project.pbxproj; do
+            # Remove any existing DEVELOPMENT_TEAM lines
+            sed -i '' '/DEVELOPMENT_TEAM/d' "$proj"
+            # Add dummy DEVELOPMENT_TEAM after every PROVISIONING_PROFILE_SPECIFIER line
+            sed -i '' '/PROVISIONING_PROFILE_SPECIFIER/a\
+            DEVELOPMENT_TEAM = ABCD1234EF;\' "$proj"
+            # Also add to buildSettings blocks that don't have it
+            sed -i '' '/buildSettings {/a\
+            DEVELOPMENT_TEAM = ABCD1234EF;\' "$proj"
+          done
+          echo "Patched DEVELOPMENT_TEAM"
       
-      - name: Create Unsigned IPA
+      - name: Build iOS (unsigned)
+        run: |
+          flutter build ios --release \
+            --build-name=${{ github.ref_name }} \
+            --build-number=${{ github.run_number }} \
+            --no-codesign
+      
+      - name: Create IPA
         run: |
           mkdir -p Payload
-          cp -r ios/build/Build/Products/Release-iphoneos/Runner.app Payload/
-          zip -r melodi-unsigned-${{ github.ref_name }}.ipa Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -r melodi-${{ github.ref_name }}-unsigned.ipa Payload
           rm -rf Payload
-        working-directory: .
       
-      - name: Upload Unsigned IPA
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: melodi-ios-unsigned-${{ github.ref_name }}
-          path: melodi-unsigned-*.ipa
+          name: melodi-ios-${{ github.ref_name }}
+          path: melodi-*-unsigned.ipa
           retention-days: 30
       
-      - name: Create Release
+      - name: Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: melodi-unsigned-*.ipa
+          files: melodi-*-unsigned.ipa
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
