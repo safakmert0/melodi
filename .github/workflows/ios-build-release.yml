@@ -55,6 +55,14 @@ jobs:
         run: pod install --repo-update
         working-directory: ./ios
       
+      - name: Set dummy Development Team in Xcode project
+        run: |
+          # Add dummy DEVELOPMENT_TEAM to Runner project (required for flutter build ios --no-codesign)
+          sed -i '' 's/DEVELOPMENT_TEAM = "";/DEVELOPMENT_TEAM = "ABC123DEFG";/g' ios/Runner.xcodeproj/project.pbxproj
+          # Also add to target if not present
+          sed -i '' '/DEVELOPMENT_TEAM = "ABC123DEFG";/! s/\(DEVELOPMENT_TEAM = \)"";/\1"ABC123DEFG";/g' ios/Runner.xcodeproj/project.pbxproj
+          echo "Development Team set to dummy value"
+      
       - name: Build iOS Release (No Code Signing)
         run: |
           flutter build ios --release \
