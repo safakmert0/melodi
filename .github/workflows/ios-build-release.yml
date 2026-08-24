@@ -1,4 +1,4 @@
-name: iOS Build & Release
+name: iOS Build & Release (Unsigned for Sideloadly)
 
 on:
   push:
@@ -16,7 +16,7 @@ env:
 
 jobs:
   build-ios:
-    name: Build iOS
+    name: Build iOS (Unsigned)
     runs-on: macos-latest
     timeout-minutes: 60
     defaults:
@@ -61,61 +61,43 @@ jobs:
         run: bundle exec pod install --repo-update
         working-directory: ./ios
       
-      - name: Update ExportOptions.plist with secrets
-        run: |
-          sed -i '' "s|YOUR_TEAM_ID|${{ secrets.IOS_TEAM_ID }}|g" ios/ExportOptions.plist
-          sed -i '' "s|Melodi App Store Profile|${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}|g" ios/ExportOptions.plist
-        env:
-          IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
-          IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
-      
-      - name: Set up code signing
-        run: |
-          echo "${{ secrets.IOS_CERTIFICATE }}" | base64 --decode > certificate.p12
-          security create-keychain -p "" build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "" build.keychain
-          security import certificate.p12 -k build.keychain -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
-          rm certificate.p12
-        env:
-          IOS_CERTIFICATE: ${{ secrets.IOS_CERTIFICATE }}
-          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-      
-      - name: Update provisioning profile
-        run: |
-          echo "${{ secrets.IOS_PROVISIONING_PROFILE }}" | base64 --decode > Melodi.mobileprovision
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp Melodi.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
-        env:
-          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
-      
-      - name: Build iOS Release
+      - name: Build iOS Release (No Code Signing)
         run: |
           flutter build ios --release \
             --build-name=${{ github.ref_name }} \
-            --build-number=${{ github.run_number }}
+            --build-number=${{ github.run_number }} \
+            --no-codesign
       
-      - name: Create IPA
+      - name: Create Unsigned IPA (for Sideloadly resigning)
         run: |
+          # Create unsigned .app bundle
           xcodebuild -workspace ios/Runner.xcworkspace \
             -scheme Runner \
             -configuration Release \
             -archivePath build/Runner.xcarchive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
             -allowProvisioningUpdates \
             archive
           
+          # Export as unsigned IPA (development method, no signing)
           xcodebuild -exportArchive \
             -archivePath build/Runner.xcarchive \
             -exportPath build/ios \
-            -exportOptionsPlist ios/ExportOptions.plist \
+            -exportOptionsPlist ios/ExportOptions-Unsigned.plist \
             -allowProvisioningUpdates
         working-directory: ./ios
       
-      - name: Upload IPA as artifact
+      - name: Verify IPA structure
+        run: |
+          ls -la ios/build/ios/
+          unzip -l ios/build/ios/*.ipa | head -30
+      
+      - name: Upload Unsigned IPA as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: melodi-ios-${{ github.ref_name }}
+          name: melodi-ios-unsigned-${{ github.ref_name }}
           path: ios/build/ios/*.ipa
           retention-days: 30
       
