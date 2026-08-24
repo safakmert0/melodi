@@ -61,6 +61,14 @@ jobs:
         run: bundle exec pod install --repo-update
         working-directory: ./ios
       
+      - name: Update ExportOptions.plist with secrets
+        run: |
+          sed -i '' "s|YOUR_TEAM_ID|${{ secrets.IOS_TEAM_ID }}|g" ios/ExportOptions.plist
+          sed -i '' "s|Melodi App Store Profile|${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}|g" ios/ExportOptions.plist
+        env:
+          IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+      
       - name: Set up code signing
         run: |
           echo "${{ secrets.IOS_CERTIFICATE }}" | base64 --decode > certificate.p12
