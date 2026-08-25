@@ -287,17 +287,17 @@ class PlayerProvider extends ChangeNotifier {
   }
 
   Future<void> setPlaybackSpeed(double speed) async {
-    await _handler.setPlaybackSpeed(speed);
+    _handler.setPlaybackSpeed(speed);
     notifyListeners();
   }
 
   Future<void> setVolume(double volume) async {
-    await _handler.setVolume(volume);
+    _handler.setVolume(volume);
     notifyListeners();
   }
 
   Future<void> setAutoShuffle(bool enabled) async {
-    await _handler.setAutoShuffle(enabled);
+    _handler.setAutoShuffle(enabled);
     notifyListeners();
   }
 
@@ -308,7 +308,7 @@ class PlayerProvider extends ChangeNotifier {
   }
 
   Future<void> setCrossfade(Duration duration) async {
-    await _handler.setCrossfade(duration);
+    _handler.setCrossfade(duration);
     notifyListeners();
   }
 

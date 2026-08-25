@@ -958,14 +958,14 @@ try {
   Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
     switch (repeatMode) {
       case AudioServiceRepeatMode.none:
-        await setLoopStyle(LoopStyle.off);
+        _player.setLoopMode(LoopMode.off);
         break;
       case AudioServiceRepeatMode.one:
-        await setLoopStyle(LoopStyle.one);
+        _player.setLoopMode(LoopMode.one);
         break;
       case AudioServiceRepeatMode.all:
       case AudioServiceRepeatMode.group:
-        await setLoopStyle(LoopStyle.all);
+        _player.setLoopMode(LoopMode.all);
         break;
     }
   }
@@ -974,10 +974,10 @@ try {
   Future<void> customAction(String name, [Map<String, dynamic>? extras]) async {
     switch (name) {
       case 'seekForward':
-        await seekForward();
+        _player.seek(Duration(seconds: _player.position.inSeconds + 10));
         break;
       case 'seekBackward':
-        await seekBackward();
+        _player.seek(Duration(seconds: _player.position.inSeconds - 10));
         break;
     }
   }
@@ -986,7 +986,7 @@ try {
   Future<int> addQueueItem(MediaItem mediaItem) async {
     final song = _queue.firstWhereOrNull((s) => s.id == mediaItem.id);
     if (song != null) {
-      await addToQueue(song);
+      add(song);
       return _queue.length - 1;
     }
     return -1;
@@ -994,7 +994,7 @@ try {
 
   @override
   Future<void> removeQueueItemAt(int index) async {
-    await removeFromQueue(index);
+    removeAt(index);
   }
 
   @override
@@ -1009,6 +1009,7 @@ try {
   void dispose() {
     _saveStateTimer?.cancel();
     _crossfadeSubscription?.cancel();
+    _sleepTimer?.cancel();
     _player.dispose();
   }
 }
