@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'database_service.dart';
 import 'download_manager.dart';
-import 'multi_source_search.dart'
+import 'multi_source_search.dart';
 import 'spotify_service.dart';
 import 'audio_quality_service.dart';
 import 'storage_manager.dart';
@@ -105,6 +106,7 @@ class SmartDownloadService {
   static SmartDownloadService get instance => _instance;
 
   final DatabaseService _db = DatabaseService.instance;
+  final SpotifyService _spotifyService = SpotifyService();
   final DownloadManager _downloadManager = DownloadManager();
   final MultiSourceSearch _multiSource = MultiSourceSearch();
   final AudioQualityService _qualityService = AudioQualityService();
@@ -267,9 +269,19 @@ class SmartDownloadService {
     }
   }
 
+  SpotifyPlaylistItem? _findPlaylist(
+    List<SpotifyPlaylistItem> playlists,
+    String name,
+  ) {
+    for (final p in playlists) {
+      if (p.name.toLowerCase().contains(name)) return p;
+    }
+    return null;
+  }
+
   Future<void> _downloadLikedSongs(SmartDownloadRule rule) async {
-    final spotify = SpotifyService();
-    if (!await spotify.isConnected()) return;
+    final spotify = _spotifyService;
+    if (!await spotify.isConnected) return;
 
     _progressController.add(SmartDownloadProgress(
       ruleId: rule.id,
@@ -286,26 +298,25 @@ class SmartDownloadService {
       total: tracks.length,
     ));
 
-    for (var i = 0; i < tracks.length; i++) {
+    for (var i = 0; i < tracks.length && i < rule.maxDownloads; i++) {
       if (!_rules.any((r) => r.id == rule.id && r.enabled)) break;
 
       final track = tracks[i];
       _progressController.add(SmartDownloadProgress(
         ruleId: rule.id,
-        status: '${track['name']} - ${track['artists'][0]['name']}',
+        status:
+            '${track.name} - ${track.artists.isNotEmpty ? track.artists.first : ''}',
         current: i + 1,
         total: tracks.length,
       ));
 
       _downloadManager.addTask(
-        spotifyTrackId: track['id'],
-        title: track['name'],
-        artist: track['artists'].map((a) => a['name']).join(', '),
-        album: track['album']['name'],
-        imageUrl: track['album']['images'].isNotEmpty
-            ? track['album']['images'][0]['url']
-            : null,
-        expectedDurationMs: track['duration_ms'],
+        spotifyTrackId: track.id,
+        title: track.name,
+        artist: track.artists.join(', '),
+        album: track.albumName ?? '',
+        imageUrl: track.albumImageUrl,
+        expectedDurationMs: track.durationMs,
       );
 
       await Future.delayed(const Duration(milliseconds: 500));
@@ -313,8 +324,8 @@ class SmartDownloadService {
   }
 
   Future<void> _downloadWeeklyMix(SmartDownloadRule rule) async {
-    final spotify = SpotifyService();
-    if (!await spotify.isConnected()) return;
+    final spotify = _spotifyService;
+    if (!await spotify.isConnected) return;
 
     _progressController.add(SmartDownloadProgress(
       ruleId: rule.id,
@@ -324,14 +335,11 @@ class SmartDownloadService {
     ));
 
     final playlists = await spotify.getUserPlaylists();
-    final weeklyMix = playlists.firstWhere(
-      (p) => (p['name'] as String).toLowerCase().contains('weekly mix'),
-      orElse: () => <String, dynamic>{},
-    );
+    final weeklyMix = _findPlaylist(playlists, 'weekly mix');
 
-    if (weeklyMix.isEmpty) return;
+    if (weeklyMix == null) return;
 
-    final tracks = await spotify.getPlaylistTracks(weeklyMix['id'], limit: rule.maxDownloads);
+    final tracks = await spotify.getPlaylistTracks(weeklyMix.id);
     _progressController.add(SmartDownloadProgress(
       ruleId: rule.id,
       status: '${tracks.length} şarkı bulundu, indiriliyor...',
@@ -339,28 +347,25 @@ class SmartDownloadService {
       total: tracks.length,
     ));
 
-    for (var i = 0; i < tracks.length; i++) {
+    for (var i = 0; i < tracks.length && i < rule.maxDownloads; i++) {
       if (!_rules.any((r) => r.id == rule.id && r.enabled)) break;
 
-      final track = tracks[i]['track'];
-      if (track == null) continue;
-
+      final track = tracks[i];
       _progressController.add(SmartDownloadProgress(
         ruleId: rule.id,
-        status: '${track['name']} - ${track['artists'][0]['name']}',
+        status:
+            '${track.name} - ${track.artists.isNotEmpty ? track.artists.first : ''}',
         current: i + 1,
         total: tracks.length,
       ));
 
       _downloadManager.addTask(
-        spotifyTrackId: track['id'],
-        title: track['name'],
-        artist: track['artists'].map((a) => a['name']).join(', '),
-        album: track['album']['name'],
-        imageUrl: track['album']['images'].isNotEmpty
-            ? track['album']['images'][0]['url']
-            : null,
-        expectedDurationMs: track['duration_ms'],
+        spotifyTrackId: track.id,
+        title: track.name,
+        artist: track.artists.join(', '),
+        album: track.albumName ?? '',
+        imageUrl: track.albumImageUrl,
+        expectedDurationMs: track.durationMs,
       );
 
       await Future.delayed(const Duration(milliseconds: 500));
@@ -368,33 +373,26 @@ class SmartDownloadService {
   }
 
   Future<void> _downloadReleaseRadar(SmartDownloadRule rule) async {
-    final spotify = SpotifyService();
-    if (!await spotify.isConnected()) return;
+    final spotify = _spotifyService;
+    if (!await spotify.isConnected) return;
 
     final playlists = await spotify.getUserPlaylists();
-    final releaseRadar = playlists.firstWhere(
-      (p) => (p['name'] as String).toLowerCase().contains('release radar'),
-      orElse: () => <String, dynamic>{},
-    );
+    final releaseRadar = _findPlaylist(playlists, 'release radar');
 
-    if (releaseRadar.isEmpty) return;
+    if (releaseRadar == null) return;
 
-    final tracks = await spotify.getPlaylistTracks(releaseRadar['id'], limit: rule.maxDownloads);
-    for (var i = 0; i < tracks.length; i++) {
+    final tracks = await spotify.getPlaylistTracks(releaseRadar.id);
+    for (var i = 0; i < tracks.length && i < rule.maxDownloads; i++) {
       if (!_rules.any((r) => r.id == rule.id && r.enabled)) break;
 
-      final track = tracks[i]['track'];
-      if (track == null) continue;
-
+      final track = tracks[i];
       _downloadManager.addTask(
-        spotifyTrackId: track['id'],
-        title: track['name'],
-        artist: track['artists'].map((a) => a['name']).join(', '),
-        album: track['album']['name'],
-        imageUrl: track['album']['images'].isNotEmpty
-            ? track['album']['images'][0]['url']
-            : null,
-        expectedDurationMs: track['duration_ms'],
+        spotifyTrackId: track.id,
+        title: track.name,
+        artist: track.artists.join(', '),
+        album: track.albumName ?? '',
+        imageUrl: track.albumImageUrl,
+        expectedDurationMs: track.durationMs,
       );
 
       await Future.delayed(const Duration(milliseconds: 500));
@@ -402,33 +400,26 @@ class SmartDownloadService {
   }
 
   Future<void> _downloadDiscoverWeekly(SmartDownloadRule rule) async {
-    final spotify = SpotifyService();
-    if (!await spotify.isConnected()) return;
+    final spotify = _spotifyService;
+    if (!await spotify.isConnected) return;
 
     final playlists = await spotify.getUserPlaylists();
-    final discover = playlists.firstWhere(
-      (p) => (p['name'] as String).toLowerCase().contains('discover weekly'),
-      orElse: () => <String, dynamic>{},
-    );
+    final discover = _findPlaylist(playlists, 'discover weekly');
 
-    if (discover.isEmpty) return;
+    if (discover == null) return;
 
-    final tracks = await spotify.getPlaylistTracks(discover['id'], limit: rule.maxDownloads);
-    for (var i = 0; i < tracks.length; i++) {
+    final tracks = await spotify.getPlaylistTracks(discover.id);
+    for (var i = 0; i < tracks.length && i < rule.maxDownloads; i++) {
       if (!_rules.any((r) => r.id == rule.id && r.enabled)) break;
 
-      final track = tracks[i]['track'];
-      if (track == null) continue;
-
+      final track = tracks[i];
       _downloadManager.addTask(
-        spotifyTrackId: track['id'],
-        title: track['name'],
-        artist: track['artists'].map((a) => a['name']).join(', '),
-        album: track['album']['name'],
-        imageUrl: track['album']['images'].isNotEmpty
-            ? track['album']['images'][0]['url']
-            : null,
-        expectedDurationMs: track['duration_ms'],
+        spotifyTrackId: track.id,
+        title: track.name,
+        artist: track.artists.join(', '),
+        album: track.albumName ?? '',
+        imageUrl: track.albumImageUrl,
+        expectedDurationMs: track.durationMs,
       );
 
       await Future.delayed(const Duration(milliseconds: 500));
@@ -438,25 +429,21 @@ class SmartDownloadService {
   Future<void> _downloadPlaylist(SmartDownloadRule rule) async {
     if (rule.sourceId == null) return;
 
-    final spotify = SpotifyService();
-    if (!await spotify.isConnected()) return;
+    final spotify = _spotifyService;
+    if (!await spotify.isConnected) return;
 
-    final tracks = await spotify.getPlaylistTracks(rule.sourceId!, limit: rule.maxDownloads);
-    for (var i = 0; i < tracks.length; i++) {
+    final tracks = await spotify.getPlaylistTracks(rule.sourceId!);
+    for (var i = 0; i < tracks.length && i < rule.maxDownloads; i++) {
       if (!_rules.any((r) => r.id == rule.id && r.enabled)) break;
 
-      final track = tracks[i]['track'];
-      if (track == null) continue;
-
+      final track = tracks[i];
       _downloadManager.addTask(
-        spotifyTrackId: track['id'],
-        title: track['name'],
-        artist: track['artists'].map((a) => a['name']).join(', '),
-        album: track['album']['name'],
-        imageUrl: track['album']['images'].isNotEmpty
-            ? track['album']['images'][0]['url']
-            : null,
-        expectedDurationMs: track['duration_ms'],
+        spotifyTrackId: track.id,
+        title: track.name,
+        artist: track.artists.join(', '),
+        album: track.albumName ?? '',
+        imageUrl: track.albumImageUrl,
+        expectedDurationMs: track.durationMs,
       );
 
       await Future.delayed(const Duration(milliseconds: 500));
@@ -466,8 +453,8 @@ class SmartDownloadService {
   Future<void> _downloadArtist(SmartDownloadRule rule) async {
     if (rule.sourceId == null) return;
 
-    final spotify = SpotifyService();
-    if (!await spotify.isConnected()) return;
+    final spotify = _spotifyService;
+    if (!await spotify.isConnected) return;
 
     final topTracks = await spotify.getArtistTopTracks(rule.sourceId!);
     for (var i = 0; i < topTracks.length && i < rule.maxDownloads; i++) {
@@ -475,14 +462,12 @@ class SmartDownloadService {
 
       final track = topTracks[i];
       _downloadManager.addTask(
-        spotifyTrackId: track['id'],
-        title: track['name'],
-        artist: track['artists'].map((a) => a['name']).join(', '),
-        album: track['album']['name'],
-        imageUrl: track['album']['images'].isNotEmpty
-            ? track['album']['images'][0]['url']
-            : null,
-        expectedDurationMs: track['duration_ms'],
+        spotifyTrackId: track.id,
+        title: track.name,
+        artist: track.artists.join(', '),
+        album: track.albumName ?? '',
+        imageUrl: track.albumImageUrl,
+        expectedDurationMs: track.durationMs,
       );
 
       await Future.delayed(const Duration(milliseconds: 500));
@@ -492,8 +477,8 @@ class SmartDownloadService {
   Future<void> _downloadAlbum(SmartDownloadRule rule) async {
     if (rule.sourceId == null) return;
 
-    final spotify = SpotifyService();
-    if (!await spotify.isConnected()) return;
+    final spotify = _spotifyService;
+    if (!await spotify.isConnected) return;
 
     final tracks = await spotify.getAlbumTracks(rule.sourceId!);
     for (var i = 0; i < tracks.length && i < rule.maxDownloads; i++) {
@@ -501,12 +486,12 @@ class SmartDownloadService {
 
       final track = tracks[i];
       _downloadManager.addTask(
-        spotifyTrackId: track['id'],
-        title: track['name'],
-        artist: track['artists'].map((a) => a['name']).join(', '),
-        album: rule.config['albumName'] as String?,
+        spotifyTrackId: track.id,
+        title: track.name,
+        artist: track.artists.join(', '),
+        album: rule.config['albumName'] as String? ?? '',
         imageUrl: rule.config['imageUrl'] as String?,
-        expectedDurationMs: track['duration_ms'],
+        expectedDurationMs: track.durationMs,
       );
 
       await Future.delayed(const Duration(milliseconds: 500));
@@ -540,9 +525,11 @@ class SmartDownloadService {
   }
 
   Future<void> runRuleNow(String ruleId) async {
-    final rule = _rules.firstWhere((r) => r.id == ruleId, orElse: () => null);
-    if (rule != null) {
-      await _runRule(rule);
+    for (final r in _rules) {
+      if (r.id == ruleId) {
+        await _runRule(r);
+        break;
+      }
     }
   }
 

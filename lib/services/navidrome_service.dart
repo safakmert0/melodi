@@ -37,6 +37,15 @@ class NavidromePlaylist {
   final Duration duration;
   final String? coverArt;
   final String? comment;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'songCount': songCount,
+        'duration': duration.inSeconds,
+        'coverArt': coverArt,
+        'comment': comment,
+      };
 }
 
 /// Client for the open Subsonic API implemented by Navidrome and compatible
@@ -106,6 +115,11 @@ class NavidromeService {
   Future<bool> isConfigured() async {
     await loadConfiguration();
     return isConnected;
+  }
+
+  Future<String?> getBaseUrl() async {
+    await loadConfiguration();
+    return _credentials?.serverUrl;
   }
 
   Future<void> connect({

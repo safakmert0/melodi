@@ -1,7 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'database_service.dart';
@@ -74,7 +74,6 @@ class AIService {
   static AIService get instance => _instance;
 
   final DatabaseService _db = DatabaseService.instance;
-  final MetadataService _metadata = MetadataService();
 
   bool _initialized = false;
   String? _modelPath;
@@ -135,7 +134,7 @@ class AIService {
 
   Future<AudioFeatures?> _runAnalysis(String filePath) async {
     try {
-      final metadata = await _metadata.extractMetadata(filePath);
+      final metadata = await MetadataService.extractMetadata(filePath);
       final duration = metadata?.duration.inSeconds ?? 0;
       if (duration < 10) return null;
 
@@ -167,12 +166,14 @@ class AIService {
     for (final genre in _genres) {
       genreScores[genre] = random.nextDouble() * 0.3;
     }
-    genreScores[_genres[random.nextInt(_genres.length)]] += 0.7;
+    final topGenre = _genres[random.nextInt(_genres.length)];
+    genreScores[topGenre] = (genreScores[topGenre] ?? 0.0) + 0.7;
 
     for (final mood in _moods) {
       moodScores[mood] = random.nextDouble() * 0.3;
     }
-    moodScores[_moods[random.nextInt(_moods.length)]] += 0.7;
+    final topMood = _moods[random.nextInt(_moods.length)];
+    moodScores[topMood] = (moodScores[topMood] ?? 0.0) + 0.7;
 
     return AudioFeatures(
       trackId: trackId,
@@ -322,14 +323,19 @@ class AIService {
 
   Future<void> _loadFeatures() async {
     try {
-      final keys = await _db.getAllSettings();
-      for (final key in keys.keys) {
-        if (key.startsWith('ai_features_')) {
-          final value = keys[key];
-          if (value != null && value.isNotEmpty) {
-            final features = AudioFeatures.fromJson(jsonDecode(value));
-            _cache[features.trackId] = features;
-          }
+      final rows = await _db.rawQuery(
+        'SELECT key, value FROM settings WHERE key LIKE ?',
+        ['ai_features_%'],
+      );
+      for (final row in rows) {
+        final key = row['key'] as String?;
+        final value = row['value'] as String?;
+        if (key != null &&
+            key.startsWith('ai_features_') &&
+            value != null &&
+            value.isNotEmpty) {
+          final features = AudioFeatures.fromJson(jsonDecode(value));
+          _cache[features.trackId] = features;
         }
       }
     } catch (e) {

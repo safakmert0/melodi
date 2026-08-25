@@ -11,6 +11,7 @@ import 'database_service.dart';
 import 'piped_service.dart';
 import 'robust_piped_service.dart';
 import 'track_matcher.dart';
+import 'multi_source_search.dart';
 import 'youtube_downloader.dart';
 import 'navidrome_service.dart';
 
@@ -62,22 +63,6 @@ class AudioPlayerHandler extends BaseAudioHandler
       _broadcastState();
     });
     _broadcastState();
-  }
-
-  void setPlaybackSpeed(double speed) {
-    _player.setSpeed(speed);
-  }
-
-  void setVolume(double volume) {
-    _player.setVolume(volume.clamp(0.0, 1.0));
-  }
-
-  void setAutoShuffle(bool enabled) {
-    _autoShuffleEnabled = enabled;
-  }
-
-  void setCrossfade(Duration duration) {
-    _crossfadeDuration = duration;
   }
 
   void _initPlayer() {
@@ -751,11 +736,6 @@ try {
       } catch (e) {
         debugPrint('Navidrome Spotify match failed: $e');
       }
-        }
-      } catch (error) {
-        debugPrint('Navidrome Spotify match failed: $error');
-      }
-    }
 
     final cached = await _db.getCachedMatch(spotifyId);
     var videoId = cached?['ytVideoId']?.toString();
@@ -986,7 +966,9 @@ try {
   Future<int> addQueueItem(MediaItem mediaItem) async {
     final song = _queue.firstWhereOrNull((s) => s.id == mediaItem.id);
     if (song != null) {
-      add(song);
+      _queue.add(song);
+      _originalQueue.add(song);
+      await _updateMediaQueue();
       return _queue.length - 1;
     }
     return -1;
@@ -994,7 +976,10 @@ try {
 
   @override
   Future<void> removeQueueItemAt(int index) async {
-    removeAt(index);
+    if (index < 0 || index >= _queue.length) return;
+    _queue.removeAt(index);
+    if (index < _originalQueue.length) _originalQueue.removeAt(index);
+    await _updateMediaQueue();
   }
 
   @override

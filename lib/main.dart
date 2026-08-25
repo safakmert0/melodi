@@ -26,7 +26,7 @@ import 'providers/settings_provider.dart';
 import 'providers/metadata_provider.dart';
 import 'providers/scrobble_provider.dart';
 import 'providers/connection_provider.dart';
-import 'providers/download_provider.dart'
+import 'providers/download_provider.dart';
 import 'providers/like_mirror_provider.dart';
 import 'services/scrobble_service.dart';
 import 'services/like_mirror_service.dart';
@@ -39,6 +39,8 @@ import 'services/voice_control_service.dart';
 import 'services/storage_manager.dart';
 import 'screens/onboarding_screen.dart';
 import 'widgets/main_shell.dart';
+import 'services/robust_piped_service.dart';
+import 'services/hls_downloader_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

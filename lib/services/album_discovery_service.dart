@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../services/database_service.dart';
 import '../services/sources/youtube_music_source.dart';
+import 'music_source.dart';
 
 class DiscoveredAlbum {
   final String id;

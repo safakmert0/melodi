@@ -83,7 +83,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       _rematchProgress = 0.0;
     });
 
-    final matcher = TrackMatcher(searchFunction: ytService.search);
+    final matcher = TrackMatcher(ytService.search);
     for (var i = 0; i < trackIds.length; i++) {
       final entry = trackIds[i];
       final song = _songs.where((s) => s.id == entry.value).firstOrNull;

@@ -135,7 +135,7 @@ class WrongMatchButton extends StatelessWidget {
                           ),
                         ),
                         subtitle: Text(
-                          alt.artists,
+                          alt.artist,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -145,7 +145,7 @@ class WrongMatchButton extends StatelessWidget {
                         ),
                         onTap: () async {
                           await service.resolveAndUpdate(
-                              spotifyTrackId, alt.videoId);
+                              spotifyTrackId, alt.id);
                           if (ctx.mounted) {
                             Navigator.pop(ctx);
                             onResolved?.call();

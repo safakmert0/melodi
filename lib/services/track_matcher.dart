@@ -29,7 +29,7 @@ class MatchResult {
 class TrackMatcher {
   final MultiSourceSearch _multiSource = MultiSourceSearch();
 
-  TrackMatcher({Function? searchFunction});
+  TrackMatcher([Function? searchFunction]);
 
   String normalizeTitle(String title) {
     final normalized = _normalizeUnicode(title);

@@ -1492,4 +1492,24 @@ class SpotifyService {
     debugPrint('SpotifyService.syncPlaylist: $playlistId direction=$direction');
     return getPlaylistTracks(playlistId);
   }
+
+  /// Delegates to [getLikedSongs] (the Web API "saved tracks" library).
+  Future<List<SpotifyTrackItem>> getSavedTracks({
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    return getLikedSongs(limit: limit, offset: offset);
+  }
+
+  /// Stub: SpotifyWeb API does not expose a simple artist-top-tracks endpoint
+  /// through the current client-token flow. Returns an empty list for now.
+  Future<List<SpotifyTrackItem>> getArtistTopTracks(String artistId) async {
+    return [];
+  }
+
+  /// Stub: album tracks are not exposed through the current client-token flow.
+  /// Returns an empty list for now.
+  Future<List<SpotifyTrackItem>> getAlbumTracks(String albumId) async {
+    return [];
+  }
 }

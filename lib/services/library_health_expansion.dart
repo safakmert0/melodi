@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'database_service.dart';
 import 'metadata_service.dart';
+import '../models/song_model.dart';
 
 enum DuplicateType { exact, nearExact, differentQuality, differentFormat, differentSource }
 
@@ -99,7 +100,6 @@ class LibraryHealthService {
   static LibraryHealthService get instance => _instance;
 
   final DatabaseService _db = DatabaseService.instance;
-  final MetadataService _metadata = MetadataService.instance;
 
   Future<LibraryHealthReport> generateFullReport() async {
     final songs = await _db.getAllSongs();
@@ -215,26 +215,41 @@ class LibraryHealthService {
     final file = File(song.filePath);
     if (!await file.exists()) return null;
 
-    final metadata = await _metadata.extractMetadata(song.filePath);
+    final metadata = await MetadataService.extractMetadata(song.filePath);
     if (metadata == null) return null;
 
-    final qualityScore = _calculateQualityScore(metadata, file);
+    final qualityScore = await _calculateQualityScore(metadata, file);
 
     return DuplicateTrack(
       songId: song.id,
       title: song.title,
       artist: song.artist,
-      album: song.album ?? '',
+      album: song.album,
       duration: metadata.duration,
       filePath: song.filePath,
       fileSize: await file.length(),
       bitrate: metadata.bitrate ?? 0,
-      format: metadata.format ?? song.filePath.split('.').last,
+      format: song.filePath.split('.').last,
       sampleRate: metadata.sampleRate ?? 0,
-      channels: metadata.channels ?? 0,
-      acoustId: metadata.acoustId,
+      channels: 2,
+      acoustId: null,
       qualityScore: qualityScore,
     );
+  }
+
+  DuplicateType? _compareTracks(DuplicateTrack a, DuplicateTrack b) {
+    if (a.title.toLowerCase() == b.title.toLowerCase() &&
+        a.artist.toLowerCase() == b.artist.toLowerCase()) {
+      if ((a.duration.inMilliseconds - b.duration.inMilliseconds).abs() < 2000) {
+        if (a.format == b.format) {
+          if (a.bitrate == b.bitrate) return DuplicateType.exact;
+          return DuplicateType.differentQuality;
+        }
+        return DuplicateType.differentFormat;
+      }
+      return DuplicateType.nearExact;
+    }
+    return null;
   }
 
   DuplicateType _determineDuplicateType(List<DuplicateTrack> tracks) {
@@ -277,12 +292,13 @@ class LibraryHealthService {
     return 'Keep "${best.title}" (${best.format}, ${best.bitrate}kbps), remove $removeCount duplicate(s)';
   }
 
-  double _calculateQualityScore(Metadata metadata, File file) {
+  Future<double> _calculateQualityScore(SongModel metadata, File file) async {
     double score = 0.0;
     score += (metadata.bitrate ?? 128000) / 320000 * 40;
     score += (metadata.sampleRate ?? 44100) / 48000 * 20;
-    score += (metadata.channels ?? 2) == 2 ? 15 : 5;
-    score += metadata.format == 'flac' ? 25 : (metadata.format == 'm4a' ? 20 : 10);
+    score += 15;
+    final fmt = file.path.split('.').last.toLowerCase();
+    score += fmt == 'flac' ? 25 : (fmt == 'm4a' ? 20 : 10);
     score -= (await file.length() == 0) ? 100 : 0;
     return score.clamp(0.0, 100.0);
   }
@@ -344,7 +360,7 @@ class LibraryHealthService {
       if (song.filePath.isEmpty || song.filePath.startsWith('spotify://')) continue;
       if (song.title.isNotEmpty && song.artist.isNotEmpty) continue;
 
-      final metadata = await _metadata.extractMetadata(song.filePath);
+      final metadata = await MetadataService.extractMetadata(song.filePath);
       if (metadata != null) {
         final updated = song.copyWith(
           title: metadata.title ?? song.title,

@@ -3,8 +3,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'database_service.dart';
+import 'download_manager.dart';
 import 'navidrome_service.dart';
-import 'apple_music_source.dart';
+import 'sources/apple_music_source.dart';
 import 'music_source.dart';
 
 class RemotePlaylist {
@@ -137,15 +138,15 @@ class RemotePlaylistService {
 
   Future<List<RemotePlaylistTrack>> _getNavidromePlaylistTracks(String playlistId) async {
     try {
-      final songs = await _navidrome.getPlaylistSongs(playlistId);
+      final songs = await _navidrome.getPlaylistTracks(playlistId);
       return songs
           .map((s) => RemotePlaylistTrack(
                 id: s.id,
                 title: s.title,
                 artist: s.artist,
                 album: s.album,
-                durationMs: s.duration?.inMilliseconds,
-                artworkUrl: s.coverArt,
+                durationMs: s.duration.inMilliseconds,
+                artworkUrl: s.thumbnailUrl,
                 sourceType: 'navidrome',
                 sourceId: s.id,
               ))

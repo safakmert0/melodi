@@ -369,10 +369,11 @@ class RadioService {
 
   Future<List<String>> _getUserTopArtists({int limit = 20}) async {
     try {
-      if (await _spotify.isConnected()) {
-        final topArtists = await _spotify.getTopArtists(limit: limit);
-        return topArtists.map((a) => a['name'] as String).toList();
-      }
+      final topArtists = await _db.getTopArtists(limit);
+      return topArtists
+          .map((a) => a['artist'] as String? ?? '')
+          .where((a) => a.isNotEmpty)
+          .toList();
     } catch (_) {}
     return [];
   }
