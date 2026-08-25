@@ -36,8 +36,15 @@ jobs:
       - name: Generate localization files
         run: flutter gen-l10n
       
+      - name: Debug plugin list
+        run: |
+          echo "=== .flutter-plugins-dependencies (ios) ==="
+          python3 -c "import json,sys; d=json.load(open('.flutter-plugins-dependencies')); print('\n'.join(p['name'] for p in d['plugins']['ios']))" 2>/dev/null || cat .flutter-plugins-dependencies
+
       - name: Install CocoaPods
-        run: pod install --repo-update
+        run: |
+          rm -f Podfile.lock
+          pod install --repo-update
         working-directory: ./ios
       
       - name: Build iOS via xcodebuild (unsigned)
