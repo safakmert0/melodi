@@ -47,33 +47,18 @@ jobs:
           pod install --repo-update
         working-directory: ./ios
       
-      - name: Build iOS via xcodebuild (unsigned)
+      - name: Build iOS via flutter (unsigned)
         run: |
-          # Dart kodunu derle
           flutter pub get
           flutter gen-l10n
-          
-          # Xcode ile derle (Dart dahil, codesiz)
-          cd ios
-          xcodebuild clean archive \
-            -workspace Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -archivePath ../build/Runner.xcarchive \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            ENABLE_BITCODE=NO \
-            DEVELOPMENT_TEAM="" \
-            PROVISIONING_PROFILE_SPECIFIER="" \
-            FLUTTER_BUILD_MODE=release \
-            FLUTTER_BUILD_NAME=${{ github.ref_name }} \
-            FLUTTER_BUILD_NUMBER=${{ github.run_number }}
+          flutter build ios --release \
+            --build-name=${{ github.ref_name }} \
+            --build-number=${{ github.run_number }} \
+            --no-codesign
           
           # IPA oluştur (unsigned)
-          cd ..
           mkdir -p Payload
-          cp -r build/Runner.xcarchive/Products/Applications/Runner.app Payload/
+          cp -r build/ios/iphoneos/Runner.app Payload/
           zip -r melodi-${{ github.ref_name }}-unsigned.ipa Payload
           rm -rf Payload
       
