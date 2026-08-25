@@ -15,7 +15,7 @@ import 'youtube_downloader.dart';
 import 'navidrome_service.dart';
 
 class AudioPlayerHandler extends BaseAudioHandler
-    with SeekHandler, QueueHandler {
+    with SeekHandler {
   final AudioPlayer _player = AudioPlayer();
   final DatabaseService _db = DatabaseService.instance;
   late final TrackMatcher _trackMatcher = TrackMatcher(
