@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../music_source.dart';
 
+export '../music_source.dart' show MusicSourceType, OnlineTrack;
+
 class RobustPipedService {
   RobustPipedService._();
   static final RobustPipedService _instance = RobustPipedService._();

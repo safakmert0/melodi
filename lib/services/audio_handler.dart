@@ -64,6 +64,22 @@ class AudioPlayerHandler extends BaseAudioHandler
     _broadcastState();
   }
 
+  void setPlaybackSpeed(double speed) {
+    _player.setSpeed(speed);
+  }
+
+  void setVolume(double volume) {
+    _player.setVolume(volume.clamp(0.0, 1.0));
+  }
+
+  void setAutoShuffle(bool enabled) {
+    _autoShuffleEnabled = enabled;
+  }
+
+  void setCrossfade(Duration duration) {
+    _crossfadeDuration = duration;
+  }
+
   void _initPlayer() {
     _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
@@ -979,18 +995,6 @@ try {
   @override
   Future<void> removeQueueItemAt(int index) async {
     await removeFromQueue(index);
-  }
-
-  Future<void> setSleepTimer(Duration duration) async {
-    _sleepTimer?.cancel();
-    _sleepTimerEnd = null;
-    if (duration == Duration.zero) return;
-    _sleepTimerEnd = DateTime.now().add(duration);
-    _sleepTimer = Timer(duration, () {
-      _player.pause();
-      _sleepTimer = null;
-      _sleepTimerEnd = null;
-    });
   }
 
   @override
