@@ -14,6 +14,8 @@ Color musicSourceColor(MusicSourceType source) => switch (source) {
       MusicSourceType.deezer => const Color(0xFFA970FF),
       MusicSourceType.navidrome => const Color(0xFF6C8CFF),
       MusicSourceType.hifi => const Color(0xFF1ED760),
+      MusicSourceType.appleMusic => const Color(0xFFFA233B),
+      MusicSourceType.soundcloud => const Color(0xFFFF5500),
     };
 
 class LocalSearchResultTile extends StatelessWidget {
@@ -324,5 +326,7 @@ class SearchSourceFilters extends StatelessWidget {
         MusicSourceType.deezer => 'Deezer',
         MusicSourceType.navidrome => 'Navidrome',
         MusicSourceType.hifi => 'Hi-Fi',
+        MusicSourceType.appleMusic => 'Apple Music',
+        MusicSourceType.soundcloud => 'SoundCloud',
       };
 }

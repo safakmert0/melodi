@@ -6,6 +6,61 @@ import '../services/track_matcher.dart';
 import '../services/sources/youtube_music_source.dart';
 import '../services/music_source.dart';
 
+class YTMusicPlaylist {
+  final String playlistId;
+  final String title;
+  final String? thumbnailUrl;
+  final int trackCount;
+
+  const YTMusicPlaylist({
+    required this.playlistId,
+    required this.title,
+    this.thumbnailUrl,
+    this.trackCount = 0,
+  });
+
+  factory YTMusicPlaylist.fromJson(Map<String, dynamic> json) => YTMusicPlaylist(
+    playlistId: json['playlistId'] as String,
+    title: json['title'] as String,
+    thumbnailUrl: json['thumbnailUrl'] as String?,
+    trackCount: json['trackCount'] as int? ?? 0,
+  );
+
+  Map<String, dynamic> toJson() => {
+    'playlistId': playlistId,
+    'title': title,
+    'thumbnailUrl': thumbnailUrl,
+    'trackCount': trackCount,
+  };
+}
+
+class YTMusicTrack {
+  final String videoId;
+  final String title;
+  final String artists;
+  final String? album;
+  final int durationMs;
+  final String? thumbnailUrl;
+
+  const YTMusicTrack({
+    required this.videoId,
+    required this.title,
+    required this.artists,
+    this.album,
+    required this.durationMs,
+    this.thumbnailUrl,
+  });
+
+  factory YTMusicTrack.fromJson(Map<String, dynamic> json) => YTMusicTrack(
+    videoId: json['videoId'] as String,
+    title: json['title'] as String,
+    artists: json['artists'] as String,
+    album: json['album'] as String?,
+    durationMs: json['durationMs'] as int,
+    thumbnailUrl: json['thumbnailUrl'] as String?,
+  );
+}
+
 class YTMusicProvider extends ChangeNotifier {
   static const _playlistKey = 'ytmusic_playlists';
 
@@ -140,10 +195,11 @@ class YTMusicProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> connectWithCookie(String cookie) async {
+  Future<bool> connectWithCookie(String cookie) async {
     _isConnected = true;
     _isInitialized = true;
     notifyListeners();
+    return true;
   }
 
   @override

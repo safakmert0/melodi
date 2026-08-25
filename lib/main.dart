@@ -299,7 +299,7 @@ class MelodiApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => LocaleNotifier()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()..loadSettings()),
         ChangeNotifierProvider(create: (_) => SpotifyProvider()..init()),
-        ChangeNotifierProvider(create: (_) => YouTubeMusicProvider()..loadSession()),
+        ChangeNotifierProvider(create: (_) => YTMusicProvider()..loadSession()),
         ChangeNotifierProvider(
           create: (ctx) {
             final spotify = ctx.read<SpotifyProvider>();
@@ -315,7 +315,7 @@ class MelodiApp extends StatelessWidget {
             final playlists = ctx.read<PlaylistProvider>();
             final library = ctx.read<LibraryProvider>();
             sync.setServices(
-                spotify: spotify.service, ytmusicSource: ytmusic.source);
+                spotify: spotify.service, ytmusicSource: ytmusic.service);
             sync.onSyncCompleted = () async {
               await playlists.loadPlaylists();
               await library.loadAll();
@@ -346,7 +346,7 @@ class MelodiApp extends StatelessWidget {
             final ytmusic = ctx.read<YTMusicProvider>();
             final provider = ConnectionProvider(
               spotifyService: spotify.service,
-              ytmusicSource: ytmusic.source,
+              ytmusicSource: ytmusic.service,
             );
             provider.init();
             return provider;
@@ -358,7 +358,7 @@ class MelodiApp extends StatelessWidget {
             final ytmusic = ctx.read<YTMusicProvider>();
             return MetadataProvider(
                 spotifyService: spotify.service,
-                ytmusicSource: ytmusic.source);
+                ytmusicSource: ytmusic.service);
           },
         ),
         ChangeNotifierProvider(
@@ -367,7 +367,7 @@ class MelodiApp extends StatelessWidget {
             final ytmusic = ctx.read<YTMusicProvider>();
             final service = LikeMirrorService(
                 spotifyService: spotify.service,
-                ytMusicSource: ytmusic.source);
+                ytMusicSource: ytmusic.service);
             final provider = LikeMirrorProvider(service);
             provider.init();
             return provider;

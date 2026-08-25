@@ -336,8 +336,8 @@ class MetadataService {
     return null;
   }
 
-  static Map<String, dynamic> addMetadataToSong(Map<String, dynamic> song,
-      {bool highResArt = false}) {
+  static Future<Map<String, dynamic>> addMetadataToSong(Map<String, dynamic> song,
+      {bool highResArt = false}) async {
     final enriched = Map<String, dynamic>.from(song);
     if (highResArt && song['spotifyTrackId'] != null) {
       final trackId = song['spotifyTrackId'] as String;

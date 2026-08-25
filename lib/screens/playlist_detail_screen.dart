@@ -83,7 +83,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       _rematchProgress = 0.0;
     });
 
-    final matcher = TrackMatcher(ytService.search);
+    final matcher = TrackMatcher(searchFunction: ytService.search);
     for (var i = 0; i < trackIds.length; i++) {
       final entry = trackIds[i];
       final song = _songs.where((s) => s.id == entry.value).firstOrNull;
@@ -728,7 +728,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
             if (song != null) {
               final results =
                   await ytmusic.service.search('${song.title} ${song.artist}');
-              if (results.isNotEmpty) videoIds.add(results.first.videoId);
+              if (results.isNotEmpty) videoIds.add(results.first.id);
             }
           }
           if (videoIds.isNotEmpty) {
@@ -748,7 +748,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
             if (song != null) {
               final results =
                   await ytmusic.service.search('${song.title} ${song.artist}');
-              if (results.isNotEmpty) videoIds.add(results.first.videoId);
+              if (results.isNotEmpty) videoIds.add(results.first.id);
             }
           }
           if (videoIds.isNotEmpty) {

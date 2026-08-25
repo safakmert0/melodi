@@ -93,7 +93,7 @@ class _CoverFlowScreenState extends State<CoverFlowScreen> {
                         transform: Matrix4.identity()
                           ..setEntry(3, 2, 0.0014)
                           ..rotateY(-delta * 0.42)
-                          ..scale(scale, scale, 1, 1),
+                          ..scale(scale, scale, 1),
                         child: child,
                       );
                     },

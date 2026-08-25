@@ -59,10 +59,10 @@ class ScrobbleProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final count = await _service.processRecentHistory();
+      final count = await _service.processRecentSpotifyHistory();
       if (count > 0) {
         _lastScrobbledAt = DateTime.now();
-        _scrobbleCount += count;
+        _scrobbleCount += count as int;
         await _loadRecentHistory();
       }
       return count;

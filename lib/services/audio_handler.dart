@@ -7,10 +7,11 @@ import 'package:audio_service/audio_service.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
 import 'backend_api_service.dart';
-import 'database_service.dart'
-import 'piped_service.dart'
-import 'track_matcher.dart'
-import 'youtube_downloader.dart'
+import 'database_service.dart';
+import 'piped_service.dart';
+import 'robust_piped_service.dart';
+import 'track_matcher.dart';
+import 'youtube_downloader.dart';
 import 'navidrome_service.dart';
 
 class AudioPlayerHandler extends BaseAudioHandler
@@ -665,54 +666,59 @@ class AudioPlayerHandler extends BaseAudioHandler
     // Spotify supplies library metadata, not downloadable audio. When the
     // user owns the same track on a connected personal server, prefer that
     // exact title/artist/duration match before trying a public resolver.
-    try {
-      if (await _navidrome.isConfigured()) {
-        final candidates = await _navidrome.search(
-          '${song.artist} - ${song.title}',
-          limit: 8,
-        );
-        candidates.sort((a, b) {
-          final aScore = TrackMatcher.scoreWithDuration(
-            song.title,
-            song.artist,
-            song.duration.inMilliseconds,
-            a.title,
-            a.artist,
-            a.duration.inMilliseconds,
+try {
+        if (await _navidrome.isConfigured()) {
+          final candidates = await _navidrome.search(
+            '${song.artist} - ${song.title}',
+            limit: 8,
           );
-          final bScore = TrackMatcher.scoreWithDuration(
-            song.title,
-            song.artist,
-            song.duration.inMilliseconds,
-            b.title,
-            b.artist,
-            b.duration.inMilliseconds,
-          );
-          return bScore.compareTo(aScore);
-        });
-        if (candidates.isNotEmpty) {
-          final best = candidates.first;
-          final score = TrackMatcher.scoreWithDuration(
-            song.title,
-            song.artist,
-            song.duration.inMilliseconds,
-            best.title,
-            best.artist,
-            best.duration.inMilliseconds,
-          );
-          if (score >= 0.72 && best.streamUrl != null) {
-            final artwork = song.albumArt ??
-                await _navidrome.fetchArtwork(best.thumbnailUrl);
-            final resolved = song.copyWith(
-              filePath: best.streamUrl,
-              album: best.album ?? song.album,
-              duration:
-                  best.duration > Duration.zero ? best.duration : song.duration,
-              albumArt: artwork,
+          candidates.sort((a, b) {
+            final aScore = TrackMatcher.scoreWithDuration(
+              song.title,
+              song.artist,
+              song.duration.inMilliseconds,
+              a.title,
+              a.artist,
+              a.duration.inMilliseconds,
             );
-            _replaceSongInQueues(resolved);
-            return resolved;
+            final bScore = TrackMatcher.scoreWithDuration(
+              song.title,
+              song.artist,
+              song.duration.inMilliseconds,
+              b.title,
+              b.artist,
+              b.duration.inMilliseconds,
+            );
+            return bScore.compareTo(aScore);
+          });
+          if (candidates.isNotEmpty) {
+            final best = candidates.first;
+            final score = TrackMatcher.scoreWithDuration(
+              song.title,
+              song.artist,
+              song.duration.inMilliseconds,
+              best.title,
+              best.artist,
+              best.duration.inMilliseconds,
+            );
+            if (score >= 0.72 && best.streamUrl != null) {
+              final artwork = song.albumArt ??
+                  await _navidrome.fetchArtwork(best.thumbnailUrl);
+              final resolved = song.copyWith(
+                filePath: best.streamUrl,
+                album: best.album ?? song.album,
+                duration:
+                    best.duration > Duration.zero ? best.duration : song.duration,
+                albumArt: artwork,
+              );
+              _replaceSongInQueues(resolved);
+              return resolved;
+            }
           }
+        }
+      } catch (e) {
+        debugPrint('Navidrome Spotify match failed: $e');
+      }
         }
       } catch (error) {
         debugPrint('Navidrome Spotify match failed: $error');

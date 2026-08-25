@@ -109,7 +109,7 @@ class SyncService {
       }
 
       // Pull: YT Music playlists → local
-      if (_ytmusicSource != null && _ytmusicSource!.isConnected) {
+      if (_ytmusicSource != null) {
         await _pullYTMusicPlaylists();
         await _syncYTMusicLikedSongs();
       }

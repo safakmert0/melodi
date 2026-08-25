@@ -3282,7 +3282,7 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ...ytmusic.playlists.map((playlist) => ListTile(
+                  ...ytmusic.playlists.cast<YTMusicPlaylist>().map((playlist) => ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: Container(
                           width: 48,
@@ -3556,7 +3556,7 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ...spotify.playlists.map((playlist) => ListTile(
+                  ...spotify.playlists.cast<SpotifyPlaylistItem>().map((playlist) => ListTile(
                         contentPadding: EdgeInsets.zero,
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute<void>(

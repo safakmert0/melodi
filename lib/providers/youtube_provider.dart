@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../core/localization.dart';
 import '../services/sources/youtube_music_source.dart';
 import '../services/music_source.dart';
+import '../services/download_manager.dart';
 
 class YouTubeProvider extends ChangeNotifier {
   final YouTubeMusicSource _source = YouTubeMusicSource();

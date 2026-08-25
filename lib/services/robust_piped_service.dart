@@ -274,7 +274,7 @@ class RobustPipedService {
     return data['audioStreams'];
   }
 
-  List<dynamic>? _parseResults(dynamic items, int limit) {
+  List<OnlineTrack>? _parseResults(dynamic items, int limit) {
     if (items is! List) return null;
     return items
         .whereType<Map<String, dynamic>>()
