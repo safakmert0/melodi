@@ -289,7 +289,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                   ),
                   Positioned.fill(
                     child:
-                        Container(color: Colors.black.withValues(alpha: 0.5)),
+                        Container(color: Colors.black .withOpacity(0.5)),
                   ),
                 ] else
                   Positioned.fill(
@@ -301,7 +301,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         center: const Alignment(0, -0.65),
                         radius: 1.35,
                         colors: [
-                          MelodiTheme.primaryGreen.withValues(alpha: 0.34),
+                          MelodiTheme.primaryGreen .withOpacity(0.34),
                           const Color(0xB8121414),
                           const Color(0xF5121414),
                         ],
@@ -331,7 +331,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                 Text(
                                   AppLocale.tr('now_playing').toUpperCase(),
                                   style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.6),
+                                    color: Colors.white .withOpacity(0.6),
                                     fontSize: 15,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: 2,
@@ -448,7 +448,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               boxShadow: [
                                 BoxShadow(
                                   color: MelodiTheme.primaryGreen
-                                      .withValues(alpha: 0.5),
+                                       .withOpacity(0.5),
                                   blurRadius: 24,
                                   spreadRadius: 2,
                                 ),
@@ -693,7 +693,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             boxShadow: [
                               BoxShadow(
                                 color: MelodiTheme.primaryGreen
-                                    .withValues(alpha: 0.26),
+                                     .withOpacity(0.26),
                                 blurRadius: 64,
                                 spreadRadius: 6,
                               ),
@@ -710,7 +710,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             borderRadius: BorderRadius.circular(24),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.42),
+                                color: Colors.black .withOpacity(0.42),
                                 blurRadius: 32,
                                 offset: const Offset(0, 12),
                               ),
@@ -740,7 +740,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.58),
+                            color: Colors.black .withOpacity(0.58),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
@@ -768,7 +768,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(22, 8, 22, 10),
       child: Material(
-        color: Colors.black.withValues(alpha: 0.24),
+        color: Colors.black .withOpacity(0.24),
         borderRadius: BorderRadius.circular(26),
         child: InkWell(
           borderRadius: BorderRadius.circular(26),
@@ -804,7 +804,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               letterSpacing: 1.2)),
                     const SizedBox(width: 4),
                     Icon(Icons.open_in_full_rounded,
-                        size: 15, color: Colors.white.withValues(alpha: 0.58)),
+                        size: 15, color: Colors.white .withOpacity(0.58)),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -849,7 +849,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                     style: TextStyle(
                       color: start + offset == focus
                           ? Colors.white
-                          : Colors.white.withValues(alpha: 0.42),
+                          : Colors.white .withOpacity(0.42),
                       fontSize: start + offset == focus ? 19 : 14,
                       height: 1.15,
                       fontWeight: start + offset == focus
@@ -872,7 +872,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
           plainText,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.86),
+            color: Colors.white .withOpacity(0.86),
             fontSize: 17,
             height: 1.55,
             fontWeight: FontWeight.w600,
@@ -886,14 +886,14 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.music_note_rounded,
-              size: 38, color: Colors.white.withValues(alpha: 0.52)),
+              size: 38, color: Colors.white .withOpacity(0.52)),
           const SizedBox(height: 12),
           Text(
             _lyricsResult?.instrumental == true
                 ? AppLocale.tr('instrumental')
                 : 'Bu parça için söz bulunamadı',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.64)),
+            style: TextStyle(color: Colors.white .withOpacity(0.64)),
           ),
           const SizedBox(height: 10),
           TextButton(
@@ -912,7 +912,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     if (queue.isEmpty) {
       return Center(
         child: Text('Sıra boş',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.64))),
+            style: TextStyle(color: Colors.white .withOpacity(0.64))),
       );
     }
     final current = player.currentIndex.clamp(0, queue.length - 1);
@@ -925,9 +925,9 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       padding: const EdgeInsets.fromLTRB(22, 8, 22, 10),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.24),
+          color: Colors.black .withOpacity(0.24),
           borderRadius: BorderRadius.circular(26),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          border: Border.all(color: Colors.white .withOpacity(0.08)),
         ),
         child: Column(
           children: [
@@ -969,7 +969,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                           ? Container(
                               width: 38,
                               height: 38,
-                              color: Colors.white.withValues(alpha: 0.1),
+                              color: Colors.white .withOpacity(0.1),
                               child: const Icon(Icons.music_note_rounded,
                                   size: 18, color: Colors.white54),
                             )
@@ -990,7 +990,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.48),
+                            color: Colors.white .withOpacity(0.48),
                             fontSize: 11)),
                     trailing: active
                         ? Icon(Icons.equalizer_rounded,
@@ -998,7 +998,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             color: Theme.of(context).colorScheme.primary)
                         : Text('${index + 1}',
                             style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.35),
+                                color: Colors.white .withOpacity(0.35),
                                 fontSize: 11)),
                     onTap: () => player.playFromQueue(queue, index),
                   );
@@ -1057,9 +1057,9 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 28),
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.38),
+          color: Colors.black .withOpacity(0.38),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          border: Border.all(color: Colors.white .withOpacity(0.12)),
         ),
         child: Row(
           children: [
@@ -1452,7 +1452,7 @@ class _SpeedButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: Colors.white .withOpacity(0.1),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Colors.white24),
         ),
@@ -1499,8 +1499,8 @@ class _VolumeBoostButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: showSlider
-              ? accentColor.withValues(alpha: 0.2)
-              : Colors.white.withValues(alpha: 0.1),
+              ? accentColor .withOpacity(0.2)
+              : Colors.white .withOpacity(0.1),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: showSlider ? accentColor : Colors.white24,

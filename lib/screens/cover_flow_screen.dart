@@ -61,7 +61,7 @@ class _CoverFlowScreenState extends State<CoverFlowScreen> {
             center: const Alignment(0, -0.35),
             radius: 1.15,
             colors: [
-              colors.primary.withValues(alpha: 0.24),
+              colors.primary .withOpacity(0.24),
               const Color(0xFF07080C),
             ],
           ),
@@ -93,7 +93,7 @@ class _CoverFlowScreenState extends State<CoverFlowScreen> {
                         transform: Matrix4.identity()
                           ..setEntry(3, 2, 0.0014)
                           ..rotateY(-delta * 0.42)
-                          ..scaleByDouble(scale, scale, 1, 1),
+                          ..scale(scale, scale, 1, 1),
                         child: child,
                       );
                     },
@@ -140,7 +140,7 @@ class _CoverFlowScreenState extends State<CoverFlowScreen> {
                     Text(
                       '${_selectedIndex + 1} / ${queue.length} · Kapağa dokunarak çal',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.55),
+                        color: Colors.white .withOpacity(0.55),
                         fontSize: 12,
                       ),
                     ),
@@ -187,7 +187,7 @@ class _CoverCard extends StatelessWidget {
                   : null,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.65),
+                  color: Colors.black .withOpacity(0.65),
                   blurRadius: 30,
                   offset: const Offset(0, 18),
                 ),
@@ -202,7 +202,7 @@ class _CoverCard extends StatelessWidget {
                         child: Icon(
                           Icons.album_rounded,
                           size: 72,
-                          color: Colors.white.withValues(alpha: 0.25),
+                          color: Colors.white .withOpacity(0.25),
                         ),
                       ),
                     )

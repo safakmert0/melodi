@@ -64,10 +64,10 @@ class HomeContinueListening extends StatelessWidget {
                                 vertical: 7,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.34),
+                                color: Colors.black .withOpacity(0.34),
                                 borderRadius: BorderRadius.circular(999),
                                 border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.16),
+                                  color: Colors.white .withOpacity(0.16),
                                 ),
                               ),
                               child: const Text(
@@ -85,7 +85,7 @@ class HomeContinueListening extends StatelessWidget {
                               width: 38,
                               height: 38,
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.14),
+                                color: Colors.white .withOpacity(0.14),
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(Icons.auto_awesome_rounded,
@@ -97,7 +97,7 @@ class HomeContinueListening extends StatelessWidget {
                         Text(
                           'LISTEN NOW',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.62),
+                            color: Colors.white .withOpacity(0.62),
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 2.2,
@@ -121,7 +121,7 @@ class HomeContinueListening extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.75),
+                            color: Colors.white .withOpacity(0.75),
                           ),
                         ),
                         const SizedBox(height: 18),
@@ -150,7 +150,7 @@ class HomeContinueListening extends StatelessWidget {
                               tooltip: 'Karıştır',
                               style: IconButton.styleFrom(
                                 backgroundColor:
-                                    Colors.white.withValues(alpha: 0.14),
+                                    Colors.white .withOpacity(0.14),
                                 foregroundColor: Colors.white,
                               ),
                               onPressed: () async {

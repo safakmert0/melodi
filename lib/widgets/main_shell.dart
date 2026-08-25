@@ -52,9 +52,9 @@ class _MainShellState extends State<MainShell> {
             begin: Alignment.topRight,
             end: Alignment.bottomLeft,
             colors: [
-              theme.colorScheme.primary.withValues(alpha: 0.08),
+              theme.colorScheme.primary .withOpacity(0.08),
               theme.scaffoldBackgroundColor,
-              theme.colorScheme.secondary.withValues(alpha: 0.045),
+              theme.colorScheme.secondary .withOpacity(0.045),
             ],
           ),
         ),
@@ -117,10 +117,10 @@ class _MelodiDock extends StatelessWidget {
           height: 74,
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surface.withValues(alpha: 0.86),
+            color: theme.colorScheme.surface .withOpacity(0.86),
             borderRadius: BorderRadius.circular(28),
             border: Border.all(
-              color: theme.colorScheme.primary.withValues(alpha: 0.16),
+              color: theme.colorScheme.primary .withOpacity(0.16),
             ),
             boxShadow: [
               BoxShadow(

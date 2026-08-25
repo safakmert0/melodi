@@ -88,7 +88,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    accent.withValues(alpha: 0.18),
+                    accent .withOpacity(0.18),
                     theme.scaffoldBackgroundColor,
                     theme.scaffoldBackgroundColor,
                   ],
@@ -535,7 +535,7 @@ class _AlbumTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.25),
+            color: color .withOpacity(0.25),
             blurRadius: 28,
             offset: const Offset(0, 14),
           ),
@@ -560,7 +560,7 @@ class _GlowOrb extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: RadialGradient(
-            colors: [color.withValues(alpha: 0.14), Colors.transparent],
+            colors: [color .withOpacity(0.14), Colors.transparent],
           ),
         ),
       ),
@@ -579,7 +579,7 @@ class _StepIcon extends StatelessWidget {
       width: 62,
       height: 62,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
+        color: color .withOpacity(0.15),
         borderRadius: BorderRadius.circular(21),
       ),
       child: Icon(icon, color: color, size: 28),
@@ -633,7 +633,7 @@ class _ChoiceTile extends StatelessWidget {
     final theme = Theme.of(context);
     return Material(
       color: selected
-          ? accent.withValues(alpha: 0.13)
+          ? accent .withOpacity(0.13)
           : theme.colorScheme.surfaceContainerLow,
       borderRadius: BorderRadius.circular(20),
       clipBehavior: Clip.antiAlias,
@@ -685,7 +685,7 @@ class _ThemePreview extends StatelessWidget {
     final theme = Theme.of(context);
     return Material(
       color: selected
-          ? accent.withValues(alpha: 0.14)
+          ? accent .withOpacity(0.14)
           : theme.colorScheme.surfaceContainerLow,
       borderRadius: BorderRadius.circular(22),
       clipBehavior: Clip.antiAlias,
@@ -744,7 +744,7 @@ class _SourcePreview extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
+              color: color .withOpacity(0.14),
               borderRadius: BorderRadius.circular(15),
             ),
             child: Icon(icon, color: color),

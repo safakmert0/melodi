@@ -187,7 +187,7 @@ class LibraryOverview extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Icon(Icons.library_music_rounded,
-                    size: 40, color: colors.primary.withValues(alpha: 0.8)),
+                    size: 40, color: colors.primary .withOpacity(0.8)),
               ],
             ),
             if (isScanning) ...[
@@ -609,7 +609,7 @@ class LibraryEmptyState extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.library_add_rounded,
-                  size: 56, color: colors.primary.withValues(alpha: 0.75)),
+                  size: 56, color: colors.primary .withOpacity(0.75)),
               const SizedBox(height: 18),
               Text(title,
                   textAlign: TextAlign.center,

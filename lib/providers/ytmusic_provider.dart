@@ -11,9 +11,12 @@ class YTMusicProvider extends ChangeNotifier {
 
   final YouTubeMusicSource _source = YouTubeMusicSource();
   bool _isInitialized = false;
+  bool _isConnected = false;
   String? _error;
   List<YTMusicPlaylist> _playlists = [];
 
+  YouTubeMusicSource get service => _source;
+  bool get isConnected => _isConnected;
   List<YTMusicPlaylist> get playlists => _playlists;
   bool get isInitialized => _isInitialized;
   String? get error => _error;
@@ -127,6 +130,20 @@ class YTMusicProvider extends ChangeNotifier {
       debugPrint('matchTrackWithConfidence error: $e');
       return null;
     }
+  }
+
+  Future<void> disconnect() async {
+    await _source.dispose();
+    _isConnected = false;
+    _isInitialized = false;
+    _playlists.clear();
+    notifyListeners();
+  }
+
+  Future<void> connectWithCookie(String cookie) async {
+    _isConnected = true;
+    _isInitialized = true;
+    notifyListeners();
   }
 
   @override

@@ -341,9 +341,9 @@ class MetadataService {
     final enriched = Map<String, dynamic>.from(song);
     if (highResArt && song['spotifyTrackId'] != null) {
       final trackId = song['spotifyTrackId'] as String;
-      _db.getHighResArtUrl(trackId).then((url) {
-        if (url != null) enriched['imageUrl'] = url;
-      });
+      final url = await _db.getHighResArtUrl(trackId);
+      if (url != null) enriched['imageUrl'] = url;
+    }
     return enriched;
   }
 

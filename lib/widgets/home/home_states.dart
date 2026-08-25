@@ -61,8 +61,8 @@ class HomeEmptyLibrary extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  theme.colorScheme.primary.withValues(alpha: 0.3),
-                  theme.colorScheme.tertiary.withValues(alpha: 0.16),
+                  theme.colorScheme.primary .withOpacity(0.3),
+                  theme.colorScheme.tertiary .withOpacity(0.16),
                 ],
               ),
               shape: BoxShape.circle,

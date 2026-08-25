@@ -130,8 +130,8 @@ class _HeatCell extends StatelessWidget {
     final color = intensity < 0
         ? Colors.transparent
         : intensity == 0
-            ? colors.surfaceContainerHighest.withValues(alpha: 0.72)
-            : colors.primary.withValues(alpha: 0.22 + intensity * 0.78);
+            ? colors.surfaceContainerHighest .withOpacity(0.72)
+            : colors.primary .withOpacity(0.22 + intensity * 0.78);
     return AnimatedContainer(
       duration: MelodiMotion.quick,
       width: size,

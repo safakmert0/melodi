@@ -77,7 +77,7 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
           _accentColor = _melodiAccent;
           await db.setSetting(
             'accent_color',
-            _melodiAccent.toARGB32().toString(),
+            _melodiAccent.value.toString(),
           );
         } else if (val != null) {
           _accentColor = Color(val);
@@ -111,7 +111,7 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _saveColor(String key, Color? color) async {
     final db = DatabaseService.instance;
     if (color != null) {
-      await db.setSetting(key, color.toARGB32().toString());
+      await db.setSetting(key, color.value.toString());
     } else {
       await db.setSetting(key, '');
     }
@@ -149,7 +149,7 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
     _accentColor = color;
     AppTheme.accentColor = color;
     await DatabaseService.instance
-        .setSetting('accent_color', color.toARGB32().toString());
+        .setSetting('accent_color', color.value.toString());
     notifyListeners();
   }
 
@@ -372,13 +372,13 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
         titleTextStyle: typography.titleLarge,
       ),
       cardTheme: CardThemeData(
-        color: card.withValues(alpha: 0.82),
+        color: card .withOpacity(0.82),
         elevation: 0,
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+          side: BorderSide(color: scheme.outlineVariant .withOpacity(0.5)),
         ),
       ),
       listTileTheme: ListTileThemeData(
@@ -387,18 +387,18 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: card.withValues(alpha: 0.82),
-        selectedColor: _accentColor.withValues(alpha: 0.2),
-        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.55)),
+        backgroundColor: card .withOpacity(0.82),
+        selectedColor: _accentColor .withOpacity(0.2),
+        side: BorderSide(color: scheme.outlineVariant .withOpacity(0.55)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
         labelStyle: typography.labelMedium,
       ),
       searchBarTheme: SearchBarThemeData(
         elevation: const WidgetStatePropertyAll(0),
         backgroundColor:
-            WidgetStatePropertyAll(card.withValues(alpha: dark ? 0.88 : 1)),
+            WidgetStatePropertyAll(card .withOpacity(dark ? 0.88 : 1)),
         side: WidgetStatePropertyAll(
-          BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.65)),
+          BorderSide(color: scheme.outlineVariant .withOpacity(0.65)),
         ),
         shape: WidgetStatePropertyAll(controlShape),
         textStyle: WidgetStatePropertyAll(typography.bodyLarge),
@@ -408,7 +408,7 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: card.withValues(alpha: dark ? 0.88 : 1),
+        fillColor: card .withOpacity(dark ? 0.88 : 1),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
@@ -449,14 +449,14 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       dividerTheme: DividerThemeData(
-        color: scheme.outlineVariant.withValues(alpha: 0.6),
+        color: scheme.outlineVariant .withOpacity(0.6),
         thickness: 0.6,
       ),
       sliderTheme: SliderThemeData(
         activeTrackColor: _accentColor,
         inactiveTrackColor: scheme.outlineVariant,
         thumbColor: textPrimary,
-        overlayColor: _accentColor.withValues(alpha: 0.18),
+        overlayColor: _accentColor .withOpacity(0.18),
         trackHeight: 3,
       ),
       switchTheme: SwitchThemeData(

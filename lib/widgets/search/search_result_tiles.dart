@@ -76,14 +76,14 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
           height: 52,
           child: track.thumbnailUrl == null
               ? ColoredBox(
-                  color: sourceColor.withValues(alpha: 0.15),
+                  color: sourceColor .withOpacity(0.15),
                   child: Icon(Icons.music_note_rounded, color: sourceColor),
                 )
               : Image.network(
                   track.thumbnailUrl!,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => ColoredBox(
-                    color: sourceColor.withValues(alpha: 0.15),
+                    color: sourceColor .withOpacity(0.15),
                     child: Icon(Icons.music_note_rounded, color: sourceColor),
                   ),
                 ),
@@ -100,7 +100,7 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: sourceColor.withValues(alpha: 0.14),
+              color: sourceColor .withOpacity(0.14),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(

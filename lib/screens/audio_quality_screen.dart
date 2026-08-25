@@ -139,7 +139,6 @@ class _AudioQualityScreenState extends State<AudioQualityScreen> {
                     setState(() => _keepDownloads = v);
                     _service.setStorageManagement(keepDownloads: v);
                   },
-                  activeThumbColor: theme.colorScheme.onPrimary,
                   activeTrackColor: theme.colorScheme.primary,
                 ),
               ],

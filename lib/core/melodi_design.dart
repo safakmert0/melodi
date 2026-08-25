@@ -42,12 +42,12 @@ class MelodiPanel extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final decoration = BoxDecoration(
       color: emphasized
-          ? colors.primary.withValues(alpha: 0.12)
-          : colors.surfaceContainer.withValues(alpha: 0.78),
+          ? colors.primary .withOpacity(0.12)
+          : colors.surfaceContainer .withOpacity(0.78),
       borderRadius: BorderRadius.circular(MelodiRadius.card),
       border: Border.all(
         color: (emphasized ? colors.primary : colors.onSurface)
-            .withValues(alpha: emphasized ? 0.22 : 0.08),
+             .withOpacity(emphasized ? 0.22 : 0.08),
       ),
     );
 

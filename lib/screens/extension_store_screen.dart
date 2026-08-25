@@ -276,7 +276,7 @@ class _ExtensionStoreScreenState extends State<ExtensionStoreScreen> {
                 color: Theme.of(context)
                     .colorScheme
                     .primary
-                    .withValues(alpha: 0.14),
+                     .withOpacity(0.14),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(badge,
@@ -614,7 +614,7 @@ class _KindIcon extends StatelessWidget {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
+        color: color .withOpacity(0.16),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Icon(icon, color: color, size: 24),

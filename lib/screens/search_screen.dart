@@ -48,7 +48,7 @@ class _SearchScreenState extends State<SearchScreen> {
               toolbarHeight: 64,
               expandedHeight: 146,
               backgroundColor:
-                  theme.scaffoldBackgroundColor.withValues(alpha: 0.94),
+                  theme.scaffoldBackgroundColor .withOpacity(0.94),
               surfaceTintColor: Colors.transparent,
               title: Text(
                 'MELODI SEARCH',
@@ -133,11 +133,11 @@ class _SearchScreenState extends State<SearchScreen> {
         ],
         elevation: const WidgetStatePropertyAll(0),
         backgroundColor: WidgetStatePropertyAll(
-          theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.72),
+          theme.colorScheme.surfaceContainerHighest .withOpacity(0.72),
         ),
         side: WidgetStatePropertyAll(
           BorderSide(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.07),
+            color: theme.colorScheme.onSurface .withOpacity(0.07),
           ),
         ),
         shape: WidgetStatePropertyAll(
@@ -511,7 +511,7 @@ class _GenreGrid extends StatelessWidget {
                       Text(
                         '${genre.songCount} şarkı',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.72),
+                          color: Colors.white .withOpacity(0.72),
                           fontSize: 11,
                         ),
                       ),

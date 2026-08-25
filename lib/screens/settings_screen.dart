@@ -1303,7 +1303,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      theme.colorScheme.primary.withValues(alpha: 0.22),
+                      theme.colorScheme.primary .withOpacity(0.22),
                       theme.scaffoldBackgroundColor,
                     ],
                   ),
@@ -2505,7 +2505,7 @@ class _SettingsHubTile extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: entry.color.withValues(alpha: 0.14),
+                    color: entry.color .withOpacity(0.14),
                     borderRadius: BorderRadius.circular(15),
                   ),
                   child: Icon(entry.icon, color: entry.color, size: 22),
@@ -2582,7 +2582,7 @@ class _AllSettingsPageState extends State<_AllSettingsPage> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      theme.colorScheme.primary.withValues(alpha: 0.2),
+                      theme.colorScheme.primary .withOpacity(0.2),
                       theme.scaffoldBackgroundColor,
                     ],
                   ),
@@ -2812,7 +2812,7 @@ class _AppearanceSettingsPage extends StatelessWidget {
               const SizedBox(height: 8),
               ...(_accentColors.map((c) {
                 final isSelected =
-                    themeProvider.accentColor.toARGB32() == c.toARGB32();
+                    themeProvider.accentColor.value == c.value;
                 return ListTile(
                   leading: Container(
                     width: 32,
@@ -2921,9 +2921,9 @@ class _AppearanceSettingsPage extends StatelessWidget {
       0xFF795548: 'color_brown',
       0xFF607D8B: 'color_blue_grey',
     };
-    final key = nameKeys[c.toARGB32()];
+    final key = nameKeys[c.value];
     if (key != null) return AppLocale.tr(key);
-    return '#${c.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+    return '#${c.value.toRadixString(16).substring(2).toUpperCase()}';
   }
 
   void _showThemePicker(BuildContext context, ThemeProvider themeProvider) {
@@ -3040,7 +3040,6 @@ class _PlaybackSettingsPageState extends State<_PlaybackSettingsPage> {
                 DatabaseService.instance
                     .setSetting('auto_shuffle', v.toString());
               },
-              activeThumbColor: theme.colorScheme.onPrimary,
               activeTrackColor: theme.colorScheme.primary,
             ),
             onTap: () {
@@ -3063,7 +3062,6 @@ class _PlaybackSettingsPageState extends State<_PlaybackSettingsPage> {
                 DatabaseService.instance
                     .setSetting('gapless_playback', v.toString());
               },
-              activeThumbColor: theme.colorScheme.onPrimary,
               activeTrackColor: theme.colorScheme.primary,
             ),
             onTap: () {

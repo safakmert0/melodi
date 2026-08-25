@@ -168,7 +168,7 @@ class _StoreCta extends StatelessWidget {
             width: 46,
             height: 46,
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.16),
+              color: theme.colorScheme.primary .withOpacity(0.16),
               borderRadius: BorderRadius.circular(15),
             ),
             child: Icon(Icons.extension_rounded,
@@ -283,7 +283,7 @@ class _SourceIcon extends StatelessWidget {
       width: 46,
       height: 46,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
+        color: color .withOpacity(0.16),
         borderRadius: BorderRadius.circular(15),
       ),
       child: Icon(icon, color: color, size: 25),
@@ -307,7 +307,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.13),
+        color: color .withOpacity(0.13),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -333,7 +333,7 @@ class _CapabilityChip extends StatelessWidget {
         color: Theme.of(context)
             .colorScheme
             .surfaceContainerHighest
-            .withValues(alpha: 0.72),
+             .withOpacity(0.72),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(

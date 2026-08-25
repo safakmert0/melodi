@@ -151,7 +151,7 @@ class _ActionCard extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: data.color.withValues(alpha: 0.14),
+              color: data.color .withOpacity(0.14),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(data.icon, color: data.color, size: 21),

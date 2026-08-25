@@ -58,7 +58,7 @@ class DownloadSummary extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: colors.primary.withValues(alpha: 0.14),
+                    color: colors.primary .withOpacity(0.14),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Icon(
@@ -155,7 +155,7 @@ class _SummaryItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Material(
-      color: colors.surfaceContainerHighest.withValues(alpha: 0.58),
+      color: colors.surfaceContainerHighest .withOpacity(0.58),
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
@@ -259,8 +259,8 @@ class DownloadTaskCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       child: Material(
         color: selected
-            ? colors.primary.withValues(alpha: 0.14)
-            : colors.surfaceContainer.withValues(alpha: 0.74),
+            ? colors.primary .withOpacity(0.14)
+            : colors.surfaceContainer .withOpacity(0.74),
         borderRadius: BorderRadius.circular(18),
         child: InkWell(
           onTap: onTap,
@@ -435,7 +435,7 @@ class DownloadEmptyState extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(filter.icon,
-                  size: 56, color: colors.primary.withValues(alpha: 0.72)),
+                  size: 56, color: colors.primary .withOpacity(0.72)),
               const SizedBox(height: 16),
               Text(
                 filter == DownloadViewFilter.all

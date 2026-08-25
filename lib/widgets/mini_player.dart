@@ -40,7 +40,7 @@ class MiniPlayer extends StatelessWidget {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
             child: Material(
-              color: theme.colorScheme.surface.withValues(alpha: 0.9),
+              color: theme.colorScheme.surface .withOpacity(0.9),
               child: InkWell(
                 onTap: song == null ? null : () => _openPlayer(context),
                 child: AnimatedSize(
@@ -76,13 +76,13 @@ class MiniPlayer extends StatelessWidget {
                                           end: Alignment.bottomRight,
                                           colors: [
                                             theme.colorScheme.primary
-                                                .withValues(alpha: 0.09),
+                                                 .withOpacity(0.09),
                                             Colors.transparent,
                                           ],
                                         ),
                                         border: Border.all(
                                           color: theme.colorScheme.onSurface
-                                              .withValues(alpha: 0.08),
+                                               .withOpacity(0.08),
                                         ),
                                         borderRadius: BorderRadius.circular(22),
                                       ),
@@ -225,7 +225,7 @@ class _MiniProgress extends StatelessWidget {
         value: value,
         minHeight: 2.5,
         backgroundColor:
-            Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+            Theme.of(context).colorScheme.onSurface .withOpacity(0.08),
       ),
     );
   }
@@ -242,7 +242,7 @@ class _IdleMiniPlayer extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         border: Border.all(
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.07),
+          color: theme.colorScheme.onSurface .withOpacity(0.07),
         ),
         borderRadius: BorderRadius.circular(22),
       ),
