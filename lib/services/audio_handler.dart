@@ -48,6 +48,22 @@ class AudioPlayerHandler extends BaseAudioHandler
     return _sleepTimerEnd!.difference(DateTime.now()).inMinutes.clamp(0, 9999);
   }
 
+  void setSleepTimer(Duration duration) {
+    _sleepTimer?.cancel();
+    if (duration == Duration.zero) {
+      _sleepTimerEnd = null;
+      _broadcastState();
+      return;
+    }
+    _sleepTimerEnd = DateTime.now().add(duration);
+    _sleepTimer = Timer(duration, () {
+      _player.stop();
+      _sleepTimerEnd = null;
+      _broadcastState();
+    });
+    _broadcastState();
+  }
+
   void _initPlayer() {
     _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
