@@ -251,7 +251,7 @@ class DownloadManager {
               return _youtubeDownloader.downloadVideoTrack(
                 videoId,
                 task.title,
-                task.artist,
+                task.artist ?? '',
                 downloadDir,
               );
             }
@@ -259,7 +259,7 @@ class DownloadManager {
               videoId,
               task.title,
               downloadDir,
-              quality: task.requestedQuality,
+              quality: task.requestedQuality ?? 'high',
             );
           }
 

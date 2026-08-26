@@ -24,3 +24,6 @@ tool/
 BUILD_INSTRUCTIONS.txt
 build_ipa.sh
 assets/fonts/*.zip
+
+# Reference extracted IPAs (third-party apps) - never commit
+reference/

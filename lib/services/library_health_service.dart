@@ -553,7 +553,7 @@ class LibraryHealthService {
                   ?.map((e) => e as String)
                   .toList() ??
               [];
-          return [_fixDuplicate(trackIds, issue.description)];
+          return [await _fixDuplicate(trackIds, issue.description)];
 
         case 'Orphaned':
           final files = issue.data['files'] as List<dynamic>?;

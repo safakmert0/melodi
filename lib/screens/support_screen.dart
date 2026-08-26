@@ -5,6 +5,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../core/localization.dart';
 import '../core/melodi_design.dart';
+import '../core/constants.dart';
 
 /// Donation / "purchase" screen. The app is free and ad-free; supporters can
 /// leave an optional tip through an Apple-regulated in-app purchase (StoreKit).
@@ -109,9 +110,8 @@ class _SupportScreenState extends State<SupportScreen> {
 
   Future<void> _buy(ProductDetails product) async {
     try {
-      await _iap.buyProduct(
-        PurchaseParam(productDetails: product),
-        type: PurchaseType.consumable,
+      await _iap.buyConsumable(
+        purchaseParam: PurchaseParam(productDetails: product),
       );
     } catch (e) {
       if (!mounted) return;
@@ -230,7 +230,7 @@ class _SupportScreenState extends State<SupportScreen> {
   }
 
   Widget _buildTier(ProductDetails product) {
-    final buying = _pending.contains(product.productID);
+    final buying = _pending.contains(product.id);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: FilledButton.tonal(

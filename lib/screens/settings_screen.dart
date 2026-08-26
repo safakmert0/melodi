@@ -528,15 +528,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.tune,
-                          iconColor: Colors.teal,
-                          title: AppLocale.tr('eq_presets'),
-                          subtitle: AppLocale.tr('eq_presets_desc'),
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => _showEqPresetsDialog(context),
-                        ),
                         const SizedBox(height: 8),
                         _SettingsTile(
                           icon: Icons.queue_music,
@@ -2286,32 +2277,7 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => YTMusicWebViewLogin(
-                          onCookieObtained: (cookie) async {
-                            Navigator.of(context).pop();
-                            final success =
-                                await ytmusic.connectWithCookie(cookie);
-                            if (context.mounted) {
-                              if (success) {
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(AppLocale.tr('connected_as')),
-                                    backgroundColor: MelodiTheme.primaryGreen,
-                                  ),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(ytmusic.error ??
-                                        AppLocale.tr('auth_failed_try_again')),
-                                    backgroundColor: MelodiTheme.errorRed,
-                                  ),
-                                );
-                              }
-                            }
-                          },
-                        ),
+                        builder: (_) => const SizedBox(),
                       ),
                     );
                   },
@@ -2594,32 +2560,7 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => SpotifyWebViewLogin(
-                          onCookieObtained: (spDc) async {
-                            Navigator.of(context).pop();
-                            final success =
-                                await spotify.connectWithCookie(spDc);
-                            if (context.mounted) {
-                              if (success) {
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(AppLocale.tr('connected_as')),
-                                    backgroundColor: MelodiTheme.primaryGreen,
-                                  ),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(spotify.error ??
-                                        AppLocale.tr('auth_failed_try_again')),
-                                    backgroundColor: MelodiTheme.errorRed,
-                                  ),
-                                );
-                              }
-                            }
-                          },
-                        ),
+                        builder: (_) => const SizedBox(),
                       ),
                     );
                   },
@@ -3076,56 +3017,6 @@ class _StreamingSettingsPageState extends State<_StreamingSettingsPage> {
   }
 }
 
-class _ScrobbleHistoryTile extends StatelessWidget {
-  final ScrobbleItem item;
-
-  const _ScrobbleHistoryTile({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.music_note_rounded,
-                color: Colors.orange, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title.isNotEmpty ? item.title : item.videoId,
-                  style: TextStyle(color: MelodiTheme.onSurface, fontSize: 14),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (item.artists.isNotEmpty)
-                  Text(
-                    item.artists,
-                    style: TextStyle(
-                        color: MelodiTheme.onSurfaceVariant, fontSize: 12),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
-            ),
-          ),
-          if (item.spotifyTrackId != null)
-            Icon(Icons.check_circle, color: MelodiTheme.primaryGreen, size: 16),
-        ],
-      ),
-    );
-  }
-}
 
 class _InfoRow extends StatelessWidget {
   final String label;
