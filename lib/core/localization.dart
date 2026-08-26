@@ -569,6 +569,13 @@ class AppLocale {
       'signal_path_preparing': 'Preparing your experience...',
       'scanning_library': 'Scanning library...',
       'enjoy_listening': 'Enjoy listening!',
+      'import_playlist': 'Import Playlist',
+      'import_playlist_hint':
+          'Paste a Spotify, YouTube Music or Deezer playlist link. Songs are matched and can be streamed/downloaded online.',
+      'playlist_name': 'Playlist Name',
+      'importing': 'Importing...',
+      'import': 'Import',
+      'playlist_imported': 'Playlist imported.',
     },
     'tr': {
       'home': 'Ana Sayfa',
@@ -1119,6 +1126,13 @@ class AppLocale {
       'signal_path_preparing': 'Deneyiminiz hazırlanıyor...',
       'scanning_library': 'Kitaplık taranıyor...',
       'enjoy_listening': 'Keyifli dinlemeler!',
+      'import_playlist': 'Çalma Listesi İçe Aktar',
+      'import_playlist_hint':
+          'Spotify, YouTube Music veya Deezer çalma listesi bağlantısını yapıştırın. Şarkılar eşleştirilir ve çevrim içi dinlenebilir/indirilebilir.',
+      'playlist_name': 'Çalma Listesi Adı',
+      'importing': 'İçe aktarılıyor...',
+      'import': 'İçe Aktar',
+      'playlist_imported': 'Çalma listesi içe aktarıldı.',
     },
     'de': {
       'home': 'Startseite',
@@ -1664,6 +1678,13 @@ class AppLocale {
       'signal_path_preparing': 'Dein Erlebnis wird vorbereitet...',
       'scanning_library': 'Bibliothek wird gescannt...',
       'enjoy_listening': 'Viel Spaß beim Hören!',
+      'import_playlist': 'Playlist importieren',
+      'import_playlist_hint':
+          'Füge einen Spotify-, YouTube-Music- oder Deezer-Playlist-Link ein. Titel werden abgeglichen und können online gestreamt/heruntergeladen werden.',
+      'playlist_name': 'Playlist-Name',
+      'importing': 'Wird importiert...',
+      'import': 'Importieren',
+      'playlist_imported': 'Playlist importiert.',
     },
   };
 

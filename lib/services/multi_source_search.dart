@@ -54,6 +54,11 @@ class MultiSourceSearch {
 
   StreamController<List<OnlineTrack>>? _controller;
 
+  // Brief cache of resolved stream URLs so repeated playback/download attempts
+  // for the same track don't re-resolve through the network every time.
+  final Map<String, _CachedStreamUrl> _streamUrlCache = {};
+  static const Duration _streamUrlCacheTtl = Duration(minutes: 3);
+
   Stream<List<OnlineTrack>> searchAll(String query, {int limitPerSource = 10}) {
     _controller?.close();
     _controller = StreamController<List<OnlineTrack>>.broadcast();
@@ -110,11 +115,16 @@ class MultiSourceSearch {
     // Deezer's public API exposes metadata and a 30-second preview only.
     // Never let preview-only sources enter the playback/download pipeline.
     if (!track.source.supportsFullTrack) return null;
+    final cacheKey = '${track.source}:${track.id}';
+    final cached = _streamUrlCache[cacheKey];
+    if (cached != null && !cached.isExpired) return cached.url;
     final source = _sources.firstWhere(
       (s) => s.type == track.source,
       orElse: () => _sources.first,
     );
-    return await source.getStreamUrl(track);
+    final url = await source.getStreamUrl(track);
+    if (url != null) _streamUrlCache[cacheKey] = _CachedStreamUrl(url);
+    return url;
   }
 
   /// Try to get stream URL with fallback across all sources.
@@ -224,4 +234,15 @@ class MultiSourceSearch {
     }
     _controller?.close();
   }
+}
+
+class _CachedStreamUrl {
+  _CachedStreamUrl(this.url)
+      : expiresAt =
+            DateTime.now().add(MultiSourceSearch._streamUrlCacheTtl);
+
+  final String url;
+  final DateTime expiresAt;
+
+  bool get isExpired => DateTime.now().isAfter(expiresAt);
 }

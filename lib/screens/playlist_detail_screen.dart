@@ -321,6 +321,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   bool _isRemoteSong(SongModel song) =>
       song.filePath.startsWith('spotify://') ||
       song.filePath.startsWith('youtube://') ||
+      song.filePath.startsWith('online://') ||
       song.filePath.startsWith('http://') ||
       song.filePath.startsWith('https://');
 

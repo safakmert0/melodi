@@ -139,6 +139,7 @@ class PlayerProvider extends ChangeNotifier {
   Future<void> playSong(SongModel song) async {
     final isRemote = song.filePath.startsWith('youtube://') ||
         song.filePath.startsWith('spotify://') ||
+        song.filePath.startsWith('online://') ||
         song.filePath.startsWith('http://') ||
         song.filePath.startsWith('https://');
     if (!isRemote) {
@@ -147,6 +148,7 @@ class PlayerProvider extends ChangeNotifier {
         final path = item.filePath.toLowerCase();
         final remote = path.startsWith('spotify://') ||
             path.startsWith('youtube://') ||
+            path.startsWith('online://') ||
             path.startsWith('http://') ||
             path.startsWith('https://');
         return !remote && File(item.filePath).existsSync();

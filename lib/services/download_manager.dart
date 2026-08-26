@@ -233,9 +233,20 @@ class DownloadManager {
             query,
             limitPerSource: 5,
           );
-          final ytResults = searchResults
+          var ytResults = searchResults
               .where((t) => t.source == MusicSourceType.youtube)
               .toList();
+          if (ytResults.isEmpty && task.title.trim().isNotEmpty) {
+            // "Artist - Title" returned nothing; retry with the title alone so
+            // common tagging mismatches still resolve to a playable track.
+            final titleOnly = await _multiSource.searchAllSync(
+              task.title.trim(),
+              limitPerSource: 5,
+            );
+            ytResults = titleOnly
+                .where((t) => t.source == MusicSourceType.youtube)
+                .toList();
+          }
           if (ytResults.isNotEmpty) {
             videoId = ytResults.first.id;
           }

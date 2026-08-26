@@ -12,6 +12,7 @@ import 'piped_service.dart';
 import 'robust_piped_service.dart';
 import 'track_matcher.dart';
 import 'multi_source_search.dart';
+import 'music_source.dart';
 import 'youtube_downloader.dart';
 import 'navidrome_service.dart';
 
@@ -24,6 +25,12 @@ class AudioPlayerHandler extends BaseAudioHandler
   );
   final NavidromeService _navidrome = NavidromeService.instance;
   final YouTubeDownloader _youtubeDownloader = YouTubeDownloader();
+
+  // Resolved YouTube stream URLs are cached briefly so repeated plays
+  // (replay, skip back, queue transitions) start instantly instead of
+  // re-resolving through the backend/piped on every tap.
+  final Map<String, _CachedStream> _ytStreamCache = {};
+  static const Duration _ytStreamCacheTtl = Duration(minutes: 3);
 
   List<SongModel> _queue = [];
   List<SongModel> _originalQueue = [];
@@ -497,14 +504,14 @@ class AudioPlayerHandler extends BaseAudioHandler
   /// eklentisi → Piped örnekleri → indirme. Böylece cihazın IP'si
   /// YouTube'a erişemese bile sunucu/örnek proxy'siyle çalma sürer.
   Future<AudioSource> _youtubeAudioSource(String videoId) async {
-    String? streamUrl;
-    try {
-      streamUrl = await BackendApiService.instance.streamUrl(videoId);
-    } catch (e) {
-      debugPrint('Backend stream URL çözülemedi: $e');
+    final cached = _ytStreamCache[videoId];
+    if (cached != null && !cached.isExpired) {
+      return AudioSource.uri(Uri.parse(cached.url));
     }
-    streamUrl ??= await RobustPipedService.instance.getStreamUrl(videoId);
+
+    final streamUrl = await _resolveYoutubeStream(videoId);
     if (streamUrl != null) {
+      _ytStreamCache[videoId] = _CachedStream(streamUrl);
       return AudioSource.uri(Uri.parse(streamUrl));
     }
     // Fallback: trigger download and play local
@@ -519,6 +526,96 @@ class AudioPlayerHandler extends BaseAudioHandler
       return AudioSource.file(path);
     }
     throw StateError('YouTube stream/download failed');
+  }
+
+  /// Resolves a streamable audio source for an imported "online" track by
+  /// matching it against the full-track sources (YouTube, JioSaavn, Apple
+  /// Music, SoundCloud). Uses the track's own metadata so no pre-stored id is
+  /// required.
+  Future<AudioSource> _resolveOnlineAudioSource(SongModel song) async {
+    final onlineTrack = OnlineTrack(
+      id: song.id,
+      title: song.title,
+      artist: song.artist,
+      album: song.album.isEmpty ? null : song.album,
+      duration: song.duration,
+      source: MusicSourceType.deezer,
+    );
+    final url = await MultiSourceSearch().getStreamUrlWithFallback(
+      onlineTrack,
+      preferStableYouTubeReference: true,
+    );
+    if (url == null) {
+      throw StateError('Eşleşen şarkı bulunamadı');
+    }
+    if (url.startsWith('youtube://')) {
+      final videoId = url.replaceFirst('youtube://', '');
+      return await _youtubeAudioSource(videoId);
+    }
+    return AudioSource.uri(Uri.parse(url));
+  }
+
+  /// Resolves a playable YouTube stream URL as fast as possible.
+  ///
+  /// The backend proxy and Piped are queried concurrently; the first one that
+  /// returns a usable URL wins. The backend is given a short head start so it
+  /// is preferred when it is responsive, but we never block on it longer than
+  /// Piped needs — if the backend is slow or unreachable, playback starts from
+  /// the Piped result without waiting for the backend to time out.
+  Future<String?> _resolveYoutubeStream(String videoId) async {
+    final backendFut =
+        BackendApiService.instance.streamUrl(videoId).catchError((_) => null);
+    final pipedFut =
+        RobustPipedService.instance.getStreamUrl(videoId).catchError((_) => null);
+
+    final completer = Completer<String?>();
+    String? backendResult;
+    String? pipedResult;
+    var settled = false;
+
+    void settle(String? url) {
+      if (settled || url == null) return;
+      settled = true;
+      completer.complete(url);
+    }
+
+    backendFut.then((url) {
+      backendResult = url;
+      // Backend finished: prefer it immediately when it has a result.
+      if (url != null) {
+        settle(url);
+      } else {
+        // Backend failed fast: fall back to Piped as soon as it lands.
+        if (pipedResult != null) settle(pipedResult);
+      }
+    });
+
+    pipedFut.then((url) {
+      pipedResult = url;
+      if (url != null) {
+        if (backendResult != null) {
+          // Both succeeded; backend was already preferred above, but if it
+          // hadn't settled yet we still honour it via the backend branch.
+          if (!settled) settle(url);
+        } else {
+          // Backend still pending: give it a brief grace period to win on
+          // quality before accepting the (already working) Piped URL.
+          Future.delayed(const Duration(milliseconds: 1200), () {
+            if (!settled) settle(url);
+          });
+        }
+      } else {
+        if (backendResult != null) settle(backendResult);
+      }
+    });
+
+    // Both sources finished without producing a usable URL: don't leave the
+    // future hanging, signal failure so the caller can fall back to download.
+    Future.wait([backendFut, pipedFut]).then((_) {
+      if (!settled) completer.complete(null);
+    });
+
+    return completer.future;
   }
 
   Future<void> _playCurrent({
@@ -551,6 +648,10 @@ class AudioPlayerHandler extends BaseAudioHandler
         } else {
           audioSource = AudioSource.uri(Uri.parse(song.filePath));
         }
+      } else if (song.filePath.startsWith('online://')) {
+        // Imported playlist tracks without a direct stream id: match them to
+        // a full-track source (YouTube/JioSaavn/etc.) and play from there.
+        audioSource = await _resolveOnlineAudioSource(song);
       } else {
         audioSource = AudioSource.file(song.filePath);
       }
@@ -1070,4 +1171,13 @@ class PlaybackCompletionDecision {
       PlaybackCompletionAction.rewindAndPause,
     );
   }
+}
+
+class _CachedStream {
+  _CachedStream(this.url) : expiresAt = DateTime.now().add(AudioPlayerHandler._ytStreamCacheTtl);
+
+  final String url;
+  final DateTime expiresAt;
+
+  bool get isExpired => DateTime.now().isAfter(expiresAt);
 }

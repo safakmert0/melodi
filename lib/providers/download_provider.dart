@@ -102,6 +102,7 @@ class DownloadProvider extends ChangeNotifier {
           final path = song.filePath.toLowerCase();
           final isRemote = path.startsWith('spotify://') ||
               path.startsWith('youtube://') ||
+              path.startsWith('online://') ||
               path.startsWith('http://') ||
               path.startsWith('https://');
           return !isRemote &&

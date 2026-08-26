@@ -49,7 +49,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late String _selectedLanguage;
   String _downloadPath = '';
-  bool _showAllSettings = false;
   String _settingsSearch = '';
 
   @override
@@ -133,11 +132,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Theme.of(context).appBarTheme.backgroundColor ??
                         Theme.of(context).scaffoldBackgroundColor,
                 surfaceTintColor: Colors.transparent,
-                leading: IconButton(
-                  tooltip: 'Özet ayarlara dön',
-                  icon: const Icon(Icons.arrow_back_rounded),
-                  onPressed: () => setState(() => _showAllSettings = false),
-                ),
                 title: Text(
                   AppLocale.tr('settings'),
                   style: TextStyle(
@@ -189,29 +183,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 builder: (_) => _AppearanceSettingsPage()),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.play_circle_outline,
-                          iconColor: Colors.amber,
-                          title: AppLocale.tr('playback'),
-                          subtitle: AppLocale.tr('gapless_playback'),
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => _PlaybackSettingsPage(
-                                      crossfadeSeconds: _crossfadeSeconds,
-                                      autoShuffle: _autoShuffle,
-                                      gaplessPlayback: _gaplessPlayback,
-                                      onCrossfadeChanged: (v) =>
-                                          setState(() => _crossfadeSeconds = v),
-                                      onAutoShuffleChanged: (v) =>
-                                          setState(() => _autoShuffle = v),
-                                      onGaplessChanged: (v) =>
-                                          setState(() => _gaplessPlayback = v),
-                                    )),
-                          ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -259,6 +230,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           onTap: () {
                             final player = context.read<PlayerProvider>();
                             _showCrossfadeSlider(context, player);
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        _SettingsTile(
+                          icon: Icons.shuffle_rounded,
+                          iconColor: Colors.amber,
+                          title: AppLocale.tr('auto_shuffle'),
+                          subtitle: AppLocale.tr('automatically_shuffle'),
+                          trailing: Switch(
+                            value: _autoShuffle,
+                            onChanged: (v) {
+                              setState(() => _autoShuffle = v);
+                              context.read<PlayerProvider>().setAutoShuffle(v);
+                              DatabaseService.instance
+                                  .setSetting('auto_shuffle', v.toString());
+                            },
+                            activeColor: const Color(0xFF53e076),
+                          ),
+                          onTap: () {
+                            final v = !_autoShuffle;
+                            setState(() => _autoShuffle = v);
+                            context.read<PlayerProvider>().setAutoShuffle(v);
+                            DatabaseService.instance
+                                .setSetting('auto_shuffle', v.toString());
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        _SettingsTile(
+                          icon: Icons.waves_rounded,
+                          iconColor: Colors.pink,
+                          title: AppLocale.tr('gapless_playback'),
+                          subtitle: AppLocale.tr('seamless_transition'),
+                          trailing: Switch(
+                            value: _gaplessPlayback,
+                            onChanged: (v) {
+                              setState(() => _gaplessPlayback = v);
+                              context
+                                  .read<PlayerProvider>()
+                                  .setGaplessPlayback(v);
+                              DatabaseService.instance
+                                  .setSetting('gapless_playback', v.toString());
+                            },
+                            activeColor: const Color(0xFF53e076),
+                          ),
+                          onTap: () {
+                            final v = !_gaplessPlayback;
+                            setState(() => _gaplessPlayback = v);
+                            context
+                                .read<PlayerProvider>()
+                                .setGaplessPlayback(v);
+                            DatabaseService.instance
+                                .setSetting('gapless_playback', v.toString());
                           },
                         ),
                       ],
@@ -1625,7 +1648,7 @@ class _CollapsibleSection extends StatefulWidget {
   const _CollapsibleSection({
     required this.title,
     required this.children,
-  }) : startExpanded = false;
+  }) : startExpanded = true;
 
   @override
   State<_CollapsibleSection> createState() => _CollapsibleSectionState();

@@ -13,6 +13,7 @@ import '../library/library_components.dart';
 import '../image_with_fallback.dart';
 import 'home_hero.dart';
 import 'home_rails.dart';
+import 'home_discover_rail.dart';
 
 class HomeContent extends StatelessWidget {
   const HomeContent({
@@ -34,6 +35,7 @@ class HomeContent extends StatelessWidget {
           playlistCount: playlists.playlists.length,
         ),
         _QuickPicks(library: library),
+        const HomeDiscoverRail(),
         HomeAlbumRail(library: library),
         if (playlists.playlists.isNotEmpty)
           HomePlaylistRail(playlists: playlists, library: library),

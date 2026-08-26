@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/constants.dart';
+import '../core/localization.dart';
 import '../services/database_service.dart';
+import 'playlist_import_screen.dart';
 
 class SharedUrlsScreen extends StatefulWidget {
   const SharedUrlsScreen({super.key});
@@ -110,6 +112,26 @@ class _SharedUrlsScreenState extends State<SharedUrlsScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: IconThemeData(color: MelodiTheme.onSurface),
+        actions: [
+          IconButton(
+            tooltip: AppLocale.tr('import_playlist'),
+            icon: const Icon(Icons.playlist_add_rounded),
+            onPressed: () async {
+              final result = await Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (_) => const PlaylistImportScreen()),
+              );
+              if (result != null && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(AppLocale.tr('playlist_imported')),
+                    backgroundColor: MelodiTheme.primaryGreen,
+                  ),
+                );
+              }
+            },
+          ),
+        ],
       ),
       body: _loading
           ? Center(

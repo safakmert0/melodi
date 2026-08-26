@@ -80,18 +80,6 @@ class SourceCatalog {
           SourceCapability.playback,
         },
       ),
-      const SourceDescriptor(
-        kind: SourceKind.lastFm,
-        name: 'Last.fm',
-        description: 'Dinleme geçmişi, keşif ve scrobble',
-        status: SourceStatus.available,
-        requiresAccount: true,
-        capabilities: {
-          SourceCapability.search,
-          SourceCapability.recommendations,
-          SourceCapability.scrobble,
-        },
-      ),
       // Eklenti mağazasından kurulan topluluk sağlayıcıları.
       for (final extension in extensions)
         if (extension.enabled)

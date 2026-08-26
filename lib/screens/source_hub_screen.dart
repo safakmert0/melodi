@@ -268,7 +268,6 @@ class _SourceIcon extends StatelessWidget {
         ),
       SourceKind.deezer => (Icons.equalizer_rounded, const Color(0xFFA970FF)),
       SourceKind.jioSaavn => (Icons.waves_rounded, const Color(0xFF2BC5B4)),
-      SourceKind.lastFm => (Icons.insights_rounded, const Color(0xFFD51007)),
       SourceKind.navidrome => (Icons.dns_rounded, const Color(0xFF6C8CFF)),
       SourceKind.extension => (
           Icons.extension_rounded,

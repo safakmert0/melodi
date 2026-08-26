@@ -5,7 +5,6 @@ enum SourceKind {
   youtube,
   deezer,
   jioSaavn,
-  lastFm,
   navidrome,
   extension,
 }

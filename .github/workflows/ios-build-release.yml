@@ -2,6 +2,9 @@ name: iOS Build & Release
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
 
 env:
   FLUTTER_VERSION: '3.47.1'
@@ -48,7 +51,7 @@ jobs:
           printf 'CODE_SIGNING_ALLOWED = NO\nCODE_SIGNING_REQUIRED = NO\nDEVELOPMENT_TEAM = AAAAAAAAAA\nCODE_SIGN_STYLE = Manual\n' >> Flutter/Debug.xcconfig
           cd ..
           flutter build ios --release \
-            --build-name=${{ github.ref_name }} \
+            --build-name=${GITHUB_REF_NAME#v} \
             --build-number=${{ github.run_number }} \
             --no-codesign
       
