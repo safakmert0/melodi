@@ -5,6 +5,7 @@ import '../core/constants.dart';
 import '../models/playlist_model.dart';
 import '../models/song_model.dart';
 import '../services/database_service.dart';
+import '../services/download_manager.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/playlist_provider.dart';
