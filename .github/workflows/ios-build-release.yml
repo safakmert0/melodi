@@ -44,21 +44,8 @@ jobs:
         run: |
           cd ios
           pod install
-          python3 - <<'PY'
-          import re
-          p = 'Runner.xcodeproj/project.pbxproj'
-          s = open(p).read()
-          def repl(m):
-              eol = m.group(1)
-              return (m.group(0)
-                      + '\t\t\t\tDEVELOPMENT_TEAM = "AAAAAAAAAA";' + eol
-                      + '\t\t\t\tCODE_SIGNING_ALLOWED = NO;' + eol
-                      + '\t\t\t\tCODE_SIGNING_REQUIRED = NO;' + eol)
-          s2 = re.sub(r'CODE_SIGN_STYLE = Automatic;(\r?\n)', repl, s)
-          open(p, 'w').write(s2)
-          print('patched' if s2 != s else 'NO CHANGE')
-          PY
-          grep -n "CODE_SIGNING_ALLOWED" Runner.xcodeproj/project.pbxproj || echo "ALLOWED not found"
+          printf 'CODE_SIGNING_ALLOWED = NO\nCODE_SIGNING_REQUIRED = NO\nDEVELOPMENT_TEAM = AAAAAAAAAA\nCODE_SIGN_STYLE = Manual\n' >> Flutter/Release.xcconfig
+          printf 'CODE_SIGNING_ALLOWED = NO\nCODE_SIGNING_REQUIRED = NO\nDEVELOPMENT_TEAM = AAAAAAAAAA\nCODE_SIGN_STYLE = Manual\n' >> Flutter/Debug.xcconfig
           cd ..
           flutter build ios --release \
             --build-name=${{ github.ref_name }} \
