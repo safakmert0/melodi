@@ -242,6 +242,7 @@ class DownloadManager {
         }
 
         if (videoId != null) {
+          final String vid = videoId;
           final asVideo =
               (await DatabaseService.instance.getSetting('download_as_video')) ==
                   'true';
@@ -249,14 +250,14 @@ class DownloadManager {
           Future<String?> _fetch(bool video) {
             if (video) {
               return _youtubeDownloader.downloadVideoTrack(
-                videoId,
+                vid,
                 task.title,
                 task.artist ?? '',
                 downloadDir,
               );
             }
             return _youtubeDownloader.downloadFullTrack(
-              videoId,
+              vid,
               task.title,
               downloadDir,
               quality: task.requestedQuality ?? 'high',
