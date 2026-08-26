@@ -35,11 +35,25 @@ jobs:
       
       - name: Generate localization files
         run: flutter gen-l10n
-      
+
+      - name: Analyze
+        run: flutter analyze
+
       - name: Install CocoaPods
         run: pod install --repo-update
         working-directory: ./ios
-      
+
+      - name: Patch Xcode for unsigned CI build
+        run: |
+          cd ios
+          python3 - <<'PY'
+          p = 'Runner.xcodeproj/project.pbxproj'
+          s = open(p).read()
+          s = s.replace('CODE_SIGN_STYLE = Automatic;\n',
+                        'CODE_SIGN_STYLE = Automatic;\n\t\t\t\tDEVELOPMENT_TEAM = "AAAAAAAAAA";\n\t\t\t\tCODE_SIGNING_ALLOWED = NO;\n')
+          open(p, 'w').write(s)
+          PY
+
       - name: Build iOS (unsigned)
         run: |
           flutter build ios --release \
