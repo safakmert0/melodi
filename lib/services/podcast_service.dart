@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'database_service.dart';
+import '../models/song_model.dart';
+import 'download_manager.dart';
+import 'storage_manager.dart';
 
 class PodcastEpisode {
   final String id;
@@ -125,6 +129,89 @@ class PodcastService {
         lastPlayedAt TEXT NOT NULL
       )
     ''');
+    await db.rawInsert('''
+      CREATE TABLE IF NOT EXISTS podcast_downloads (
+        episodeId TEXT PRIMARY KEY,
+        podcastId TEXT NOT NULL,
+        localPath TEXT NOT NULL,
+        downloadedAt TEXT NOT NULL
+      )
+    ''');
+  }
+
+  /// Whether a pasted/opened URL is likely a podcast feed or episode.
+  static bool isPodcastUrl(String url) {
+    final u = url.trim().toLowerCase();
+    if (!u.startsWith('http://') && !u.startsWith('https://')) return false;
+    if (RegExp(r'\.(mp3|m4a|aac|ogg|opus|wav|flac)(\?|$)').hasMatch(u)) {
+      return true;
+    }
+    if (u.endsWith('.xml') ||
+        u.endsWith('.rss') ||
+        u.contains('feed') ||
+        u.contains('rss') ||
+        u.contains('podcast')) {
+      return true;
+    }
+    const hosts = [
+      'feeds.',
+      'feed.',
+      'podcasts.',
+      'pinecast',
+      'buzzsprout',
+      'anchor.fm',
+      'libsyn',
+      'simplecast',
+      'fireside.fm',
+      'transistor.fm',
+      'redcircle',
+      'megaphone.fm',
+      'acast',
+      'soundcloud.com',
+      'feeds.',
+      'podbay',
+      'stitcher',
+    ];
+    return hosts.any((h) => u.contains(h));
+  }
+
+  /// Resolve a feed URL or a single episode (audio file) URL into a feed.
+  Future<PodcastFeed> resolveUrl(String url) async {
+    final trimmed = url.trim();
+    if (RegExp(r'\.(mp3|m4a|aac|ogg|opus|wav|flac)(\?|$)',
+            caseSensitive: false)
+        .hasMatch(trimmed)) {
+      final fileName =
+          Uri.parse(trimmed).pathSegments.lastOrNull?.split('?').first ??
+              'Episode';
+      final id = _hashUrl(trimmed);
+      final ep = PodcastEpisode(
+        id: id,
+        title: _prettyName(fileName),
+        description: '',
+        audioUrl: trimmed,
+        duration: Duration.zero,
+        publishDate: DateTime.now(),
+      );
+      return PodcastFeed(
+        id: _hashUrl('single:$trimmed'),
+        title: _prettyName(fileName),
+        description: 'Single episode',
+        episodes: [ep],
+        rssUrl: trimmed,
+        fetchedAt: DateTime.now(),
+      );
+    }
+
+    final response = await _client.get(Uri.parse(trimmed));
+    if (response.statusCode != 200) {
+      throw Exception('Failed to fetch podcast: ${response.statusCode}');
+    }
+    final xml = response.body;
+    if (xml.contains('<rss') || xml.contains('<channel')) {
+      return _parseRss(xml, trimmed);
+    }
+    throw FormatException('Not a podcast feed: $trimmed');
   }
 
   Future<PodcastFeed> fetchFeed(String rssUrl) async {
@@ -145,8 +232,7 @@ class PodcastService {
     final title = _extractTag(channel, 'title');
     final description = _extractTag(channel, 'description') ??
         _extractTag(channel, 'itunes:summary');
-    final imageUrl =
-        _extractTag(channel, 'itunes:image') ?? _extractTag(channel, 'image');
+    final imageUrl = _extractImageUrl(channel);
 
     final items =
         RegExp(r'<item>(.*?)</item>', dotAll: true).allMatches(channel);
@@ -171,7 +257,7 @@ class PodcastService {
     final description =
         _extractTag(item, 'description') ?? _extractTag(item, 'itunes:summary');
     final audioUrl = _extractEnclosureUrl(item);
-    final imageUrl = _extractTag(item, 'itunes:image');
+    final imageUrl = _extractImageUrl(item);
     final publishDate = _parseDate(_extractTag(item, 'pubDate'));
     final duration = _parseDuration(_extractTag(item, 'itunes:duration'));
 
@@ -200,6 +286,136 @@ class PodcastService {
   String? _extractEnclosureUrl(String item) {
     final match = RegExp(r'<enclosure[^>]+url="([^"]+)"').firstMatch(item);
     return match?.group(1);
+  }
+
+  /// Resolve an image url from <itunes:image href="..."/> or <image><url>...</url></image>.
+  String? _extractImageUrl(String xml) {
+    final itunes =
+        RegExp(r'<itunes:image[^>]+href="([^"]+)"', caseSensitive: false)
+            .firstMatch(xml);
+    if (itunes != null) return itunes.group(1)!.trim();
+    final imageBlock =
+        RegExp(r'<image[^>]*>(.*?)</image>', dotAll: true).firstMatch(xml);
+    if (imageBlock != null) {
+      final url = _extractTag(imageBlock.group(1)!, 'url');
+      if (url != null) return url;
+    }
+    return null;
+  }
+
+  String _prettyName(String raw) {
+    final noExt = raw.contains('.')
+        ? raw.substring(0, raw.lastIndexOf('.'))
+        : raw;
+    return noExt
+        .replaceAll(RegExp(r'[-_]'), ' ')
+        .trim()
+        .replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  String _safeName(String value) =>
+      value.replaceAll(RegExp(r'[^\w\s-]'), '').trim().replaceAll(
+          RegExp(r'\s+'), ' ');
+
+  String _extForUrl(String url) {
+    final suffix = Uri.tryParse(url)
+            ?.pathSegments
+            .lastOrNull
+            ?.split('?')
+            .first
+            .toLowerCase()
+            .split('.')
+            .last ??
+        'mp3';
+    const supported = {'flac', 'mp3', 'm4a', 'aac', 'ogg', 'opus', 'wav'};
+    return supported.contains(suffix) ? suffix : 'mp3';
+  }
+
+  /// Download an episode to local storage, register it in the library and the
+  /// Downloads list, and return the local file path.
+  Future<String> downloadEpisode(PodcastEpisode episode,
+      {required String podcastId, String? podcastTitle}) async {
+    await _ensureTable();
+    final db = DatabaseService.instance;
+    final existing = await getLocalPath(episode.id);
+    if (existing != null) {
+      final file = File(existing);
+      if (await file.exists()) return existing;
+    }
+
+    final dir = Directory(await StorageManager.instance.getStorageLocation());
+    await dir.create(recursive: true);
+
+    final ext = _extForUrl(episode.audioUrl);
+    final safe = _safeName('${podcastTitle ?? 'Podcast'} - ${episode.title}');
+    final path = '${dir.path}/$safe.$ext';
+
+    final request = http.Request('GET', Uri.parse(episode.audioUrl))
+      ..followRedirects = true
+      ..headers['User-Agent'] =
+          'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)';
+    final response = await _client.send(request);
+    if (response.statusCode != 200) {
+      throw Exception('Download failed: ${response.statusCode}');
+    }
+    final file = File(path);
+    final sink = file.openWrite();
+    await response.stream.pipe(sink);
+    await sink.close();
+
+    if (await file.length() < 1000) {
+      await file.delete();
+      throw Exception('Downloaded file is empty');
+    }
+
+    final song = SongModel(
+      id: 'podcast:${episode.id}',
+      title: episode.title,
+      artist: podcastTitle ?? 'Podcast',
+      album: podcastTitle ?? '',
+      duration: episode.duration,
+      filePath: path,
+      fileSize: await file.length(),
+      dateAdded: DateTime.now(),
+    );
+    await db.insertSong(song);
+    await db.upsertDownloadedTrack('podcast:${episode.id}', path);
+    await db.rawInsert('''
+      INSERT OR REPLACE INTO podcast_downloads (episodeId, podcastId, localPath, downloadedAt)
+      VALUES (?, ?, ?, ?)
+    ''', [
+      episode.id,
+      podcastId,
+      path,
+      DateTime.now().toIso8601String()
+    ]);
+
+    DownloadManager().registerExternalDownload(
+      id: 'podcast:${episode.id}',
+      title: episode.title,
+      artist: podcastTitle ?? 'Podcast',
+      album: podcastTitle,
+      filePath: path,
+      expectedDurationMs: episode.duration.inMilliseconds,
+    );
+
+    return path;
+  }
+
+  Future<String?> getLocalPath(String episodeId) async {
+    await _ensureTable();
+    final db = DatabaseService.instance;
+    final result = await db.rawQuery(
+        'SELECT localPath FROM podcast_downloads WHERE episodeId = ?',
+        [episodeId]);
+    if (result.isEmpty) return null;
+    return result.first['localPath'] as String?;
+  }
+
+  Future<bool> isDownloaded(String episodeId) async {
+    final path = await getLocalPath(episodeId);
+    if (path == null) return false;
+    return File(path).existsSync();
   }
 
   DateTime _parseDate(String? dateStr) {

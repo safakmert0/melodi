@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../core/constants.dart';
+import '../models/song_model.dart';
 import '../services/storage_manager.dart';
+import '../services/database_service.dart';
 import '../services/database_backup.dart';
 
 class StorageScreen extends StatefulWidget {
@@ -20,6 +22,7 @@ class _StorageScreenState extends State<StorageScreen> {
   int _fileCount = 0;
   Map<String, Map<String, int>> _formatBreakdown = {};
   String _location = '';
+  List<SongModel> _downloadedSongs = [];
   bool _isLoading = true;
   bool _isMoving = false;
 
@@ -36,6 +39,7 @@ class _StorageScreenState extends State<StorageScreen> {
       _storage.getFileCount(),
       _storage.getFormatBreakdown(),
       _storage.getStorageLocation(),
+      DatabaseService.instance.getDownloadedSongs(),
     ]);
     if (!mounted) return;
     setState(() {
@@ -43,6 +47,7 @@ class _StorageScreenState extends State<StorageScreen> {
       _fileCount = results[1] as int;
       _formatBreakdown = results[2] as Map<String, Map<String, int>>;
       _location = results[3] as String;
+      _downloadedSongs = results[4] as List<SongModel>;
       _isLoading = false;
     });
   }
@@ -100,6 +105,8 @@ class _StorageScreenState extends State<StorageScreen> {
                     Icons.folder_rounded,
                     Colors.orange,
                   ),
+                  const SizedBox(height: 20),
+                  _buildDownloadedSongs(),
                   const SizedBox(height: 20),
                   _buildFormatBreakdown(),
                   const SizedBox(height: 20),
@@ -319,6 +326,89 @@ class _StorageScreenState extends State<StorageScreen> {
               ),
             );
           }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDownloadedSongs() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: MelodiTheme.containerLow,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.download_rounded,
+                  color: MelodiTheme.primaryGreen, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                AppLocale.tr('downloads_subtitle'),
+                style: TextStyle(
+                  color: MelodiTheme.onSurface,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${_downloadedSongs.length}',
+                style: TextStyle(
+                  color: MelodiTheme.onSurfaceVariant,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_downloadedSongs.isEmpty)
+            Text(
+              AppLocale.tr('no_downloads'),
+              style: TextStyle(
+                color: MelodiTheme.onSurfaceVariant,
+                fontSize: 13,
+              ),
+            )
+          else
+            SizedBox(
+              height: (_downloadedSongs.length * 56.0).clamp(0.0, 320.0),
+              child: ListView.separated(
+                physics: const ClampingScrollPhysics(),
+                itemCount: _downloadedSongs.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final song = _downloadedSongs[index];
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.music_note_rounded, size: 20),
+                    title: Text(
+                      song.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: MelodiTheme.onSurface,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    subtitle: Text(
+                      song.artist,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: MelodiTheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
         ],
       ),
     );

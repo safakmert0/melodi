@@ -21,15 +21,10 @@ import 'providers/youtube_provider.dart';
 import 'providers/ytmusic_provider.dart';
 import 'providers/spotify_provider.dart';
 import 'providers/mix_provider.dart';
-import 'providers/sync_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/metadata_provider.dart';
-import 'providers/scrobble_provider.dart';
 import 'providers/connection_provider.dart';
 import 'providers/download_provider.dart';
-import 'providers/like_mirror_provider.dart';
-import 'services/scrobble_service.dart';
-import 'services/like_mirror_service.dart';
 import 'services/queue_manager.dart';
 import 'services/resume_playback.dart';
 import 'services/notification_service.dart';
@@ -311,39 +306,6 @@ class MelodiApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SettingsProvider()..load()),
         ChangeNotifierProvider(
           create: (ctx) {
-            final sync = SyncProvider();
-            final spotify = ctx.read<SpotifyProvider>();
-            final ytmusic = ctx.read<YTMusicProvider>();
-            final playlists = ctx.read<PlaylistProvider>();
-            final library = ctx.read<LibraryProvider>();
-            sync.setServices(
-                spotify: spotify.service, ytmusicSource: ytmusic.service);
-            sync.onSyncCompleted = () async {
-              await playlists.loadPlaylists();
-              await library.loadAll();
-            };
-            // Delay sync init to allow SpotifyProvider/YTMusicProvider to finish loading
-            Future.delayed(const Duration(seconds: 5), () {
-              if (spotify.isConnected || ytmusic.isConnected) {
-                sync.triggerSync();
-              }
-            });
-            return sync;
-          },
-        ),
-        ChangeNotifierProvider(
-          create: (ctx) {
-            final ytmusic = ctx.read<YTMusicProvider>();
-            final spotify = ctx.read<SpotifyProvider>();
-            final service = ScrobbleService(
-                spotify: spotify.service);
-            final provider = ScrobbleProvider(service: service);
-            provider.init();
-            return provider;
-          },
-        ),
-        ChangeNotifierProvider(
-          create: (ctx) {
             final spotify = ctx.read<SpotifyProvider>();
             final ytmusic = ctx.read<YTMusicProvider>();
             final provider = ConnectionProvider(
@@ -361,18 +323,6 @@ class MelodiApp extends StatelessWidget {
             return MetadataProvider(
                 spotifyService: spotify.service,
                 ytmusicSource: ytmusic.service);
-          },
-        ),
-        ChangeNotifierProvider(
-          create: (ctx) {
-            final spotify = ctx.read<SpotifyProvider>();
-            final ytmusic = ctx.read<YTMusicProvider>();
-            final service = LikeMirrorService(
-                spotifyService: spotify.service,
-                ytMusicSource: ytmusic.service);
-            final provider = LikeMirrorProvider(service);
-            provider.init();
-            return provider;
           },
         ),
         ChangeNotifierProvider(

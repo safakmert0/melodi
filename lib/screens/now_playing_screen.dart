@@ -22,6 +22,7 @@ import '../widgets/seek_bar.dart';
 import '../widgets/queue_sheet.dart';
 import '../widgets/image_with_fallback.dart';
 import '../widgets/sleep_timer_sheet.dart';
+import '../widgets/equalizer_sheet.dart';
 import '../widgets/crossfade_slider.dart';
 import 'lyrics_screen.dart';
 import 'cover_flow_screen.dart';
@@ -605,6 +606,21 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                         top: Radius.circular(20)),
                                   ),
                                   builder: (_) => const SleepTimerSheet(),
+                                );
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.equalizer_rounded,
+                                  color: Colors.white54, size: 24),
+                              onPressed: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  backgroundColor: MelodiTheme.containerLow,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.vertical(
+                                        top: Radius.circular(20)),
+                                  ),
+                                  builder: (_) => const EqualizerSheet(),
                                 );
                               },
                             ),

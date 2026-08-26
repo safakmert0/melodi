@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/constants.dart';
+import '../services/database_service.dart';
 import '../providers/download_provider.dart';
 import '../providers/player_provider.dart';
 import '../providers/spotify_provider.dart';
@@ -29,6 +30,10 @@ class _SpotifyPlaylistScreenState extends State<SpotifyPlaylistScreen> {
   @override
   void initState() {
     super.initState();
+    DatabaseService.instance.addSharedUrl(
+      'https://open.spotify.com/playlist/${widget.playlist.id}',
+      title: widget.playlist.name,
+    );
     _tracksFuture = _loadTracks();
   }
 

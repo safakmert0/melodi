@@ -5,6 +5,27 @@ All notable changes to Melodi will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.6.0] - 2025-08-25
+
+### App Store Uyumluluk ve Yeniden Yapılanma
+
+#### Kaldırılan Özellikler (App Store uyumu / sadeleştirme)
+- Spotify ve YouTube Music **hesap bağlama (OAuth)** akışı kaldırıldı; çalma listesi **link ile ekleme** korundu.
+- Last.fm / scrobble özelliği kaldırıldı.
+- Senkronizasyon özellikleri kaldırıldı: otomatik senkron, varsayılan eş zamanlama, beğeni aynalama, geçmiş ve scrobble.
+- Engellenen parçalar, dosya düzeni, başarısız indirmeler menü girişi (özellik İndirmeler'in içinde kaldı), sesli kitaplar, Siri/sesli kontrol ve AirPlay kaldırıldı.
+
+#### İyileştirmeler
+- **Spotify parçası çalınamıyor hatası giderildi**: YouTube eşleşmesi sağlamlaştırıldı (Topic/VEVO normalizasyonu, daha geniş arama, düşük güvenli eşleşmede en iyi çabayla kabul).
+- Ses kalitesi varsayılanı ilk yüklemede **tamamen kayıpsız** oldu (akış/indirme/wifi/cellular).
+- Kütüphane sağlığı artık sorunları **gerçekten düzeltiyor** ve madde madde başarılı/başarısız raporu veriyor.
+- Kitaplık "İndirilenler" bölümü indirilen parçaları gösteriyor; Depolama ekranı şarkı adlarını listeliyor.
+- Ekolayzır Ayarlar'dan kaldırılıp **oynatıcı ekranına** taşındı.
+- Paylaşılan Bağlantılar: Spotify/YouTube çalma listesi linkleri artık kaydediliyor ve tekrar açılabiliyor.
+- Podcast: feed/episode linki eklenince podcast + bölümleri gösteriliyor; bölüm çevrim içi dinenebiliyor veya indirilebiliyor.
+- Kapak & söz tamamlama (backfill) geliştirildi; söz çekme artık çalışıyor, toplu işlem daha dayanıklı.
+- Ayarlar ekranı düzleştirildi: tüm menüler "Tüm ayarlar"a tıklamadan doğrudan görünüyor.
+
 ## [4.5.0] - 2025-08-24
 
 ### 🎉 Major Features - Native HLS Downloader (JollyTune/Musix Style)

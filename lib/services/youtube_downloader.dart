@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'backend_api_service.dart';
 import 'robust_piped_service.dart';
+import 'hls_downloader_service.dart';
 
 class YouTubeDownloader {
   final BackendApiService _backend = BackendApiService.instance;
@@ -44,6 +45,39 @@ class YouTubeDownloader {
     try {
       return await _piped.getStreamUrl(videoId);
     } catch (_) {}
+
+    return null;
+  }
+
+  /// Downloads the track as a video file (mp4/mov). Tries the native HLS
+  /// downloader (MusiX / JollyTone style) first, then the yt-dlp backend.
+  Future<String?> downloadVideoTrack(
+    String videoId,
+    String title,
+    String artist,
+    Directory dir,
+  ) async {
+    try {
+      final manifest = await _piped.getHLSManifestUrl(videoId);
+      if (manifest != null) {
+        final path = await HLSDownloaderService.instance.downloadHLS(
+          hlsManifestUrl: manifest,
+          videoId: videoId,
+          title: title,
+          artist: artist,
+        );
+        if (path != null) return path;
+      }
+    } catch (e) {
+      debugPrint('HLS video download failed: $e');
+    }
+
+    try {
+      final backendPath = await _backend.downloadVideo(videoId, title);
+      if (backendPath != null) return backendPath;
+    } catch (e) {
+      debugPrint('Backend video download failed: $e');
+    }
 
     return null;
   }

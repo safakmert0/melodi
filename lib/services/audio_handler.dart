@@ -746,9 +746,17 @@ try {
         album: song.album,
         durationMs: song.duration.inMilliseconds,
       );
-      if (match == null || match.confidence < 0.45) {
+      if (match == null) {
         throw StateError(
             'Spotify parçası için oynatılabilir kaynak bulunamadı');
+      }
+      // Düşük güvenli eşleşmelerde sert hata vermek yerine en iyi çabayı
+      // kabul et; böylece çalma listesi içindeki parçalar "kaynak bulunamadı"
+      // hatasıyla çalmamazlık yapmaz.
+      if (match.confidence < 0.35) {
+        debugPrint(
+            'Düşük güvenli YouTube eşleşmesi kabul edildi (${match.confidence.toStringAsFixed(2)}): '
+            '${song.title} - ${song.artist} -> ${match.ytVideoId}');
       }
       videoId = match.ytVideoId;
       await _db.cacheMatch(spotifyId, videoId, match.confidence);

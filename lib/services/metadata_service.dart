@@ -2,12 +2,35 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
+import 'package:flutter/foundation.dart';
 import '../models/song_model.dart';
 import '../core/constants.dart';
 import 'database_service.dart';
 import 'spotify_service.dart';
+import 'lyrics_service.dart';
+import 'multi_source_search.dart';
 import 'sources/youtube_music_source.dart';
 import 'music_source.dart';
+
+/// Result of a backfill run, including per-track failures so the UI can
+/// surface exactly which tracks could not be completed and why.
+class BackfillReport {
+  final int updated;
+  final int total;
+  final List<String> failures;
+
+  const BackfillReport({
+    this.updated = 0,
+    this.total = 0,
+    this.failures = const [],
+  });
+
+  BackfillReport operator +(BackfillReport other) => BackfillReport(
+        updated: updated + other.updated,
+        total: total + other.total,
+        failures: [...failures, ...other.failures],
+      );
+}
 
 class MetadataService {
   static final Set<String> _supportedExtensions =
@@ -138,69 +161,236 @@ class MetadataService {
     return files;
   }
 
-  static Future<int> backfillAlbumArt({
+  static Future<BackfillReport> backfillAlbumArt({
     SpotifyService? spotifyService,
     YouTubeMusicSource? ytmusicSource,
   }) async {
     final tracks = await _db.getTracksMissingArt();
+    final failures = <String>[];
     int updated = 0;
 
     for (final track in tracks) {
       final trackId = track['id'] as String;
-      final title = track['title'] as String? ?? '';
-      final artist = track['artist'] as String? ?? '';
-
-      String? imageUrl;
-
-      if (spotifyService != null && spotifyService.isConnected) {
-        final results = await spotifyService.searchTracks('$artist $title');
-        if (results.isNotEmpty) {
-          imageUrl = results.first.albumImageUrl;
-        }
+      final title = (track['title'] as String? ?? '').trim();
+      final artist = (track['artist'] as String? ?? '').trim();
+      if (title.isEmpty) {
+        failures.add('$artist - <no title>: skipped (missing title)');
+        continue;
       }
 
-      if (imageUrl == null && ytmusicSource != null) {
-        final results = await ytmusicSource.search('$artist $title', limit: 5);
-        if (results.isNotEmpty) {
-          imageUrl = results.first.thumbnailUrl;
+      String? url;
+      String sourceLabel = 'unknown';
+      try {
+        // 1. Spotify (best quality cover).
+        if (spotifyService != null && spotifyService.isConnected) {
+          final results = await spotifyService.searchTracks('$artist $title');
+          final best = _bestSpotifyCover(results, title, artist);
+          if (best != null) {
+            url = best.albumImageUrl;
+            sourceLabel = 'Spotify';
+          }
         }
-      }
 
-      if (imageUrl != null && imageUrl.isNotEmpty) {
-        await _db.updateTrackImageUrl(trackId, imageUrl);
+        // 2. YouTube Music.
+        if (url == null && ytmusicSource != null) {
+          final results =
+              await ytmusicSource.search('$artist $title', limit: 5);
+          final best = _bestOnlineCover(results, title, artist);
+          if (best != null) {
+            url = best.thumbnailUrl;
+            sourceLabel = 'YouTube Music';
+          }
+        }
+
+        // 3. Any other configured source as a last resort.
+        if (url == null) {
+          final other = await _searchCoverOtherSources(title, artist);
+          if (other != null) {
+            url = other.url;
+            sourceLabel = other.source;
+          }
+        }
+
+        if (url == null || url.isEmpty) {
+          failures
+              .add('$artist - $title: no matching cover in any source');
+          continue;
+        }
+
+        final bytes = await _downloadBytes(url);
+        if (bytes == null || bytes.isEmpty) {
+          failures.add(
+              '$artist - $title: cover url unreachable ($sourceLabel)');
+          continue;
+        }
+
+        // Persist the actual artwork bytes (what the UI renders) and keep the
+        // remote URL for reference.
+        await _db.updateTrackAlbumArt(trackId, bytes);
+        await _db.updateTrackImageUrl(trackId, url);
         updated++;
+      } catch (e) {
+        failures.add('$artist - $title: $e');
       }
     }
 
-    return updated;
+    return BackfillReport(
+        updated: updated, total: tracks.length, failures: failures);
   }
 
-  static Future<int> backfillLyrics({
+  static Future<BackfillReport> backfillLyrics({
     YouTubeMusicSource? ytmusicSource,
   }) async {
     final db = await _db.database;
     final tracks = await db.rawQuery('''
-      SELECT s.id, s.title, s.artist FROM songs s
+      SELECT s.id, s.title, s.artist, s.album, s.durationMs, s.filePath
+      FROM songs s
       WHERE (s.lyrics IS NULL OR s.lyrics = '')
       AND NOT EXISTS (SELECT 1 FROM track_lyrics tl WHERE tl.trackId = s.id)
     ''');
+    final failures = <String>[];
     int updated = 0;
 
     for (final track in tracks) {
       final trackId = track['id'] as String;
-      final title = track['title'] as String? ?? '';
-      final artist = track['artist'] as String? ?? '';
+      final title = (track['title'] as String? ?? '').trim();
+      final artist = (track['artist'] as String? ?? '').trim();
+      final album = (track['album'] as String? ?? '').trim();
+      final durationMs = (track['durationMs'] as int?) ?? 0;
+      final filePath = track['filePath'] as String?;
+      if (title.isEmpty) {
+        failures.add('$artist - <no title>: skipped (missing title)');
+        continue;
+      }
 
-      if (ytmusicSource != null) {
-        final results = await ytmusicSource.search('$artist $title', limit: 5);
-        if (results.isNotEmpty) {
-          // Note: Piped/Backend don't provide lyrics directly
-          // Lyrics would need to come from a separate lyrics service
+      try {
+        final result = await LyricsService.fetchLyrics(
+          artist: artist,
+          track: title,
+          album: album.isNotEmpty ? album : null,
+          durationMs: durationMs > 0 ? durationMs : null,
+          filePath: filePath,
+          preferSynced: true,
+        );
+
+        if (result == null ||
+            (result.plainText == null && result.syncedLrc == null)) {
+          failures.add('$artist - $title: no lyrics found');
+          continue;
         }
+
+        final plain = result.plainText ?? result.syncedLrc;
+        final synced = result.syncedLrc;
+        await _db.saveLyrics(trackId, {
+          'lyrics': plain,
+          'syncedLyrics': synced,
+          'source': result.source ?? 'lrclib',
+        });
+        if (plain != null && plain.isNotEmpty) {
+          await _db.updateTrackMetadata(trackId, {'lyrics': plain});
+        }
+        updated++;
+      } catch (e) {
+        failures.add('$artist - $title: $e');
       }
     }
 
-    return updated;
+    return BackfillReport(
+        updated: updated, total: tracks.length, failures: failures);
+  }
+
+  // --- cover-art helpers -------------------------------------------------
+
+  static String _normalize(String value) => value
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9\u00c0-\u024f\u0400-\u04ff]+'), ' ')
+      .trim();
+
+  /// Score how well a candidate matches the wanted title/artist.
+  /// >= 3 means at least a partial title match; >= 5 means exact title match.
+  static int _scoreMatch(String wantedTitle, String wantedArtist,
+      String candTitle, String candArtist) {
+    final wt = _normalize(wantedTitle);
+    final wa = _normalize(wantedArtist.split(',').first);
+    final ct = _normalize(candTitle);
+    final ca = _normalize(candArtist);
+    var score = 0;
+    if (ct == wt) {
+      score += 5;
+    } else if (ct.contains(wt) || wt.contains(ct)) {
+      score += 3;
+    }
+    if (wa.isNotEmpty && ca.contains(wa)) score += 3;
+    return score;
+  }
+
+  static SpotifyTrackItem? _bestSpotifyCover(
+      List<SpotifyTrackItem> items, String title, String artist) {
+    SpotifyTrackItem? best;
+    var bestScore = 0;
+    for (final it in items) {
+      final score = _scoreMatch(title, artist, it.name, it.artists.join(', '));
+      if (score > bestScore &&
+          it.albumImageUrl != null &&
+          it.albumImageUrl!.isNotEmpty) {
+        bestScore = score;
+        best = it;
+      }
+    }
+    return bestScore >= 3 ? best : null;
+  }
+
+  static OnlineTrack? _bestOnlineCover(
+      List<OnlineTrack> items, String title, String artist) {
+    OnlineTrack? best;
+    var bestScore = 0;
+    for (final it in items) {
+      final score = _scoreMatch(title, artist, it.title, it.artist);
+      if (score > bestScore &&
+          it.thumbnailUrl != null &&
+          it.thumbnailUrl!.isNotEmpty) {
+        bestScore = score;
+        best = it;
+      }
+    }
+    return bestScore >= 3 ? best : null;
+  }
+
+  static Future<_CoverCandidate?> _searchCoverOtherSources(
+      String title, String artist) async {
+    try {
+      final all = await MultiSourceSearch()
+          .searchAllSync('$artist $title', limitPerSource: 5);
+      final best = _bestOnlineCover(all, title, artist);
+      if (best != null &&
+          best.thumbnailUrl != null &&
+          best.thumbnailUrl!.isNotEmpty) {
+        return _CoverCandidate(best.thumbnailUrl!, best.sourceLabel);
+      }
+    } catch (e) {
+      debugPrint('backfill album art (other sources) error: $e');
+    }
+    return null;
+  }
+
+  static Future<Uint8List?> _downloadBytes(String url) async {
+    try {
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 15);
+      try {
+        final request = await client.getUrl(Uri.parse(url));
+        request.headers.set('User-Agent', 'Melodi/1.0');
+        final response = await request.close();
+        if (response.statusCode == 200) {
+          return await consolidateHttpClientResponseBytes(response);
+        }
+      } finally {
+        client.close();
+      }
+    } catch (e) {
+      debugPrint('backfill album art download error: $e');
+    }
+    return null;
   }
 
   static Map<String, String> _parseTimedText(String xml) {
@@ -228,44 +418,65 @@ class MetadataService {
     };
   }
 
-  static Future<int> backfillTrackMetadata({
+  static Future<BackfillReport> backfillTrackMetadata({
     SpotifyService? spotifyService,
   }) async {
     final tracks = await _db.getTracksMissingMetadata();
+    final failures = <String>[];
     int updated = 0;
 
     for (final track in tracks) {
       final trackId = track['id'] as String;
-      final title = track['title'] as String? ?? '';
-      final artist = track['artist'] as String? ?? '';
+      final title = (track['title'] as String? ?? '').trim();
+      final artist = (track['artist'] as String? ?? '').trim();
 
-      if (spotifyService != null && spotifyService.isConnected) {
+      try {
+        if (spotifyService == null || !spotifyService.isConnected) {
+          failures.add('$artist - $title: Spotify not connected');
+          continue;
+        }
+
         final results = await spotifyService.searchTracks('$artist $title');
-        if (results.isNotEmpty) {
-          final result = results.first;
-          final updates = <String, dynamic>{};
-          if (result.albumName != null &&
-              (track['album'] == 'Unknown Album' || track['album'] == null)) {
-            updates['album'] = result.albumName;
-          }
-          if (result.artists.isNotEmpty &&
-              (track['artist'] == 'Unknown Artist' ||
-                  track['artist'] == null)) {
-            updates['artist'] = result.artists.join(', ');
-          }
-          if (result.durationMs > 0 &&
-              ((track['durationMs'] as int?) ?? 0) == 0) {
-            updates['durationMs'] = result.durationMs;
-          }
-          if (updates.isNotEmpty) {
-            await _db.updateTrackMetadata(trackId, updates);
-            updated++;
+        SpotifyTrackItem? best;
+        var bestScore = 0;
+        for (final r in results) {
+          final score = _scoreMatch(title, artist, r.name, r.artists.join(', '));
+          if (score > bestScore) {
+            bestScore = score;
+            best = r;
           }
         }
+        if (best == null || bestScore < 3) {
+          failures.add('$artist - $title: no confident metadata match');
+          continue;
+        }
+
+        final updates = <String, dynamic>{};
+        if (best.albumName != null &&
+            (track['album'] == 'Unknown Album' || track['album'] == null)) {
+          updates['album'] = best.albumName;
+        }
+        if (best.artists.isNotEmpty &&
+            (track['artist'] == 'Unknown Artist' || track['artist'] == null)) {
+          updates['artist'] = best.artists.join(', ');
+        }
+        if (best.durationMs > 0 &&
+            ((track['durationMs'] as int?) ?? 0) == 0) {
+          updates['durationMs'] = best.durationMs;
+        }
+        if (updates.isNotEmpty) {
+          await _db.updateTrackMetadata(trackId, updates);
+          updated++;
+        } else {
+          failures.add('$artist - $title: nothing to update');
+        }
+      } catch (e) {
+        failures.add('$artist - $title: $e');
       }
     }
 
-    return updated;
+    return BackfillReport(
+        updated: updated, total: tracks.length, failures: failures);
   }
 
   static Future<String?> getHighResAlbumArt(String spotifyTrackId,
@@ -347,15 +558,20 @@ class MetadataService {
     return enriched;
   }
 
-  static Future<int> backfillAll({
+  static Future<BackfillReport> backfillAll({
     SpotifyService? spotifyService,
     YouTubeMusicSource? ytmusicSource,
   }) async {
-    int total = 0;
-    total += await backfillAlbumArt(
+    final art = await backfillAlbumArt(
         spotifyService: spotifyService, ytmusicSource: ytmusicSource);
-    total += await backfillLyrics(ytmusicSource: ytmusicSource);
-    total += await backfillTrackMetadata(spotifyService: spotifyService);
-    return total;
+    final lyrics = await backfillLyrics(ytmusicSource: ytmusicSource);
+    final meta = await backfillTrackMetadata(spotifyService: spotifyService);
+    return art + lyrics + meta;
   }
+}
+
+class _CoverCandidate {
+  final String url;
+  final String source;
+  const _CoverCandidate(this.url, this.source);
 }

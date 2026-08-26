@@ -65,6 +65,11 @@ class TrackMatcher {
         .replaceAll(RegExp(r'\s*&\s*'), ' and ')
         .replaceAll(RegExp(r'\s*,\s*'), ' and ')
         .replaceAll(RegExp(r'\s*x\s*'), ' and ')
+        // YouTube / VEVO kanallarındaki "Artist - Topic", "Artist VEVO",
+        // "Artist Official" gibi ekleri temizle ki eşleşme oranı artsın.
+        .replaceAll(RegExp(r'\b(topic|vevo|official)\b', caseSensitive: false),
+            '')
+        .replaceAll(RegExp(r'-?\s*topic\s*songs?', caseSensitive: false), '')
         .replaceAll(RegExp(r'[^\w\s]'), '')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
@@ -236,6 +241,9 @@ class TrackMatcher {
       '$title $artist',
       '$title $artist audio',
       '$artist $title lyrics',
+      '$title $artist official audio',
+      if (album != null && album.isNotEmpty) '$title $artist $album',
+      '$title topic',
     ];
 
     final seen = <String>{};

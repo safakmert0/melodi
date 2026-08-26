@@ -6,7 +6,7 @@ import '../../core/melodi_design.dart';
 import '../../models/song_model.dart';
 import '../image_with_fallback.dart';
 
-enum LibrarySourceFilter { all, device, spotify, youtube }
+enum LibrarySourceFilter { all, device, spotify, youtube, downloads }
 
 extension LibrarySourceFilterUi on LibrarySourceFilter {
   String get label => switch (this) {
@@ -14,6 +14,7 @@ extension LibrarySourceFilterUi on LibrarySourceFilter {
         LibrarySourceFilter.device => 'Aygıtta',
         LibrarySourceFilter.spotify => 'Spotify',
         LibrarySourceFilter.youtube => 'YouTube',
+        LibrarySourceFilter.downloads => 'İndirilenler',
       };
 
   IconData get icon => switch (this) {
@@ -21,6 +22,7 @@ extension LibrarySourceFilterUi on LibrarySourceFilter {
         LibrarySourceFilter.device => Icons.smartphone_rounded,
         LibrarySourceFilter.spotify => Icons.graphic_eq_rounded,
         LibrarySourceFilter.youtube => Icons.play_circle_fill_rounded,
+        LibrarySourceFilter.downloads => Icons.download_rounded,
       };
 
   bool matches(SongModel song) {
@@ -35,6 +37,9 @@ extension LibrarySourceFilterUi on LibrarySourceFilter {
       LibrarySourceFilter.youtube => path.startsWith('youtube://') ||
           path.startsWith('http://') ||
           path.startsWith('https://'),
+      // The downloads section is driven directly by the downloaded-tracks
+      // query in LibraryProvider, so the generic filter never matches here.
+      LibrarySourceFilter.downloads => false,
     };
   }
 }

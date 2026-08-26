@@ -242,15 +242,40 @@ class DownloadManager {
         }
 
         if (videoId != null) {
-          task.progress = 0.15;
-          task.error = 'YouTube indiriliyor (Backend/Piped)...';
-          _notify();
-          final resultPath = await _youtubeDownloader.downloadFullTrack(
-            videoId,
-            task.title,
-            downloadDir,
-            quality: task.requestedQuality,
-          );
+          final asVideo =
+              (await DatabaseService.instance.getSetting('download_as_video')) ==
+                  'true';
+
+          Future<String?> _fetch(bool video) {
+            if (video) {
+              return _youtubeDownloader.downloadVideoTrack(
+                videoId,
+                task.title,
+                task.artist,
+                downloadDir,
+              );
+            }
+            return _youtubeDownloader.downloadFullTrack(
+              videoId,
+              task.title,
+              downloadDir,
+              quality: task.requestedQuality,
+            );
+          }
+
+          final attempts = asVideo ? [true, false] : [false];
+          String? resultPath;
+          for (final video in attempts) {
+            if (task.cancelled) break;
+            task.progress = 0.15;
+            task.error = video
+                ? 'YouTube video indiriliyor...'
+                : 'YouTube indiriliyor (Backend/Piped)...';
+            _notify();
+            resultPath = await _fetch(video);
+            if (resultPath != null) break;
+          }
+
           if (resultPath != null) {
             task.filePath = resultPath;
             task.progress = 0.8;
@@ -480,6 +505,14 @@ class DownloadManager {
       await musicDir.create(recursive: true);
 
       final ext = filePath.split('.').last;
+      final isVideo = const {
+        'mp4',
+        'm4v',
+        'mov',
+        'webm',
+        'avi',
+        'mkv',
+      }.contains(ext.toLowerCase());
       final safeName = '${task.artist} - ${task.title}'
           .replaceAll(RegExp(r'[^\w\s-]'), '')
           .replaceAll(RegExp(r'\s+'), ' ');
@@ -514,17 +547,21 @@ class DownloadManager {
       }
       final lyricsText = lyricsResult?.syncedLrc ?? lyricsResult?.plainText;
 
-      final processed = await LyricsEmbeddingService.embedAndNormalize(
-        filePath: destPath,
-        lyrics: lyricsText,
-        expectedDurationMs: task.expectedDurationMs,
-      );
-      if (processed) {
-        metadata = await MetadataService.extractMetadata(destPath) ?? metadata;
-      }
+          if (!isVideo) {
+            final processed = await LyricsEmbeddingService.embedAndNormalize(
+              filePath: destPath,
+              lyrics: lyricsText,
+              expectedDurationMs: task.expectedDurationMs,
+            );
+            if (processed) {
+              metadata =
+                  await MetadataService.extractMetadata(destPath) ?? metadata;
+            }
+          }
 
-      if (metadata != null &&
-          !isDurationCompatible(metadata.duration, task.expectedDurationMs)) {
+          if (!isVideo &&
+              metadata != null &&
+              !isDurationCompatible(metadata.duration, task.expectedDurationMs)) {
         task.error =
             'Kaynak süresi parça süresiyle uyuşmuyor; farklı kaynak deneyin';
         final invalidFile = File(destPath);
@@ -582,6 +619,35 @@ class DownloadManager {
 
   String _matchKey(String value) =>
       value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+  /// Registers a download that was performed externally (e.g. a podcast
+  /// episode fetched by [PodcastService]) so it appears in the Downloads list
+  /// and triggers a library refresh.
+  void registerExternalDownload({
+    required String id,
+    required String title,
+    required String artist,
+    String? album,
+    String? imageUrl,
+    required String filePath,
+    int expectedDurationMs = 0,
+  }) {
+    _tasks.removeWhere((t) => t.id == id);
+    _tasks.add(DownloadTask(
+      id: id,
+      spotifyTrackId: id,
+      title: title,
+      artist: artist,
+      album: album,
+      imageUrl: imageUrl,
+      expectedDurationMs: expectedDurationMs,
+      state: DownloadState.completed,
+      progress: 1.0,
+      filePath: filePath,
+    ));
+    onDownloadComplete?.call();
+    _notify();
+  }
 
   void cancelTask(String taskId) {
     final tasks = _tasks.where((t) => t.id == taskId).toList();

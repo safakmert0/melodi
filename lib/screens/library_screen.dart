@@ -56,9 +56,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
         bottom: false,
         child: Consumer2<LibraryProvider, PlaylistProvider>(
           builder: (context, library, playlists, _) {
-            final sourceSongs =
-                widget.favoritesOnly ? library.favorites : library.songs;
-            final songs = sourceSongs.where(_source.matches).toList();
+            final sourceSongs = widget.favoritesOnly
+                ? library.favorites
+                : (_source == LibrarySourceFilter.downloads
+                    ? library.downloaded
+                    : library.songs);
+            final songs = _source == LibrarySourceFilter.downloads
+                ? List<SongModel>.from(sourceSongs)
+                : sourceSongs.where(_source.matches).toList();
             final playableSongs = songs.where(_canQueue).toList();
             final totalMinutes = songs.fold<int>(
               0,

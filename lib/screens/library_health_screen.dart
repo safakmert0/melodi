@@ -34,31 +34,123 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
   }
 
   Future<void> _fixAll() async {
-    final fixed = await _service.fixAllIssues();
+    setState(() => _scanning = true);
+    final result = await _service.fixAllIssues();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              '$fixed ${AppLocale.tr('issues_found')} ${AppLocale.tr('fix_all')}'),
-          backgroundColor: MelodiTheme.primaryGreen,
-        ),
-      );
-      setState(() {});
+      setState(() => _scanning = false);
+      _showFixReport(result);
     }
   }
 
   Future<void> _fixIssue(String issueId) async {
-    final success = await _service.fixIssue(issueId);
+    setState(() => _scanning = true);
+    final result = await _service.fixIssue(issueId);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success ? 'Issue fixed' : 'Could not fix issue'),
-          backgroundColor:
-              success ? MelodiTheme.primaryGreen : MelodiTheme.errorRed,
-        ),
-      );
-      setState(() {});
+      setState(() => _scanning = false);
+      if (result != null) {
+        _showFixReport(result);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Issue no longer present'),
+            backgroundColor: MelodiTheme.errorRed,
+          ),
+        );
+      }
     }
+  }
+
+  void _showFixReport(LibraryHealthFixResult result) {
+    final fixed = result.fixedCount;
+    final failed = result.failedCount;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: MelodiTheme.containerLow,
+        title: Row(
+          children: [
+            Icon(
+              fixed > 0 ? Icons.check_circle_outline_rounded : Icons.info_outline,
+              color: fixed > 0 ? const Color(0xFF34C759) : MelodiTheme.onSurface,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                failed == 0
+                    ? '$fixed issue${fixed == 1 ? '' : 's'} fixed'
+                    : '$fixed fixed, $failed could not fix',
+                style: TextStyle(color: MelodiTheme.onSurface, fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 360,
+          child: ListView.separated(
+            itemCount: result.details.length,
+            separatorBuilder: (_, __) => Divider(
+              color: MelodiTheme.onSurfaceVariant.withOpacity(0.15),
+              height: 1,
+            ),
+            itemBuilder: (context, index) {
+              final d = result.details[index];
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      d.success
+                          ? Icons.check_circle_rounded
+                          : Icons.cancel_rounded,
+                      color: d.success
+                          ? const Color(0xFF34C759)
+                          : MelodiTheme.errorRed,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            d.description,
+                            style: TextStyle(
+                              color: MelodiTheme.onSurface,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            d.reason ?? (d.success ? 'Resolved' : 'Not resolved'),
+                            style: TextStyle(
+                              color: MelodiTheme.onSurfaceVariant,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              setState(() {});
+            },
+            child: Text('Done',
+                style: TextStyle(color: MelodiTheme.primaryGreen)),
+          ),
+        ],
+      ),
+    );
   }
 
   Color _healthColor(double score) {
@@ -152,19 +244,21 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
 
     final byCategory = _service.getIssuesByCategory();
     final fixableCount = _service.getFixableCount();
+    final totalCount = issues.length;
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         _buildHealthScore(score),
         const SizedBox(height: 24),
-        if (fixableCount > 0) ...[
+        if (totalCount > 0) ...[
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: _fixAll,
               icon: const Icon(Icons.build_rounded, size: 18),
-              label: Text('${AppLocale.tr('fix_all')} ($fixableCount)'),
+              label: Text(
+                  '${AppLocale.tr('fix_all')} ($fixableCount fixable / $totalCount)'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: MelodiTheme.primaryGreen,
                 foregroundColor: Colors.black,
@@ -343,6 +437,8 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
         return Icons.content_copy_rounded;
       case 'Orphaned':
         return Icons.insert_drive_file_rounded;
+      case 'Missing Files':
+        return Icons.broken_image_rounded;
       default:
         return Icons.warning_rounded;
     }
@@ -364,6 +460,8 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
         return AppLocale.tr('duplicates');
       case 'Orphaned':
         return AppLocale.tr('orphaned_files');
+      case 'Missing Files':
+        return 'Missing Files';
       default:
         return category;
     }

@@ -20,6 +20,7 @@ class LibraryProvider extends ChangeNotifier {
   List<SongModel> _favorites = [];
   List<SongModel> _recent = [];
   List<SongModel> _mostPlayed = [];
+  List<SongModel> _downloaded = [];
 
   bool _isLoading = false;
   bool _isScanning = false;
@@ -89,6 +90,7 @@ class LibraryProvider extends ChangeNotifier {
   List<SongModel> get favorites => List.unmodifiable(_favorites);
   List<SongModel> get recent => List.unmodifiable(_recent);
   List<SongModel> get mostPlayed => List.unmodifiable(_mostPlayed);
+  List<SongModel> get downloaded => List.unmodifiable(_downloaded);
   bool get isLoading => _isLoading;
   bool get isScanning => _isScanning;
   String? get error => _error;
@@ -144,6 +146,7 @@ class LibraryProvider extends ChangeNotifier {
           _mostPlayed[i] = _mostPlayed[i].copyWith(albumArt: art);
         }
       }
+      _downloaded = await _db.getDownloadedSongs();
       _buildAlbums();
       _buildArtists();
       _buildGenres();
@@ -318,6 +321,7 @@ class LibraryProvider extends ChangeNotifier {
           _mostPlayed[i] = _mostPlayed[i].copyWith(albumArt: art);
         }
       }
+      _downloaded = await _db.getDownloadedSongs();
       _scanProgress = 1.0;
     } catch (e) {
       _error = 'Scan failed: $e';

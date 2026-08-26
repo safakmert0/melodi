@@ -1,7 +1,7 @@
 name: melodi
-description: A source-aware music library, streaming companion, downloader, and local player for iOS and Android.
+description: A source-aware music library, streaming companion, downloader, and local player for iOS.
 publish_to: 'none'
-version: 4.5.0+14
+version: 4.6.0+15
 
 environment:
   sdk: ^3.2.0
@@ -54,6 +54,9 @@ dependencies:
 
   # Sharing
   share_plus: ^12.0.2
+
+  # In-app purchases (donations / tips via StoreKit)
+  in_app_purchase: ^3.1.0
 
   # Local notifications
   flutter_local_notifications: ^18.0.1

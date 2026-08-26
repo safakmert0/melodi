@@ -127,13 +127,6 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
       'description': 'Ana ekran widget\'ı ile kontrol',
     });
 
-    // AirPlay
-    features.add({
-      'name': 'AirPlay',
-      'status': 'working',
-      'description': 'AirPlay ile kablosuz ses aktarımı',
-    });
-
     return features;
   }
 

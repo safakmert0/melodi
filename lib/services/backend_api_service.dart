@@ -287,6 +287,69 @@ class BackendApiService {
     }
   }
 
+  Future<String?> downloadVideo(
+    String videoId,
+    String title, {
+    Function(DownloadProgress)? onProgress,
+  }) async {
+    await _resolveEndpointOverride();
+    try {
+      final url = '$_baseUrl/api/download';
+      final request = http.Request('POST', Uri.parse(url));
+      request.headers['Content-Type'] = 'application/json';
+      request.body = jsonEncode({
+        'url': 'https://www.youtube.com/watch?v=$videoId',
+        'format': 'mp4',
+      });
+
+      final streamedResponse = await http.Client()
+          .send(request)
+          .timeout(const Duration(seconds: 180));
+
+      if (streamedResponse.statusCode == 200) {
+        final dir = await getApplicationDocumentsDirectory();
+        final downloadDir = Directory('${dir.path}/backend_downloads');
+        await downloadDir.create(recursive: true);
+
+        final sanitized = title.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
+        final safeTitle = sanitized.isEmpty ? videoId : sanitized;
+        final filePath = p.join(downloadDir.path, '${safeTitle}_$videoId.mp4');
+        final file = File(filePath);
+
+        final totalBytes = streamedResponse.contentLength;
+        int downloadedBytes = 0;
+
+        final sink = file.openWrite();
+        await for (final chunk in streamedResponse.stream) {
+          sink.add(chunk);
+          downloadedBytes += chunk.length;
+          if (onProgress != null) {
+            final progress =
+                totalBytes != null ? downloadedBytes / totalBytes : 0.0;
+            onProgress(DownloadProgress(
+              progress: progress.clamp(0.0, 1.0),
+              downloadedBytes: downloadedBytes,
+              totalBytes: totalBytes,
+            ));
+          }
+        }
+        await sink.close();
+
+        final len = await file.length();
+        if (len < 1000) {
+          await file.delete();
+          return null;
+        }
+        return filePath;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Video download error: $e');
+      return null;
+    }
+  }
+
   Future<List<BackendVideo>> getPlaylist(String playlistId) async {
     await _resolveEndpointOverride();
     try {

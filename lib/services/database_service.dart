@@ -36,7 +36,7 @@ class DatabaseService {
     final path = p.join(dir.path, 'melodi.db');
     return await openDatabase(
       path,
-      version: 20,
+      version: 21,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -273,6 +273,11 @@ class DatabaseService {
             .execute('ALTER TABLE lyrics_cache ADD COLUMN durationMs INTEGER');
       } catch (_) {}
     }
+    if (oldVersion < 21) {
+      try {
+        await db.execute('ALTER TABLE shared_urls ADD COLUMN title TEXT');
+      } catch (_) {}
+    }
   }
 
   Future<String?> getSetting(String key) async {
@@ -293,13 +298,40 @@ class DatabaseService {
     await db.delete('settings', where: 'key = ?', whereArgs: [key]);
   }
 
-  Future<void> addSharedUrl(String url) async {
+  /// Stores a shared/imported playlist link. Duplicates (same normalized URL)
+  /// are collapsed: the existing row's [sharedAt] (and [title] if provided) is
+  /// refreshed instead of inserting a second copy.
+  Future<void> addSharedUrl(String url, {String? title}) async {
     final db = await database;
+    final normalized = _normalizeSharedUrl(url);
+    final existing = await db.query('shared_urls',
+        where: 'url = ?', whereArgs: [normalized], limit: 1);
+    if (existing.isNotEmpty) {
+      final id = existing.first['id'] as int;
+      await db.update(
+        'shared_urls',
+        {
+          'sharedAt': DateTime.now().toIso8601String(),
+          if (title != null) 'title': title,
+        },
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      return;
+    }
     await db.insert('shared_urls', {
-      'url': url,
+      'url': normalized,
+      'title': title,
       'sharedAt': DateTime.now().toIso8601String(),
       'processed': 0,
     });
+  }
+
+  /// Returns every saved shared link (newest first), including ones that have
+  /// already been processed/imported.
+  Future<List<Map<String, dynamic>>> getSharedUrls() async {
+    final db = await database;
+    return await db.query('shared_urls', orderBy: 'sharedAt DESC');
   }
 
   Future<List<Map<String, dynamic>>> getPendingSharedUrls() async {
@@ -312,6 +344,28 @@ class DatabaseService {
     final db = await database;
     await db.update('shared_urls', {'processed': 1},
         where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> deleteSharedUrl(int id) async {
+    final db = await database;
+    await db.delete('shared_urls', where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Normalizes a playlist/link URL so that the same resource stored with
+  /// slightly different query strings or trailing slashes is treated as one.
+  String _normalizeSharedUrl(String url) {
+    final trimmed = url.trim();
+    final uri = Uri.tryParse(trimmed);
+    if (uri == null || !uri.hasScheme) return trimmed;
+    final host = uri.host.toLowerCase();
+    if (host.contains('youtube.com') &&
+        uri.queryParameters['list'] != null &&
+        uri.path.contains('playlist')) {
+      return 'https://www.youtube.com/playlist?list=${uri.queryParameters['list']}';
+    }
+    var path = uri.path;
+    if (path.endsWith('/')) path = path.substring(0, path.length - 1);
+    return uri.replace(query: '', fragment: '').toString();
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -528,6 +582,7 @@ class DatabaseService {
       CREATE TABLE IF NOT EXISTS shared_urls (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         url TEXT NOT NULL,
+        title TEXT,
         sharedAt TEXT NOT NULL,
         processed INTEGER DEFAULT 0
       )
@@ -1027,6 +1082,19 @@ class DatabaseService {
         where: 'id = ?', whereArgs: [trackId]);
   }
 
+  /// Store downloaded album-art bytes for a track. This populates the same
+  /// cache the UI reads from (song.albumArt), so covers actually show up.
+  Future<void> updateTrackAlbumArt(String songId, Uint8List artwork) async {
+    final db = await database;
+    await db.insert(
+        'album_art_cache',
+        {
+          'songId': songId,
+          'artwork': artwork,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
   Future<void> updateTrackMetadata(
       String trackId, Map<String, dynamic> data) async {
     final db = await database;
@@ -1106,6 +1174,19 @@ class DatabaseService {
   Future<List<Map<String, dynamic>>> getDownloadedTracks() async {
     final db = await database;
     return db.query('downloaded_tracks', orderBy: 'downloadedAt DESC');
+  }
+
+  /// Returns the actual [SongModel] rows for every downloaded track, joined
+  /// with the [songs] table on the stored file path. Songs that were recorded
+  /// as downloaded but never inserted into the library are omitted.
+  Future<List<SongModel>> getDownloadedSongs() async {
+    final db = await database;
+    final maps = await db.rawQuery('''
+      SELECT s.* FROM songs s
+      INNER JOIN downloaded_tracks d ON d.filePath = s.filePath
+      ORDER BY d.downloadedAt DESC
+    ''');
+    return maps.map((m) => SongModel.fromMap(m)).toList();
   }
 
   Future<List<Map<String, dynamic>>> getTracksNeedingRematch() async {

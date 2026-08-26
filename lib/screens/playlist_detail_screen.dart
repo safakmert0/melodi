@@ -13,10 +13,8 @@ import '../widgets/song_tile.dart';
 import '../widgets/wrong_match_button.dart';
 import '../providers/spotify_provider.dart';
 import '../providers/ytmusic_provider.dart';
-import '../providers/sync_provider.dart';
 import '../services/track_matcher.dart';
 import '../services/download_manager.dart';
-import '../widgets/playlist_sync_settings.dart';
 
 class PlaylistDetailScreen extends StatefulWidget {
   final PlaylistModel playlist;
@@ -152,28 +150,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               color: MelodiTheme.onSurfaceVariant,
               onPressed: _rematchAll,
             ),
-          IconButton(
-            icon: Icon(
-              _syncEnabled ? Icons.sync : Icons.sync_disabled_rounded,
-              color: _syncEnabled
-                  ? MelodiTheme.primaryGreen
-                  : MelodiTheme.textMuted,
-              size: 22,
-            ),
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                backgroundColor: MelodiTheme.containerLow,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                ),
-                builder: (_) => PlaylistSyncSettings(
-                  playlistId: widget.playlist.id,
-                  playlistName: widget.playlist.name,
-                ),
-              ).then((_) => _loadSyncState());
-            },
-          ),
           PopupMenuButton<String>(
             icon: Icon(Icons.more_horiz_rounded,
                 color: MelodiTheme.onSurfaceVariant),
@@ -687,13 +663,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               if (results.isNotEmpty) uris.add(results.first.uri);
             }
           }
-          if (uris.isNotEmpty) {
-            await context.read<SyncProvider>().service.pushPlaylistToSpotify(
-              localPlaylistId: widget.playlist.id,
-              addedTrackUris: uris,
-              removedTrackUris: [],
-            );
-          }
+
         }
 
         if (removedSongIds != null && removedSongIds.isNotEmpty) {
@@ -706,13 +676,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               uris.add('spotify:track:${spotifyEntry.key}');
             }
           }
-          if (uris.isNotEmpty) {
-            await context.read<SyncProvider>().service.pushPlaylistToSpotify(
-                  localPlaylistId: widget.playlist.id,
-                  addedTrackUris: [],
-                  removedTrackUris: uris,
-                );
-          }
+
         }
       }
 
@@ -731,13 +695,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               if (results.isNotEmpty) videoIds.add(results.first.id);
             }
           }
-          if (videoIds.isNotEmpty) {
-            await context.read<SyncProvider>().service.pushPlaylistToYTMusic(
-              localPlaylistId: widget.playlist.id,
-              addedVideoIds: videoIds,
-              removedVideoIds: [],
-            );
-          }
+
         }
 
         if (removedSongIds != null && removedSongIds.isNotEmpty) {
@@ -751,13 +709,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               if (results.isNotEmpty) videoIds.add(results.first.id);
             }
           }
-          if (videoIds.isNotEmpty) {
-            await context.read<SyncProvider>().service.pushPlaylistToYTMusic(
-                  localPlaylistId: widget.playlist.id,
-                  addedVideoIds: [],
-                  removedVideoIds: videoIds,
-                );
-          }
+
         }
       }
     } catch (e) {

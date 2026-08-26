@@ -10,7 +10,6 @@ import '../widgets/listening_heatmap.dart';
 import 'settings_screen.dart';
 import 'downloads_screen.dart';
 import 'library_screen.dart';
-import 'listening_history_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -344,19 +343,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const DownloadsScreen()),
-              );
-            },
-          ),
-          const SizedBox(height: 8),
-          _QuickActionTile(
-            icon: Icons.history_rounded,
-            iconColor: Colors.teal,
-            title: AppLocale.tr('scrobbling'),
-            subtitle: AppLocale.tr('scrobbling_subtitle'),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                    builder: (_) => const ListeningHistoryScreen()),
               );
             },
           ),

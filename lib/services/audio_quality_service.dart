@@ -8,7 +8,7 @@ class AudioQualityService {
   final DatabaseService _db = DatabaseService.instance;
 
   Future<String> getStreamingQuality() async {
-    return (await _db.getSetting('streaming_quality')) ?? 'auto';
+    return (await _db.getSetting('streaming_quality')) ?? 'lossless';
   }
 
   Future<void> setStreamingQuality(String quality) async {
@@ -16,7 +16,7 @@ class AudioQualityService {
   }
 
   Future<String> getDownloadQuality() async {
-    return (await _db.getSetting('download_quality')) ?? 'high';
+    return (await _db.getSetting('download_quality')) ?? 'lossless';
   }
 
   Future<void> setDownloadQuality(String quality) async {
@@ -24,7 +24,7 @@ class AudioQualityService {
   }
 
   Future<String> getCellularQuality() async {
-    return (await _db.getSetting('cellular_quality')) ?? 'auto';
+    return (await _db.getSetting('cellular_quality')) ?? 'lossless';
   }
 
   Future<void> setCellularQuality(String quality) async {
@@ -32,7 +32,7 @@ class AudioQualityService {
   }
 
   Future<String> getWifiQuality() async {
-    return (await _db.getSetting('wifi_quality')) ?? 'high';
+    return (await _db.getSetting('wifi_quality')) ?? 'lossless';
   }
 
   Future<void> setWifiQuality(String quality) async {

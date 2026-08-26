@@ -5,7 +5,9 @@ import '../providers/library_provider.dart';
 import '../providers/player_provider.dart';
 import '../providers/search_provider.dart';
 import '../services/music_source.dart';
+import '../services/podcast_service.dart';
 import '../widgets/search/search_result_tiles.dart';
+import 'podcast_detail_screen.dart';
 import 'source_hub_screen.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -21,6 +23,33 @@ class _SearchScreenState extends State<SearchScreen> {
   MusicSourceType? _selectedSource;
 
   bool get _hasQuery => _controller.text.trim().isNotEmpty;
+
+  Future<void> _maybeOpenPodcast(String value) async {
+    if (!PodcastService.isPodcastUrl(value)) return;
+    final navigator = Navigator.of(context);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    try {
+      final feed = await PodcastService.instance.resolveUrl(value);
+      await PodcastService.instance.subscribe(feed);
+      if (!mounted) return;
+      navigator.pop();
+      await navigator.push(
+        MaterialPageRoute<void>(
+          builder: (_) => PodcastDetailScreen(feed: feed),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      navigator.pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open podcast: $e')),
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -151,6 +180,7 @@ class _SearchScreenState extends State<SearchScreen> {
           final value = query.trim();
           if (value.isNotEmpty) {
             context.read<SearchProvider>().addRecentSearch(value);
+            _maybeOpenPodcast(value);
           }
         },
       ),

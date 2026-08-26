@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'database_service.dart';
 import 'multi_source_search.dart';
 import 'music_source.dart';
-import 'lastfm_service.dart';
 import 'spotify_service.dart';
 
 enum RadioType {
@@ -73,7 +72,6 @@ class RadioService {
   final DatabaseService _db = DatabaseService.instance;
   final MultiSourceSearch _multiSource = MultiSourceSearch();
   final SpotifyService _spotify = SpotifyService();
-  final LastFmService _lastFm = LastFmService();
 
   final Random _random = Random();
   final Map<String, RadioStation> _cache = {};
@@ -343,28 +341,15 @@ class RadioService {
   }
 
   Future<List<String>> _getSimilarArtists(String artist, {int limit = 10}) async {
-    try {
-      final similar = await _lastFm.getSimilarArtists(artist, limit: limit);
-      return similar.map((a) => a['name'] as String).toList();
-    } catch (_) {
-      return [];
-    }
+    return [];
   }
 
   Future<List<String>> _getTopArtistsByGenre(String genre, {int limit = 15}) async {
-    try {
-      return await _lastFm.getTopArtistsByTag(genre, limit: limit);
-    } catch (_) {
-      return [];
-    }
+    return [];
   }
 
   Future<List<Map<String, String>>> _getSimilarTracks(String title, String artist, {int limit = 10}) async {
-    try {
-      return await _lastFm.getSimilarTracks(artist, title, limit: limit);
-    } catch (_) {
-      return [];
-    }
+    return [];
   }
 
   Future<List<String>> _getUserTopArtists({int limit = 20}) async {
@@ -379,11 +364,7 @@ class RadioService {
   }
 
   Future<String?> _getArtistArtwork(String artist) async {
-    try {
-      return await _lastFm.getArtistImage(artist);
-    } catch (_) {
-      return null;
-    }
+    return null;
   }
 
   void startStation(RadioStation station) {

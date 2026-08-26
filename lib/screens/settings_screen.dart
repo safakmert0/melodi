@@ -13,34 +13,32 @@ import '../providers/theme_provider.dart';
 import '../providers/ytmusic_provider.dart';
 import '../providers/spotify_provider.dart';
 import '../providers/playlist_provider.dart';
-import '../providers/like_mirror_provider.dart';
-import '../providers/scrobble_provider.dart';
-import '../services/scrobble_service.dart';
+
 import '../services/spotify_service.dart';
 import '../services/podcast_service.dart';
-import '../services/audiobook_service.dart';
-import '../models/song_model.dart';
+import 'podcast_detail_screen.dart';
+
+import '../providers/player_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/metadata_provider.dart';
-import '../providers/sync_provider.dart';
 import '../providers/download_provider.dart';
 import '../services/database_service.dart';
 import '../services/library_health_service.dart';
 import '../services/playback_service.dart';
-import '../services/airplay_service.dart';
-import '../services/file_organizer.dart';
+
 import '../services/stream_cache.dart';
 import 'audio_quality_screen.dart';
+import 'support_screen.dart';
 import '../widgets/sleep_timer_sheet.dart';
-import '../widgets/spotify_webview_login.dart';
+
 import 'diagnostics_screen.dart';
-import 'failed_downloads_screen.dart';
+
 import 'downloads_screen.dart';
-import 'blocked_tracks_screen.dart';
+
 import 'shared_urls_screen.dart';
 import 'library_health_screen.dart';
 import 'storage_screen.dart';
-import '../widgets/ytmusic_webview_login.dart';
+
 import 'backend_settings_screen.dart';
 import 'extension_store_screen.dart';
 import 'source_hub_screen.dart';
@@ -74,12 +72,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final shuffle = await db.getSetting('auto_shuffle');
     final gapless = await db.getSetting('gapless_playback');
     final btAutoEq = await db.getSetting('bluetooth_auto_eq');
+    final dlVideo = await db.getSetting('download_as_video');
     if (mounted) {
       setState(() {
         _crossfadeSeconds = double.tryParse(crossfade ?? '') ?? 0;
         _autoShuffle = shuffle == 'true';
         _gaplessPlayback = gapless != 'false';
         _bluetoothAutoEq = btAutoEq == 'true';
+        _downloadAsVideo = dlVideo == 'true';
       });
     }
   }
@@ -108,6 +108,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _autoShuffle = false;
   bool _gaplessPlayback = true;
   bool _bluetoothAutoEq = false;
+  bool _downloadAsVideo = false;
   String _watchedFolderPath = '';
 
   String _formatBytes(int bytes) {
@@ -127,9 +128,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Consumer3<LibraryProvider, PlayerProvider, LocaleNotifier>(
       builder: (context, library, player, locale, _) {
-        if (!_showAllSettings) {
-          return _buildSettingsHub(context);
-        }
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: CustomScrollView(
@@ -346,7 +344,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 subtitle: md.isBackfilling
                                     ? '${AppLocale.tr('backfill_progress')}: ${md.backfillProgress}/${md.backfillTotal}'
                                     : md.lastBackfilledAt != null
-                                        ? '${AppLocale.tr('last_backfilled')}: ${_formatDateTime(md.lastBackfilledAt!)}'
+                                        ? '${AppLocale.tr('last_backfilled')}: ${_formatDateTime(md.lastBackfilledAt!)}${md.backfillFailed > 0 ? '  •  ${md.backfillFailed} failed' : ''}'
                                         : null,
                                 trailing: md.isBackfilling
                                     ? SizedBox(
@@ -369,7 +367,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 subtitle: md.isBackfilling
                                     ? '${AppLocale.tr('backfill_progress')}: ${md.backfillProgress}/${md.backfillTotal}'
                                     : md.lastBackfilledAt != null
-                                        ? '${AppLocale.tr('last_backfilled')}: ${_formatDateTime(md.lastBackfilledAt!)}'
+                                        ? '${AppLocale.tr('last_backfilled')}: ${_formatDateTime(md.lastBackfilledAt!)}${md.backfillFailed > 0 ? '  •  ${md.backfillFailed} failed' : ''}'
                                         : null,
                                 trailing: md.isBackfilling
                                     ? SizedBox(
@@ -475,41 +473,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           onTap: () => _confirmClearLibrary(context),
                         ),
                         const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.block_rounded,
-                          iconColor: Colors.red,
-                          title: AppLocale.tr('blocklist'),
-                          subtitle: AppLocale.tr('blocked_count'),
-                          trailing: FutureBuilder<int>(
-                            future: DatabaseService.instance
-                                .rawQuery(
-                                    'SELECT COUNT(*) as count FROM blocked_tracks')
-                                .then((r) => (r.first['count'] as int?) ?? 0),
-                            builder: (_, snap) {
-                              final count = snap.data ?? 0;
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: MelodiTheme.errorRed.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  count > 0 ? '$count' : '0',
-                                  style: TextStyle(
-                                      color: MelodiTheme.errorRed,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              );
-                            },
-                          ),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const BlockedTracksScreen()),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
+
                         _SettingsTile(
                           icon: Icons.link_rounded,
                           iconColor: Colors.blue,
@@ -527,84 +491,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _CollapsibleSection(
                       title: AppLocale.tr('accounts'),
                       children: [
-                        Consumer<SpotifyProvider>(
-                          builder: (context, spotify, _) {
-                            if (spotify.isConnected) {
-                              return _SettingsTile(
-                                icon: Icons.music_video_rounded,
-                                iconColor: Colors.green,
-                                title: AppLocale.tr('spotify'),
-                                subtitle:
-                                    '${AppLocale.tr('spotify_connected_as')} ${spotify.username}',
-                                trailing: TextButton(
-                                  onPressed: () => spotify.disconnect(),
-                                  child: Text(AppLocale.tr('disconnect'),
-                                      style: TextStyle(
-                                          color: MelodiTheme.errorRed,
-                                          fontSize: 13)),
-                                ),
-                                onTap: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) =>
-                                          const _SpotifySettingsPage()),
-                                ),
-                              );
-                            }
-                            return _SettingsTile(
-                              icon: Icons.music_video_rounded,
-                              iconColor: Colors.green,
-                              title: AppLocale.tr('spotify'),
-                              subtitle:
-                                  AppLocale.tr('connect_spotify_description'),
-                              trailing: Icon(Icons.chevron_right,
-                                  color: MelodiTheme.textMuted),
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                    builder: (_) =>
-                                        const _SpotifySettingsPage()),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        Consumer<YTMusicProvider>(
-                          builder: (context, ytmusic, _) {
-                            if (ytmusic.isConnected) {
-                              return _SettingsTile(
-                                icon: Icons.play_circle_filled_rounded,
-                                iconColor: Colors.red,
-                                title: AppLocale.tr('youtube_music'),
-                                subtitle: AppLocale.tr('connected_as'),
-                                trailing: TextButton(
-                                  onPressed: () => ytmusic.disconnect(),
-                                  child: Text(AppLocale.tr('disconnect'),
-                                      style: TextStyle(
-                                          color: MelodiTheme.errorRed,
-                                          fontSize: 13)),
-                                ),
-                                onTap: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (_) =>
-                                          const _YtMusicSettingsPage()),
-                                ),
-                              );
-                            }
-                            return _SettingsTile(
-                              icon: Icons.play_circle_filled_rounded,
-                              iconColor: Colors.red,
-                              title: AppLocale.tr('youtube_music'),
-                              subtitle: AppLocale.tr('connect_youtube_music'),
-                              trailing: Icon(Icons.chevron_right,
-                                  color: MelodiTheme.textMuted),
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                    builder: (_) =>
-                                        const _YtMusicSettingsPage()),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 8),
                         _SettingsTile(
                           icon: Icons.dns_rounded,
                           iconColor: MelodiTheme.primaryGreen,
@@ -618,100 +504,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 builder: (_) => BackendSettingsScreen()),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.schedule_rounded,
-                          iconColor: Colors.teal,
-                          title: AppLocale.tr('scheduled_sync'),
-                          subtitle: FutureBuilder<Map<String, dynamic>>(
-                            future: context
-                                .read<SyncProvider>()
-                                .service
-                                .loadPreferences(),
-                            builder: (_, snap) {
-                              if (!snap.hasData) return const SizedBox.shrink();
-                              final data = snap.data!;
-                              final enabled = data['enabled'] as bool;
-                              if (!enabled) return Text(AppLocale.tr('off'));
-                              final hour = data['hour'] as int;
-                              final minute = data['minute'] as int;
-                              final time =
-                                  '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
-                              return Text(
-                                  '${AppLocale.tr('sync_enabled')} · $time');
-                            },
-                          ),
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const _SyncSettingsPage()),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Consumer2<SpotifyProvider, YTMusicProvider>(
-                          builder: (context, spotify, ytmusic, _) {
-                            if (!spotify.isConnected || !ytmusic.isConnected) {
-                              return const SizedBox.shrink();
-                            }
-                            return _SettingsTile(
-                              icon: Icons.sync_alt_rounded,
-                              iconColor: Colors.blue,
-                              title: AppLocale.tr('like_mirroring'),
-                              subtitle:
-                                  AppLocale.tr('mirror_likes_description'),
-                              trailing: Icon(Icons.chevron_right,
-                                  color: MelodiTheme.textMuted),
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                    builder: (_) =>
-                                        const _LikeMirrorSettingsPage()),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        Consumer2<SpotifyProvider, YTMusicProvider>(
-                          builder: (context, spotify, ytmusic, _) {
-                            if (!spotify.isConnected || !ytmusic.isConnected) {
-                              return const SizedBox.shrink();
-                            }
-                            return _SettingsTile(
-                              icon: Icons.sync_alt_rounded,
-                              iconColor: Colors.teal,
-                              title: AppLocale.tr('default_sync'),
-                              subtitle: AppLocale.tr('sync_settings'),
-                              trailing: Icon(Icons.chevron_right,
-                                  color: MelodiTheme.textMuted),
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                    builder: (_) =>
-                                        const _DefaultSyncSettingsPage()),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        Consumer2<SpotifyProvider, YTMusicProvider>(
-                          builder: (context, spotify, ytmusic, _) {
-                            if (!spotify.isConnected || !ytmusic.isConnected) {
-                              return const SizedBox.shrink();
-                            }
-                            return _SettingsTile(
-                              icon: Icons.history_rounded,
-                              iconColor: Colors.orange,
-                              title: AppLocale.tr('yt_history_scrobbling'),
-                              subtitle: AppLocale.tr('scrobbling'),
-                              trailing: Icon(Icons.chevron_right,
-                                  color: MelodiTheme.textMuted),
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                    builder: (_) =>
-                                        const _ScrobbleSettingsPage()),
-                              ),
-                            );
-                          },
-                        ),
+
+
+
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -719,19 +514,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _CollapsibleSection(
                       title: AppLocale.tr('audio'),
                       children: [
-                        _SettingsTile(
-                          icon: Icons.tune_rounded,
-                          iconColor: Colors.purple,
-                          title: AppLocale.tr('equalizer'),
-                          subtitle: AppLocale.tr('adjust_sound_frequencies'),
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const _EqualizerPage()),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
+
                         _SettingsTile(
                           icon: Icons.equalizer,
                           iconColor: const Color(0xFF53e076),
@@ -782,6 +565,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 .setSetting('gapless_playback', v.toString());
                           },
                         ),
+                        _SettingsTile(
+                          icon: Icons.videocam_rounded,
+                          iconColor: Colors.deepOrange,
+                          title: 'İndirme biçimi',
+                          subtitle: _downloadAsVideo
+                              ? 'Video (mp4) olarak indir'
+                              : 'Ses olarak indir',
+                          trailing: Switch(
+                            value: _downloadAsVideo,
+                            onChanged: (v) {
+                              setState(() => _downloadAsVideo = v);
+                              DatabaseService.instance.setSetting(
+                                  'download_as_video', v.toString());
+                            },
+                            activeColor: const Color(0xFF53e076),
+                          ),
+                          onTap: () {
+                            final v = !_downloadAsVideo;
+                            setState(() => _downloadAsVideo = v);
+                            DatabaseService.instance.setSetting(
+                                'download_as_video', v.toString());
+                          },
+                        ),
                         const SizedBox(height: 8),
                         _SettingsTile(
                           icon: Icons.bluetooth,
@@ -806,29 +612,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           },
                         ),
                         const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.mic,
-                          iconColor: Colors.orange,
-                          title: AppLocale.tr('siri_shortcuts'),
-                          subtitle: AppLocale.tr('siri_shortcuts_desc'),
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const _VoiceControlPage()),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.cast,
-                          iconColor: Colors.deepPurple,
-                          title: AppLocale.tr('airplay'),
-                          subtitle: AppLocale.tr('airplay_desc'),
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => _showAirPlayDevicesDialog(context),
-                        ),
-                        const SizedBox(height: 8),
+
+
                         _SettingsTile(
                           icon: Icons.headphones,
                           iconColor: Colors.pink,
@@ -843,19 +628,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.menu_book,
-                          iconColor: Colors.brown,
-                          title: AppLocale.tr('audiobook'),
-                          subtitle: AppLocale.tr('audiobook_desc'),
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const _AudiobookLibraryPage()),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
+
                         _SettingsTile(
                           icon: Icons.widgets,
                           iconColor: Colors.amber,
@@ -921,40 +694,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Consumer<DownloadProvider>(
-                          builder: (context, dp, _) {
-                            if (dp.failedCount == 0)
-                              return const SizedBox.shrink();
-                            return _SettingsTile(
-                              icon: Icons.error_outline_rounded,
-                              iconColor: MelodiTheme.errorRed,
-                              title: AppLocale.tr('failed'),
-                              subtitle:
-                                  '${dp.failedCount} ${AppLocale.tr('failed')}',
-                              trailing: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: MelodiTheme.errorRed,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  '${dp.failedCount}',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                    builder: (_) =>
-                                        const FailedDownloadsScreen()),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 8),
+
                         _SettingsTile(
                           icon: Platform.isIOS
                               ? Icons.lock_rounded
@@ -1035,29 +775,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.folder_rounded,
-                          iconColor: Colors.amber,
-                          title: AppLocale.tr('file_organization'),
-                          subtitle: FutureBuilder<bool>(
-                            future: FileOrganizer().isOrganized(),
-                            builder: (_, snap) {
-                              final organized = snap.data ?? false;
-                              return Text(
-                                organized
-                                    ? AppLocale.tr('organized_by_artist')
-                                    : AppLocale.tr('flat_structure'),
-                                style: TextStyle(
-                                    color: MelodiTheme.onSurfaceVariant,
-                                    fontSize: 12),
-                              );
-                            },
-                          ),
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => _showFileOrganizationDialog(context),
-                        ),
-                        const SizedBox(height: 8),
+
                         _SettingsTile(
                           icon: Icons.storage_rounded,
                           iconColor: Colors.cyan,
@@ -1100,6 +818,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 24),
                     Divider(color: MelodiTheme.outlineVariant, height: 1),
+                    _SettingsTile(
+                      icon: Icons.volunteer_activism_rounded,
+                      iconColor: MelodiTheme.primaryGreen,
+                      title: 'Destek Ol',
+                      subtitle: 'Bağış yaparak geliştirmeyi destekle',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const SupportScreen(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Divider(color: MelodiTheme.outlineVariant, height: 1),
                     _CollapsibleSection(
                       title: AppLocale.tr('developer'),
                       children: [
@@ -1116,8 +847,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           icon: Icons.send_rounded,
                           iconColor: Colors.lightBlue,
                           title: 'Telegram',
-                          subtitle: '@safakmert',
-                          onTap: () => _openUrl('https://t.me/safakmert'),
+                          subtitle: '@mertiletisimbot',
+                          onTap: () => _openUrl('https://t.me/mertiletisimbot'),
                         ),
                       ],
                     ),
@@ -1172,513 +903,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       },
     );
-  }
-
-  Widget _buildSettingsHub(BuildContext context) {
-    final theme = Theme.of(context);
-    void open(Widget page) => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => page),
-        );
-
-    final items = <_SettingsHubEntry>[
-      _SettingsHubEntry(
-        section: 'Kişiselleştirme',
-        title: 'Görünüm ve tema',
-        subtitle: 'Açık/koyu mod, vurgu rengi ve görünüm',
-        icon: Icons.palette_outlined,
-        color: theme.colorScheme.primary,
-        onTap: () => open(const _AppearanceSettingsPage()),
-      ),
-      _SettingsHubEntry(
-        section: 'Kişiselleştirme',
-        title: 'Dil',
-        subtitle: _selectedLanguage,
-        icon: Icons.language_rounded,
-        color: const Color(0xFF00A896),
-        onTap: () => _showLanguagePicker(context),
-      ),
-      _SettingsHubEntry(
-        section: 'Dinleme',
-        title: 'Oynatma',
-        subtitle: 'Geçiş, kesintisiz oynatma ve karıştırma',
-        icon: Icons.graphic_eq_rounded,
-        color: const Color(0xFF8C72FF),
-        onTap: () => open(_PlaybackSettingsPage(
-          crossfadeSeconds: _crossfadeSeconds,
-          autoShuffle: _autoShuffle,
-          gaplessPlayback: _gaplessPlayback,
-          onCrossfadeChanged: (value) =>
-              setState(() => _crossfadeSeconds = value),
-          onAutoShuffleChanged: (value) => setState(() => _autoShuffle = value),
-          onGaplessChanged: (value) => setState(() => _gaplessPlayback = value),
-        )),
-      ),
-      _SettingsHubEntry(
-        section: 'Dinleme',
-        title: 'Ses kalitesi',
-        subtitle: 'Akış, mobil veri ve indirme kalitesi',
-        icon: Icons.high_quality_rounded,
-        color: const Color(0xFFFF9F43),
-        onTap: () => open(const AudioQualityScreen()),
-      ),
-      _SettingsHubEntry(
-        section: 'Kaynaklar',
-        title: 'Müzik kaynakları',
-        subtitle: 'Spotify, YouTube Music ve kişisel sunucu',
-        icon: Icons.hub_outlined,
-        color: const Color(0xFF2EC4B6),
-        onTap: () => open(const SourceHubScreen()),
-      ),
-      _SettingsHubEntry(
-        section: 'Kitaplık',
-        title: 'İndirmeler',
-        subtitle: 'Kuyruk, tamamlananlar ve başarısız görevler',
-        icon: Icons.download_for_offline_outlined,
-        color: const Color(0xFF4D96FF),
-        onTap: () => open(const DownloadsScreen()),
-      ),
-      _SettingsHubEntry(
-        section: 'Kitaplık',
-        title: 'Depolama',
-        subtitle: 'Konum, kullanılan alan ve yedekler',
-        icon: Icons.storage_rounded,
-        color: const Color(0xFF9B5DE5),
-        onTap: () => open(const StorageScreen()),
-      ),
-      _SettingsHubEntry(
-        section: 'Kitaplık',
-        title: 'Kitaplık sağlığı',
-        subtitle: 'Eksik dosyalar, eşleşmeler ve tarama',
-        icon: Icons.health_and_safety_outlined,
-        color: const Color(0xFF2BB673),
-        onTap: () => open(const LibraryHealthScreen()),
-      ),
-      _SettingsHubEntry(
-        section: 'Destek',
-        title: 'Tanılama',
-        subtitle: 'Hata kayıtları ve sistem raporu',
-        icon: Icons.monitor_heart_outlined,
-        color: const Color(0xFFFF6B6B),
-        onTap: () => open(const DiagnosticsScreen()),
-      ),
-      _SettingsHubEntry(
-        section: 'Destek',
-        title: 'Tüm ayarlar',
-        subtitle: 'Gelişmiş seçeneklerin tamamı',
-        icon: Icons.tune_rounded,
-        color: theme.colorScheme.onSurfaceVariant,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => _AllSettingsPage(
-              entries: _buildAllSettingsEntries(context),
-            ),
-          ),
-        ),
-      ),
-    ];
-
-    final needle = _settingsSearch.trim().toLowerCase();
-    final filtered = needle.isEmpty
-        ? items
-        : items
-            .where((item) => '${item.section} ${item.title} ${item.subtitle}'
-                .toLowerCase()
-                .contains(needle))
-            .toList();
-    final sections = <String>[];
-    for (final item in filtered) {
-      if (!sections.contains(item.section)) sections.add(item.section);
-    }
-
-    return Scaffold(
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverAppBar.large(
-            pinned: true,
-            title: const Text('Ayarlar'),
-            flexibleSpace: FlexibleSpaceBar(
-              background: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      theme.colorScheme.primary .withOpacity(0.22),
-                      theme.scaffoldBackgroundColor,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
-              child: TextField(
-                onChanged: (value) => setState(() => _settingsSearch = value),
-                style: theme.textTheme.bodyLarge,
-                decoration: const InputDecoration(
-                  hintText: 'Ayarlarda ara',
-                  prefixIcon: Icon(Icons.search_rounded),
-                ),
-              ),
-            ),
-          ),
-          if (filtered.isEmpty)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(
-                child: Text('Eşleşen ayar bulunamadı',
-                    style: theme.textTheme.bodyLarge),
-              ),
-            )
-          else
-            for (final section in sections) ...[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
-                  child: Text(
-                    section.toUpperCase(),
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                ),
-              ),
-              SliverList.separated(
-                itemCount:
-                    filtered.where((item) => item.section == section).length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
-                itemBuilder: (context, index) {
-                  final entries = filtered
-                      .where((item) => item.section == section)
-                      .toList();
-                  return _SettingsHubTile(entry: entries[index]);
-                },
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 14)),
-            ],
-          const SliverToBoxAdapter(child: SizedBox(height: 32)),
-        ],
-      ),
-    );
-  }
-
-  List<_SettingsHubEntry> _buildAllSettingsEntries(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    void open(Widget page) => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => page),
-        );
-    void message(String text) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
-    }
-
-    return [
-      _SettingsHubEntry(
-        section: 'Kişiselleştirme',
-        title: 'Görünüm ve tema',
-        subtitle: 'Tema, renkler ve uygulama görünümü',
-        icon: Icons.palette_outlined,
-        color: colors.primary,
-        onTap: () => open(const _AppearanceSettingsPage()),
-      ),
-      _SettingsHubEntry(
-        section: 'Kişiselleştirme',
-        title: 'Dil',
-        subtitle: _selectedLanguage,
-        icon: Icons.language_rounded,
-        color: const Color(0xFF00A896),
-        onTap: () => _showLanguagePicker(context),
-      ),
-      _SettingsHubEntry(
-        section: 'Oynatma ve ses',
-        title: 'Oynatma',
-        subtitle: 'Geçiş, kesintisiz oynatma ve karıştırma',
-        icon: Icons.play_circle_outline_rounded,
-        color: const Color(0xFF8C72FF),
-        onTap: () => open(_PlaybackSettingsPage(
-          crossfadeSeconds: _crossfadeSeconds,
-          autoShuffle: _autoShuffle,
-          gaplessPlayback: _gaplessPlayback,
-          onCrossfadeChanged: (value) =>
-              setState(() => _crossfadeSeconds = value),
-          onAutoShuffleChanged: (value) => setState(() => _autoShuffle = value),
-          onGaplessChanged: (value) => setState(() => _gaplessPlayback = value),
-        )),
-      ),
-      _SettingsHubEntry(
-        section: 'Oynatma ve ses',
-        title: 'Ses kalitesi',
-        subtitle: 'Akış ve indirme kalite tercihleri',
-        icon: Icons.high_quality_rounded,
-        color: const Color(0xFFFF9F43),
-        onTap: () => open(const AudioQualityScreen()),
-      ),
-      _SettingsHubEntry(
-        section: 'Oynatma ve ses',
-        title: 'Ekolayzır',
-        subtitle: 'Frekansları ve hazır profilleri ayarla',
-        icon: Icons.tune_rounded,
-        color: const Color(0xFF9B5DE5),
-        onTap: () => open(const _EqualizerPage()),
-      ),
-      _SettingsHubEntry(
-        section: 'Oynatma ve ses',
-        title: 'Ses efektleri',
-        subtitle: 'Ses işleme ve çıkış seçenekleri',
-        icon: Icons.equalizer_rounded,
-        color: const Color(0xFF2BB673),
-        onTap: () => open(const _AudioEffectsPage()),
-      ),
-      _SettingsHubEntry(
-        section: 'Kaynaklar ve hesaplar',
-        title: 'Müzik kaynakları',
-        subtitle: 'Kataloglar, hesaplar ve kişisel sunucu',
-        icon: Icons.hub_outlined,
-        color: const Color(0xFF2EC4B6),
-        onTap: () => open(const SourceHubScreen()),
-      ),
-      _SettingsHubEntry(
-        section: 'Kaynaklar ve hesaplar',
-        title: 'Spotify',
-        subtitle: context.read<SpotifyProvider>().isConnected
-            ? 'Bağlı · listeler, beğeniler ve eşzamanlama'
-            : 'Hesabını bağla ve kitaplığını içe aktar',
-        icon: Icons.graphic_eq_rounded,
-        color: const Color(0xFF1ED760),
-        onTap: () => open(const _SpotifySettingsPage()),
-      ),
-      _SettingsHubEntry(
-        section: 'Kaynaklar ve hesaplar',
-        title: 'YouTube Music',
-        subtitle: context.read<YTMusicProvider>().isConnected
-            ? 'Bağlı · kitaplık ve geçmiş'
-            : 'Hesabını bağla',
-        icon: Icons.play_circle_fill_rounded,
-        color: const Color(0xFFFF3D5A),
-        onTap: () => open(const _YtMusicSettingsPage()),
-      ),
-      _SettingsHubEntry(
-        section: 'Kaynaklar ve hesaplar',
-        title: 'Akış motoru',
-        subtitle: 'Çevrim içi oynatma davranışı',
-        icon: Icons.cloud_outlined,
-        color: const Color(0xFF4D96FF),
-        onTap: () => open(const _StreamingSettingsPage()),
-      ),
-      _SettingsHubEntry(
-        section: 'Kaynaklar ve hesaplar',
-        title: 'Eklenti mağazası',
-        subtitle: 'Topluluk sağlayıcılarını bağlantı ile kur',
-        icon: Icons.extension_rounded,
-        color: const Color(0xFF32D583),
-        onTap: () => open(const ExtensionStoreScreen()),
-      ),
-      _SettingsHubEntry(
-        section: 'Kaynaklar ve hesaplar',
-        title: 'YT-DLP backend',
-        subtitle: 'İsteğe bağlı uzak indirme motoru',
-        icon: Icons.dns_outlined,
-        color: colors.primary,
-        onTap: () => open(const BackendSettingsScreen()),
-      ),
-      _SettingsHubEntry(
-        section: 'Eşzamanlama',
-        title: 'Zamanlanmış eşzamanlama',
-        subtitle: 'Gün, saat ve ağ koşulları',
-        icon: Icons.schedule_rounded,
-        color: const Color(0xFF00A896),
-        onTap: () => open(const _SyncSettingsPage()),
-      ),
-      _SettingsHubEntry(
-        section: 'Eşzamanlama',
-        title: 'Varsayılan eşzamanlama',
-        subtitle: 'Spotify ve YouTube Music yönü',
-        icon: Icons.sync_alt_rounded,
-        color: const Color(0xFF2EC4B6),
-        onTap: () => open(const _DefaultSyncSettingsPage()),
-      ),
-      _SettingsHubEntry(
-        section: 'Eşzamanlama',
-        title: 'Beğenileri aynala',
-        subtitle: 'Kaynaklar arasında beğenileri eşleştir',
-        icon: Icons.favorite_border_rounded,
-        color: const Color(0xFFFF6B81),
-        onTap: () => open(const _LikeMirrorSettingsPage()),
-      ),
-      _SettingsHubEntry(
-        section: 'Eşzamanlama',
-        title: 'Geçmiş ve scrobble',
-        subtitle: 'Dinleme geçmişini diğer servislere gönder',
-        icon: Icons.history_rounded,
-        color: const Color(0xFFFF9F43),
-        onTap: () => open(const _ScrobbleSettingsPage()),
-      ),
-      _SettingsHubEntry(
-        section: 'Kitaplık',
-        title: 'Kitaplığı yeniden tara',
-        subtitle: 'Aygıttaki müzik dosyalarını bul',
-        icon: Icons.refresh_rounded,
-        color: const Color(0xFF2BB673),
-        onTap: () async {
-          await context.read<LibraryProvider>().scanMusic();
-          message('Kitaplık taraması tamamlandı');
-        },
-      ),
-      _SettingsHubEntry(
-        section: 'Kitaplık',
-        title: 'Dosyalardan içe aktar',
-        subtitle: 'Bir veya daha fazla ses dosyası seç',
-        icon: Icons.file_open_rounded,
-        color: const Color(0xFFFF9F43),
-        onTap: () => context.read<LibraryProvider>().importFromFiles(),
-      ),
-      _SettingsHubEntry(
-        section: 'Kitaplık',
-        title: 'Klasörden içe aktar',
-        subtitle: 'Seçilen klasördeki müzikleri tara',
-        icon: Icons.folder_copy_outlined,
-        color: const Color(0xFF9B5DE5),
-        onTap: () => context.read<LibraryProvider>().importFromDirectory(),
-      ),
-      _SettingsHubEntry(
-        section: 'Kitaplık',
-        title: 'İzlenen klasör',
-        subtitle: _watchedFolderPath.isEmpty
-            ? 'Otomatik taranacak klasörü seç'
-            : _watchedFolderPath,
-        icon: Icons.folder_special_outlined,
-        color: const Color(0xFF7C6EE6),
-        onTap: () => _pickWatchedFolder(context),
-      ),
-      _SettingsHubEntry(
-        section: 'Kitaplık',
-        title: 'Kitaplık sağlığı',
-        subtitle: 'Eksik dosyalar ve bozuk eşleşmeler',
-        icon: Icons.health_and_safety_outlined,
-        color: const Color(0xFF2BB673),
-        onTap: () => open(const LibraryHealthScreen()),
-      ),
-      _SettingsHubEntry(
-        section: 'Kitaplık',
-        title: 'Kapakları ve sözleri tamamla',
-        subtitle: 'Eksik metadata alanlarını topluca getir',
-        icon: Icons.auto_fix_high_rounded,
-        color: const Color(0xFF8C72FF),
-        onTap: () async {
-          final count =
-              await context.read<MetadataProvider>().startBackfillAll();
-          message('$count parça güncellendi');
-        },
-      ),
-      _SettingsHubEntry(
-        section: 'İndirmeler ve depolama',
-        title: 'İndirmeler',
-        subtitle: 'Kuyruk ve tamamlanan görevler',
-        icon: Icons.download_for_offline_outlined,
-        color: const Color(0xFF4D96FF),
-        onTap: () => open(const DownloadsScreen()),
-      ),
-      _SettingsHubEntry(
-        section: 'İndirmeler ve depolama',
-        title: 'Başarısız indirmeler',
-        subtitle: 'Hatalı görevleri incele ve yeniden dene',
-        icon: Icons.error_outline_rounded,
-        color: colors.error,
-        onTap: () => open(const FailedDownloadsScreen()),
-      ),
-      _SettingsHubEntry(
-        section: 'İndirmeler ve depolama',
-        title: 'Depolama',
-        subtitle: 'Kullanılan alan, konum ve yedekler',
-        icon: Icons.storage_rounded,
-        color: const Color(0xFF9B5DE5),
-        onTap: () => open(const StorageScreen()),
-      ),
-      _SettingsHubEntry(
-        section: 'İndirmeler ve depolama',
-        title: 'Dosya düzeni',
-        subtitle: 'Sanatçı ve albüme göre düzenleme',
-        icon: Icons.account_tree_outlined,
-        color: const Color(0xFFFFB020),
-        onTap: () => _showFileOrganizationDialog(context),
-      ),
-      _SettingsHubEntry(
-        section: 'İndirmeler ve depolama',
-        title: 'Engellenen parçalar',
-        subtitle: 'İndirmede atlanan eşleşmeler',
-        icon: Icons.block_rounded,
-        color: colors.error,
-        onTap: () => open(const BlockedTracksScreen()),
-      ),
-      _SettingsHubEntry(
-        section: 'İndirmeler ve depolama',
-        title: 'Paylaşılan bağlantılar',
-        subtitle: 'Uygulamaya gönderilen müzik bağlantıları',
-        icon: Icons.link_rounded,
-        color: const Color(0xFF4D96FF),
-        onTap: () => open(const SharedUrlsScreen()),
-      ),
-      _SettingsHubEntry(
-        section: 'Diğer',
-        title: 'Podcast',
-        subtitle: 'Abonelikler ve bölümler',
-        icon: Icons.podcasts_rounded,
-        color: const Color(0xFFFF6B81),
-        onTap: () => open(const _PodcastSubscriptionsPage()),
-      ),
-      _SettingsHubEntry(
-        section: 'Diğer',
-        title: 'Sesli kitaplar',
-        subtitle: 'Kitaplığı ve ilerlemeyi yönet',
-        icon: Icons.menu_book_rounded,
-        color: const Color(0xFF9A6B4F),
-        onTap: () => open(const _AudiobookLibraryPage()),
-      ),
-      _SettingsHubEntry(
-        section: 'Diğer',
-        title: 'Siri ve sesli kontrol',
-        subtitle: 'Kısayollar ve ses komutları',
-        icon: Icons.mic_none_rounded,
-        color: const Color(0xFFFF9F43),
-        onTap: () => open(const _VoiceControlPage()),
-      ),
-      _SettingsHubEntry(
-        section: 'Diğer',
-        title: 'AirPlay',
-        subtitle: 'Uygun ses çıkışlarını göster',
-        icon: Icons.airplay_rounded,
-        color: const Color(0xFF8C72FF),
-        onTap: () => _showAirPlayDevicesDialog(context),
-      ),
-      _SettingsHubEntry(
-        section: 'Destek ve hakkında',
-        title: 'Tanılama',
-        subtitle: 'Hata kayıtları ve sistem raporu',
-        icon: Icons.monitor_heart_outlined,
-        color: colors.error,
-        onTap: () => open(const DiagnosticsScreen()),
-      ),
-      _SettingsHubEntry(
-        section: 'Destek ve hakkında',
-        title: 'Açık kaynak ve teşekkürler',
-        subtitle: 'Kullanılan projeleri ve bağlantılarını gör',
-        icon: Icons.auto_awesome_rounded,
-        color: colors.primary,
-        onTap: () => _showAcknowledgments(context),
-      ),
-      _SettingsHubEntry(
-        section: 'Destek ve hakkında',
-        title: 'Lisanslar',
-        subtitle: 'Açık kaynak paket lisansları',
-        icon: Icons.description_outlined,
-        color: colors.onSurfaceVariant,
-        onTap: () => _showCredits(context),
-      ),
-    ];
   }
 
   void _showStreamCacheDialog(BuildContext context) {
@@ -2054,107 +1278,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showFileOrganizationDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: MelodiTheme.containerLow,
-        title: Text(AppLocale.tr('file_organization'),
-            style: TextStyle(color: MelodiTheme.onSurface)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(AppLocale.tr('file_organization'),
-                style: TextStyle(
-                    color: MelodiTheme.onSurfaceVariant, fontSize: 14)),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  Navigator.pop(ctx);
-                  await FileOrganizer().organizeDownloads();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(AppLocale.tr('organize_now')),
-                        backgroundColor: MelodiTheme.primaryGreen,
-                      ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.folder_rounded, size: 18),
-                label: Text(AppLocale.tr('organize_now')),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: MelodiTheme.primaryGreen,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  Navigator.pop(ctx);
-                  await FileOrganizer().flattenStructure();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(AppLocale.tr('flat_structure')),
-                        backgroundColor: MelodiTheme.primaryGreen,
-                      ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.unfold_less_rounded, size: 18),
-                label: Text(AppLocale.tr('flat_structure')),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: MelodiTheme.onSurface,
-                  side: BorderSide(color: MelodiTheme.outlineVariant),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  Navigator.pop(ctx);
-                  await FileOrganizer().organizeDownloads(dryRun: true);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(AppLocale.tr('preview')),
-                      backgroundColor: MelodiTheme.primaryGreen,
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.preview_rounded, size: 18),
-                label: Text(AppLocale.tr('preview')),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: MelodiTheme.onSurface,
-                  side: BorderSide(color: MelodiTheme.outlineVariant),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _showAcknowledgments(BuildContext context) {
     const projects = <({String name, String role, String url})>[
       (
@@ -2458,189 +1581,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Text(AppLocale.tr('delete'),
                 style: TextStyle(color: MelodiTheme.errorRed)),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SettingsHubEntry {
-  const _SettingsHubEntry({
-    required this.section,
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
-
-  final String section;
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-}
-
-class _SettingsHubTile extends StatelessWidget {
-  const _SettingsHubTile({required this.entry});
-
-  final _SettingsHubEntry entry;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Material(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(22),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: entry.onTap,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 13, 12, 13),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: entry.color .withOpacity(0.14),
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Icon(entry.icon, color: entry.color, size: 22),
-                ),
-                const SizedBox(width: 13),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(entry.title, style: theme.textTheme.titleMedium),
-                      const SizedBox(height: 3),
-                      Text(
-                        entry.subtitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right_rounded,
-                    color: theme.colorScheme.onSurfaceVariant),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AllSettingsPage extends StatefulWidget {
-  const _AllSettingsPage({required this.entries});
-
-  final List<_SettingsHubEntry> entries;
-
-  @override
-  State<_AllSettingsPage> createState() => _AllSettingsPageState();
-}
-
-class _AllSettingsPageState extends State<_AllSettingsPage> {
-  String _query = '';
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final needle = _query.trim().toLowerCase();
-    final entries = needle.isEmpty
-        ? widget.entries
-        : widget.entries
-            .where((entry) =>
-                '${entry.section} ${entry.title} ${entry.subtitle}'
-                    .toLowerCase()
-                    .contains(needle))
-            .toList();
-    final sections = <String>[];
-    for (final entry in entries) {
-      if (!sections.contains(entry.section)) sections.add(entry.section);
-    }
-
-    return Scaffold(
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverAppBar.large(
-            pinned: true,
-            title: const Text('Tüm ayarlar'),
-            flexibleSpace: FlexibleSpaceBar(
-              background: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      theme.colorScheme.primary .withOpacity(0.2),
-                      theme.scaffoldBackgroundColor,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
-              child: TextField(
-                onChanged: (value) => setState(() => _query = value),
-                decoration: const InputDecoration(
-                  hintText: 'Tüm ayarlarda ara',
-                  prefixIcon: Icon(Icons.search_rounded),
-                ),
-              ),
-            ),
-          ),
-          if (entries.isEmpty)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(
-                child: Text(
-                  'Eşleşen ayar bulunamadı',
-                  style: theme.textTheme.bodyLarge,
-                ),
-              ),
-            )
-          else
-            for (final section in sections) ...[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
-                  child: Text(
-                    section.toUpperCase(),
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                ),
-              ),
-              SliverList.separated(
-                itemCount:
-                    entries.where((entry) => entry.section == section).length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
-                itemBuilder: (context, index) {
-                  final sectionEntries = entries
-                      .where((entry) => entry.section == section)
-                      .toList();
-                  return _SettingsHubTile(entry: sectionEntries[index]);
-                },
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 14)),
-            ],
-          const SliverToBoxAdapter(child: SizedBox(height: 36)),
         ],
       ),
     );
@@ -3210,6 +2150,10 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                         final playlistProvider =
                             context.read<PlaylistProvider>();
                         for (final ytPlaylist in playlists) {
+                          await DatabaseService.instance.addSharedUrl(
+                            'https://music.youtube.com/playlist?list=${ytPlaylist.playlistId}',
+                            title: ytPlaylist.title,
+                          );
                           final exists = playlistProvider.playlists
                               .any((p) => p.name == ytPlaylist.title);
                           if (!exists) {
@@ -3219,8 +2163,7 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                             );
                           }
                         }
-                        // Trigger sync to pull playlist tracks into local library
-                        context.read<SyncProvider>().triggerSync();
+
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
@@ -3350,9 +2293,7 @@ class _YtMusicSettingsPageState extends State<_YtMusicSettingsPage> {
                                 await ytmusic.connectWithCookie(cookie);
                             if (context.mounted) {
                               if (success) {
-                                await context
-                                    .read<SyncProvider>()
-                                    .triggerSync();
+
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(AppLocale.tr('connected_as')),
@@ -3464,16 +2405,19 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                                 ScaffoldMessenger.maybeOf(context);
                             final playlistProvider =
                                 context.read<PlaylistProvider>();
-                            final syncProvider = context.read<SyncProvider>();
+
                             final libraryProvider =
                                 context.read<LibraryProvider>();
                             final playlists = await spotify.importPlaylists();
                             if (!mounted) return;
-                            // The sync service creates/updates the real lists
-                            // with all paged tracks; no empty shell lists.
-                            await syncProvider.triggerSync(
-                              spotifyPlaylists: playlists,
-                            );
+
+                            for (final p in playlists) {
+                              await DatabaseService.instance.addSharedUrl(
+                                'https://open.spotify.com/playlist/${p.id}',
+                                title: p.name,
+                              );
+                            }
+
                             await playlistProvider.loadPlaylists();
                             if (!mounted) return;
                             await libraryProvider.loadAll();
@@ -3657,9 +2601,7 @@ class _SpotifySettingsPageState extends State<_SpotifySettingsPage> {
                                 await spotify.connectWithCookie(spDc);
                             if (context.mounted) {
                               if (success) {
-                                await context
-                                    .read<SyncProvider>()
-                                    .triggerSync();
+
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(AppLocale.tr('connected_as')),
@@ -4131,544 +3073,6 @@ class _StreamingSettingsPageState extends State<_StreamingSettingsPage> {
         },
       ),
     );
-  }
-}
-
-class _SyncSettingsPage extends StatefulWidget {
-  const _SyncSettingsPage();
-
-  @override
-  State<_SyncSettingsPage> createState() => _SyncSettingsPageState();
-}
-
-class _SyncSettingsPageState extends State<_SyncSettingsPage> {
-  bool _syncEnabled = false;
-  TimeOfDay _syncTime = const TimeOfDay(hour: 3, minute: 0);
-  bool _wifiOnly = true;
-  Set<int> _selectedDays = {1, 2, 3, 4, 5, 6, 7};
-
-  String _dayLabel(int day) {
-    final df = DateFormat('E', AppLocale.currentLocale);
-    return df.format(DateTime(2024, 1, day + 1));
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPrefs();
-  }
-
-  Future<void> _loadPrefs() async {
-    final prefs = await context.read<SyncProvider>().service.loadPreferences();
-    if (!mounted) return;
-    setState(() {
-      _syncEnabled = prefs['enabled'] as bool;
-      _syncTime =
-          TimeOfDay(hour: prefs['hour'] as int, minute: prefs['minute'] as int);
-      _wifiOnly = prefs['wifiOnly'] as bool;
-      _selectedDays = (prefs['days'] as List).cast<int>().toSet();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: MelodiTheme.background,
-      appBar: AppBar(
-        title: Text(AppLocale.tr('auto_sync')),
-        backgroundColor: MelodiTheme.containerLow,
-        foregroundColor: MelodiTheme.onSurface,
-        elevation: 0,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        children: [
-          _SettingsTile(
-            icon: Icons.sync_rounded,
-            iconColor: Colors.teal,
-            title: AppLocale.tr('auto_sync'),
-            subtitle: AppLocale.tr('sync_schedule'),
-            trailing: Switch(
-              value: _syncEnabled,
-              onChanged: (v) {
-                setState(() => _syncEnabled = v);
-                final provider = context.read<SyncProvider>();
-                if (v) {
-                  provider.scheduleSync(
-                    hour: _syncTime.hour,
-                    minute: _syncTime.minute,
-                    wifiOnly: _wifiOnly,
-                    days: _selectedDays.toList(),
-                  );
-                } else {
-                  provider.cancelSync();
-                }
-              },
-              activeColor: MelodiTheme.primaryGreen,
-            ),
-            onTap: () {
-              final v = !_syncEnabled;
-              setState(() => _syncEnabled = v);
-              final provider = context.read<SyncProvider>();
-              if (v) {
-                provider.scheduleSync(
-                  hour: _syncTime.hour,
-                  minute: _syncTime.minute,
-                  wifiOnly: _wifiOnly,
-                  days: _selectedDays.toList(),
-                );
-              } else {
-                provider.cancelSync();
-              }
-            },
-          ),
-          if (_syncEnabled) ...[
-            const SizedBox(height: 8),
-            _SettingsTile(
-              icon: Icons.access_time_rounded,
-              iconColor: Colors.orange,
-              title: AppLocale.tr('sync_time'),
-              subtitle: _syncTime.format(context),
-              trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
-              onTap: () async {
-                final picked = await showTimePicker(
-                  context: context,
-                  initialTime: _syncTime,
-                  builder: (context, child) => Theme(
-                    data: Theme.of(context).copyWith(
-                      colorScheme: ColorScheme.dark(
-                        primary: MelodiTheme.primaryGreen,
-                        surface: MelodiTheme.containerLow,
-                      ),
-                    ),
-                    child: child!,
-                  ),
-                );
-                if (picked != null) {
-                  setState(() => _syncTime = picked);
-                  context.read<SyncProvider>().scheduleSync(
-                        hour: picked.hour,
-                        minute: picked.minute,
-                        wifiOnly: _wifiOnly,
-                        days: _selectedDays.toList(),
-                      );
-                }
-              },
-            ),
-            const SizedBox(height: 8),
-            _SettingsTile(
-              icon: Icons.wifi_rounded,
-              iconColor: Colors.blue,
-              title: AppLocale.tr('wifi_only'),
-              subtitle: AppLocale.tr('sync_schedule'),
-              trailing: Switch(
-                value: _wifiOnly,
-                onChanged: (v) {
-                  setState(() => _wifiOnly = v);
-                  context.read<SyncProvider>().scheduleSync(
-                        hour: _syncTime.hour,
-                        minute: _syncTime.minute,
-                        wifiOnly: v,
-                        days: _selectedDays.toList(),
-                      );
-                },
-                activeColor: MelodiTheme.primaryGreen,
-              ),
-              onTap: () {
-                final v = !_wifiOnly;
-                setState(() => _wifiOnly = v);
-                context.read<SyncProvider>().scheduleSync(
-                      hour: _syncTime.hour,
-                      minute: _syncTime.minute,
-                      wifiOnly: v,
-                      days: _selectedDays.toList(),
-                    );
-              },
-            ),
-            const SizedBox(height: 16),
-            _SectionTitle(AppLocale.tr('sync_schedule')),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [1, 2, 3, 4, 5, 6, 7].map((day) {
-                  final selected = _selectedDays.contains(day);
-                  return FilterChip(
-                    label: Text(_dayLabel(day)),
-                    selected: selected,
-                    onSelected: (v) {
-                      setState(() {
-                        if (v) {
-                          _selectedDays.add(day);
-                        } else {
-                          _selectedDays.remove(day);
-                        }
-                      });
-                      context.read<SyncProvider>().scheduleSync(
-                            hour: _syncTime.hour,
-                            minute: _syncTime.minute,
-                            wifiOnly: _wifiOnly,
-                            days: _selectedDays.toList(),
-                          );
-                    },
-                    selectedColor: MelodiTheme.primaryGreen.withOpacity(0.3),
-                    checkmarkColor: MelodiTheme.primaryGreen,
-                    backgroundColor: MelodiTheme.containerLow,
-                    labelStyle: TextStyle(
-                      color: selected
-                          ? MelodiTheme.primaryGreen
-                          : MelodiTheme.onSurfaceVariant,
-                      fontSize: 15,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _DefaultSyncSettingsPage extends StatefulWidget {
-  const _DefaultSyncSettingsPage();
-
-  @override
-  State<_DefaultSyncSettingsPage> createState() =>
-      _DefaultSyncSettingsPageState();
-}
-
-class _DefaultSyncSettingsPageState extends State<_DefaultSyncSettingsPage> {
-  bool _autoSync = false;
-  String _direction = 'bidirectional';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadDefaults();
-  }
-
-  Future<void> _loadDefaults() async {
-    final db = DatabaseService.instance;
-    final autoSync = await db.getSetting('default_auto_sync');
-    final direction = await db.getSetting('default_sync_direction');
-    if (mounted) {
-      setState(() {
-        _autoSync = autoSync == 'true';
-        _direction = direction ?? 'bidirectional';
-      });
-    }
-  }
-
-  Future<void> _save() async {
-    final db = DatabaseService.instance;
-    await db.setSetting('default_auto_sync', _autoSync.toString());
-    await db.setSetting('default_sync_direction', _direction);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocale.tr('save')),
-          backgroundColor: MelodiTheme.primaryGreen,
-        ),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: MelodiTheme.background,
-      appBar: AppBar(
-        title: Text(AppLocale.tr('default_sync')),
-        backgroundColor: MelodiTheme.containerLow,
-        foregroundColor: MelodiTheme.onSurface,
-        elevation: 0,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            AppLocale.tr('sync_settings'),
-            style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
-          ),
-          const SizedBox(height: 24),
-          _SettingsTile(
-            icon: Icons.autorenew_rounded,
-            iconColor: Colors.teal,
-            title: AppLocale.tr('auto_sync'),
-            subtitle: AppLocale.tr('sync_schedule'),
-            trailing: Switch(
-              value: _autoSync,
-              onChanged: (v) => setState(() => _autoSync = v),
-              activeColor: MelodiTheme.primaryGreen,
-            ),
-            onTap: () => setState(() => _autoSync = !_autoSync),
-          ),
-          const SizedBox(height: 16),
-          _SectionTitle(AppLocale.tr('sync_direction')),
-          const SizedBox(height: 8),
-          _buildDirectionOption('bidirectional', AppLocale.tr('bidirectional')),
-          _buildDirectionOption('spotify_to_yt', AppLocale.tr('spotify_to_yt')),
-          _buildDirectionOption('yt_to_spotify', AppLocale.tr('yt_to_spotify')),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _save,
-              icon: const Icon(Icons.save_rounded, size: 20),
-              label: Text(AppLocale.tr('save')),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: MelodiTheme.primaryGreen,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDirectionOption(String value, String label) {
-    final selected = _direction == value;
-    return ListTile(
-      leading: Icon(
-        selected ? Icons.radio_button_checked : Icons.radio_button_off,
-        color: selected ? MelodiTheme.primaryGreen : MelodiTheme.textMuted,
-        size: 20,
-      ),
-      title: Text(
-        label,
-        style: TextStyle(
-          color: selected ? MelodiTheme.primaryGreen : MelodiTheme.onSurface,
-          fontSize: 15,
-        ),
-      ),
-      onTap: () => setState(() => _direction = value),
-    );
-  }
-}
-
-class _LikeMirrorSettingsPage extends StatelessWidget {
-  const _LikeMirrorSettingsPage();
-
-  @override
-  Widget build(BuildContext context) {
-    final provider = context.watch<LikeMirrorProvider>();
-    return Scaffold(
-      backgroundColor: MelodiTheme.background,
-      appBar: AppBar(
-        title: Text(AppLocale.tr('like_mirroring')),
-        backgroundColor: MelodiTheme.containerLow,
-        foregroundColor: MelodiTheme.onSurface,
-        elevation: 0,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            AppLocale.tr('mirror_likes_description'),
-            style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
-          ),
-          const SizedBox(height: 24),
-          _SettingsTile(
-            icon: Icons.sync_alt_rounded,
-            iconColor: Colors.blue,
-            title: AppLocale.tr('mirror_likes'),
-            trailing: Switch(
-              value: provider.enabled,
-              onChanged: (v) => provider.setEnabled(v),
-              activeColor: MelodiTheme.primaryGreen,
-            ),
-            onTap: () => provider.setEnabled(!provider.enabled),
-          ),
-          const SizedBox(height: 16),
-          if (provider.enabled)
-            _SettingsTile(
-              icon: Icons.check_circle_rounded,
-              iconColor: Colors.green,
-              title: AppLocale.tr('mirroring_enabled'),
-              subtitle: provider.isMirroring
-                  ? SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: MelodiTheme.primaryGreen,
-                      ),
-                    )
-                  : null,
-            ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed:
-                  provider.isMirroring ? null : () => provider.mirrorNow(),
-              icon: provider.isMirroring
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.black),
-                    )
-                  : const Icon(Icons.sync_rounded),
-              label: Text(AppLocale.tr('mirror_now')),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: MelodiTheme.primaryGreen,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          if (provider.lastMirroredAt != null) ...[
-            _InfoRow(
-              label: AppLocale.tr('last_mirrored'),
-              value: _formatDateTime(provider.lastMirroredAt!),
-            ),
-            const SizedBox(height: 8),
-          ],
-          _InfoRow(
-            label: AppLocale.tr('mirrored_count'),
-            value: '${provider.mirroredCount}',
-          ),
-          if (provider.error != null) ...[
-            const SizedBox(height: 16),
-            Text(provider.error!,
-                style: TextStyle(color: MelodiTheme.errorRed, fontSize: 13)),
-          ],
-        ],
-      ),
-    );
-  }
-
-  String _formatDateTime(DateTime dt) {
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
-  }
-}
-
-class _ScrobbleSettingsPage extends StatelessWidget {
-  const _ScrobbleSettingsPage();
-
-  @override
-  Widget build(BuildContext context) {
-    final provider = context.watch<ScrobbleProvider>();
-    return Scaffold(
-      backgroundColor: MelodiTheme.background,
-      appBar: AppBar(
-        title: Text(AppLocale.tr('yt_history_scrobbling')),
-        backgroundColor: MelodiTheme.containerLow,
-        foregroundColor: MelodiTheme.onSurface,
-        elevation: 0,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            AppLocale.tr('yt_history_scrobbling'),
-            style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
-          ),
-          const SizedBox(height: 24),
-          _SettingsTile(
-            icon: Icons.history_rounded,
-            iconColor: Colors.orange,
-            title: AppLocale.tr('scrobbling_enabled'),
-            trailing: Switch(
-              value: provider.enabled,
-              onChanged: (v) {
-                if (v) {
-                  provider.enable();
-                } else {
-                  provider.disable();
-                }
-              },
-              activeColor: MelodiTheme.primaryGreen,
-            ),
-            onTap: () {
-              if (provider.enabled) {
-                provider.disable();
-              } else {
-                provider.enable();
-              }
-            },
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed:
-                  provider.isScrobbling ? null : () => provider.scrobbleNow(),
-              icon: provider.isScrobbling
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.black),
-                    )
-                  : const Icon(Icons.sync_rounded),
-              label: Text(AppLocale.tr('scrobble_now')),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: MelodiTheme.primaryGreen,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          if (provider.lastScrobbledAt != null) ...[
-            _InfoRow(
-              label: AppLocale.tr('last_scrobbled'),
-              value: _formatDateTime(provider.lastScrobbledAt!),
-            ),
-            const SizedBox(height: 8),
-          ],
-          _InfoRow(
-            label: AppLocale.tr('scrobbled_count'),
-            value: '${provider.scrobbleCount}',
-          ),
-          if (provider.recentHistory.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            _SectionTitle(AppLocale.tr('recent_scrobbles')),
-            const SizedBox(height: 8),
-            ...provider.recentHistory.take(10).map((item) {
-              return _ScrobbleHistoryTile(item: item);
-            }),
-          ],
-          if (provider.error != null) ...[
-            const SizedBox(height: 16),
-            Text(provider.error!,
-                style: TextStyle(color: MelodiTheme.errorRed, fontSize: 13)),
-          ],
-        ],
-      ),
-    );
-  }
-
-  String _formatDateTime(DateTime dt) {
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
   }
 }
 
@@ -5455,15 +3859,19 @@ class _PodcastSubscriptionsPageState extends State<_PodcastSubscriptionsPage> {
         builder: (_) => const Center(child: CircularProgressIndicator()),
         barrierDismissible: false);
     try {
-      final feed = await _service.fetchFeed(url);
+      final feed = await _service.resolveUrl(url);
       await _service.subscribe(feed);
-      Navigator.of(context).pop();
+      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => PodcastDetailScreen(feed: feed),
+          ),
+        );
+      }
       await _load();
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Subscribed to ${feed.title}')));
     } catch (e) {
-      Navigator.of(context).pop();
+      if (mounted) Navigator.of(context).pop();
       if (mounted)
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -5476,73 +3884,11 @@ class _PodcastSubscriptionsPageState extends State<_PodcastSubscriptionsPage> {
   }
 
   void _showEpisodes(PodcastFeed feed) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: MelodiTheme.containerLow,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        maxChildSize: 0.95,
-        minChildSize: 0.4,
-        expand: false,
-        builder: (ctx, scrollCtrl) => Column(
-          children: [
-            Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                    color: MelodiTheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(2))),
-            Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(feed.title,
-                    style: TextStyle(
-                        color: MelodiTheme.onSurface,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold))),
-            const SizedBox(height: 8),
-            Expanded(
-                child: ListView.builder(
-              controller: scrollCtrl,
-              itemCount: feed.episodes.length,
-              itemBuilder: (ctx, i) {
-                final ep = feed.episodes[i];
-                return ListTile(
-                  leading: const Icon(Icons.podcasts, color: Color(0xFF53e076)),
-                  title: Text(ep.title,
-                      style:
-                          TextStyle(color: MelodiTheme.onSurface, fontSize: 14),
-                      maxLines: 2),
-                  subtitle: Text('${ep.duration.inMinutes} min',
-                      style: TextStyle(
-                          color: MelodiTheme.textMuted, fontSize: 12)),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _playEpisode(ep);
-                  },
-                );
-              },
-            )),
-          ],
-        ),
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PodcastDetailScreen(feed: feed),
       ),
     );
-  }
-
-  void _playEpisode(PodcastEpisode episode) {
-    final song = SongModel(
-      id: 'podcast_${episode.id}',
-      title: episode.title,
-      artist: 'Podcast',
-      album: '',
-      filePath: episode.audioUrl,
-      duration: episode.duration,
-      fileSize: 0,
-    );
-    context.read<PlayerProvider>().playSong(song);
   }
 
   @override
@@ -5635,402 +3981,6 @@ class _PodcastSubscriptionsPageState extends State<_PodcastSubscriptionsPage> {
             ]),
     );
   }
-}
-
-class _AudiobookLibraryPage extends StatefulWidget {
-  const _AudiobookLibraryPage();
-
-  @override
-  State<_AudiobookLibraryPage> createState() => _AudiobookLibraryPageState();
-}
-
-class _AudiobookLibraryPageState extends State<_AudiobookLibraryPage> {
-  final AudiobookService _service = AudiobookService.instance;
-  List<Audiobook> _books = [];
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final books = await _service.getAllAudiobooks();
-    if (mounted)
-      setState(() {
-        _books = books;
-        _loading = false;
-      });
-  }
-
-  Future<void> _importFolder() async {
-    final path = await FilePicker.platform.getDirectoryPath();
-    if (path == null) return;
-    final book = await _service.loadAudiobook(path);
-    if (book == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Ses dosyası bulunamadı'),
-              backgroundColor: MelodiTheme.errorRed),
-        );
-      }
-      return;
-    }
-    await _service.saveAudiobook(book);
-    _load();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('${book.title} eklendi'),
-            backgroundColor: MelodiTheme.primaryGreen),
-      );
-    }
-  }
-
-  Future<void> _deleteBook(Audiobook book) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: MelodiTheme.containerLow,
-        title: Text('Sil', style: TextStyle(color: MelodiTheme.onSurface)),
-        content: Text('${book.title} silinecek. Emin misiniz?',
-            style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text('İptal',
-                  style: TextStyle(color: MelodiTheme.onSurfaceVariant))),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child:
-                  Text('Sil', style: TextStyle(color: MelodiTheme.errorRed))),
-        ],
-      ),
-    );
-    if (confirm != true) return;
-    await _service.deleteAudiobook(book.id);
-    _load();
-  }
-
-  void _showChapters(Audiobook book) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: MelodiTheme.containerLow,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        maxChildSize: 0.95,
-        minChildSize: 0.4,
-        expand: false,
-        builder: (ctx, scrollCtrl) => Column(
-          children: [
-            Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                    color: MelodiTheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(2))),
-            Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(book.title,
-                    style: TextStyle(
-                        color: MelodiTheme.onSurface,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold))),
-            const SizedBox(height: 8),
-            Expanded(
-                child: ListView.builder(
-              controller: scrollCtrl,
-              itemCount: book.chapters.length,
-              itemBuilder: (ctx, i) {
-                final ch = book.chapters[i];
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: ch.completed
-                        ? MelodiTheme.primaryGreen.withOpacity(0.2)
-                        : MelodiTheme.containerHigh,
-                    child: ch.completed
-                        ? Icon(Icons.check,
-                            color: MelodiTheme.primaryGreen, size: 18)
-                        : Text('${i + 1}',
-                            style: TextStyle(
-                                color: MelodiTheme.onSurface, fontSize: 12)),
-                  ),
-                  title: Text(ch.title,
-                      style:
-                          TextStyle(color: MelodiTheme.onSurface, fontSize: 14),
-                      maxLines: 2),
-                  subtitle: Text('${ch.duration.inMinutes} min',
-                      style: TextStyle(
-                          color: MelodiTheme.textMuted, fontSize: 12)),
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    _playChapter(ch);
-                  },
-                );
-              },
-            )),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _playChapter(AudiobookChapter chapter) {
-    final song = SongModel(
-      id: 'audiobook_${chapter.id}',
-      title: chapter.title,
-      artist: 'Audiobook',
-      album: '',
-      filePath: chapter.audioPath,
-      duration: chapter.duration,
-      fileSize: 0,
-    );
-    context.read<PlayerProvider>().playSong(song);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: MelodiTheme.background,
-      appBar: AppBar(
-        title: Text(AppLocale.tr('audiobook')),
-        backgroundColor: MelodiTheme.containerLow,
-        foregroundColor: MelodiTheme.onSurface,
-        elevation: 0,
-        actions: [
-          IconButton(
-            onPressed: _importFolder,
-            icon: const Icon(Icons.add_rounded),
-          ),
-        ],
-      ),
-      body: _loading
-          ? Center(
-              child: CircularProgressIndicator(color: MelodiTheme.primaryGreen))
-          : _books.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.menu_book,
-                          size: 64, color: MelodiTheme.textMuted),
-                      const SizedBox(height: 16),
-                      Text(AppLocale.tr('no_audiobooks_found'),
-                          style: TextStyle(
-                              color: MelodiTheme.onSurfaceVariant,
-                              fontSize: 16)),
-                      const SizedBox(height: 8),
-                      Text(AppLocale.tr('import_audiobooks_hint'),
-                          style: TextStyle(
-                              color: MelodiTheme.textMuted, fontSize: 13)),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: _importFolder,
-                        icon: const Icon(Icons.folder_open, size: 18),
-                        label: Text(AppLocale.tr('import_from_folder')),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: MelodiTheme.primaryGreen,
-                          foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _books.length,
-                  itemBuilder: (context, index) {
-                    final book = _books[index];
-                    final progress = (book.progress * 100).toInt();
-                    return Dismissible(
-                      key: Key(book.id),
-                      direction: DismissDirection.endToStart,
-                      background: Container(
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 20),
-                        color: MelodiTheme.errorRed,
-                        child: Icon(Icons.delete, color: Colors.white),
-                      ),
-                      onDismissed: (_) => _deleteBook(book),
-                      child: InkWell(
-                        onTap: () => _showChapters(book),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: MelodiTheme.containerLow,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 56,
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  color: MelodiTheme.primaryGreen
-                                      .withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(Icons.menu_book,
-                                    color: MelodiTheme.primaryGreen, size: 28),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(book.title,
-                                        style: TextStyle(
-                                            color: MelodiTheme.onSurface,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600)),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                        '${book.author} · ${book.chapters.length} bölüm',
-                                        style: TextStyle(
-                                            color: MelodiTheme.onSurfaceVariant,
-                                            fontSize: 13)),
-                                    if (progress > 0) ...[
-                                      const SizedBox(height: 8),
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(2),
-                                        child: LinearProgressIndicator(
-                                          value: book.progress,
-                                          backgroundColor:
-                                              MelodiTheme.outlineVariant,
-                                          valueColor: AlwaysStoppedAnimation(
-                                              MelodiTheme.primaryGreen),
-                                          minHeight: 4,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text('$progress% tamamlandı',
-                                          style: TextStyle(
-                                              color: MelodiTheme.textMuted,
-                                              fontSize: 11)),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              Icon(Icons.chevron_right,
-                                  color: MelodiTheme.textMuted),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-    );
-  }
-}
-
-void _showEqPresetsDialog(BuildContext context) {
-  final presets = [
-    ('Flat', Icons.equalizer),
-    ('Bass Boost', Icons.graphic_eq),
-    ('Treble Boost', Icons.trending_up),
-    ('Vocal', Icons.mic),
-    ('Rock', Icons.music_note),
-    ('Jazz', Icons.piano),
-    ('Classical', Icons.queue_music),
-    ('Electronic', Icons.electric_bolt),
-    ('Podcast', Icons.headphones),
-  ];
-  showDialog(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      backgroundColor: const Color(0xFF201f1f),
-      title: Text('EQ Presets',
-          style: TextStyle(
-              color: MelodiTheme.onSurface,
-              fontSize: 20,
-              fontWeight: FontWeight.bold)),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: ListView.builder(
-          shrinkWrap: true,
-          itemCount: presets.length,
-          itemBuilder: (ctx, i) {
-            final (name, icon) = presets[i];
-            return ListTile(
-              leading: Icon(icon, color: const Color(0xFF53e076), size: 20),
-              title: Text(name,
-                  style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15)),
-              onTap: () {
-                DatabaseService.instance.setSetting('eq_preset', name);
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('EQ preset set to $name'),
-                    backgroundColor: const Color(0xFF53e076),
-                  ),
-                );
-              },
-            );
-          },
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child: Text('Cancel',
-              style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
-        ),
-      ],
-    ),
-  );
-}
-
-void _showAirPlayDevicesDialog(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      backgroundColor: const Color(0xFF201f1f),
-      title: Text('AirPlay',
-          style: TextStyle(
-              color: MelodiTheme.onSurface,
-              fontSize: 20,
-              fontWeight: FontWeight.bold)),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading:
-                Icon(Icons.speaker, color: const Color(0xFF53e076), size: 20),
-            title: Text('AirPlay cihazlarını seç',
-                style: TextStyle(
-                    color: MelodiTheme.onSurfaceVariant, fontSize: 15)),
-            subtitle: Text(
-                'iOS ses çıkışı menüsünü açarak hoparlör veya Apple TV seçebilirsin.',
-                style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
-            onTap: () async {
-              await AirPlayService.instance.showRoutePicker();
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child:
-              Text('Kapat', style: TextStyle(color: MelodiTheme.primaryGreen)),
-        ),
-      ],
-    ),
-  );
 }
 
 void _showWidgetConfigDialog(BuildContext context) {
