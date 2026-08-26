@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
+import '../theme/app_tokens.dart';
 import '../models/playlist_model.dart';
 import '../providers/playlist_provider.dart';
 import '../providers/library_provider.dart';
@@ -87,7 +88,7 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
                 height: 180,
                 decoration: BoxDecoration(
                   color: MelodiTheme.surfaceMid2,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: context.tokens.borderRadiusCover,
                 ),
                 child: Stack(
                   alignment: Alignment.center,

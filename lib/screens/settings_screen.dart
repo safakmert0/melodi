@@ -251,7 +251,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               DatabaseService.instance
                                   .setSetting('auto_shuffle', v.toString());
                             },
-                            activeColor: const Color(0xFF53e076),
+                            activeColor: MelodiTheme.primaryGreen,
                           ),
                           onTap: () {
                             final v = !_autoShuffle;
@@ -277,7 +277,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               DatabaseService.instance
                                   .setSetting('gapless_playback', v.toString());
                             },
-                            activeColor: const Color(0xFF53e076),
+                            activeColor: MelodiTheme.primaryGreen,
                           ),
                           onTap: () {
                             final v = !_gaplessPlayback;
@@ -540,7 +540,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                         _SettingsTile(
                           icon: Icons.equalizer,
-                          iconColor: const Color(0xFF53e076),
+                          iconColor: MelodiTheme.primaryGreen,
                           title: AppLocale.tr('audio_effects'),
                           subtitle: AppLocale.tr('audio_effects_desc'),
                           trailing: Icon(Icons.chevron_right,
@@ -567,7 +567,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               DatabaseService.instance
                                   .setSetting('gapless_playback', v.toString());
                             },
-                            activeColor: const Color(0xFF53e076),
+                            activeColor: MelodiTheme.primaryGreen,
                           ),
                           onTap: () {
                             final v = !_gaplessPlayback;
@@ -593,7 +593,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               DatabaseService.instance.setSetting(
                                   'download_as_video', v.toString());
                             },
-                            activeColor: const Color(0xFF53e076),
+                            activeColor: MelodiTheme.primaryGreen,
                           ),
                           onTap: () {
                             final v = !_downloadAsVideo;
@@ -615,7 +615,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               DatabaseService.instance.setSetting(
                                   'bluetooth_auto_eq', v.toString());
                             },
-                            activeColor: const Color(0xFF53e076),
+                            activeColor: MelodiTheme.primaryGreen,
                           ),
                           onTap: () {
                             setState(
@@ -1130,7 +1130,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         boxShadow: isSelected
                             ? [
                                 BoxShadow(
-                                    color: color.withOpacity(0.5),
+                                    color: color.withValues(alpha: 0.5),
                                     blurRadius: 8)
                               ]
                             : null,
@@ -1681,8 +1681,8 @@ class _CollapsibleSectionState extends State<_CollapsibleSection> {
                 Expanded(
                   child: Text(
                     widget.title.toUpperCase(),
-                    style: const TextStyle(
-                      color: Color(0xFF53e076),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 1.5,
@@ -1691,7 +1691,7 @@ class _CollapsibleSectionState extends State<_CollapsibleSection> {
                 ),
                 Icon(
                   _expanded ? Icons.expand_less : Icons.expand_more,
-                  color: const Color(0xFF53e076),
+                  color: Theme.of(context).colorScheme.primary,
                   size: 20,
                 ),
               ],
@@ -1722,8 +1722,8 @@ class _SectionTitle extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
       child: Text(
         title.toUpperCase(),
-        style: const TextStyle(
-          color: Color(0xFF53e076),
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.primary,
           fontSize: 14,
           fontWeight: FontWeight.w600,
           letterSpacing: 1.5,
@@ -2253,7 +2253,7 @@ class _CustomColorTile extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.15),
+          color: color.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: color, size: 20),
@@ -2347,7 +2347,7 @@ class _CustomColorTile extends StatelessWidget {
                         boxShadow: isSelected
                             ? [
                                 BoxShadow(
-                                    color: c.withOpacity(0.5), blurRadius: 8)
+                                    color: c.withValues(alpha: 0.5), blurRadius: 8)
                               ]
                             : null,
                       ),
@@ -2595,7 +2595,7 @@ class _SettingsTile extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.1),
+            color: iconColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: iconColor, size: 20),
@@ -2981,7 +2981,7 @@ class _PodcastSubscriptionsPageState extends State<_PodcastSubscriptionsPage> {
                   IconButton(
                     onPressed: _addByUrl,
                     icon: const Icon(Icons.add_circle,
-                        color: Color(0xFF53e076), size: 36),
+                        color: MelodiTheme.primaryGreen, size: 36),
                   ),
                 ]),
               ),
@@ -3013,7 +3013,7 @@ class _PodcastSubscriptionsPageState extends State<_PodcastSubscriptionsPage> {
                       leading: CircleAvatar(
                         backgroundColor: MelodiTheme.containerHigh,
                         child: const Icon(Icons.podcasts,
-                            color: Color(0xFF53e076)),
+                            color: MelodiTheme.primaryGreen),
                       ),
                       title: Text(feed.title,
                           style: TextStyle(
@@ -3073,13 +3073,13 @@ void _showWidgetConfigDialog(BuildContext context) {
 Widget _widgetOption(
     BuildContext ctx, String name, IconData icon, bool enabled) {
   return ListTile(
-    leading: Icon(icon, color: const Color(0xFF53e076), size: 20),
+    leading: Icon(icon, color: MelodiTheme.primaryGreen, size: 20),
     title: Text(name,
         style: const TextStyle(color: Color(0xFFe5e2e1), fontSize: 15)),
     trailing: Switch(
       value: enabled,
       onChanged: (v) {},
-      activeColor: const Color(0xFF53e076),
+      activeColor: MelodiTheme.primaryGreen,
     ),
   );
 }

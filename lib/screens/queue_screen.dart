@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
+import '../theme/app_tokens.dart';
 import '../providers/player_provider.dart';
 import '../services/audio_handler.dart';
 import '../models/song_model.dart';
@@ -72,8 +73,8 @@ class QueueScreen extends StatelessWidget {
                               horizontal: 16, vertical: 4),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: MelodiTheme.containerHigh.withOpacity(0.6),
-                            borderRadius: BorderRadius.circular(8),
+                            color: MelodiTheme.containerHigh.withValues(alpha: 0.6),
+                            borderRadius: context.tokens.borderRadiusThumb,
                             border: Border.all(
                                 color: MelodiTheme.outlineVariant, width: 0.5),
                           ),
@@ -151,7 +152,7 @@ class QueueScreen extends StatelessWidget {
                                 decoration: BoxDecoration(
                                     border: Border.all(
                                         color: MelodiTheme.primaryGreen
-                                            .withOpacity(0.4)),
+                                            .withValues(alpha: 0.4)),
                                     borderRadius: BorderRadius.circular(4)),
                                 child: Text('HI-RES',
                                     style: MelodiTheme.label(
@@ -241,7 +242,7 @@ class QueueScreen extends StatelessWidget {
                   color: MelodiTheme.background,
                   border: Border(
                       top: BorderSide(
-                          color: MelodiTheme.outlineVariant.withOpacity(0.3),
+                          color: MelodiTheme.outlineVariant.withValues(alpha: 0.3),
                           width: 0.5)),
                 ),
                 child: SafeArea(
@@ -307,7 +308,7 @@ class QueueScreen extends StatelessWidget {
                             boxShadow: [
                               BoxShadow(
                                   color:
-                                      MelodiTheme.primaryGreen.withOpacity(0.4),
+                                      MelodiTheme.primaryGreen.withValues(alpha: 0.4),
                                   blurRadius: 12,
                                   spreadRadius: 2)
                             ],

@@ -52,7 +52,7 @@ class AppConstants {
   static const int maxRecentSearches = 20;
   static const int maxQueueHistory = 50;
 
-  static const String fontFamily = 'BeVietnamPro';
+  static const String fontFamily = 'Google Sans Flex';
 }
 
 class MelodiTheme {
@@ -82,18 +82,19 @@ class MelodiTheme {
   static Color get onSurfaceVariant =>
       AppTheme.isLightMode ? const Color(0xFF645B64) : const Color(0xFFC9C1CB);
 
+  // SpotiFLAC visual identity — Spotify-green brand seed.
   // Kept under the legacy name so existing feature screens inherit the new
   // brand without a risky, all-at-once API rename.
-  static const Color primaryGreen = Color(0xFFFF4D8D);
-  static const Color primaryGreenBright = Color(0xFFFF79AA);
-  static const Color primaryContainer = Color(0xFF5E1638);
+  static const Color primaryGreen = Color(0xFF1DB954);
+  static const Color primaryGreenBright = Color(0xFF1ED760);
+  static const Color primaryContainer = Color(0xFF0C3B22);
   static const Color onPrimary = Color(0xFFFFFFFF);
-  static const Color onPrimaryContainer = Color(0xFFFFD8E7);
+  static const Color onPrimaryContainer = Color(0xFFB9F5CF);
 
   // Secondary
-  static const Color secondary = Color(0xFFC8C6C5);
-  static const Color secondaryContainer = Color(0xFF4A4949);
-  static const Color onSecondaryContainer = Color(0xFFBAB8B7);
+  static const Color secondary = Color(0xFFB7B7B7);
+  static const Color secondaryContainer = Color(0xFF3A3A3A);
+  static const Color onSecondaryContainer = Color(0xFFD6D6D6);
 
   // Outline
   static Color get outline =>
@@ -303,7 +304,7 @@ class MelodiTheme {
         activeTrackColor: primaryGreen,
         inactiveTrackColor: surfaceBright,
         thumbColor: primaryGreen,
-        overlayColor: Color(0x3353E076),
+        overlayColor: const Color(0x331DB954),
         trackHeight: 2,
         thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6),
         overlayShape: RoundSliderOverlayShape(overlayRadius: 14),

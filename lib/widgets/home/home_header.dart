@@ -4,6 +4,7 @@ import '../../core/localization.dart';
 import '../../screens/profile_screen.dart';
 import '../../screens/settings_screen.dart';
 import '../../screens/source_hub_screen.dart';
+import '../../screens/search_screen.dart';
 
 class HomeHeader extends StatelessWidget {
   const HomeHeader({super.key});
@@ -64,6 +65,16 @@ class HomeHeader extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
+                    _HeaderButton(
+                      tooltip: 'Ara',
+                      icon: Icons.search_rounded,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const SearchScreen(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
                     _HeaderButton(
                       tooltip: 'Ayarlar',
                       icon: Icons.settings_rounded,

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../core/localization.dart';
+import '../theme/app_tokens.dart';
 import '../core/melodi_design.dart';
 import '../core/constants.dart';
 
@@ -274,7 +275,7 @@ class _SupportScreenState extends State<SupportScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(context.tokens.radiusControl),
         border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Text(

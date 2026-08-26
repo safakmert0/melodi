@@ -163,7 +163,7 @@ class _SplashScreenState extends State<SplashScreen>
                       fontFamily: AppConstants.fontFamily,
                       fontSize: 15,
                       fontWeight: FontWeight.w400,
-                      color: MelodiTheme.onSurfaceVariant.withOpacity(0.6),
+                      color: MelodiTheme.onSurfaceVariant.withValues(alpha: 0.6),
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -192,7 +192,7 @@ class _SplashScreenState extends State<SplashScreen>
                     key: ValueKey(_statusText),
                     style: TextStyle(
                       fontFamily: AppConstants.fontFamily,
-                      color: MelodiTheme.onSurfaceVariant.withOpacity(0.7),
+                      color: MelodiTheme.onSurfaceVariant.withValues(alpha: 0.7),
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
                       letterSpacing: 0.3,
@@ -250,7 +250,7 @@ class _SplashScreenState extends State<SplashScreen>
               child: Icon(
                 icons[index],
                 size: 28,
-                color: MelodiTheme.primaryGreen.withOpacity(opacity),
+                color: MelodiTheme.primaryGreen.withValues(alpha: opacity),
               ),
             ),
           ),
@@ -276,7 +276,7 @@ class _SplashScreenState extends State<SplashScreen>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: MelodiTheme.primaryGreen.withOpacity(opacity * 0.25),
+                color: MelodiTheme.primaryGreen.withValues(alpha: opacity * 0.25),
                 width: 1.5,
               ),
             ),
@@ -312,12 +312,12 @@ class _SplashScreenState extends State<SplashScreen>
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      MelodiTheme.primaryGreen.withOpacity(0.15),
-                      MelodiTheme.primaryGreen.withOpacity(0.05),
+                      MelodiTheme.primaryGreen.withValues(alpha: 0.15),
+                      MelodiTheme.primaryGreen.withValues(alpha: 0.05),
                     ],
                   ),
                   border: Border.all(
-                    color: MelodiTheme.primaryGreen.withOpacity(0.3),
+                    color: MelodiTheme.primaryGreen.withValues(alpha: 0.3),
                     width: 2,
                   ),
                 ),
@@ -342,7 +342,7 @@ class _SplashScreenState extends State<SplashScreen>
           width: 180,
           height: 3,
           decoration: BoxDecoration(
-            color: MelodiTheme.surfaceBright.withOpacity(0.5),
+            color: MelodiTheme.surfaceBright.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(2),
           ),
           child: FractionallySizedBox(
@@ -351,12 +351,12 @@ class _SplashScreenState extends State<SplashScreen>
             child: Container(
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [MelodiTheme.primaryGreen, Color(0xFF42A5F5)],
+                  colors: [MelodiTheme.primaryGreen, MelodiTheme.primaryGreenBright],
                 ),
                 borderRadius: BorderRadius.circular(2),
                 boxShadow: [
                   BoxShadow(
-                    color: MelodiTheme.primaryGreen.withOpacity(0.6),
+                    color: MelodiTheme.primaryGreen.withValues(alpha: 0.6),
                     blurRadius: 12,
                     spreadRadius: 2,
                   ),

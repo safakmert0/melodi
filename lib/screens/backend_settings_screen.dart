@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
+import '../theme/app_tokens.dart';
 import '../services/backend_api_service.dart';
 import '../services/database_service.dart';
 import '../services/extension_service.dart';
@@ -117,7 +118,7 @@ class _BackendSettingsScreenState extends State<BackendSettingsScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: MelodiTheme.containerLow,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: context.tokens.borderRadiusCover,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,7 +151,7 @@ class _BackendSettingsScreenState extends State<BackendSettingsScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: MelodiTheme.containerLow,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: context.tokens.borderRadiusCover,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,7 +216,7 @@ class _BackendSettingsScreenState extends State<BackendSettingsScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: MelodiTheme.containerLow,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: context.tokens.borderRadiusCover,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -235,7 +236,7 @@ class _BackendSettingsScreenState extends State<BackendSettingsScreen> {
                       filled: true,
                       fillColor: MelodiTheme.containerLow,
                       border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: context.tokens.borderRadiusThumb,
                           borderSide: BorderSide.none),
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 12),
@@ -251,7 +252,7 @@ class _BackendSettingsScreenState extends State<BackendSettingsScreen> {
                         foregroundColor: const Color(0xFF003914),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
+                            borderRadius: context.tokens.borderRadiusThumb),
                       ),
                       child: Text(
                         _isChecking ? 'Checking...' : 'Check Connection',
@@ -268,7 +269,7 @@ class _BackendSettingsScreenState extends State<BackendSettingsScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: MelodiTheme.containerLow,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: context.tokens.borderRadiusCover,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

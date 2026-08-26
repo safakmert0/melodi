@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
+import '../theme/app_tokens.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/playlist_provider.dart';
@@ -112,13 +113,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                MelodiTheme.primaryGreen.withOpacity(0.15),
-                MelodiTheme.primaryGreen.withOpacity(0.05),
+                MelodiTheme.primaryGreen.withValues(alpha: 0.15),
+                MelodiTheme.primaryGreen.withValues(alpha: 0.05),
               ],
             ),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: context.tokens.borderRadiusCard,
             border: Border.all(
-              color: MelodiTheme.primaryGreen.withOpacity(0.2),
+              color: MelodiTheme.primaryGreen.withValues(alpha: 0.2),
               width: 1,
             ),
           ),
@@ -133,12 +134,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      MelodiTheme.primaryGreen.withOpacity(0.3),
-                      MelodiTheme.primaryGreen.withOpacity(0.1),
+                      MelodiTheme.primaryGreen.withValues(alpha: 0.3),
+                      MelodiTheme.primaryGreen.withValues(alpha: 0.1),
                     ],
                   ),
                   border: Border.all(
-                    color: MelodiTheme.primaryGreen.withOpacity(0.3),
+                    color: MelodiTheme.primaryGreen.withValues(alpha: 0.3),
                     width: 2,
                   ),
                 ),
@@ -371,9 +372,9 @@ class _StatCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: MelodiTheme.containerLow,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(context.tokens.radiusControl),
         border: Border.all(
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -426,7 +427,7 @@ class _QuickActionTile extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: MelodiTheme.containerLow,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: context.tokens.borderRadiusCover,
         ),
         child: Row(
           children: [
@@ -435,7 +436,7 @@ class _QuickActionTile extends StatelessWidget {
               height: 40,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: iconColor.withOpacity(0.1),
+                color: iconColor.withValues(alpha: 0.1),
               ),
               child: Icon(icon, size: 20, color: iconColor),
             ),

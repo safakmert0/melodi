@@ -104,3 +104,6 @@ flutter:
           weight: 700
         - asset: assets/fonts/BeVietnamPro-ExtraBold.ttf
           weight: 800
+    - family: Google Sans Flex
+      fonts:
+        - asset: assets/fonts/GoogleSansFlex.ttf

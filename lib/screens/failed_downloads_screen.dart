@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
+import '../theme/app_tokens.dart';
 import '../providers/download_provider.dart';
 import '../services/download_manager.dart';
 
@@ -114,7 +115,7 @@ class _FailedDownloadTileState extends State<_FailedDownloadTile> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: MelodiTheme.containerLow,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: context.tokens.borderRadiusCover,
       ),
       child: Column(
         children: [
@@ -123,8 +124,8 @@ class _FailedDownloadTileState extends State<_FailedDownloadTile> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: MelodiTheme.errorRed.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+                color: MelodiTheme.errorRed.withValues(alpha: 0.1),
+                borderRadius: context.tokens.borderRadiusThumb,
               ),
               child: Icon(Icons.error_rounded,
                   color: MelodiTheme.errorRed, size: 22),

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../core/constants.dart';
 import '../models/song_model.dart';
+import '../theme/app_tokens.dart';
 import '../providers/player_provider.dart';
 import '../services/discover_service.dart';
 import '../widgets/melodi_cache_image.dart';
@@ -138,16 +139,16 @@ class _DiscoverTile extends StatelessWidget {
     final color = Theme.of(context).colorScheme;
     return Material(
       color: Colors.transparent,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: context.tokens.borderRadiusCover,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: context.tokens.borderRadiusCover,
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
           child: Row(
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: context.tokens.borderRadiusThumb,
                 child: MelodiCacheImage(
                   imageUrl: item.thumbnailUrl,
                   width: 56,

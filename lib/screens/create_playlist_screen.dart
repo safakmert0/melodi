@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
+import '../theme/app_tokens.dart';
 import '../providers/playlist_provider.dart';
 
 class CreatePlaylistScreen extends StatefulWidget {
@@ -130,7 +131,7 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen> {
               padding: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
                 color: MelodiTheme.surfaceMid2,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: context.tokens.borderRadiusThumb,
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -208,14 +209,14 @@ class _GlassInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(context.tokens.radiusControl),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(context.tokens.radiusControl),
             border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
           ),
           child: Column(

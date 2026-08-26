@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../core/melodi_design.dart';
 import '../models/extension.dart';
+import '../theme/app_tokens.dart';
 import '../models/source_descriptor.dart';
 import '../providers/connection_provider.dart';
 import '../services/extension_service.dart';
@@ -164,8 +165,8 @@ class _StoreCta extends StatelessWidget {
             width: 46,
             height: 46,
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary .withOpacity(0.16),
-              borderRadius: BorderRadius.circular(15),
+              color: theme.colorScheme.primary.withValues(alpha: 0.16),
+              borderRadius: context.tokens.borderRadiusCover,
             ),
             child: Icon(Icons.extension_rounded,
                 color: theme.colorScheme.primary, size: 25),
@@ -278,8 +279,8 @@ class _SourceIcon extends StatelessWidget {
       width: 46,
       height: 46,
       decoration: BoxDecoration(
-        color: color .withOpacity(0.16),
-        borderRadius: BorderRadius.circular(15),
+        color: color.withValues(alpha: 0.16),
+        borderRadius: context.tokens.borderRadiusCover,
       ),
       child: Icon(icon, color: color, size: 25),
     );

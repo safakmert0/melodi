@@ -9,7 +9,7 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   ThemeMode _themeMode = ThemeMode.dark;
-  static const Color _melodiAccent = Color(0xFFFF4D8D);
+  static const Color _melodiAccent = Color(0xFF1DB954);
   static const int _legacyBlue = 0xFF2196F3;
   Color _accentColor = _melodiAccent;
   Color? _customBackground;

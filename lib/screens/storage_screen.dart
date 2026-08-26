@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../core/constants.dart';
+import '../theme/app_tokens.dart';
 import '../models/song_model.dart';
 import '../services/storage_manager.dart';
 import '../services/database_service.dart';
@@ -124,7 +125,7 @@ class _StorageScreenState extends State<StorageScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: MelodiTheme.containerLow,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(context.tokens.radiusControl),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,15 +220,15 @@ class _StorageScreenState extends State<StorageScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: MelodiTheme.containerLow,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: context.tokens.borderRadiusCover,
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: iconColor.withValues(alpha: 0.1),
+              borderRadius: context.tokens.borderRadiusThumb,
             ),
             child: Icon(icon, color: iconColor, size: 20),
           ),
@@ -266,7 +267,7 @@ class _StorageScreenState extends State<StorageScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: MelodiTheme.containerLow,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(context.tokens.radiusControl),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,8 +294,8 @@ class _StorageScreenState extends State<StorageScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: MelodiTheme.primaryGreen.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(6),
+                      color: MelodiTheme.primaryGreen.withValues(alpha: 0.15),
+                      borderRadius: context.tokens.borderRadiusBadge,
                     ),
                     child: Text(
                       ext,
@@ -336,7 +337,7 @@ class _StorageScreenState extends State<StorageScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: MelodiTheme.containerLow,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(context.tokens.radiusControl),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -428,7 +429,7 @@ class _StorageScreenState extends State<StorageScreen> {
               side: BorderSide(color: MelodiTheme.errorRed),
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: context.tokens.borderRadiusCover,
               ),
             ),
           ),
@@ -465,7 +466,7 @@ class _StorageScreenState extends State<StorageScreen> {
               side: BorderSide(color: MelodiTheme.primaryGreen),
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: context.tokens.borderRadiusCover,
               ),
             ),
           ),

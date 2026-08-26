@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/constants.dart';
 import '../core/melodi_design.dart';
+import '../theme/app_tokens.dart';
 import '../models/extension.dart';
 import '../services/extension_service.dart';
 
@@ -614,8 +615,8 @@ class _KindIcon extends StatelessWidget {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: color .withOpacity(0.16),
-        borderRadius: BorderRadius.circular(14),
+        color: color.withValues(alpha: 0.16),
+        borderRadius: context.tokens.borderRadiusCover,
       ),
       child: Icon(icon, color: color, size: 24),
     );

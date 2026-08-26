@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../models/song_model.dart';
 import '../core/constants.dart';
+import '../theme/app_tokens.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/playlist_provider.dart';
@@ -79,14 +80,14 @@ class SongTile extends StatelessWidget {
                 ArtworkImage(
                   imageBytes: song.albumArt,
                   size: artworkSize,
-                  borderRadius: 6,
+                  borderRadius: context.tokens.radiusThumb,
                 ),
                 if (isPlaying)
                   Positioned.fill(
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.black45,
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: context.tokens.borderRadiusThumb,
                       ),
                       child: Icon(
                         Icons.equalizer_rounded,

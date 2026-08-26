@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../core/constants.dart';
+import '../theme/app_tokens.dart';
 import '../services/album_discovery_service.dart';
 import 'album_detail_screen.dart';
 
@@ -255,7 +256,7 @@ class _AlbumCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: context.tokens.borderRadiusCover,
               child: Container(
                 width: 150,
                 height: 150,

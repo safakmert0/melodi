@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../models/song_model.dart';
+import '../theme/app_tokens.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
 import '../services/album_discovery_service.dart';
@@ -368,7 +369,7 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                     foregroundColor: MelodiTheme.onSurface,
                     side: BorderSide(color: MelodiTheme.outlineVariant),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: context.tokens.borderRadiusCard,
                     ),
                   ),
                 ),
@@ -473,7 +474,7 @@ class _AlbumGridCard extends StatelessWidget {
         children: [
           Expanded(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: context.tokens.borderRadiusCover,
               child: Container(
                 width: double.infinity,
                 color: MelodiTheme.containerLow,

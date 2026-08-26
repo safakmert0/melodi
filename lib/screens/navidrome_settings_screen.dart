@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../core/melodi_design.dart';
 import '../models/song_model.dart';
+import '../theme/app_tokens.dart';
 import '../providers/download_provider.dart';
 import '../providers/player_provider.dart';
 import '../services/music_source.dart';
@@ -104,7 +105,7 @@ class _NavidromeSettingsScreenState extends State<NavidromeSettingsScreen> {
                             decoration: BoxDecoration(
                               color: const Color(0xFF6C8CFF)
                                    .withOpacity(0.16),
-                              borderRadius: BorderRadius.circular(15),
+                              borderRadius: context.tokens.borderRadiusCover,
                             ),
                             child: const Icon(
                               Icons.dns_rounded,
@@ -332,7 +333,7 @@ class _PlaylistCard extends StatelessWidget {
       child: Row(
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: context.tokens.borderRadiusCover,
             child: SizedBox(
               width: 58,
               height: 58,
@@ -449,7 +450,7 @@ class _NavidromePlaylistScreenState extends State<NavidromePlaylistScreen> {
             width: 190,
             height: 190,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(26),
+              borderRadius: BorderRadius.circular(context.tokens.radiusSheet),
               child: coverUrl == null
                   ? const ColoredBox(
                       color: Color(0x226C8CFF),
@@ -510,7 +511,7 @@ class _NavidromePlaylistScreenState extends State<NavidromePlaylistScreen> {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
       leading: ClipRRect(
-        borderRadius: BorderRadius.circular(11),
+        borderRadius: context.tokens.borderRadiusCover,
         child: SizedBox(
           width: 48,
           height: 48,

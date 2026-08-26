@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../core/constants.dart';
 import '../core/localization.dart';
+import '../theme/app_tokens.dart';
 import '../models/song_model.dart';
 import '../providers/player_provider.dart';
 import '../providers/playlist_provider.dart';
@@ -110,7 +111,7 @@ class _DiscoverPlaylistScreenState extends State<DiscoverPlaylistScreen> {
                   child: Padding(
                     padding: const EdgeInsets.only(top: 40),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(context.tokens.radiusControl),
                       child: MelodiCacheImage(
                         imageUrl: widget.thumbnailUrl,
                         width: 110,
@@ -198,7 +199,7 @@ class _DiscoverPlaylistScreenState extends State<DiscoverPlaylistScreen> {
                       child: Row(
                         children: [
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: context.tokens.borderRadiusThumb,
                             child: MelodiCacheImage(
                               imageUrl: item.thumbnailUrl,
                               width: 48,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/song_model.dart';
+import '../../theme/app_tokens.dart';
 import '../../providers/download_provider.dart';
 import '../../providers/player_provider.dart';
 import '../../providers/search_provider.dart';
@@ -72,7 +73,7 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       leading: ClipRRect(
-        borderRadius: BorderRadius.circular(13),
+        borderRadius: context.tokens.borderRadiusCover,
         child: SizedBox(
           width: 52,
           height: 52,

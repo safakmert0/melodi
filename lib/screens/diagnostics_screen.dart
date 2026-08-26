@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../core/constants.dart';
+import '../theme/app_tokens.dart';
 import '../services/diagnostics_service.dart';
 
 class DiagnosticsScreen extends StatefulWidget {
@@ -231,7 +232,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: MelodiTheme.containerLow,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: context.tokens.borderRadiusCover,
                           border: Border.all(color: MelodiTheme.outlineVariant),
                         ),
                         child: Row(
@@ -265,8 +266,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: statusColor.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(8),
+                                color: statusColor.withValues(alpha: 0.15),
+                                borderRadius: context.tokens.borderRadiusThumb,
                               ),
                               child: Text(
                                 statusText,
@@ -303,7 +304,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: MelodiTheme.containerLow,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: context.tokens.borderRadiusCover,
                             border:
                                 Border.all(color: MelodiTheme.outlineVariant),
                           ),
@@ -317,7 +318,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                         horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: MelodiTheme.errorRed
-                                          .withOpacity(0.15),
+                                          .withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
@@ -395,10 +396,10 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                             style: OutlinedButton.styleFrom(
                               foregroundColor: MelodiTheme.errorRed,
                               side: BorderSide(
-                                  color: MelodiTheme.errorRed.withOpacity(0.5)),
+                                  color: MelodiTheme.errorRed.withValues(alpha: 0.5)),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: context.tokens.borderRadiusCover,
                               ),
                             ),
                           ),
@@ -418,7 +419,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                             foregroundColor: Colors.black,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: context.tokens.borderRadiusCover,
                             ),
                           ),
                         ),

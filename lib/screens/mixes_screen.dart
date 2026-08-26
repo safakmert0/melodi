@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
+import '../theme/app_tokens.dart';
 import '../providers/mix_provider.dart';
 
 class MixesScreen extends StatefulWidget {
@@ -96,7 +97,7 @@ class _MixesScreenState extends State<MixesScreen> {
           height: 80,
           decoration: BoxDecoration(
             color: MelodiTheme.containerLow,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: context.tokens.borderRadiusCover,
           ),
         );
       },
@@ -268,7 +269,7 @@ class _MixesScreenState extends State<MixesScreen> {
               ),
               const SizedBox(height: 20),
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: context.tokens.borderRadiusCover,
                 child: track['imageUrl'] != null
                     ? Image.network(
                         track['imageUrl'] as String,
@@ -410,11 +411,11 @@ class _TrackCard extends StatelessWidget {
               width: 140,
               height: 140,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: context.tokens.borderRadiusCover,
                 color: MelodiTheme.containerLow,
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: context.tokens.borderRadiusCover,
                 child: _buildArtwork(),
               ),
             ),
@@ -500,13 +501,13 @@ class _TrackListTile extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: context.tokens.borderRadiusThumb,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: context.tokens.borderRadiusBadge,
                 child: _buildArtwork(),
               ),
               const SizedBox(width: 12),
@@ -610,7 +611,7 @@ class _GridTrackCard extends StatelessWidget {
         children: [
           Expanded(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: context.tokens.borderRadiusCover,
               child: _buildArtwork(),
             ),
           ),

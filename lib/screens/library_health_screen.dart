@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
+import '../theme/app_tokens.dart';
 import '../services/library_health_service.dart';
 
 class LibraryHealthScreen extends StatefulWidget {
@@ -264,7 +265,7 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                    borderRadius: context.tokens.borderRadiusCover),
               ),
             ),
           ),
@@ -346,7 +347,7 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
                 color: MelodiTheme.primaryGreen.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: context.tokens.borderRadiusThumb,
               ),
               child: Text(
                 '${issues.length}',
