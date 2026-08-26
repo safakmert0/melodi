@@ -1,9 +1,6 @@
 name: iOS Build Unsigned IPA
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 env:

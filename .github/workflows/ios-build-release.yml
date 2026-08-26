@@ -1,9 +1,6 @@
 name: iOS Build & Release
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 env:
