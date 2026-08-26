@@ -10,11 +10,6 @@ import '../providers/library_provider.dart';
 import '../providers/playlist_provider.dart';
 import '../providers/download_provider.dart';
 import '../widgets/song_tile.dart';
-import '../widgets/wrong_match_button.dart';
-import '../providers/spotify_provider.dart';
-import '../providers/ytmusic_provider.dart';
-import '../services/track_matcher.dart';
-import '../services/download_manager.dart';
 
 class PlaylistDetailScreen extends StatefulWidget {
   final PlaylistModel playlist;
@@ -29,16 +24,12 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   late List<SongModel> _songs;
   bool _isLoading = true;
   bool _syncEnabled = false;
-  Map<String, double> _confidenceMap = {};
-  bool _isRematching = false;
-  double _rematchProgress = 0.0;
 
   @override
   void initState() {
     super.initState();
     _loadSongs();
     _loadSyncState();
-    _loadConfidence();
   }
 
   Future<void> _loadSyncState() async {
@@ -52,74 +43,13 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     }
   }
 
-  Future<void> _loadConfidence() async {
-    final confidences =
-        await DatabaseService.instance.getAllCachedConfidences();
-    final spotify = context.read<SpotifyProvider>();
-    final map = <String, double>{};
-    for (final entry in spotify.matchedTrackIds.entries) {
-      final confidence = confidences[entry.key];
-      if (confidence != null) {
-        map[entry.value] = confidence;
-      }
-    }
-    if (mounted) {
-      setState(() => _confidenceMap = map);
-    }
-  }
-
   Future<void> _rematchAll() async {
-    final spotify = context.read<SpotifyProvider>();
-    final ytService = context.read<YTMusicProvider>().service;
-    if (!spotify.isConnected) return;
-
-    final trackIds = spotify.matchedTrackIds.entries.toList();
-    if (trackIds.isEmpty) return;
-
-    setState(() {
-      _isRematching = true;
-      _rematchProgress = 0.0;
-    });
-
-    final matcher = TrackMatcher(ytService.search);
-    for (var i = 0; i < trackIds.length; i++) {
-      final entry = trackIds[i];
-      final song = _songs.where((s) => s.id == entry.value).firstOrNull;
-      if (song == null) continue;
-
-      final result = await matcher.matchSpotifyTrackToYT(
-        song.title,
-        song.artist,
-        durationMs: song.duration.inMilliseconds,
-      );
-
-      if (result != null) {
-        await DatabaseService.instance.cacheMatch(
-          entry.key,
-          result.ytVideoId,
-          result.confidence,
-        );
-        if (mounted) {
-          setState(() {
-            _confidenceMap[entry.value] = result.confidence;
-          });
-        }
-      }
-
-      if (mounted) {
-        setState(() {
-          _rematchProgress = (i + 1) / trackIds.length;
-        });
-      }
-    }
-
-    if (mounted) {
-      setState(() {
-        _isRematching = false;
-        _rematchProgress = 1.0;
-      });
-    }
+    // Playlist rematching was powered by Spotify/YTMusic account matching and
+    // has been removed.
+    return;
   }
+
+
 
   Future<void> _loadSongs() async {
     final db = DatabaseService.instance;
@@ -143,13 +73,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       appBar: AppBar(
         title: Text(playlist.name),
         actions: [
-          if (!_isRematching)
-            IconButton(
-              icon: const Icon(Icons.compare_arrows_rounded, size: 22),
-              tooltip: AppLocale.tr('rematch_all'),
-              color: MelodiTheme.onSurfaceVariant,
-              onPressed: _rematchAll,
-            ),
           PopupMenuButton<String>(
             icon: Icon(Icons.more_horiz_rounded,
                 color: MelodiTheme.onSurfaceVariant),
@@ -337,57 +260,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                       ),
                     ),
                     Divider(color: MelodiTheme.outlineVariant, height: 1),
-                    if (_isRematching)
-                      Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: MelodiTheme.primaryGreen,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  AppLocale.tr('match_progress'),
-                                  style: TextStyle(
-                                    color: MelodiTheme.onSurfaceVariant,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  '${(_rematchProgress * 100).toInt()}%',
-                                  style: TextStyle(
-                                    color: MelodiTheme.onSurfaceVariant,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: LinearProgressIndicator(
-                                value: _rematchProgress,
-                                backgroundColor: MelodiTheme.containerLow,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                    MelodiTheme.primaryGreen),
-                                minHeight: 4,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                        ],
-                      ),
                     // Songs list
                     Expanded(
                       child: ReorderableListView.builder(
@@ -420,7 +292,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                   .read<PlaylistProvider>()
                                   .removeSongFromPlaylist(playlist.id, song.id);
                               setState(() => _songs.removeAt(index));
-                              _pushToRemote(removedSongIds: [song.id]);
                             },
                             child: SongTile(
                               song: song,
@@ -436,8 +307,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                   _navigateToAlbum(context, song),
                               onViewArtist: () =>
                                   _navigateToArtist(context, song),
-                              wrongMatchButton: _buildWrongMatch(context, song),
-                              confidence: _confidenceMap[song.id],
                             ),
                           );
                         },
@@ -609,113 +478,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     );
   }
 
-  Widget? _buildWrongMatch(BuildContext context, SongModel song) {
-    final spotify = context.read<SpotifyProvider>();
-    final entries = spotify.matchedTrackIds.entries
-        .where((e) => e.value == song.id)
-        .toList();
-    if (entries.isEmpty) return null;
-    return WrongMatchButton(
-      spotifyTrackId: entries.first.key,
-      title: song.title,
-      artist: song.artist,
-      onResolved: () {
-        if (mounted) setState(() {});
-      },
-    );
-  }
-
-  void _pushToRemote(
-      {List<String>? addedSongIds, List<String>? removedSongIds}) async {
-    if (!mounted) return;
-    try {
-      final syncState = await DatabaseService.instance
-          .getPlaylistSyncState(widget.playlist.id);
-      if (syncState == null || syncState['syncEnabled'] != 1) return;
-
-      final remoteService = syncState['remoteService'] as String?;
-      final remotePlaylistId = syncState['remotePlaylistId'] as String?;
-      if (remoteService == null || remotePlaylistId == null) return;
-
-      final direction =
-          syncState['syncDirection'] as String? ?? 'bidirectional';
-
-      if (remoteService == 'spotify' && direction != 'yt_to_spotify') {
-        final spotify = context.read<SpotifyProvider>();
-        if (!spotify.isConnected) return;
-
-        final db = DatabaseService.instance;
-        final allSongs = await db.getAllSongs();
-
-        if (addedSongIds != null && addedSongIds.isNotEmpty) {
-          final uris = <String>[];
-          for (final songId in addedSongIds) {
-            final spotifyEntry = spotify.matchedTrackIds.entries
-                .where((e) => e.value == songId)
-                .firstOrNull;
-            if (spotifyEntry != null) {
-              uris.add('spotify:track:${spotifyEntry.key}');
-            } else {
-              final song = allSongs.firstWhere((s) => s.id == songId,
-                  orElse: () => allSongs.first);
-              final results = await spotify.service
-                  .searchTracks('${song.title} ${song.artist}', limit: 1);
-              if (results.isNotEmpty) uris.add(results.first.uri);
-            }
-          }
-
-        }
-
-        if (removedSongIds != null && removedSongIds.isNotEmpty) {
-          final uris = <String>[];
-          for (final songId in removedSongIds) {
-            final spotifyEntry = spotify.matchedTrackIds.entries
-                .where((e) => e.value == songId)
-                .firstOrNull;
-            if (spotifyEntry != null) {
-              uris.add('spotify:track:${spotifyEntry.key}');
-            }
-          }
-
-        }
-      }
-
-      if (remoteService == 'ytmusic' && direction != 'spotify_to_yt') {
-        final ytmusic = context.read<YTMusicProvider>();
-        if (!ytmusic.isConnected) return;
-
-        if (addedSongIds != null && addedSongIds.isNotEmpty) {
-          final videoIds = <String>[];
-          for (final songId in addedSongIds) {
-            final db = DatabaseService.instance;
-            final song = await db.getSongById(songId);
-            if (song != null) {
-              final results =
-                  await ytmusic.service.search('${song.title} ${song.artist}');
-              if (results.isNotEmpty) videoIds.add(results.first.id);
-            }
-          }
-
-        }
-
-        if (removedSongIds != null && removedSongIds.isNotEmpty) {
-          final videoIds = <String>[];
-          for (final songId in removedSongIds) {
-            final db = DatabaseService.instance;
-            final song = await db.getSongById(songId);
-            if (song != null) {
-              final results =
-                  await ytmusic.service.search('${song.title} ${song.artist}');
-              if (results.isNotEmpty) videoIds.add(results.first.id);
-            }
-          }
-
-        }
-      }
-    } catch (e) {
-      debugPrint('_pushToRemote failed: $e');
-    }
-  }
 
   void _showAddSongsSheet(BuildContext context) {
     final library = context.read<LibraryProvider>();
@@ -766,7 +528,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                   widget.playlist.id, songIds);
                               setState(() => _songs.addAll(available
                                   .where((s) => selected.contains(s.id))));
-                              _pushToRemote(addedSongIds: songIds);
                               Navigator.pop(ctx);
                             },
                             child: Text(

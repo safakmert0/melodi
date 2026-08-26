@@ -1,23 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../../core/localization.dart';
-import '../../providers/connection_provider.dart';
 import '../../screens/profile_screen.dart';
 import '../../screens/settings_screen.dart';
 import '../../screens/source_hub_screen.dart';
 
 class HomeHeader extends StatelessWidget {
-  const HomeHeader({super.key, required this.connection});
-
-  final ConnectionProvider connection;
+  const HomeHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final connectedCount = [
-      connection.spotifyConnected,
-      connection.ytMusicConnected,
-    ].where((connected) => connected).length;
 
     return SliverToBoxAdapter(
       child: ColoredBox(
@@ -32,13 +25,8 @@ class HomeHeader extends StatelessWidget {
                 Row(
                   children: [
                     _HeaderButton(
-                      tooltip: connectedCount == 0
-                          ? 'Müzik kaynaklarını bağla'
-                          : '$connectedCount hesap bağlı',
-                      icon: connectedCount == 0
-                          ? Icons.hub_outlined
-                          : Icons.hub_rounded,
-                      badge: connectedCount == 0 ? null : '$connectedCount',
+                      tooltip: 'Müzik kaynaklarını bağla',
+                      icon: Icons.hub_outlined,
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
                           builder: (_) => const SourceHubScreen(),

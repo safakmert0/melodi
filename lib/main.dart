@@ -18,8 +18,6 @@ import 'providers/playlist_provider.dart';
 import 'providers/search_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/youtube_provider.dart';
-import 'providers/ytmusic_provider.dart';
-import 'providers/spotify_provider.dart';
 import 'providers/mix_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/metadata_provider.dart';
@@ -295,35 +293,13 @@ class MelodiApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => YouTubeProvider()),
         ChangeNotifierProvider(create: (_) => LocaleNotifier()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()..loadSettings()),
-        ChangeNotifierProvider(create: (_) => SpotifyProvider()..init()),
-        ChangeNotifierProvider(create: (_) => YTMusicProvider()..loadSession()),
-        ChangeNotifierProvider(
-          create: (ctx) {
-            final spotify = ctx.read<SpotifyProvider>();
-            return MixProvider(spotifyService: spotify.service)..init();
-          },
-        ),
+        ChangeNotifierProvider(create: (_) => MixProvider()..init()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()..load()),
         ChangeNotifierProvider(
-          create: (ctx) {
-            final spotify = ctx.read<SpotifyProvider>();
-            final ytmusic = ctx.read<YTMusicProvider>();
-            final provider = ConnectionProvider(
-              spotifyService: spotify.service,
-              ytmusicSource: ytmusic.service,
-            );
-            provider.init();
-            return provider;
-          },
+          create: (_) => ConnectionProvider()..init(),
         ),
         ChangeNotifierProvider(
-          create: (ctx) {
-            final spotify = ctx.read<SpotifyProvider>();
-            final ytmusic = ctx.read<YTMusicProvider>();
-            return MetadataProvider(
-                spotifyService: spotify.service,
-                ytmusicSource: ytmusic.service);
-          },
+          create: (_) => MetadataProvider(),
         ),
         ChangeNotifierProvider(
           create: (ctx) {

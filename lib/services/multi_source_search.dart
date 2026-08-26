@@ -26,6 +26,32 @@ class MultiSourceSearch {
 
   List<MusicSource> get sources => List.unmodifiable(_sources);
 
+  /// Display ranking for search results. Full-track sources (those that can
+  /// actually play/download the whole song) are shown first; preview-only
+  /// catalogues such as Deezer (30s preview) are pushed to the bottom.
+  static const Map<MusicSourceType, int> _fullTrackRank = {
+    MusicSourceType.navidrome: 0,
+    MusicSourceType.youtube: 1,
+    MusicSourceType.jiosaavn: 2,
+    MusicSourceType.appleMusic: 3,
+    MusicSourceType.soundcloud: 4,
+    MusicSourceType.hifi: 5,
+  };
+
+  int _displayRank(OnlineTrack track) {
+    if (track.source.supportsFullTrack) {
+      return _fullTrackRank[track.source] ?? 50;
+    }
+    return 100;
+  }
+
+  int _displayCompare(OnlineTrack a, OnlineTrack b) {
+    final ra = _displayRank(a);
+    final rb = _displayRank(b);
+    if (ra != rb) return ra.compareTo(rb);
+    return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+  }
+
   StreamController<List<OnlineTrack>>? _controller;
 
   Stream<List<OnlineTrack>> searchAll(String query, {int limitPerSource = 10}) {
@@ -48,6 +74,7 @@ class MultiSourceSearch {
     });
     final results = await Future.wait(futures);
     final allTracks = results.expand((list) => list).toList();
+    allTracks.sort(_displayCompare);
     return allTracks;
   }
 
@@ -61,6 +88,7 @@ class MultiSourceSearch {
         try {
           final tracks = await source.search(query, limit: limitPerSource);
           allTracks.addAll(tracks);
+          allTracks.sort(_displayCompare);
           if (!controller.isClosed) {
             controller.add(List.from(allTracks));
           }
@@ -69,6 +97,7 @@ class MultiSourceSearch {
         }
       });
       await Future.wait(futures);
+      allTracks.sort(_displayCompare);
       if (!controller.isClosed) {
         controller.add(allTracks);
       }

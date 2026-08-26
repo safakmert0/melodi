@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import '../services/mix_service.dart';
-import '../services/spotify_service.dart';
 
 class MixProvider extends ChangeNotifier {
   final MixService _mixService;
@@ -12,8 +11,7 @@ class MixProvider extends ChangeNotifier {
   String? _error;
   DateTime? _lastGenerated;
 
-  MixProvider({required SpotifyService spotifyService})
-      : _mixService = MixService(spotifyService: spotifyService);
+  MixProvider() : _mixService = MixService();
 
   List<Map<String, dynamic>> get dailyMix => _dailyMix;
   List<Map<String, dynamic>> get releaseRadar => _releaseRadar;

@@ -86,10 +86,6 @@ class _SourceHubScreenState extends State<SourceHubScreen> {
   Widget build(BuildContext context) {
     final connection = context.watch<ConnectionProvider>();
     final sources = SourceCatalog.build(
-      spotifyConnected: connection.spotifyConnected,
-      spotifyExpired: connection.spotifyExpired,
-      youtubeMusicConnected: connection.ytMusicConnected,
-      youtubeMusicExpired: connection.ytMusicExpired,
       navidromeConnected: _navidromeConnected,
       extensions: _extensions,
     );

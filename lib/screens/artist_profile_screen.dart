@@ -5,7 +5,6 @@ import '../core/constants.dart';
 import '../models/song_model.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
-import '../providers/spotify_provider.dart';
 import '../services/album_discovery_service.dart';
 import 'album_detail_screen.dart';
 
@@ -32,7 +31,6 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
   List<DiscoveredAlbum> _albums = [];
   List<DiscoveredArtist> _related = [];
   bool _isLoading = true;
-  bool _isFollowing = false;
 
   @override
   void initState() {
@@ -346,37 +344,6 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              _FollowButton(
-                isFollowing: _isFollowing,
-                onToggle: () async {
-                  final spotify = context.read<SpotifyProvider>();
-                  bool success;
-                  if (_isFollowing) {
-                    success =
-                        await spotify.service.unfollowArtist(widget.artistId);
-                  } else {
-                    success =
-                        await spotify.service.followArtist(widget.artistId);
-                  }
-                  if (success) {
-                    setState(() => _isFollowing = !_isFollowing);
-                  }
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(success
-                            ? (_isFollowing
-                                ? AppLocale.tr('following')
-                                : AppLocale.tr('unfollow'))
-                            : 'Failed'),
-                        backgroundColor: success
-                            ? MelodiTheme.primaryGreen
-                            : MelodiTheme.errorRed,
-                      ),
-                    );
-                  }
-                },
-              ),
               if (_topTracks.isNotEmpty) const SizedBox(width: 12),
               if (_topTracks.isNotEmpty)
                 OutlinedButton.icon(
@@ -434,38 +401,6 @@ SongModel discoveredTrackToSongModel(DiscoveredTrack track) {
     fileSize: 0,
     trackNumber: track.trackNumber,
   );
-}
-
-class _FollowButton extends StatelessWidget {
-  final bool isFollowing;
-  final VoidCallback onToggle;
-
-  const _FollowButton({
-    required this.isFollowing,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return FilledButton.icon(
-      onPressed: onToggle,
-      icon: Icon(
-        isFollowing ? Icons.check_rounded : Icons.person_add_rounded,
-        size: 18,
-      ),
-      label: Text(
-        isFollowing ? AppLocale.tr('following') : AppLocale.tr('follow'),
-      ),
-      style: FilledButton.styleFrom(
-        backgroundColor:
-            isFollowing ? MelodiTheme.surfaceHigh : MelodiTheme.primaryGreen,
-        foregroundColor: isFollowing ? MelodiTheme.onSurface : Colors.black,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-      ),
-    );
-  }
 }
 
 class _RelatedArtistCard extends StatelessWidget {

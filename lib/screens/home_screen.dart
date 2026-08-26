@@ -28,7 +28,7 @@ class HomeScreen extends StatelessWidget {
               parent: BouncingScrollPhysics(),
             ),
             slivers: [
-              HomeHeader(connection: connection),
+              HomeHeader(),
               if (library.error != null)
                 HomeLibraryError(
                   message: library.error!,

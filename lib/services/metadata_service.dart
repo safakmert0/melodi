@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import '../models/song_model.dart';
 import '../core/constants.dart';
 import 'database_service.dart';
-import 'spotify_service.dart';
 import 'lyrics_service.dart';
 import 'multi_source_search.dart';
 import 'sources/youtube_music_source.dart';
@@ -162,7 +161,6 @@ class MetadataService {
   }
 
   static Future<BackfillReport> backfillAlbumArt({
-    SpotifyService? spotifyService,
     YouTubeMusicSource? ytmusicSource,
   }) async {
     final tracks = await _db.getTracksMissingArt();
@@ -181,17 +179,7 @@ class MetadataService {
       String? url;
       String sourceLabel = 'unknown';
       try {
-        // 1. Spotify (best quality cover).
-        if (spotifyService != null && spotifyService.isConnected) {
-          final results = await spotifyService.searchTracks('$artist $title');
-          final best = _bestSpotifyCover(results, title, artist);
-          if (best != null) {
-            url = best.albumImageUrl;
-            sourceLabel = 'Spotify';
-          }
-        }
-
-        // 2. YouTube Music.
+        // YouTube Music (no-auth search source).
         if (url == null && ytmusicSource != null) {
           final results =
               await ytmusicSource.search('$artist $title', limit: 5);
@@ -324,22 +312,6 @@ class MetadataService {
     return score;
   }
 
-  static SpotifyTrackItem? _bestSpotifyCover(
-      List<SpotifyTrackItem> items, String title, String artist) {
-    SpotifyTrackItem? best;
-    var bestScore = 0;
-    for (final it in items) {
-      final score = _scoreMatch(title, artist, it.name, it.artists.join(', '));
-      if (score > bestScore &&
-          it.albumImageUrl != null &&
-          it.albumImageUrl!.isNotEmpty) {
-        bestScore = score;
-        best = it;
-      }
-    }
-    return bestScore >= 3 ? best : null;
-  }
-
   static OnlineTrack? _bestOnlineCover(
       List<OnlineTrack> items, String title, String artist) {
     OnlineTrack? best;
@@ -418,115 +390,16 @@ class MetadataService {
     };
   }
 
-  static Future<BackfillReport> backfillTrackMetadata({
-    SpotifyService? spotifyService,
-  }) async {
-    final tracks = await _db.getTracksMissingMetadata();
-    final failures = <String>[];
-    int updated = 0;
-
-    for (final track in tracks) {
-      final trackId = track['id'] as String;
-      final title = (track['title'] as String? ?? '').trim();
-      final artist = (track['artist'] as String? ?? '').trim();
-
-      try {
-        if (spotifyService == null || !spotifyService.isConnected) {
-          failures.add('$artist - $title: Spotify not connected');
-          continue;
-        }
-
-        final results = await spotifyService.searchTracks('$artist $title');
-        SpotifyTrackItem? best;
-        var bestScore = 0;
-        for (final r in results) {
-          final score = _scoreMatch(title, artist, r.name, r.artists.join(', '));
-          if (score > bestScore) {
-            bestScore = score;
-            best = r;
-          }
-        }
-        if (best == null || bestScore < 3) {
-          failures.add('$artist - $title: no confident metadata match');
-          continue;
-        }
-
-        final updates = <String, dynamic>{};
-        if (best.albumName != null &&
-            (track['album'] == 'Unknown Album' || track['album'] == null)) {
-          updates['album'] = best.albumName;
-        }
-        if (best.artists.isNotEmpty &&
-            (track['artist'] == 'Unknown Artist' || track['artist'] == null)) {
-          updates['artist'] = best.artists.join(', ');
-        }
-        if (best.durationMs > 0 &&
-            ((track['durationMs'] as int?) ?? 0) == 0) {
-          updates['durationMs'] = best.durationMs;
-        }
-        if (updates.isNotEmpty) {
-          await _db.updateTrackMetadata(trackId, updates);
-          updated++;
-        } else {
-          failures.add('$artist - $title: nothing to update');
-        }
-      } catch (e) {
-        failures.add('$artist - $title: $e');
-      }
-    }
-
-    return BackfillReport(
-        updated: updated, total: tracks.length, failures: failures);
+  static Future<BackfillReport> backfillTrackMetadata() async {
+    // Track metadata enrichment was powered by Spotify; that integration has
+    // been removed, so this is now a no-op that leaves existing data intact.
+    return const BackfillReport();
   }
 
-  static Future<String?> getHighResAlbumArt(String spotifyTrackId,
-      {SpotifyService? spotifyService}) async {
-    final cached = await _db.getHighResArtUrl(spotifyTrackId);
-    if (cached != null) return cached;
-
-    if (spotifyService == null || !spotifyService.isConnected) return null;
-
-    try {
-      final token = await spotifyService.getClientCredentialsToken();
-      if (token == null) return null;
-
-      final url = '${SpotifyAuthConfig.webApiBase}/tracks/$spotifyTrackId';
-      final client = HttpClient()
-        ..connectionTimeout = const Duration(seconds: 10);
-      try {
-        final request = await client.getUrl(Uri.parse(url));
-        request.headers.set('Authorization', 'Bearer $token');
-        request.headers.set('Accept', 'application/json');
-        final response = await request.close();
-        if (response.statusCode == 200) {
-          final body = await response.transform(utf8.decoder).join();
-          final data = jsonDecode(body) as Map<String, dynamic>;
-          final album = data['album'] as Map<String, dynamic>?;
-          final images = album?['images'] as List<dynamic>?;
-          if (images != null && images.isNotEmpty) {
-            String? bestUrl;
-            int bestSize = 0;
-            for (final img in images) {
-              final w = (img as Map<String, dynamic>)['width'] as int? ?? 0;
-              final h = img['height'] as int? ?? 0;
-              final size = w * h;
-              if (size > bestSize) {
-                bestSize = size;
-                bestUrl = img['url'] as String?;
-              }
-            }
-            if (bestUrl != null) {
-              await _db.saveHighResArtUrl(spotifyTrackId, bestUrl);
-              return bestUrl;
-            }
-          }
-        }
-      } finally {
-        client.close();
-      }
-    } catch (_) {}
-
-    return null;
+  static Future<String?> getHighResAlbumArt(String spotifyTrackId) async {
+    // High-resolution artwork was sourced from Spotify; that integration has
+    // been removed. Return any previously cached URL, otherwise null.
+    return _db.getHighResArtUrl(spotifyTrackId);
   }
 
   static Future<String?> getLyrics(String trackId) async {
@@ -559,13 +432,11 @@ class MetadataService {
   }
 
   static Future<BackfillReport> backfillAll({
-    SpotifyService? spotifyService,
     YouTubeMusicSource? ytmusicSource,
   }) async {
-    final art = await backfillAlbumArt(
-        spotifyService: spotifyService, ytmusicSource: ytmusicSource);
+    final art = await backfillAlbumArt(ytmusicSource: ytmusicSource);
     final lyrics = await backfillLyrics(ytmusicSource: ytmusicSource);
-    final meta = await backfillTrackMetadata(spotifyService: spotifyService);
+    final meta = await backfillTrackMetadata();
     return art + lyrics + meta;
   }
 }

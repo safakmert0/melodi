@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'database_service.dart';
 import 'multi_source_search.dart';
 import 'music_source.dart';
-import 'spotify_service.dart';
 
 enum RadioType {
   artist,
@@ -71,7 +70,6 @@ class RadioService {
 
   final DatabaseService _db = DatabaseService.instance;
   final MultiSourceSearch _multiSource = MultiSourceSearch();
-  final SpotifyService _spotify = SpotifyService();
 
   final Random _random = Random();
   final Map<String, RadioStation> _cache = {};

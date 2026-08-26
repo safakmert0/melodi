@@ -3,8 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../core/constants.dart';
 import '../services/diagnostics_service.dart';
-import '../providers/spotify_provider.dart';
-import '../providers/ytmusic_provider.dart';
 
 class DiagnosticsScreen extends StatefulWidget {
   const DiagnosticsScreen({super.key});
@@ -103,14 +101,6 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
       'name': 'Crossfade',
       'status': 'working',
       'description': 'Şarkılar arası geçiş efekti',
-    });
-
-    // Playlist sync
-    features.add({
-      'name': 'Çalma Listesi Senkronizasyonu',
-      'status': 'partial',
-      'description':
-          'Spotify/YTMusic ile çalma listesi eşzamanlama (oturum gerekli)',
     });
 
     // Background playback
@@ -216,33 +206,6 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                       value: '${(_bundle!['tableCounts'] as Map)['playlists']}',
                     ),
                     const SizedBox(height: 16),
-                    _SectionTitle(AppLocale.tr('service_status')),
-                    Consumer2<SpotifyProvider, YTMusicProvider>(
-                      builder: (context, spotify, ytmusic, _) {
-                        return Column(
-                          children: [
-                            _InfoRow(
-                              label: 'Spotify',
-                              value: spotify.isConnected
-                                  ? 'Connected (${spotify.username ?? ''})'
-                                  : 'Not Connected',
-                              valueColor: spotify.isConnected
-                                  ? Colors.green
-                                  : MelodiTheme.textMuted,
-                            ),
-                            _InfoRow(
-                              label: 'YouTube Music',
-                              value: ytmusic.isConnected
-                                  ? 'Connected'
-                                  : 'Not Connected',
-                              valueColor: ytmusic.isConnected
-                                  ? Colors.green
-                                  : MelodiTheme.textMuted,
-                            ),
-                          ],
-                        );
-                      },
-                    ),
                     const SizedBox(height: 16),
                     _SectionTitle('ÖZELLİK DURUMU'),
                     ..._features.map((feature) {

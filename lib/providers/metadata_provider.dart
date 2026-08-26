@@ -1,13 +1,11 @@
 import 'package:flutter/foundation.dart';
 import '../services/metadata_service.dart';
-import '../services/spotify_service.dart';
 import '../services/sources/youtube_music_source.dart';
 
 class MetadataProvider extends ChangeNotifier {
-  final SpotifyService? spotifyService;
   final YouTubeMusicSource? ytmusicSource;
 
-  MetadataProvider({this.spotifyService, this.ytmusicSource});
+  MetadataProvider({this.ytmusicSource});
 
   bool _isBackfilling = false;
   int _backfillProgress = 0;
@@ -52,7 +50,6 @@ class MetadataProvider extends ChangeNotifier {
 
     try {
       final report = await MetadataService.backfillAlbumArt(
-        spotifyService: spotifyService,
         ytmusicSource: ytmusicSource,
       );
       _lastBackfilledAt = DateTime.now();
@@ -103,7 +100,6 @@ class MetadataProvider extends ChangeNotifier {
 
     try {
       final report = await MetadataService.backfillAll(
-        spotifyService: spotifyService,
         ytmusicSource: ytmusicSource,
       );
       _lastBackfilledAt = DateTime.now();
