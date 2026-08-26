@@ -47,9 +47,14 @@ jobs:
           pod install --repo-update
         working-directory: ./ios
 
-      - name: Patch Xcode for unsigned CI build
+      - name: Build iOS via flutter (unsigned)
         run: |
+          flutter pub get
+          flutter gen-l10n
           cd ios
+          # Pods'u entegre et, sonra imzasiz yamayi uygula.
+          # flutter build ios kendi pod install'ini calistirmazsa yama korunur.
+          pod install
           python3 - <<'PY'
           import re
           p = 'Runner.xcodeproj/project.pbxproj'
@@ -65,16 +70,12 @@ jobs:
           print('patched' if s2 != s else 'NO CHANGE')
           PY
           grep -n "CODE_SIGNING_ALLOWED" Runner.xcodeproj/project.pbxproj || echo "ALLOWED not found"
-
-      - name: Build iOS via flutter (unsigned)
-        run: |
-          flutter pub get
-          flutter gen-l10n
+          cd ..
           flutter build ios --release \
             --build-name=${{ github.ref_name }} \
             --build-number=${{ github.run_number }} \
             --no-codesign
-          
+
           # IPA oluştur (unsigned)
           mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload/

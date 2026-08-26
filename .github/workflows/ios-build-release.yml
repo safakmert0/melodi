@@ -40,9 +40,10 @@ jobs:
         run: pod install --repo-update
         working-directory: ./ios
 
-      - name: Patch Xcode for unsigned CI build
+      - name: Build iOS (unsigned)
         run: |
           cd ios
+          pod install
           python3 - <<'PY'
           import re
           p = 'Runner.xcodeproj/project.pbxproj'
@@ -58,9 +59,7 @@ jobs:
           print('patched' if s2 != s else 'NO CHANGE')
           PY
           grep -n "CODE_SIGNING_ALLOWED" Runner.xcodeproj/project.pbxproj || echo "ALLOWED not found"
-
-      - name: Build iOS (unsigned)
-        run: |
+          cd ..
           flutter build ios --release \
             --build-name=${{ github.ref_name }} \
             --build-number=${{ github.run_number }} \
