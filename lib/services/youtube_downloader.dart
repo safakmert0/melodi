@@ -50,7 +50,7 @@ class YouTubeDownloader {
   }
 
   /// Downloads the track as a video file (mp4/mov). Tries the native HLS
-  /// downloader (MusiX / JollyTone style) first, then the yt-dlp backend.
+  /// downloader (native HLS) first, then the yt-dlp backend.
   Future<String?> downloadVideoTrack(
     String videoId,
     String title,

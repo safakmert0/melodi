@@ -10,7 +10,7 @@ import 'backend_api_service.dart';
 import 'robust_piped_service.dart';
 import 'metadata_service.dart';
 
-/// iOS Native HLS Downloader using AVAssetDownloadTask (JollyTune/Musix style)
+/// iOS Native HLS Downloader using AVAssetDownloadTask
 /// Uses AVAssetDownloadURLSession for background HLS segment downloading with FairPlay support
 class HLSDownloaderService {
   HLSDownloaderService._();

@@ -3,7 +3,7 @@ import AVFoundation
 import Flutter
 
 /// iOS Native HLS Downloader using AVAssetDownloadTask
-/// JollyTune/Musix style native HLS downloading with FairPlay support
+/// Native HLS downloading with FairPlay support
 public class HLSDownloader: NSObject, FlutterPlugin, AVAssetDownloadDelegate {
     
     // MARK: - Properties
