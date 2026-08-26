@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -50,6 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late String _selectedLanguage;
   String _downloadPath = '';
   String _settingsSearch = '';
+  String _appVersion = AppConstants.appVersion;
 
   @override
   void initState() {
@@ -58,6 +60,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadWatchedFolder();
     _loadPlaybackSettings();
     _loadDownloadPath();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) setState(() => _appVersion = info.version);
+    });
   }
 
   Future<void> _loadPlaybackSettings() async {
@@ -871,7 +876,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           iconColor: MelodiTheme.onSurfaceVariant,
                           title: 'Melodi',
                           subtitle:
-                              '${AppLocale.tr('version')} ${AppConstants.appVersion}',
+                              '${AppLocale.tr('version')} $_appVersion',
                         ),
                         const SizedBox(height: 8),
                         _SettingsTile(
