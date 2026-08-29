@@ -11,10 +11,10 @@ abstract final class MelodiSpacing {
 }
 
 abstract final class MelodiRadius {
-  static const double control = 14;
-  static const double card = 20;
-  static const double panel = 28;
-  static const double artwork = 16;
+  static const double control = 10;
+  static const double card = 12;
+  static const double panel = 12;
+  static const double artwork = 8;
 }
 
 abstract final class MelodiMotion {
@@ -42,12 +42,11 @@ class MelodiPanel extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final decoration = BoxDecoration(
       color: emphasized
-          ? colors.primary .withOpacity(0.12)
-          : colors.surfaceContainer .withOpacity(0.78),
+          ? colors.surfaceContainerHigh
+          : colors.surfaceContainer,
       borderRadius: BorderRadius.circular(MelodiRadius.card),
       border: Border.all(
-        color: (emphasized ? colors.primary : colors.onSurface)
-             .withOpacity(emphasized ? 0.22 : 0.08),
+        color: colors.outlineVariant.withValues(alpha: 0.5),
       ),
     );
 

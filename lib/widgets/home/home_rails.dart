@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/melodi_design.dart';
 import '../../providers/library_provider.dart';
 import '../../providers/player_provider.dart';
 import '../../providers/playlist_provider.dart';
 import '../../screens/mixes_screen.dart';
 import '../../screens/playlist_detail_screen.dart';
 import '../image_with_fallback.dart';
+import '../../core/melodi_design.dart';
 
 class HomeSection extends StatelessWidget {
   const HomeSection({
@@ -28,7 +28,7 @@ class HomeSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 28, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -41,9 +41,9 @@ class HomeSection extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.45,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
                           ),
                     ),
                     const SizedBox(height: 2),
@@ -61,7 +61,7 @@ class HomeSection extends StatelessWidget {
                 TextButton(onPressed: onAction, child: Text(actionLabel!)),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           child,
         ],
       ),
@@ -80,20 +80,20 @@ class HomeAlbumRail extends StatelessWidget {
       title: 'Albüm rafın',
       subtitle: '${library.albums.length} albüm · kapaklara göre göz at',
       child: SizedBox(
-        height: 218,
+        height: 200,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           itemCount: albums.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 12),
+          separatorBuilder: (_, __) => const SizedBox(width: 10),
           itemBuilder: (context, index) {
             final album = albums[index];
             final songs = library.songs
                 .where((song) => album.songIds.contains(song.id))
                 .toList();
             return SizedBox(
-              width: 154,
+              width: 140,
               child: InkWell(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(10),
                 onTap: songs.isEmpty
                     ? null
                     : () =>
@@ -104,23 +104,24 @@ class HomeAlbumRail extends StatelessWidget {
                     ArtworkImage(
                       imageBytes: album.artwork,
                       title: album.name,
-                      size: 154,
-                      borderRadius: 16,
+                      size: 140,
+                      borderRadius: 8,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Text(
                       album.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
                           ),
                     ),
                     Text(
                       album.artist,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color:
                                 Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
@@ -156,7 +157,7 @@ class HomePlaylistRail extends StatelessWidget {
         MaterialPageRoute<void>(builder: (_) => const MixesScreen()),
       ),
       child: SizedBox(
-        height: 104,
+        height: 92,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           itemCount: items.length,
@@ -173,7 +174,7 @@ class HomePlaylistRail extends StatelessWidget {
                 ? playlist.artwork
                 : coverSongs.first.albumArt;
             return SizedBox(
-              width: 210,
+              width: 200,
               child: MelodiPanel(
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -185,10 +186,10 @@ class HomePlaylistRail extends StatelessWidget {
                     ArtworkImage(
                       imageBytes: artwork,
                       title: playlist.name,
-                      size: 52,
-                      borderRadius: 14,
+                      size: 48,
+                      borderRadius: 8,
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -201,13 +202,14 @@ class HomePlaylistRail extends StatelessWidget {
                             style: Theme.of(context)
                                 .textTheme
                                 .titleSmall
-                                ?.copyWith(fontWeight: FontWeight.w700),
+                                ?.copyWith(
+                                    fontWeight: FontWeight.w600, fontSize: 13),
                           ),
                           Text(
                             '${playlist.songCount} şarkı',
                             style: Theme.of(context)
                                 .textTheme
-                                .labelMedium
+                                .labelSmall
                                 ?.copyWith(
                                   color: Theme.of(context)
                                       .colorScheme

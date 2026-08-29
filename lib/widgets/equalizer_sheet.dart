@@ -44,8 +44,7 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
   List<double> _getBandsForPreset(String name) {
     if (name == 'custom') return _customBands;
     final presets = PlaybackService.equalizerPresets;
-    final match =
-        presets.firstWhere((p) => p.name == name, orElse: () => presets.first);
+    final match = presets.firstWhere((p) => p.name == name, orElse: () => presets.first);
     return match.bands;
   }
 
@@ -59,10 +58,8 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
 
   Future<void> _saveAndApply() async {
     final handler = context.read<PlayerProvider>().handler;
-
     if (_activePreset == 'custom') {
       await _service.setCustomEQ(_currentBands);
-      // Apply custom bands to actual equalizer
       for (int i = 0; i < _currentBands.length && i < 10; i++) {
         await handler.setEqualizerBand(i, _currentBands[i]);
       }
@@ -83,12 +80,10 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     if (!_loaded) {
       return const SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-        ),
+        child: Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
       );
     }
 
@@ -99,46 +94,27 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: MelodiTheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Icon(Icons.tune_rounded, color: MelodiTheme.textMuted, size: 48),
-              const SizedBox(height: 16),
-              Text(
-                AppLocale.tr('equalizer'),
-                style: TextStyle(
-                  color: MelodiTheme.onSurface,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Container(width: 32, height: 3, decoration: BoxDecoration(color: scheme.outlineVariant, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 20),
+              Icon(Icons.tune_rounded, color: scheme.onSurfaceVariant, size: 32),
               const SizedBox(height: 12),
+              Text(AppLocale.tr('equalizer'), style: Theme.of(context).textTheme.titleMedium?.copyWith(color: scheme.onSurface, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
               Text(
                 'Ekolayzır şu anda iOS ses motoruna uygulanamıyor.\nAyarlar kaydedilir; gerçek iOS ses işleme sonraki sürümde eklenecek.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: MelodiTheme.onSurfaceVariant,
-                  fontSize: 14,
-                ),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
                   onPressed: () => Navigator.pop(context),
                   style: FilledButton.styleFrom(
-                    backgroundColor: MelodiTheme.containerHigh,
-                    foregroundColor: MelodiTheme.onSurface,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    backgroundColor: scheme.surfaceContainerHighest,
+                    foregroundColor: scheme.onSurface,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                   child: Text(AppLocale.tr('close')),
                 ),
@@ -154,49 +130,25 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: MelodiTheme.outlineVariant,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
+            Container(width: 32, height: 3, decoration: BoxDecoration(color: scheme.outlineVariant, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 12),
             Row(
               children: [
-                Icon(Icons.tune_rounded,
-                    color: MelodiTheme.primaryGreen, size: 24),
+                Icon(Icons.tune_rounded, color: scheme.onSurfaceVariant, size: 20),
                 const SizedBox(width: 8),
-                Text(
-                  AppLocale.tr('equalizer'),
-                  style: TextStyle(
-                    color: MelodiTheme.onSurface,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Text(AppLocale.tr('equalizer'), style: Theme.of(context).textTheme.titleMedium?.copyWith(color: scheme.onSurface, fontWeight: FontWeight.w600)),
                 const Spacer(),
-                Switch(
-                  value: _enabled,
-                  onChanged: (v) => setState(() => _enabled = v),
-                  activeColor: MelodiTheme.primaryGreen,
-                ),
+                Switch(value: _enabled, onChanged: (v) => setState(() => _enabled = v)),
               ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              AppLocale.tr('presets').toUpperCase(),
-              style: TextStyle(
-                color: MelodiTheme.textMuted,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.2,
-              ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(AppLocale.tr('presets').toUpperCase(), style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant, letterSpacing: 0.8)),
             ),
             const SizedBox(height: 8),
             SizedBox(
@@ -209,29 +161,21 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
                     padding: const EdgeInsets.only(right: 8),
                     child: FilterChip(
                       selected: selected,
-                      label: Text(
-                        AppLocale.tr(preset.name),
-                        style: TextStyle(fontSize: 12),
-                      ),
+                      label: Text(AppLocale.tr(preset.name), style: const TextStyle(fontSize: 12)),
                       onSelected: (_) => _applyPreset(preset.name),
-                      selectedColor: MelodiTheme.primaryGreen.withOpacity(0.3),
-                      checkmarkColor: MelodiTheme.primaryGreen,
-                      backgroundColor: MelodiTheme.containerLow,
-                      labelStyle: TextStyle(
-                        color: selected
-                            ? MelodiTheme.primaryGreen
-                            : MelodiTheme.onSurfaceVariant,
-                        fontSize: 14,
-                      ),
+                      side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+                      selectedColor: scheme.surfaceContainerHigh,
+                      backgroundColor: scheme.surfaceContainer,
+                      labelStyle: TextStyle(color: selected ? scheme.onSurface : scheme.onSurfaceVariant, fontSize: 13),
                     ),
                   );
                 }).toList(),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             if (_enabled) ...[
               SizedBox(
-                height: 130,
+                height: 120,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: bandLabels.length,
@@ -241,14 +185,7 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
                       margin: const EdgeInsets.symmetric(horizontal: 2),
                       child: Column(
                         children: [
-                          Text(
-                            '${_currentBands[index] >= 0 ? '+' : ''}${_currentBands[index].toInt()}',
-                            style: TextStyle(
-                              color: MelodiTheme.primaryGreen,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          Text('${_currentBands[index] >= 0 ? '+' : ''}${_currentBands[index].toInt()}', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurface, fontWeight: FontWeight.w600, fontSize: 11)),
                           const SizedBox(height: 4),
                           Expanded(
                             child: RotatedBox(
@@ -261,26 +198,18 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
                                     _activePreset = 'custom';
                                   });
                                 },
-                                activeColor: MelodiTheme.primaryGreen,
-                                inactiveColor: MelodiTheme.outlineVariant,
                               ),
                             ),
                           ),
                           const SizedBox(height: 2),
-                          Text(
-                            bandLabels[index],
-                            style: TextStyle(
-                              color: MelodiTheme.textMuted,
-                              fontSize: 8,
-                            ),
-                          ),
+                          Text(bandLabels[index], style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant, fontSize: 8)),
                         ],
                       ),
                     );
                   },
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -288,17 +217,15 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
                   icon: const Icon(Icons.restore_rounded, size: 16),
                   label: Text(AppLocale.tr('reset_eq')),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: MelodiTheme.onSurfaceVariant,
-                    side: BorderSide(color: MelodiTheme.outlineVariant),
+                    foregroundColor: scheme.onSurfaceVariant,
+                    side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
                     padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
               ),
             ],
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
@@ -307,17 +234,14 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
                   Navigator.pop(context);
                 },
                 style: FilledButton.styleFrom(
-                  backgroundColor: MelodiTheme.primaryGreen,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  backgroundColor: scheme.onSurface,
+                  foregroundColor: scheme.surface,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 child: Text(AppLocale.tr('apply')),
               ),
             ),
-            const SizedBox(height: 8),
           ],
         ),
       ),

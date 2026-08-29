@@ -5,6 +5,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 
+/// LA Player tarzı sade kapak bulma: önce yerel etiket, yoksa iTunes'da ilk sonuç.
+/// Puanlama/threshold yok, ilk artworkUrl100 → 600x600.
 class ArtworkService {
   static const _itunesSearchUrl = 'https://itunes.apple.com/search';
 
@@ -28,7 +30,7 @@ class ArtworkService {
           'term': terms.join(' '),
           'media': 'music',
           'entity': 'song',
-          'limit': '15',
+          'limit': '5',
           'country': 'TR',
         },
       );
@@ -41,36 +43,17 @@ class ArtworkService {
       final data = jsonDecode(body) as Map<String, dynamic>;
       final results = data['results'] as List<dynamic>?;
       if (results == null || results.isEmpty) return null;
-
-      Map<String, dynamic>? best;
-      var bestScore = -1;
       for (final raw in results) {
         if (raw is! Map<String, dynamic>) continue;
-        final score = _scoreCandidate(
-          title: title,
-          artist: artist,
-          album: album,
-          duration: duration,
-          candidateTitle: raw['trackName']?.toString() ?? '',
-          candidateArtist: raw['artistName']?.toString() ?? '',
-          candidateAlbum: raw['collectionName']?.toString() ?? '',
-          candidateDuration: Duration(
-            milliseconds: (raw['trackTimeMillis'] as num?)?.toInt() ?? 0,
-          ),
-        );
-        if (score > bestScore) {
-          best = raw;
-          bestScore = score;
-        }
+        final artUrl = raw['artworkUrl100'] as String?;
+        if (artUrl == null || artUrl.isEmpty) continue;
+        final largeUrl = artUrl
+            .replaceAll('100x100bb', '600x600bb')
+            .replaceAll('100x100', '600x600');
+        final bytes = await _downloadImage(largeUrl);
+        if (bytes != null) return bytes;
       }
-      if (best == null || bestScore < 70) return null;
-
-      final artUrl = best['artworkUrl100'] as String?;
-      if (artUrl == null || artUrl.isEmpty) return null;
-      final largeUrl = artUrl
-          .replaceAll('100x100bb', '600x600bb')
-          .replaceAll('100x100', '600x600');
-      return _downloadImage(largeUrl);
+      return null;
     } catch (error) {
       debugPrint('Artwork fetch error: $error');
       return null;
@@ -159,35 +142,12 @@ class ArtworkService {
     return score;
   }
 
-  static bool _isReliable(String value) {
-    final normalized = _clean(value).replaceAll(' ', '');
-    if (normalized.length < 2) return false;
-    const placeholders = {
-      'unknown',
-      'unknownartist',
-      'unknownalbum',
-      'bilinmeyen',
-      'bilinmeyensanatci',
-      'bilinmeyenalbum',
-      'sanatciyok',
-      'albumyok',
-      'untitled',
-    };
-    return !placeholders.contains(normalized);
-  }
-
   static String _cleanTitle(String value) {
     return _clean(value.replaceAll(RegExp(r'[\(\[].*?[\)\]]'), ' ').replaceAll(
         RegExp(r'\b(feat|ft|official|video|audio|lyrics?)\b.*',
             caseSensitive: false),
         ' '));
   }
-
-  static String _clean(String value) => value
-      .toLowerCase()
-      .replaceAll(RegExp(r'[^a-z0-9çğıöşü]+'), ' ')
-      .trim()
-      .replaceAll(RegExp(r'\s+'), ' ');
 
   static double _similarity(String left, String right) {
     if (left.isEmpty || right.isEmpty) return 0;
@@ -209,6 +169,29 @@ class ArtworkService {
     if (union == 0) return 0;
     return leftTokens.intersection(rightTokens).length / union;
   }
+
+  static bool _isReliable(String value) {
+    final normalized = _clean(value).replaceAll(' ', '');
+    if (normalized.length < 2) return false;
+    const placeholders = {
+      'unknown',
+      'unknownartist',
+      'unknownalbum',
+      'bilinmeyen',
+      'bilinmeyensanatci',
+      'bilinmeyenalbum',
+      'sanatciyok',
+      'albumyok',
+      'untitled',
+    };
+    return !placeholders.contains(normalized);
+  }
+
+  static String _clean(String value) => value
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9çğıöşü]+'), ' ')
+      .trim()
+      .replaceAll(RegExp(r'\s+'), ' ');
 
   static Future<Uint8List?> _downloadImage(String url) async {
     HttpClient? client;

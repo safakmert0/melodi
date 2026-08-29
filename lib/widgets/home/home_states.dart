@@ -50,34 +50,33 @@ class HomeEmptyLibrary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 38, 24, 170),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 112,
-            height: 112,
+            width: 72,
+            height: 72,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  theme.colorScheme.primary .withOpacity(0.3),
-                  theme.colorScheme.tertiary .withOpacity(0.16),
-                ],
+              color: scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: scheme.outlineVariant.withValues(alpha: 0.5),
               ),
-              shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.library_music_rounded,
-              size: 48,
-              color: theme.colorScheme.primary,
+              size: 28,
+              color: scheme.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           Text(
             'Kitaplığını oluştur',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 8),
@@ -86,14 +85,14 @@ class HomeEmptyLibrary extends StatelessWidget {
             'Melodi hepsini tek kitaplıkta düzenler.',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              height: 1.45,
+              color: scheme.onSurfaceVariant,
+              height: 1.4,
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 20),
           FilledButton.icon(
             onPressed: library.importFromFiles,
-            icon: const Icon(Icons.add_rounded),
+            icon: const Icon(Icons.add_rounded, size: 18),
             label: const Text('Müzik ekle'),
           ),
           const SizedBox(height: 8),
@@ -101,7 +100,7 @@ class HomeEmptyLibrary extends StatelessWidget {
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const SourceHubScreen()),
             ),
-            icon: const Icon(Icons.hub_rounded),
+            icon: const Icon(Icons.hub_rounded, size: 18),
             label: const Text('Hesap bağla'),
           ),
         ],

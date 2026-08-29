@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../models/song_model.dart';
 import '../models/album_model.dart';
@@ -6,6 +7,15 @@ import '../models/artist_model.dart';
 import '../models/genre_model.dart';
 import '../services/database_service.dart';
 import '../services/music_scanner_service.dart';
+
+class WatchedFolder {
+  final String path;
+  final bool enabled;
+  const WatchedFolder({required this.path, this.enabled = true});
+  Map<String, dynamic> toJson() => {'path': path, 'enabled': enabled};
+  factory WatchedFolder.fromJson(Map<String, dynamic> json) =>
+      WatchedFolder(path: json['path'] as String, enabled: json['enabled'] as bool? ?? true);
+}
 
 enum SongSortField { title, artist, album, duration, dateAdded }
 
@@ -111,11 +121,14 @@ class LibraryProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final watchedFolder = await _db.getSetting('watched_folder');
-      if (watchedFolder != null && watchedFolder.isNotEmpty) {
-        await _scanner.scanDirectoryAndSync(watchedFolder);
-        _startWatchTimer(watchedFolder);
+      // Çoklu klasör desteği — foobar2000 gibi her klasör ayrı izlenir, migration dahil
+      final folders = await getWatchedFolders();
+      for (final wf in folders.where((f) => f.enabled)) {
+        try {
+          await _scanner.scanDirectoryAndSync(wf.path);
+        } catch (_) {}
       }
+      if (folders.any((f) => f.enabled)) _startWatchTimer();
 
       _songs = _applySort(await _db.getAllSongs());
       final artCache = await _db.getAllCachedAlbumArts();
@@ -158,43 +171,112 @@ class LibraryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> getWatchedFolder() => _db.getSetting('watched_folder');
+  Future<List<WatchedFolder>> getWatchedFolders() async {
+    final raw = await _db.getSetting('watched_folders');
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        final list = jsonDecode(raw) as List<dynamic>;
+        return list
+            .map((e) => WatchedFolder.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } catch (_) {}
+    }
+    // Migration: tek klasörden çokluya
+    final single = await _db.getSetting('watched_folder');
+    if (single != null && single.isNotEmpty) {
+      final wf = WatchedFolder(path: single, enabled: true);
+      await setWatchedFolders([wf]);
+      await _db.setSetting('watched_folder', '');
+      return [wf];
+    }
+    return [];
+  }
 
-  void _startWatchTimer(String path) {
+  Future<String?> getWatchedFolder() async {
+    final folders = await getWatchedFolders();
+    final enabled = folders.where((f) => f.enabled).toList();
+    if (enabled.isNotEmpty) return enabled.first.path;
+    if (folders.isNotEmpty) return folders.first.path;
+    return null;
+  }
+
+  Future<void> setWatchedFolders(List<WatchedFolder> folders) async {
+    await _db.setSetting(
+        'watched_folders', jsonEncode(folders.map((f) => f.toJson()).toList()));
+  }
+
+  Future<void> addWatchedFolder(String path) async {
+    final folders = await getWatchedFolders();
+    if (folders.any((f) => f.path == path)) return;
+    folders.add(WatchedFolder(path: path, enabled: true));
+    await setWatchedFolders(folders);
+    try {
+      await _scanner.scanDirectoryAndSync(path);
+    } catch (_) {}
+    _songs = _applySort(await _db.getAllSongs());
+    _buildAlbums();
+    _buildArtists();
+    _buildGenres();
+    _startWatchTimer();
+    notifyListeners();
+  }
+
+  Future<void> removeWatchedFolder(String path) async {
+    final folders = await getWatchedFolders();
+    folders.removeWhere((f) => f.path == path);
+    await setWatchedFolders(folders);
+    if (folders.isEmpty) {
+      _watchTimer?.cancel();
+      _watchTimer = null;
+    } else {
+      _startWatchTimer();
+    }
+    notifyListeners();
+  }
+
+  Future<void> toggleWatchedFolder(String path, bool enabled) async {
+    final folders = await getWatchedFolders();
+    final idx = folders.indexWhere((f) => f.path == path);
+    if (idx == -1) return;
+    folders[idx] = WatchedFolder(path: path, enabled: enabled);
+    await setWatchedFolders(folders);
+    _startWatchTimer();
+    notifyListeners();
+  }
+
+  void _startWatchTimer() {
     _watchTimer?.cancel();
     _watchTimer = Timer.periodic(const Duration(seconds: 60), (_) async {
-      try {
-        final newSongs = await _scanner.importFromDirectoryPath(path);
-        if (newSongs.isNotEmpty) {
-          _songs.addAll(newSongs);
-          _songs = _applySort(_songs);
+      final folders = await getWatchedFolders();
+      bool changed = false;
+      for (final wf in folders.where((f) => f.enabled)) {
+        try {
+          final newSongs = await _scanner.scanDirectoryAndSync(wf.path);
+          if (newSongs.isNotEmpty) changed = true;
+        } catch (_) {}
+      }
+      if (changed) {
+        try {
+          _songs = _applySort(await _db.getAllSongs());
           _buildAlbums();
           _buildArtists();
           _buildGenres();
           notifyListeners();
-        }
-      } catch (_) {}
+        } catch (_) {}
+      }
     });
   }
 
+  // Geriye dönük tek klasör API — çokluya ekler
   Future<void> setWatchedFolder(String? path) async {
     if (path != null && path.isNotEmpty) {
-      await _db.setSetting('watched_folder', path);
-      final newSongs = await _scanner.importFromDirectoryPath(path);
-      if (newSongs.isNotEmpty) {
-        _songs.addAll(newSongs);
-      }
-      _songs = _applySort(await _db.getAllSongs());
-      _favorites = await _db.getFavoriteSongs();
-      _recent = await _db.getRecentSongs();
-      _mostPlayed = await _db.getMostPlayedSongs();
-      _buildAlbums();
-      _buildArtists();
-      _buildGenres();
-      _startWatchTimer(path);
-      notifyListeners();
+      await addWatchedFolder(path);
     } else {
       await _db.setSetting('watched_folder', '');
+      await setWatchedFolders([]);
+      _watchTimer?.cancel();
+      _watchTimer = null;
+      notifyListeners();
     }
   }
 
@@ -202,6 +284,7 @@ class LibraryProvider extends ChangeNotifier {
     _watchTimer?.cancel();
     _watchTimer = null;
     await _db.setSetting('watched_folder', '');
+    await _db.setSetting('watched_folders', '[]');
     notifyListeners();
   }
 

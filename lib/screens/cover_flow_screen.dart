@@ -48,108 +48,78 @@ class _CoverFlowScreenState extends State<CoverFlowScreen> {
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF07080C),
+      backgroundColor: colors.surface,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        title: const Text('Kapak Akışı'),
+        backgroundColor: colors.surface,
+        foregroundColor: colors.onSurface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        title: const Text('Kapak Akışı',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
         centerTitle: true,
       ),
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            center: const Alignment(0, -0.35),
-            radius: 1.15,
-            colors: [
-              colors.primary .withOpacity(0.24),
-              const Color(0xFF07080C),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            children: [
-              const Spacer(),
-              SizedBox(
-                height: MediaQuery.sizeOf(context).width * 0.78,
-                child: PageView.builder(
-                  controller: _controller,
-                  itemCount: queue.length,
-                  onPageChanged: (index) =>
-                      setState(() => _selectedIndex = index),
-                  itemBuilder: (context, index) => AnimatedBuilder(
-                    animation: _controller!,
-                    builder: (context, child) {
-                      var page = _selectedIndex.toDouble();
-                      if (_controller!.hasClients &&
-                          _controller!.position.haveDimensions) {
-                        page = _controller!.page ?? page;
-                      }
-                      final delta = (index - page).clamp(-1.0, 1.0);
-                      final scale = 1 - delta.abs() * 0.17;
-                      return Transform(
-                        alignment: Alignment.center,
-                        transform: Matrix4.identity()
-                          ..setEntry(3, 2, 0.0014)
-                          ..rotateY(-delta * 0.42)
-                          ..scale(scale, scale, 1),
-                        child: child,
-                      );
-                    },
-                    child: _CoverCard(
-                      song: queue[index],
-                      active: index == player.currentIndex,
-                      onTap: () async {
-                        await player.playFromQueue(queue, index);
-                        if (context.mounted) Navigator.of(context).pop();
-                      },
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            const Spacer(),
+            SizedBox(
+              height: MediaQuery.sizeOf(context).width * 0.72,
+              child: PageView.builder(
+                controller: _controller,
+                itemCount: queue.length,
+                onPageChanged: (index) =>
+                    setState(() => _selectedIndex = index),
+                itemBuilder: (context, index) => _CoverCard(
+                  song: queue[index],
+                  active: index == player.currentIndex,
+                  onTap: () async {
+                    await player.playFromQueue(queue, index);
+                    if (context.mounted) Navigator.of(context).pop();
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
+                  Text(
+                    selected.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: colors.onSurface,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
+                  const SizedBox(height: 4),
+                  Text(
+                    selected.artist,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: colors.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${_selectedIndex + 1} / ${queue.length} · Kapağa dokunarak çal',
+                    style: TextStyle(
+                      color: colors.onSurfaceVariant,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 26),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28),
-                child: Column(
-                  children: [
-                    Text(
-                      selected.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 23,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      selected.artist,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: colors.primary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      '${_selectedIndex + 1} / ${queue.length} · Kapağa dokunarak çal',
-                      style: TextStyle(
-                        color: Colors.white .withOpacity(0.55),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(flex: 2),
-            ],
-          ),
+            ),
+            const Spacer(flex: 2),
+          ],
         ),
       ),
     );
@@ -169,40 +139,32 @@ class _CoverCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Semantics(
       button: true,
       label: '${song.title}, ${song.artist}',
       child: GestureDetector(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 18),
-          child: DecoratedBox(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          child: Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(26),
-              border: active
-                  ? Border.all(
-                      color: Theme.of(context).colorScheme.primary,
-                      width: 2,
-                    )
-                  : null,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black .withOpacity(0.65),
-                  blurRadius: 30,
-                  offset: const Offset(0, 18),
-                ),
-              ],
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: active ? colors.onSurface : colors.outlineVariant,
+                width: active ? 1.5 : 1,
+              ),
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(9),
               child: song.albumArt == null
                   ? ColoredBox(
-                      color: const Color(0xFF1C1E27),
+                      color: colors.surfaceContainer,
                       child: Center(
                         child: Icon(
                           Icons.album_rounded,
-                          size: 72,
-                          color: Colors.white .withOpacity(0.25),
+                          size: 40,
+                          color: colors.onSurfaceVariant,
                         ),
                       ),
                     )
@@ -210,9 +172,10 @@ class _CoverCard extends StatelessWidget {
                       song.albumArt!,
                       fit: BoxFit.cover,
                       gaplessPlayback: true,
-                      errorBuilder: (_, __, ___) => const ColoredBox(
-                        color: Color(0xFF1C1E27),
-                        child: Icon(Icons.album_rounded, size: 72),
+                      errorBuilder: (_, __, ___) => ColoredBox(
+                        color: colors.surfaceContainer,
+                        child: Icon(Icons.album_rounded,
+                            size: 40, color: colors.onSurfaceVariant),
                       ),
                     ),
             ),

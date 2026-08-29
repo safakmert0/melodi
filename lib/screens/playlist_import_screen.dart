@@ -116,10 +116,19 @@ class _PlaylistImportScreenState extends State<PlaylistImportScreen> {
                 if (_detected != PlaylistImportSource.unknown)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
-                    child: Chip(
-                      label: Text(_sourceLabel(_detected)),
-                      backgroundColor:
-                          colors.primaryContainer.withOpacity(0.4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: colors.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: colors.outlineVariant),
+                      ),
+                      child: Text(
+                        _sourceLabel(_detected),
+                        style: TextStyle(
+                            color: colors.onSurfaceVariant, fontSize: 12),
+                      ),
                     ),
                   ),
               ],
@@ -148,27 +157,28 @@ class _PlaylistImportScreenState extends State<PlaylistImportScreen> {
             ),
           SizedBox(
             width: double.infinity,
-            height: 48,
+            height: 44,
             child: FilledButton.icon(
               onPressed: _loading ? null : _import,
               icon: _loading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.black,
+                        color: colors.onPrimary,
                       ),
                     )
-                  : const Icon(Icons.download_rounded),
+                  : const Icon(Icons.download_rounded, size: 18),
               label: Text(_loading
                   ? AppLocale.tr('importing')
                   : AppLocale.tr('import')),
               style: FilledButton.styleFrom(
-                backgroundColor: MelodiTheme.primaryGreen,
-                foregroundColor: Colors.black,
+                backgroundColor: colors.onSurface,
+                foregroundColor: colors.surface,
+                elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(MelodiRadius.control),
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
             ),

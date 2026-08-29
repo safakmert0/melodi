@@ -84,7 +84,9 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
       ),
       body: _isLoading
           ? Center(
-              child: CircularProgressIndicator(color: MelodiTheme.primaryGreen))
+              child: CircularProgressIndicator(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  strokeWidth: 2))
           : CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
@@ -98,26 +100,32 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                       children: [
                         FilledButton.icon(
                           onPressed: () => _playAll(context),
-                          icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                          icon: const Icon(Icons.play_arrow_rounded, size: 18),
                           label: Text(AppLocale.tr('play_all')),
                           style: FilledButton.styleFrom(
-                            backgroundColor: MelodiTheme.primaryGreen,
-                            foregroundColor: Colors.black,
+                            backgroundColor:
+                                Theme.of(context).colorScheme.onSurface,
+                            foregroundColor:
+                                Theme.of(context).colorScheme.surface,
+                            elevation: 0,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                         OutlinedButton.icon(
                           onPressed: () => _addAllToPlaylist(context),
-                          icon: const Icon(Icons.playlist_add, size: 20),
+                          icon: const Icon(Icons.playlist_add, size: 18),
                           label: Text(AppLocale.tr('add_to_playlist')),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: MelodiTheme.onSurfaceVariant,
-                            side: BorderSide(color: MelodiTheme.outlineVariant),
+                            foregroundColor:
+                                Theme.of(context).colorScheme.onSurface,
+                            side: BorderSide(
+                                color:
+                                    Theme.of(context).colorScheme.outlineVariant),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
                         ),
@@ -160,32 +168,37 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
   }
 
   Widget _buildHeader(BuildContext context, DiscoveredAlbum album) {
+    final colors = Theme.of(context).colorScheme;
     final durationStr =
         _tracks.isNotEmpty ? '${_tracks.length} ${AppLocale.tr('songs')}' : '';
     return Container(
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              width: 140,
-              height: 140,
-              color: MelodiTheme.containerLow,
+          Container(
+            width: 140,
+            height: 140,
+            decoration: BoxDecoration(
+              color: colors.surfaceContainer,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: colors.outlineVariant),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(9),
               child: album.imageUrl != null
                   ? CachedNetworkImage(
                       imageUrl: album.imageUrl!,
                       fit: BoxFit.cover,
                       placeholder: (_, __) => Container(
-                        color: MelodiTheme.containerLow,
+                        color: colors.surfaceContainer,
                         child: Icon(Icons.album_rounded,
-                            size: 48, color: MelodiTheme.textMuted),
+                            size: 40, color: colors.onSurfaceVariant),
                       ),
                       errorWidget: (_, __, ___) => Icon(Icons.album_rounded,
-                          size: 48, color: MelodiTheme.textMuted),
+                          size: 40, color: colors.onSurfaceVariant),
                     )
                   : Icon(Icons.album_rounded,
-                      size: 48, color: MelodiTheme.textMuted),
+                      size: 40, color: colors.onSurfaceVariant),
             ),
           ),
           const SizedBox(width: 16),
@@ -257,9 +270,9 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
     final playlistProvider = context.read<PlaylistProvider>();
     showModalBottomSheet(
       context: context,
-      backgroundColor: MelodiTheme.containerLow,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
       ),
       builder: (ctx) {
         return SafeArea(
@@ -301,7 +314,6 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                         SnackBar(
                           content:
                               Text('${AppLocale.tr('added_to')} ${pl.name}'),
-                          backgroundColor: MelodiTheme.primaryGreen,
                         ),
                       );
                     },

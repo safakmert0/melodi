@@ -105,48 +105,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildProfileCard() {
     return Consumer<PlayerProvider>(
       builder: (context, player, _) {
+        final colors = Theme.of(context).colorScheme;
         return Container(
           margin: const EdgeInsets.all(16),
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                MelodiTheme.primaryGreen.withValues(alpha: 0.15),
-                MelodiTheme.primaryGreen.withValues(alpha: 0.05),
-              ],
-            ),
-            borderRadius: context.tokens.borderRadiusCard,
-            border: Border.all(
-              color: MelodiTheme.primaryGreen.withValues(alpha: 0.2),
-              width: 1,
-            ),
+            color: colors.surfaceContainer,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: colors.outlineVariant),
           ),
           child: Row(
             children: [
               Container(
-                width: 64,
-                height: 64,
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      MelodiTheme.primaryGreen.withValues(alpha: 0.3),
-                      MelodiTheme.primaryGreen.withValues(alpha: 0.1),
-                    ],
-                  ),
-                  border: Border.all(
-                    color: MelodiTheme.primaryGreen.withValues(alpha: 0.3),
-                    width: 2,
-                  ),
+                  color: colors.surfaceContainerHighest,
+                  border: Border.all(color: colors.outlineVariant),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.person_rounded,
-                  size: 32,
-                  color: MelodiTheme.primaryGreen,
+                  size: 28,
+                  color: colors.onSurfaceVariant,
                 ),
               ),
               const SizedBox(width: 16),
@@ -204,15 +185,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Text(
                 AppLocale.tr('listening_stats').toUpperCase(),
                 style: TextStyle(
-                  color: MelodiTheme.onSurfaceVariant,
-                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  letterSpacing: 1.5,
+                  letterSpacing: 1.2,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               if (_isLoading)
-                const LinearProgressIndicator(color: MelodiTheme.primaryGreen)
+                LinearProgressIndicator(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)
               else
                 Row(
                   children: [
@@ -221,25 +203,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         icon: Icons.play_circle_outline_rounded,
                         label: AppLocale.tr('total_plays'),
                         value: '$totalPlays',
-                        color: MelodiTheme.primaryGreen,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: _StatCard(
                         icon: Icons.access_time_rounded,
                         label: AppLocale.tr('total_listening_time'),
                         value: '$totalMinutes ${AppLocale.tr('minutes')}',
-                        color: const Color(0xFFFFA726),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: _StatCard(
                         icon: Icons.person_outline_rounded,
                         label: AppLocale.tr('unique_artists'),
                         value: '$uniqueArtists',
-                        color: const Color(0xFFAB47BC),
                       ),
                     ),
                   ],
@@ -252,13 +231,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Text(
                 AppLocale.tr('library').toUpperCase(),
                 style: TextStyle(
-                  color: MelodiTheme.onSurfaceVariant,
-                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  letterSpacing: 1.5,
+                  letterSpacing: 1.2,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Row(
                 children: [
                   Expanded(
@@ -266,25 +245,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       icon: Icons.music_note_rounded,
                       label: AppLocale.tr('songs'),
                       value: '$totalSongs',
-                      color: MelodiTheme.primaryGreen,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: _StatCard(
                       icon: Icons.queue_music_rounded,
                       label: AppLocale.tr('playlists'),
                       value: '$totalPlaylists',
-                      color: const Color(0xFF42A5F5),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: _StatCard(
                       icon: Icons.favorite_rounded,
                       label: AppLocale.tr('liked_songs'),
                       value: '$favorites',
-                      color: const Color(0xFFFF2D55),
                     ),
                   ),
                 ],
@@ -357,45 +333,44 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  final Color color;
 
   const _StatCard({
     required this.icon,
     required this.label,
     required this.value,
-    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: MelodiTheme.containerLow,
-        borderRadius: BorderRadius.circular(context.tokens.radiusControl),
-        border: Border.all(
-          color: color.withValues(alpha: 0.2),
-          width: 1,
-        ),
+        color: colors.surfaceContainer,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Column(
         children: [
-          Icon(icon, size: 24, color: color),
+          Icon(icon, size: 20, color: colors.onSurfaceVariant),
           const SizedBox(height: 8),
           Text(
             value,
             style: TextStyle(
-              color: MelodiTheme.onSurface,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+              color: colors.onSurface,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: MelodiTheme.onSurfaceVariant,
-              fontSize: 12,
+              color: colors.onSurfaceVariant,
+              fontSize: 11,
             ),
           ),
         ],
@@ -421,24 +396,27 @@ class _QuickActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: MelodiTheme.containerLow,
-          borderRadius: context.tokens.borderRadiusCover,
+          color: colors.surfaceContainer,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: colors.outlineVariant),
         ),
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: iconColor.withValues(alpha: 0.1),
+                color: colors.surfaceContainerHighest,
+                border: Border.all(color: colors.outlineVariant),
               ),
-              child: Icon(icon, size: 20, color: iconColor),
+              child: Icon(icon, size: 18, color: colors.onSurfaceVariant),
             ),
             const SizedBox(width: 12),
             Expanded(

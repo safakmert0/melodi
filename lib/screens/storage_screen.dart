@@ -69,23 +69,27 @@ class _StorageScreenState extends State<StorageScreen> {
     int totalOther = _usage['other'] ?? 0;
     int used = totalAudio + totalArt + totalOther;
 
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: MelodiTheme.background,
+      backgroundColor: colors.surface,
       appBar: AppBar(
         title: Text(
           AppLocale.tr('storage'),
-          style: TextStyle(color: MelodiTheme.onSurface),
+          style: TextStyle(color: colors.onSurface, fontSize: 16),
         ),
-        backgroundColor: MelodiTheme.containerLow,
-        foregroundColor: MelodiTheme.onSurface,
+        backgroundColor: colors.surface,
+        foregroundColor: colors.onSurface,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
       ),
       body: _isLoading
           ? Center(
-              child: CircularProgressIndicator(color: MelodiTheme.primaryGreen))
+              child: CircularProgressIndicator(
+                  color: colors.onSurfaceVariant, strokeWidth: 2))
           : RefreshIndicator(
               onRefresh: _refresh,
-              color: MelodiTheme.primaryGreen,
+              color: colors.onSurfaceVariant,
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -121,11 +125,13 @@ class _StorageScreenState extends State<StorageScreen> {
 
   Widget _buildUsageCard(
       int used, int totalAudio, int totalArt, int totalOther) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: MelodiTheme.containerLow,
-        borderRadius: BorderRadius.circular(context.tokens.radiusControl),
+        color: colors.surfaceContainer,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,53 +139,54 @@ class _StorageScreenState extends State<StorageScreen> {
           Text(
             AppLocale.tr('library_size'),
             style: TextStyle(
-              color: MelodiTheme.onSurfaceVariant,
-              fontSize: 15,
+              color: colors.onSurfaceVariant,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             _formatBytes(used),
             style: TextStyle(
-              color: MelodiTheme.onSurface,
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
+              color: colors.onSurface,
+              fontSize: 26,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: SizedBox(
-              height: 8,
+              height: 6,
               child: Row(
                 children: [
                   if (totalAudio > 0)
                     Expanded(
                       flex: totalAudio,
-                      child: Container(color: MelodiTheme.primaryGreen),
+                      child: Container(color: colors.onSurface),
                     ),
                   if (totalArt > 0)
                     Expanded(
                       flex: totalArt,
-                      child: Container(color: Colors.amber),
+                      child: Container(color: colors.onSurfaceVariant),
                     ),
                   if (totalOther > 0)
                     Expanded(
                       flex: totalOther,
-                      child: Container(color: Colors.grey),
+                      child: Container(color: colors.outlineVariant),
                     ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 12),
-          _usageLegend(MelodiTheme.primaryGreen, AppLocale.tr('audio'),
+          _usageLegend(colors.onSurface, AppLocale.tr('audio'),
               _formatBytes(totalAudio)),
           const SizedBox(height: 4),
           _usageLegend(
-              Colors.amber, AppLocale.tr('artists'), _formatBytes(totalArt)),
+              colors.onSurfaceVariant, AppLocale.tr('artists'), _formatBytes(totalArt)),
           const SizedBox(height: 4),
-          _usageLegend(Colors.grey, 'Other', _formatBytes(totalOther)),
+          _usageLegend(colors.outline, 'Other', _formatBytes(totalOther)),
         ],
       ),
     );
@@ -216,21 +223,24 @@ class _StorageScreenState extends State<StorageScreen> {
 
   Widget _buildInfoRow(
       String label, String value, IconData icon, Color iconColor) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: MelodiTheme.containerLow,
-        borderRadius: context.tokens.borderRadiusCover,
+        color: colors.surfaceContainer,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
-              borderRadius: context.tokens.borderRadiusThumb,
+              color: colors.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: colors.outlineVariant),
             ),
-            child: Icon(icon, color: iconColor, size: 20),
+            child: Icon(icon, color: colors.onSurfaceVariant, size: 18),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -240,14 +250,14 @@ class _StorageScreenState extends State<StorageScreen> {
                 Text(
                   label,
                   style: TextStyle(
-                      color: MelodiTheme.onSurfaceVariant, fontSize: 12),
+                      color: colors.onSurfaceVariant, fontSize: 11),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
                   style: TextStyle(
-                    color: MelodiTheme.onSurface,
-                    fontSize: 14,
+                    color: colors.onSurface,
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
                   maxLines: 2,
@@ -263,11 +273,13 @@ class _StorageScreenState extends State<StorageScreen> {
 
   Widget _buildFormatBreakdown() {
     if (_formatBreakdown.isEmpty) return const SizedBox.shrink();
+    final colors = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: MelodiTheme.containerLow,
-        borderRadius: BorderRadius.circular(context.tokens.radiusControl),
+        color: colors.surfaceContainer,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,8 +287,8 @@ class _StorageScreenState extends State<StorageScreen> {
           Text(
             AppLocale.tr('format_breakdown'),
             style: TextStyle(
-              color: MelodiTheme.onSurfaceVariant,
-              fontSize: 15,
+              color: colors.onSurface,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -290,20 +302,21 @@ class _StorageScreenState extends State<StorageScreen> {
               child: Row(
                 children: [
                   Container(
-                    width: 48,
+                    width: 44,
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: MelodiTheme.primaryGreen.withValues(alpha: 0.15),
-                      borderRadius: context.tokens.borderRadiusBadge,
+                      color: colors.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: colors.outlineVariant),
                     ),
                     child: Text(
                       ext,
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: MelodiTheme.primaryGreen,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
+                        color: colors.onSurfaceVariant,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -311,16 +324,16 @@ class _StorageScreenState extends State<StorageScreen> {
                   Text(
                     '$count ${AppLocale.tr('songs')}',
                     style: TextStyle(
-                      color: MelodiTheme.onSurface,
-                      fontSize: 14,
+                      color: colors.onSurface,
+                      fontSize: 13,
                     ),
                   ),
                   const Spacer(),
                   Text(
                     _formatBytes(size),
                     style: TextStyle(
-                      color: MelodiTheme.onSurfaceVariant,
-                      fontSize: 15,
+                      color: colors.onSurfaceVariant,
+                      fontSize: 13,
                     ),
                   ),
                 ],
@@ -333,11 +346,13 @@ class _StorageScreenState extends State<StorageScreen> {
   }
 
   Widget _buildDownloadedSongs() {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: MelodiTheme.containerLow,
-        borderRadius: BorderRadius.circular(context.tokens.radiusControl),
+        color: colors.surfaceContainer,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -345,13 +360,13 @@ class _StorageScreenState extends State<StorageScreen> {
           Row(
             children: [
               Icon(Icons.download_rounded,
-                  color: MelodiTheme.primaryGreen, size: 18),
+                  color: colors.onSurfaceVariant, size: 18),
               const SizedBox(width: 8),
               Text(
                 AppLocale.tr('downloads_subtitle'),
                 style: TextStyle(
-                  color: MelodiTheme.onSurface,
-                  fontSize: 15,
+                  color: colors.onSurface,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -359,8 +374,8 @@ class _StorageScreenState extends State<StorageScreen> {
               Text(
                 '${_downloadedSongs.length}',
                 style: TextStyle(
-                  color: MelodiTheme.onSurfaceVariant,
-                  fontSize: 14,
+                  color: colors.onSurfaceVariant,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -371,7 +386,7 @@ class _StorageScreenState extends State<StorageScreen> {
             Text(
               AppLocale.tr('no_downloads'),
               style: TextStyle(
-                color: MelodiTheme.onSurfaceVariant,
+                color: colors.onSurfaceVariant,
                 fontSize: 13,
               ),
             )
@@ -386,14 +401,15 @@ class _StorageScreenState extends State<StorageScreen> {
                   final song = _downloadedSongs[index];
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.music_note_rounded, size: 20),
+                    leading: Icon(Icons.music_note_rounded,
+                        size: 18, color: colors.onSurfaceVariant),
                     title: Text(
                       song.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: MelodiTheme.onSurface,
-                        fontSize: 14,
+                        color: colors.onSurface,
+                        fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -402,7 +418,7 @@ class _StorageScreenState extends State<StorageScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: MelodiTheme.onSurfaceVariant,
+                        color: colors.onSurfaceVariant,
                         fontSize: 12,
                       ),
                     ),
@@ -416,26 +432,27 @@ class _StorageScreenState extends State<StorageScreen> {
   }
 
   Widget _buildActions() {
+    final colors = Theme.of(context).colorScheme;
     return Column(
       children: [
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: _isMoving ? null : _clearCache,
-            icon: Icon(Icons.delete_sweep_rounded, size: 18),
+            icon: const Icon(Icons.delete_sweep_rounded, size: 18),
             label: Text(AppLocale.tr('clear_cache')),
             style: OutlinedButton.styleFrom(
-              foregroundColor: MelodiTheme.errorRed,
-              side: BorderSide(color: MelodiTheme.errorRed),
-              padding: const EdgeInsets.symmetric(vertical: 14),
+              foregroundColor: colors.error,
+              side: BorderSide(color: colors.error.withValues(alpha: 0.5)),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: context.tokens.borderRadiusCover,
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
           ),
         ),
         if (!Platform.isIOS) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -446,27 +463,36 @@ class _StorageScreenState extends State<StorageScreen> {
                       height: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.black,
+                        color: colors.onPrimary,
                       ),
                     )
-                  : Icon(Icons.drive_folder_upload_rounded, size: 18),
+                  : const Icon(Icons.drive_folder_upload_rounded, size: 18),
               label: Text(AppLocale.tr('move_library')),
+              style: FilledButton.styleFrom(
+                backgroundColor: colors.onSurface,
+                foregroundColor: colors.surface,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
             ),
           ),
         ],
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: _backupDatabase,
-            icon: Icon(Icons.backup_rounded, size: 18),
-            label: Text('Veritabanı Yedekle'),
+            icon: const Icon(Icons.backup_rounded, size: 18),
+            label: const Text('Veritabanı Yedekle'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: MelodiTheme.primaryGreen,
-              side: BorderSide(color: MelodiTheme.primaryGreen),
-              padding: const EdgeInsets.symmetric(vertical: 14),
+              foregroundColor: colors.onSurface,
+              side: BorderSide(color: colors.outlineVariant),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: context.tokens.borderRadiusCover,
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
           ),
@@ -476,31 +502,37 @@ class _StorageScreenState extends State<StorageScreen> {
   }
 
   Future<void> _clearCache() async {
+    final colors = Theme.of(context).colorScheme;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: MelodiTheme.containerLow,
+        backgroundColor: colors.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: colors.outlineVariant),
+        ),
         title: Text(
           AppLocale.tr('clear_cache'),
-          style: TextStyle(color: MelodiTheme.onSurface),
+          style: TextStyle(color: colors.onSurface, fontSize: 16),
         ),
         content: Text(
           '${AppLocale.tr('clear_cache')}?',
-          style: TextStyle(color: MelodiTheme.onSurfaceVariant),
+          style: TextStyle(color: colors.onSurfaceVariant, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(
               AppLocale.tr('cancel'),
-              style: TextStyle(color: MelodiTheme.onSurfaceVariant),
+              style: TextStyle(color: colors.onSurfaceVariant),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
               AppLocale.tr('clear_cache'),
-              style: TextStyle(color: MelodiTheme.errorRed),
+              style: TextStyle(color: colors.error),
             ),
           ),
         ],
@@ -513,7 +545,6 @@ class _StorageScreenState extends State<StorageScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocale.tr('clear_cache')),
-          backgroundColor: MelodiTheme.primaryGreen,
         ),
       );
     }
@@ -532,7 +563,6 @@ class _StorageScreenState extends State<StorageScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocale.tr('move_library')),
-            backgroundColor: MelodiTheme.primaryGreen,
           ),
         );
       }
@@ -541,7 +571,6 @@ class _StorageScreenState extends State<StorageScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${AppLocale.tr('move_library')}: $e'),
-            backgroundColor: MelodiTheme.errorRed,
           ),
         );
       }
@@ -550,24 +579,30 @@ class _StorageScreenState extends State<StorageScreen> {
   }
 
   Future<void> _backupDatabase() async {
+    final colors = Theme.of(context).colorScheme;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: MelodiTheme.containerLow,
+        backgroundColor: colors.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: colors.outlineVariant),
+        ),
         title: Text('Veritabanı Yedekle',
-            style: TextStyle(color: MelodiTheme.onSurface)),
+            style: TextStyle(color: colors.onSurface, fontSize: 16)),
         content: Text('Veritabanı yedeklenecek. Devam edilsin mi?',
-            style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
+            style: TextStyle(color: colors.onSurfaceVariant, fontSize: 14)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(AppLocale.tr('cancel'),
-                style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
+                style: TextStyle(color: colors.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text('Yedekle',
-                style: TextStyle(color: MelodiTheme.primaryGreen)),
+                style: TextStyle(color: colors.onSurface)),
           ),
         ],
       ),
@@ -581,8 +616,6 @@ class _StorageScreenState extends State<StorageScreen> {
           content: Text(path != null
               ? 'Yedek oluşturuldu: $path'
               : 'Yedekleme başarısız'),
-          backgroundColor:
-              path != null ? MelodiTheme.primaryGreen : MelodiTheme.errorRed,
         ),
       );
     }

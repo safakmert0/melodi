@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../models/song_model.dart';
 import '../core/constants.dart';
-import '../theme/app_tokens.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/playlist_provider.dart';
@@ -70,6 +68,7 @@ class SongTile extends StatelessWidget {
         song.filePath.startsWith('youtube://') ||
         song.filePath.startsWith('http://') ||
         song.filePath.startsWith('https://');
+    final scheme = Theme.of(context).colorScheme;
 
     return ListTile(
       onTap: onTap,
@@ -80,19 +79,19 @@ class SongTile extends StatelessWidget {
                 ArtworkImage(
                   imageBytes: song.albumArt,
                   size: artworkSize,
-                  borderRadius: context.tokens.radiusThumb,
+                  borderRadius: 8,
                 ),
                 if (isPlaying)
                   Positioned.fill(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.black45,
-                        borderRadius: context.tokens.borderRadiusThumb,
+                        color: Colors.black38,
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
                         Icons.equalizer_rounded,
-                        color: MelodiTheme.primaryGreen,
-                        size: 20,
+                        color: scheme.onPrimary,
+                        size: 18,
                       ),
                     ),
                   ),
@@ -106,24 +105,22 @@ class SongTile extends StatelessWidget {
               song.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: isPlaying
-                    ? MelodiTheme.primaryGreen
-                    : MelodiTheme.onSurface,
-                fontWeight: isPlaying ? FontWeight.w600 : FontWeight.normal,
-                fontSize: 15,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: isPlaying ? scheme.onSurface : scheme.onSurface,
+                    fontWeight: isPlaying ? FontWeight.w600 : FontWeight.w400,
+                    fontSize: 14,
+                  ),
             ),
           ),
           if (showFileSize && song.fileSize > 0) ...[
             const SizedBox(width: 8),
             Text(
               _fileSizeLabel(song.fileSize),
-              style: TextStyle(
-                color: MelodiTheme.textMuted,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
             ),
           ],
         ],
@@ -134,15 +131,15 @@ class SongTile extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(right: 6),
               child: Container(
-                width: 8,
-                height: 8,
+                width: 6,
+                height: 6,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: confidence! >= 0.9
-                      ? const Color(0xFF4CAF50)
+                      ? scheme.primary
                       : confidence! >= 0.7
-                          ? const Color(0xFFFFC107)
-                          : const Color(0xFFF44336),
+                          ? scheme.outline
+                          : scheme.error,
                 ),
               ),
             ),
@@ -151,23 +148,26 @@ class SongTile extends StatelessWidget {
               song.artist,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: MelodiTheme.onSurfaceVariant,
-                fontSize: 15,
-              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontSize: 13,
+                  ),
             ),
           ),
           if (song.bitrate != null) ...[
             Text(
               ' · ',
-              style: TextStyle(color: MelodiTheme.textMuted, fontSize: 11),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontSize: 11,
+                  ),
             ),
             Text(
               '${song.bitrate} kbps',
-              style: TextStyle(
-                color: MelodiTheme.textMuted,
-                fontSize: 15,
-              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
             ),
           ],
         ],
@@ -183,8 +183,8 @@ class SongTile extends StatelessWidget {
                   icon: Icon(
                     song.isFavorite ? Icons.favorite : Icons.favorite_border,
                     color: song.isFavorite
-                        ? MelodiTheme.primaryGreen
-                        : MelodiTheme.textMuted,
+                        ? scheme.onSurface
+                        : scheme.onSurfaceVariant,
                     size: 20,
                   ),
                   onPressed: onFavorite ??
@@ -193,7 +193,7 @@ class SongTile extends StatelessWidget {
                 ),
               PopupMenuButton<String>(
                 icon: Icon(Icons.more_horiz,
-                    color: MelodiTheme.onSurfaceVariant, size: 20),
+                    color: scheme.onSurfaceVariant, size: 20),
                 onSelected: (value) {
                   switch (value) {
                     case 'queue':
@@ -293,7 +293,7 @@ class SongTile extends StatelessWidget {
             ],
           ),
       minLeadingWidth: artworkSize + 8,
-    ).animate().fadeIn(duration: 300.ms);
+    );
   }
 
   void _showAddToPlaylistSheet(BuildContext context) {
@@ -345,7 +345,6 @@ class SongTile extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text("${song.title} · ${AppLocale.tr('download_queued')}"),
-        backgroundColor: MelodiTheme.primaryGreen,
       ),
     );
   }
@@ -372,6 +371,7 @@ class _DownloadIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Consumer<DownloadProvider>(
       builder: (context, provider, _) {
         final status = provider.getStatusForSong(song.title, song.artist);
@@ -393,14 +393,14 @@ class _DownloadIndicator extends StatelessWidget {
                       CircularProgressIndicator(
                         value: progress,
                         strokeWidth: 2,
-                        color: MelodiTheme.primaryGreen,
+                        color: scheme.onSurfaceVariant,
                       ),
                       Text(
                         '${(progress * 100).toInt()}',
                         style: TextStyle(
                             fontSize: 7,
-                            fontWeight: FontWeight.bold,
-                            color: MelodiTheme.primaryGreen),
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -414,7 +414,7 @@ class _DownloadIndicator extends StatelessWidget {
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: MelodiTheme.primaryGreen,
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
             );
@@ -422,12 +422,12 @@ class _DownloadIndicator extends StatelessWidget {
             return Padding(
               padding: const EdgeInsets.only(right: 4),
               child: Icon(Icons.check_circle,
-                  color: MelodiTheme.primaryGreen, size: 18),
+                  color: scheme.onSurfaceVariant, size: 18),
             );
           case DownloadState.failed:
             return Padding(
               padding: const EdgeInsets.only(right: 4),
-              child: Icon(Icons.error, color: MelodiTheme.errorRed, size: 18),
+              child: Icon(Icons.error, color: scheme.error, size: 18),
             );
         }
       },

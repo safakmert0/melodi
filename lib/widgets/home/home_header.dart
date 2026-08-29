@@ -12,6 +12,7 @@ class HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
     return SliverToBoxAdapter(
       child: ColoredBox(
@@ -19,7 +20,7 @@ class HomeHeader extends StatelessWidget {
         child: SafeArea(
           bottom: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -48,17 +49,16 @@ class HomeHeader extends StatelessWidget {
                           width: 42,
                           height: 42,
                           decoration: BoxDecoration(
+                            color: scheme.surfaceContainerHighest,
                             shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [
-                                theme.colorScheme.primary,
-                                theme.colorScheme.secondary,
-                              ],
+                            border: Border.all(
+                              color:
+                                  scheme.outlineVariant.withValues(alpha: 0.5),
                             ),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.person_rounded,
-                            color: Colors.white,
+                            color: scheme.onSurfaceVariant,
                             size: 21,
                           ),
                         ),
@@ -86,23 +86,23 @@ class HomeHeader extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 16),
                 Text(
                   _greeting(),
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.1,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.6,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   _headline(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.headlineLarge?.copyWith(
-                    fontSize: 31,
-                    letterSpacing: -1.4,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
                   ),
                 ),
               ],
@@ -180,7 +180,7 @@ class _HeaderButton extends StatelessWidget {
                 style: TextStyle(
                   color: colors.onPrimary,
                   fontSize: 8,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),

@@ -2,9 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-import '../../core/melodi_design.dart';
 import '../../models/song_model.dart';
-import '../image_with_fallback.dart';
 
 enum LibrarySourceFilter { all, device, spotify, youtube, downloads }
 
@@ -29,16 +27,16 @@ extension LibrarySourceFilterUi on LibrarySourceFilter {
     final path = song.filePath.toLowerCase();
     return switch (this) {
       LibrarySourceFilter.all => true,
-      LibrarySourceFilter.device => !path.startsWith('spotify://') &&
-          !path.startsWith('youtube://') &&
-          !path.startsWith('http://') &&
-          !path.startsWith('https://'),
+      LibrarySourceFilter.device =>
+        !path.startsWith('spotify://') &&
+            !path.startsWith('youtube://') &&
+            !path.startsWith('http://') &&
+            !path.startsWith('https://'),
       LibrarySourceFilter.spotify => path.startsWith('spotify://'),
-      LibrarySourceFilter.youtube => path.startsWith('youtube://') ||
-          path.startsWith('http://') ||
-          path.startsWith('https://'),
-      // The downloads section is driven directly by the downloaded-tracks
-      // query in LibraryProvider, so the generic filter never matches here.
+      LibrarySourceFilter.youtube =>
+        path.startsWith('youtube://') ||
+            path.startsWith('http://') ||
+            path.startsWith('https://'),
       LibrarySourceFilter.downloads => false,
     };
   }
@@ -80,58 +78,82 @@ class LibraryHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 12, 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
       child: Row(
         children: [
-          Semantics(
-            button: true,
-            label: 'Profili aç',
-            child: InkWell(
-              onTap: onProfile,
-              borderRadius: BorderRadius.circular(20),
-              child: CircleAvatar(
-                radius: 19,
-                backgroundColor: colors.surfaceContainerHighest,
-                child: Icon(Icons.person_rounded,
-                    size: 21, color: colors.onSurfaceVariant),
+          InkWell(
+            onTap: onProfile,
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: colors.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: colors.outlineVariant.withValues(alpha: 0.6),
+                ),
+              ),
+              child: Icon(
+                Icons.person_rounded,
+                size: 18,
+                color: colors.onSurfaceVariant,
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('KİTAPLIĞIN',
-                    style: TextStyle(
-                      color: colors.primary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.4,
-                    )),
-                Text('Müziğin, tek yerde',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontSize: 21,
-                        )),
+                Text(
+                  'Kitaplığın',
+                  style: TextStyle(
+                    color: colors.onSurfaceVariant,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  'Müziğin, tek yerde',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colors.onSurface,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
           IconButton(
             tooltip: 'Kaynaklar',
             onPressed: onSources,
-            icon: const Icon(Icons.hub_rounded),
+            icon: Icon(Icons.hub_rounded,
+                size: 20, color: colors.onSurfaceVariant),
+            visualDensity: VisualDensity.compact,
           ),
           IconButton(
             tooltip: 'Kitaplıkta ara',
             onPressed: onSearch,
-            icon: const Icon(Icons.search_rounded),
+            icon: Icon(Icons.search_rounded,
+                size: 20, color: colors.onSurfaceVariant),
+            visualDensity: VisualDensity.compact,
           ),
-          IconButton.filled(
+          const SizedBox(width: 4),
+          IconButton(
             tooltip: 'Ekle veya içe aktar',
             onPressed: onAdd,
-            icon: const Icon(Icons.add_rounded),
+            style: IconButton.styleFrom(
+              backgroundColor: colors.onSurface,
+              foregroundColor: colors.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              minimumSize: const Size(36, 36),
+            ),
+            icon: const Icon(Icons.add_rounded, size: 18),
           ),
         ],
       ),
@@ -165,18 +187,25 @@ class LibraryOverview extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
-      child: MelodiPanel(
-        emphasized: true,
-        padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: colors.surfaceContainer,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: colors.outlineVariant.withValues(alpha: 0.5),
+          ),
+        ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Expanded(
                   child: Wrap(
-                    spacing: 18,
-                    runSpacing: 10,
+                    spacing: 16,
+                    runSpacing: 8,
                     children: [
                       _Metric(value: '$songCount', label: 'parça'),
                       _Metric(value: '$albumCount', label: 'albüm'),
@@ -191,48 +220,102 @@ class LibraryOverview extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Icon(Icons.library_music_rounded,
-                    size: 40, color: colors.primary .withOpacity(0.8)),
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: colors.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: colors.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.library_music_rounded,
+                    size: 18,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
               ],
             ),
             if (isScanning) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Row(
                 children: [
-                  const SizedBox(
-                    width: 15,
-                    height: 15,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                  SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: colors.onSurfaceVariant,
+                    ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: Text('Müzik kitaplığı taranıyor…',
-                        style: TextStyle(
-                            color: colors.onSurfaceVariant, fontSize: 12)),
+                    child: Text(
+                      'Müzik kitaplığı taranıyor…',
+                      style: TextStyle(
+                        color: colors.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
-                  Text('${(scanProgress * 100).round()}%',
-                      style: TextStyle(color: colors.onSurfaceVariant)),
+                  Text(
+                    '${(scanProgress * 100).round()}%',
+                    style: TextStyle(
+                      color: colors.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
               LinearProgressIndicator(
-                  value: scanProgress <= 0 ? null : scanProgress),
+                value: scanProgress <= 0 ? null : scanProgress,
+                backgroundColor: colors.surfaceContainerHighest,
+                color: colors.onSurfaceVariant,
+                minHeight: 3,
+                borderRadius: BorderRadius.circular(10),
+              ),
             ],
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             Row(
               children: [
                 Expanded(
                   child: FilledButton.icon(
                     onPressed: onPlayAll,
-                    icon: const Icon(Icons.play_arrow_rounded),
+                    icon: const Icon(Icons.play_arrow_rounded, size: 18),
                     label: const Text('Tümünü çal'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: colors.onSurface,
+                      foregroundColor: colors.surface,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      textStyle: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
-                IconButton.outlined(
-                  tooltip: 'Karıştır',
+                OutlinedButton(
                   onPressed: onShuffle,
-                  icon: const Icon(Icons.shuffle_rounded),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: colors.onSurfaceVariant,
+                    side: BorderSide(
+                      color: colors.outlineVariant.withValues(alpha: 0.7),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.all(12),
+                    minimumSize: const Size(44, 44),
+                  ),
+                  child: const Icon(Icons.shuffle_rounded, size: 18),
                 ),
               ],
             ),
@@ -255,13 +338,18 @@ class _Metric extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(value,
-            style: TextStyle(
-                color: colors.onSurface,
-                fontWeight: FontWeight.w800,
-                fontSize: 17)),
-        Text(label,
-            style: TextStyle(color: colors.onSurfaceVariant, fontSize: 11)),
+        Text(
+          value,
+          style: TextStyle(
+            color: colors.onSurface,
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(color: colors.onSurfaceVariant, fontSize: 11),
+        ),
       ],
     );
   }
@@ -299,7 +387,7 @@ class LibraryFilters extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            height: 42,
+            height: 38,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -307,19 +395,42 @@ class LibraryFilters extends StatelessWidget {
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (_, index) {
                 final item = LibrarySourceFilter.values[index];
+                final selected = item == source;
                 return FilterChip(
-                  selected: item == source,
+                  selected: selected,
                   showCheckmark: false,
-                  avatar: Icon(item.icon, size: 16),
+                  avatar: Icon(item.icon,
+                      size: 14,
+                      color: selected
+                          ? colors.onSurface
+                          : colors.onSurfaceVariant),
                   label: Text(item.label),
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    color:
+                        selected ? colors.onSurface : colors.onSurfaceVariant,
+                  ),
+                  backgroundColor: colors.surfaceContainer,
+                  selectedColor: colors.surfaceContainerHigh,
+                  side: BorderSide(
+                    color: selected
+                        ? colors.outlineVariant.withValues(alpha: 0.7)
+                        : colors.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   onSelected: (_) => onSourceChanged(item),
                 );
               },
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           SizedBox(
-            height: 42,
+            height: 38,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -327,42 +438,88 @@ class LibraryFilters extends StatelessWidget {
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (_, index) {
                 final item = LibraryContentFilter.values[index];
+                final selected = item == content;
                 return ChoiceChip(
-                  selected: item == content,
+                  selected: selected,
                   showCheckmark: false,
-                  avatar: Icon(item.icon, size: 16),
+                  avatar: Icon(item.icon,
+                      size: 14,
+                      color: selected
+                          ? colors.onSurface
+                          : colors.onSurfaceVariant),
                   label: Text(item.label),
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    color:
+                        selected ? colors.onSurface : colors.onSurfaceVariant,
+                  ),
+                  backgroundColor: colors.surfaceContainer,
+                  selectedColor: colors.surfaceContainerHigh,
+                  side: BorderSide(
+                    color: selected
+                        ? colors.outlineVariant.withValues(alpha: 0.7)
+                        : colors.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   onSelected: (_) => onContentChanged(item),
                 );
               },
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 10, 10, 4),
+            padding: const EdgeInsets.fromLTRB(16, 8, 8, 2),
             child: Row(
               children: [
                 TextButton.icon(
                   onPressed: onSort,
+                  style: TextButton.styleFrom(
+                    foregroundColor: colors.onSurfaceVariant,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                   icon: Icon(
                     ascending
                         ? Icons.arrow_upward_rounded
                         : Icons.arrow_downward_rounded,
-                    size: 16,
+                    size: 14,
                   ),
-                  label: Text(sortLabel),
+                  label: Text(
+                    sortLabel,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
                 const Spacer(),
-                Text(content.label,
-                    style: TextStyle(
-                        color: colors.onSurfaceVariant,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600)),
+                Text(
+                  content.label,
+                  style: TextStyle(
+                    color: colors.onSurfaceVariant,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 4),
                 IconButton(
                   tooltip: isGrid ? 'Liste görünümü' : 'Izgara görünümü',
                   onPressed: onToggleGrid,
-                  icon: Icon(isGrid
-                      ? Icons.view_list_rounded
-                      : Icons.grid_view_rounded),
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(
+                    isGrid
+                        ? Icons.view_list_rounded
+                        : Icons.grid_view_rounded,
+                    size: 18,
+                    color: colors.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -389,33 +546,45 @@ class LibrarySongTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       leading: _Artwork(
         bytes: song.albumArt,
         icon: Icons.music_note_rounded,
-        size: 54,
+        size: 48,
       ),
-      title: Text(song.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+      title: Text(
+        song.title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+          color: colors.onSurface,
+        ),
+      ),
       subtitle: Row(
         children: [
           _SourceDot(song: song),
           const SizedBox(width: 6),
           Expanded(
-            child: Text('${song.artist} • ${song.album}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12)),
+            child: Text(
+              '${song.artist} • ${song.album}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: colors.onSurfaceVariant, fontSize: 11),
+            ),
           ),
         ],
       ),
-      trailing: IconButton(
-        tooltip: 'Diğer',
-        onPressed: onMore,
-        icon: const Icon(Icons.more_horiz_rounded),
-      ),
+      trailing: onMore == null
+          ? null
+          : IconButton(
+              tooltip: 'Diğer',
+              onPressed: onMore,
+              visualDensity: VisualDensity.compact,
+              icon: Icon(Icons.more_horiz_rounded,
+                  size: 18, color: colors.onSurfaceVariant),
+            ),
       onTap: onTap,
     );
   }
@@ -428,16 +597,15 @@ class _SourceDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final path = song.filePath.toLowerCase();
-    final color = path.startsWith('spotify://')
-        ? const Color(0xFF1ED760)
-        : path.startsWith('youtube://') || path.startsWith('http')
-            ? const Color(0xFFFF4D4D)
-            : Theme.of(context).colorScheme.primary;
+    final colors = Theme.of(context).colorScheme;
+    // Neutral dot regardless of source — no neon.
     return Container(
       width: 6,
       height: 6,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      decoration: BoxDecoration(
+        color: colors.outlineVariant.withValues(alpha: 0.9),
+        shape: BoxShape.circle,
+      ),
     );
   }
 }
@@ -450,33 +618,41 @@ class LibraryCollectionTile extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.artwork,
-    this.gradient,
   });
 
   final String title;
   final String subtitle;
   final IconData icon;
   final Uint8List? artwork;
-  final Gradient? gradient;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading:
-          _Artwork(bytes: artwork, icon: icon, gradient: gradient, size: 58),
-      title: Text(title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-      subtitle: Text(subtitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontSize: 12)),
-      trailing: const Icon(Icons.chevron_right_rounded),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      leading: _Artwork(bytes: artwork, icon: icon, size: 48),
+      title: Text(
+        title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: colors.onSurface,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: colors.onSurfaceVariant,
+          fontSize: 11,
+        ),
+      ),
+      trailing: Icon(Icons.chevron_right_rounded,
+          size: 18, color: colors.onSurfaceVariant),
       onTap: onTap,
     );
   }
@@ -490,49 +666,50 @@ class LibraryCollectionCard extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.artwork,
-    this.gradient,
   });
 
   final String title;
   final String subtitle;
   final IconData icon;
   final Uint8List? artwork;
-  final Gradient? gradient;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(MelodiRadius.artwork),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: _Artwork(
-                bytes: artwork,
-                icon: icon,
-                gradient: gradient,
-                size: double.infinity,
-                radius: MelodiRadius.artwork,
-              ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: _Artwork(
+              bytes: artwork,
+              icon: icon,
+              size: double.infinity,
+              radius: 10,
             ),
-            const SizedBox(height: 8),
-            Text(title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style:
-                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 2),
-            Text(subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: colors.onSurfaceVariant, fontSize: 11)),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: colors.onSurface,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: colors.onSurfaceVariant, fontSize: 11),
+          ),
+        ],
       ),
     );
   }
@@ -543,48 +720,60 @@ class _Artwork extends StatelessWidget {
     required this.bytes,
     required this.icon,
     required this.size,
-    this.gradient,
-    this.radius = 12,
+    this.radius = 10,
   });
 
   final Uint8List? bytes;
   final IconData icon;
   final double size;
-  final Gradient? gradient;
   final double radius;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final fallback = gradient == null && icon == Icons.music_note_rounded
-        ? MelodiArtworkFallback(
-            size: size.isFinite ? size : null,
-            borderRadius: radius,
-          )
-        : Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              gradient: gradient,
-              color: gradient == null ? colors.surfaceContainerHighest : null,
-              borderRadius: BorderRadius.circular(radius),
-            ),
-            child: Icon(
-              icon,
-              size: size.isFinite ? size * 0.38 : 40,
-              color: gradient == null ? colors.onSurfaceVariant : Colors.white,
-            ),
-          );
+    final fallback = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(
+          color: colors.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Icon(
+        icon,
+        size: size.isFinite ? size * 0.36 : 28,
+        color: colors.onSurfaceVariant,
+      ),
+    );
     if (bytes == null || bytes!.isEmpty) return fallback;
+    // For music notes keep subtle icon fallback when needed, otherwise image.
+    if (bytes == null) {
+      return fallback;
+    }
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
-      child: Image.memory(
-        bytes!,
+      child: Container(
         width: size,
         height: size,
-        fit: BoxFit.cover,
-        gaplessPlayback: true,
-        errorBuilder: (_, __, ___) => fallback,
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: colors.outlineVariant.withValues(alpha: 0.5),
+          ),
+          borderRadius: BorderRadius.circular(radius),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(radius - 1),
+          child: Image.memory(
+            bytes!,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            gaplessPlayback: true,
+            errorBuilder: (_, __, ___) => fallback,
+          ),
+        ),
       ),
     );
   }
@@ -609,28 +798,66 @@ class LibraryEmptyState extends StatelessWidget {
       hasScrollBody: false,
       child: Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.library_add_rounded,
-                  size: 56, color: colors.primary .withOpacity(0.75)),
-              const SizedBox(height: 18),
-              Text(title,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontSize: 20,
-                      )),
-              const SizedBox(height: 8),
-              Text(message,
-                  textAlign: TextAlign.center,
-                  style:
-                      TextStyle(color: colors.onSurfaceVariant, height: 1.4)),
-              const SizedBox(height: 18),
-              FilledButton.icon(
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: colors.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                ),
+                child: Icon(
+                  Icons.library_add_rounded,
+                  size: 24,
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: colors.onSurface,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: colors.onSurfaceVariant,
+                  fontSize: 12,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
                 onPressed: onAdd,
-                icon: const Icon(Icons.add_rounded),
+                icon: const Icon(Icons.add_rounded, size: 16),
                 label: const Text('Müzik ekle'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: colors.onSurface,
+                  side: BorderSide(
+                    color: colors.outlineVariant.withValues(alpha: 0.7),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  textStyle: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),

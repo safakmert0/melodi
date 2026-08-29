@@ -1,19 +1,22 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import '../models/song_model.dart';
+import 'artwork_embedding_service.dart';
+import 'artwork_service.dart';
 import 'backend_api_service.dart';
 import 'database_service.dart';
-import 'piped_service.dart';
-import 'youtube_downloader.dart';
+import 'lyrics_embedding_service.dart';
+import 'lyrics_service.dart';
 import 'metadata_service.dart';
 import 'multi_source_search.dart';
 import 'music_source.dart';
+import 'piped_service.dart';
 import 'storage_manager.dart';
 import 'audio_quality_service.dart';
 import 'track_matcher.dart';
-import 'lyrics_service.dart';
-import 'lyrics_embedding_service.dart';
+import 'youtube_downloader.dart';
 
 enum DownloadState { pending, downloading, completed, failed }
 
@@ -539,6 +542,42 @@ class DownloadManager {
       var metadata = await MetadataService.extractMetadata(filePath);
       await sourceFile.rename(destPath);
 
+      // ── Kapak resmi gömme (önceden atlanıyordu) ──
+      Uint8List? artworkBytes;
+      if (!isVideo) {
+        task.progress = 0.83;
+        task.error = 'Kapak resmi ekleniyor...';
+        _notify();
+        if (task.imageUrl != null && task.imageUrl!.isNotEmpty) {
+          artworkBytes = await _downloadImageBytes(task.imageUrl!);
+        }
+        if (artworkBytes == null || artworkBytes.isEmpty) {
+          try {
+            artworkBytes = await ArtworkService.fetchArtwork(
+              title: task.title,
+              artist: task.artist,
+              album: task.album ?? '',
+              duration: metadata?.duration ?? Duration.zero,
+            );
+          } catch (_) {}
+        }
+        if (artworkBytes != null && artworkBytes.isNotEmpty) {
+          try {
+            final ok = await ArtworkEmbeddingService.embedCoverArt(
+              filePath: destPath,
+              artwork: artworkBytes,
+            );
+            if (ok) {
+              try {
+                metadata = await MetadataService.extractMetadata(destPath) ?? metadata;
+              } catch (_) {}
+            }
+          } catch (e) {
+            debugPrint('Artwork embedding failed: $e');
+          }
+        }
+      }
+
       task.progress = 0.86;
       task.error = 'Senkronize sözler ekleniyor...';
       _notify();
@@ -559,21 +598,21 @@ class DownloadManager {
       }
       final lyricsText = lyricsResult?.syncedLrc ?? lyricsResult?.plainText;
 
-          if (!isVideo) {
-            final processed = await LyricsEmbeddingService.embedAndNormalize(
-              filePath: destPath,
-              lyrics: lyricsText,
-              expectedDurationMs: task.expectedDurationMs,
-            );
-            if (processed) {
-              metadata =
-                  await MetadataService.extractMetadata(destPath) ?? metadata;
-            }
-          }
+      if (!isVideo) {
+        final processed = await LyricsEmbeddingService.embedAndNormalize(
+          filePath: destPath,
+          lyrics: lyricsText,
+          expectedDurationMs: task.expectedDurationMs,
+        );
+        if (processed) {
+          metadata =
+              await MetadataService.extractMetadata(destPath) ?? metadata;
+        }
+      }
 
-          if (!isVideo &&
-              metadata != null &&
-              !isDurationCompatible(metadata.duration, task.expectedDurationMs)) {
+      if (!isVideo &&
+          metadata != null &&
+          !isDurationCompatible(metadata.duration, task.expectedDurationMs)) {
         task.error =
             'Kaynak süresi parça süresiyle uyuşmuyor; farklı kaynak deneyin';
         final invalidFile = File(destPath);
@@ -615,7 +654,9 @@ class DownloadManager {
           album:
               (task.album?.isNotEmpty ?? false) ? task.album : metadata.album,
           filePath: destPath,
-          albumArt: placeholder?.albumArt ?? metadata.albumArt,
+          albumArt: (artworkBytes != null && artworkBytes.isNotEmpty)
+              ? artworkBytes
+              : (placeholder?.albumArt ?? metadata.albumArt),
           fileSize: await File(destPath).length(),
           lyrics: lyricsText ?? placeholder?.lyrics ?? metadata.lyrics,
         );
@@ -631,6 +672,25 @@ class DownloadManager {
 
   String _matchKey(String value) =>
       value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+  Future<Uint8List?> _downloadImageBytes(String url) async {
+    try {
+      final client = HttpClient()
+        ..connectionTimeout = const Duration(seconds: 15);
+      try {
+        final request = await client.getUrl(Uri.parse(url));
+        request.headers.set(HttpHeaders.userAgentHeader, 'Melodi/1.0');
+        final response = await request.close();
+        if (response.statusCode != 200) return null;
+        final bytes = await consolidateHttpClientResponseBytes(response);
+        return bytes.length >= 1024 ? bytes : null;
+      } finally {
+        client.close(force: true);
+      }
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Registers a download that was performed externally (e.g. a podcast
   /// episode fetched by [PodcastService]) so it appears in the Downloads list

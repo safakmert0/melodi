@@ -60,47 +60,39 @@ class MelodiTheme {
   // These compatibility colors intentionally resolve at runtime. A large
   // number of mature feature screens predate ColorScheme; keeping the legacy
   // API dynamic makes those screens immediately safe in light mode too.
+  // Sade palet — LA Player gibi tek surface tonu (açık/koyu 2 varyant)
   static Color get background =>
       AppTheme.isLightMode ? const Color(0xFFF8F5F8) : const Color(0xFF08080C);
   static Color get surface =>
       AppTheme.isLightMode ? const Color(0xFFFFFFFF) : const Color(0xFF08080C);
-  static Color get surfaceBright =>
-      AppTheme.isLightMode ? const Color(0xFFFFFFFF) : const Color(0xFF34313D);
-  static Color get surfaceLowest =>
-      AppTheme.isLightMode ? const Color(0xFFFFFBFF) : const Color(0xFF050507);
-  static Color get containerLow =>
-      AppTheme.isLightMode ? const Color(0xFFF2EDF2) : const Color(0xFF101016);
-  static Color get container =>
-      AppTheme.isLightMode ? const Color(0xFFEBE4EC) : const Color(0xFF16151E);
-  static Color get containerHigh =>
-      AppTheme.isLightMode ? const Color(0xFFE3DAE5) : const Color(0xFF201E2A);
-  static Color get containerHighest =>
-      AppTheme.isLightMode ? const Color(0xFFD8CDD9) : const Color(0xFF2B2836);
+  static Color get surfaceBright => surface;
+  static Color get surfaceLowest => surface;
+  static Color get containerLow => surface;
+  static Color get container => surface;
+  static Color get containerHigh => surface;
+  static Color get containerHighest => surface;
 
   static Color get onSurface =>
       AppTheme.isLightMode ? const Color(0xFF211B20) : const Color(0xFFF8F4F7);
   static Color get onSurfaceVariant =>
       AppTheme.isLightMode ? const Color(0xFF645B64) : const Color(0xFFC9C1CB);
 
-  // SpotiFLAC visual identity — Spotify-green brand seed.
-  // Kept under the legacy name so existing feature screens inherit the new
-  // brand without a risky, all-at-once API rename.
-  static const Color primaryGreen = Color(0xFF1DB954);
-  static const Color primaryGreenBright = Color(0xFF1ED760);
-  static const Color primaryContainer = Color(0xFF0C3B22);
+  // Sade kimlik — LA Player gibi nötr, neon yok
+  static const Color primaryGreen = Color(0xFF3A3A3C);
+  static const Color primaryGreenBright = Color(0xFF4A4A4C);
+  static const Color primaryContainer = Color(0xFFE5E5EA);
   static const Color onPrimary = Color(0xFFFFFFFF);
-  static const Color onPrimaryContainer = Color(0xFFB9F5CF);
+  static const Color onPrimaryContainer = Color(0xFF1C1C1E);
 
   // Secondary
   static const Color secondary = Color(0xFFB7B7B7);
   static const Color secondaryContainer = Color(0xFF3A3A3A);
   static const Color onSecondaryContainer = Color(0xFFD6D6D6);
 
-  // Outline
+  // Outline — tek ton + alpha varyant
   static Color get outline =>
       AppTheme.isLightMode ? const Color(0xFF81747F) : const Color(0xFF8F8492);
-  static Color get outlineVariant =>
-      AppTheme.isLightMode ? const Color(0xFFD7CCD7) : const Color(0xFF3B3540);
+  static Color get outlineVariant => outline.withValues(alpha: 0.5);
 
   // Error
   static Color get errorRed =>

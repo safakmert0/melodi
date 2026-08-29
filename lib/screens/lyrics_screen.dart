@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
@@ -146,21 +145,8 @@ class _LyricsScreenState extends State<LyricsScreen> {
           }
 
           return Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF0D2318),
-                  MelodiTheme.background,
-                ],
-              ),
-            ),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-              child: Container(
-                color: Colors.black.withOpacity(0.3),
-                child: Column(
+            color: Theme.of(context).colorScheme.surface,
+                    child: Column(
                   children: [
                     SafeArea(
                       child: Padding(
@@ -171,8 +157,8 @@ class _LyricsScreenState extends State<LyricsScreen> {
                             IconButton(
                               icon: const Icon(
                                   Icons.keyboard_arrow_down_rounded,
-                                  size: 32),
-                              color: MelodiTheme.onSurface,
+                                  size: 24),
+                              color: Theme.of(context).colorScheme.onSurface,
                               onPressed: () => Navigator.of(context).pop(),
                             ),
                             Expanded(
@@ -180,18 +166,24 @@ class _LyricsScreenState extends State<LyricsScreen> {
                                 children: [
                                   Text(
                                     AppLocale.tr('lyrics'),
-                                    style: MelodiTheme.label(
-                                        size: 10, letterSpacing: 1.5),
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                        fontSize: 11,
+                                        letterSpacing: 1.2,
+                                        fontWeight: FontWeight.w600),
                                   ),
                                   Text(
                                     song.title,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                      fontFamily: AppConstants.fontFamily,
-                                      color: MelodiTheme.onSurface,
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
@@ -199,7 +191,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
                             ),
                             if (song.albumArt != null)
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
+                                borderRadius: BorderRadius.circular(8),
                                 child: Image.memory(
                                   song.albumArt!,
                                   width: 32,
@@ -281,16 +273,14 @@ class _LyricsScreenState extends State<LyricsScreen> {
                     ),
                     Container(
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            MelodiTheme.background.withOpacity(0.9),
-                          ],
-                        ),
+                        color: Theme.of(context).colorScheme.surface,
+                        border: Border(
+                            top: BorderSide(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outlineVariant)),
                       ),
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(14),
                       child: Column(
                         children: [
                           Row(
@@ -305,13 +295,14 @@ class _LyricsScreenState extends State<LyricsScreen> {
                               TextButton(
                                 onPressed: () =>
                                     _adjustOffset(-_manualOffsetMs),
-                                child: Text(
-                                  '${(_manualOffsetMs / 1000).toStringAsFixed(1)} sn',
+                  child: Text(
+                                   '${(_manualOffsetMs / 1000).toStringAsFixed(1)} sn',
                                   style: TextStyle(
-                                    color: _manualOffsetMs == 0
-                                        ? MelodiTheme.onSurfaceVariant
-                                        : MelodiTheme.primaryGreen,
-                                    fontWeight: FontWeight.w700,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
                                   ),
                                 ),
                               ),
@@ -379,50 +370,60 @@ class _LyricsScreenState extends State<LyricsScreen> {
                                 icon: Icon(
                                   Icons.shuffle,
                                   color: player.isShuffled
-                                      ? MelodiTheme.primaryGreen
-                                      : MelodiTheme.onSurfaceVariant,
+                                      ? Theme.of(context).colorScheme.onSurface
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
                                 ),
-                                iconSize: 28,
+                                iconSize: 22,
                                 onPressed: player.toggleShuffle,
                               ),
                               IconButton(
                                 icon: const Icon(Icons.skip_previous_rounded),
-                                color: MelodiTheme.onSurface,
-                                iconSize: 36,
+                                color: Theme.of(context).colorScheme.onSurface,
+                                iconSize: 28,
                                 onPressed: player.skipToPrevious,
                               ),
                               Container(
-                                width: 56,
-                                height: 56,
+                                width: 48,
+                                height: 48,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: MelodiTheme.surfaceBright,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
+                                  border: Border.all(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .outlineVariant),
                                 ),
                                 child: IconButton(
                                   icon: Icon(
                                     player.isPlaying
                                         ? Icons.pause_rounded
                                         : Icons.play_arrow_rounded,
-                                    color: MelodiTheme.background,
+                                    color:
+                                        Theme.of(context).colorScheme.surface,
                                   ),
-                                  iconSize: 28,
+                                  iconSize: 22,
                                   onPressed: player.playPause,
                                 ),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.skip_next_rounded),
-                                color: MelodiTheme.onSurface,
-                                iconSize: 36,
+                                color: Theme.of(context).colorScheme.onSurface,
+                                iconSize: 28,
                                 onPressed: player.skipToNext,
                               ),
                               IconButton(
                                 icon: Icon(
                                   Icons.repeat,
                                   color: player.repeatMode != LoopStyle.off
-                                      ? MelodiTheme.primaryGreen
-                                      : MelodiTheme.onSurfaceVariant,
+                                      ? Theme.of(context).colorScheme.onSurface
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
                                 ),
-                                iconSize: 28,
+                                iconSize: 22,
                                 onPressed: player.cycleRepeatMode,
                               ),
                             ],
@@ -432,9 +433,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
                     ),
                   ],
                 ),
-              ),
-            ),
-          );
+              );
         },
       ),
     );

@@ -1,8 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:shimmer/shimmer.dart';
-import '../core/constants.dart';
 
 class MelodiCacheImage extends StatelessWidget {
   final String? imageUrl;
@@ -26,32 +24,21 @@ class MelodiCacheImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageBytes != null) {
-      return _buildFromBytes();
-    }
-    if (imageUrl != null && imageUrl!.isNotEmpty) {
-      return _buildFromNetwork();
-    }
-    return _buildPlaceholder();
+    if (imageBytes != null) return _buildFromBytes(context);
+    if (imageUrl != null && imageUrl!.isNotEmpty) return _buildFromNetwork(context);
+    return _buildPlaceholder(context);
   }
 
-  Widget _buildFromBytes() {
+  Widget _buildFromBytes(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: Image.memory(
-        imageBytes!,
-        width: width,
-        height: height,
-        fit: fit,
-        gaplessPlayback: true,
-        errorBuilder: (_, __, ___) => _buildPlaceholder(),
-      ),
+      borderRadius: BorderRadius.circular(borderRadius.clamp(0, 12)),
+      child: Image.memory(imageBytes!, width: width, height: height, fit: fit, gaplessPlayback: true, errorBuilder: (_, __, ___) => _buildPlaceholder(context)),
     );
   }
 
-  Widget _buildFromNetwork() {
+  Widget _buildFromNetwork(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
+      borderRadius: BorderRadius.circular(borderRadius.clamp(0, 12)),
       child: CachedNetworkImage(
         imageUrl: imageUrl!,
         width: width,
@@ -59,41 +46,24 @@ class MelodiCacheImage extends StatelessWidget {
         fit: fit,
         memCacheWidth: width != null ? (width! * 2).toInt() : null,
         memCacheHeight: height != null ? (height! * 2).toInt() : null,
-        placeholder: (_, __) =>
-            showShimmer ? _buildShimmer() : _buildPlaceholder(),
-        errorWidget: (_, __, ___) => _buildPlaceholder(),
+        placeholder: (_, __) => showShimmer ? _buildShimmer(context) : _buildPlaceholder(context),
+        errorWidget: (_, __, ___) => _buildPlaceholder(context),
       ),
     );
   }
 
-  Widget _buildShimmer() {
-    return Shimmer.fromColors(
-      baseColor: MelodiTheme.surfaceBright.withOpacity(0.5),
-      highlightColor: MelodiTheme.onSurfaceVariant.withOpacity(0.1),
-      child: Container(
-        width: width,
-        height: height,
-        decoration: BoxDecoration(
-          color: MelodiTheme.surfaceBright,
-          borderRadius: BorderRadius.circular(borderRadius),
-        ),
-      ),
-    );
+  Widget _buildShimmer(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(width: width, height: height, color: scheme.surfaceContainerHighest);
   }
 
-  Widget _buildPlaceholder() {
+  Widget _buildPlaceholder(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       width: width,
       height: height,
-      decoration: BoxDecoration(
-        color: MelodiTheme.containerLow,
-        borderRadius: BorderRadius.circular(borderRadius),
-      ),
-      child: Icon(
-        Icons.music_note_rounded,
-        size: (width ?? 48) * 0.5,
-        color: MelodiTheme.onSurfaceVariant,
-      ),
+      decoration: BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(borderRadius.clamp(0, 12)), border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5))),
+      child: Icon(Icons.music_note_rounded, size: (width ?? 48) * 0.4, color: scheme.onSurfaceVariant),
     );
   }
 }

@@ -20,8 +20,9 @@ class WrongMatchButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return IconButton(
-      icon: Icon(Icons.flag_outlined, size: 18, color: MelodiTheme.textMuted),
+      icon: Icon(Icons.flag_outlined, size: 18, color: scheme.onSurfaceVariant),
       tooltip: AppLocale.tr('wrong_match'),
       onPressed: () => _showAlternatives(context),
       padding: EdgeInsets.zero,
@@ -31,138 +32,67 @@ class WrongMatchButton extends StatelessWidget {
 
   Future<void> _showAlternatives(BuildContext context) async {
     final service = WrongMatchService();
-    if (currentYtVideoId != null) {
-      await service.flagWrongMatch(spotifyTrackId, currentYtVideoId!);
-    }
-
+    if (currentYtVideoId != null) await service.flagWrongMatch(spotifyTrackId, currentYtVideoId!);
     final alternatives = await service.getAlternatives(title, artist);
-
     if (!context.mounted) return;
-
+    final scheme = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
-      backgroundColor: MelodiTheme.containerLow,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: scheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(12)), side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5))),
       builder: (ctx) {
+        final s = Theme.of(ctx).colorScheme;
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: MelodiTheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Text(
-                  AppLocale.tr('find_alternative'),
-                  style: TextStyle(
-                    color: MelodiTheme.onSurface,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+              Container(margin: const EdgeInsets.symmetric(vertical: 12), width: 32, height: 3, decoration: BoxDecoration(color: s.outlineVariant, borderRadius: BorderRadius.circular(2))),
+              Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child: Text(AppLocale.tr('find_alternative'), style: Theme.of(ctx).textTheme.titleMedium?.copyWith(color: s.onSurface, fontWeight: FontWeight.w600))),
               const SizedBox(height: 4),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  '$title - $artist',
-                  style: TextStyle(
-                      color: MelodiTheme.onSurfaceVariant, fontSize: 13),
-                  textAlign: TextAlign.center,
-                ),
-              ),
+              Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text('$title - $artist', style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: s.onSurfaceVariant), textAlign: TextAlign.center)),
               const SizedBox(height: 12),
-              Divider(color: MelodiTheme.outlineVariant, height: 1),
+              Divider(color: s.outlineVariant.withValues(alpha: 0.5), height: 1),
               if (alternatives.isEmpty)
                 Padding(
                   padding: const EdgeInsets.all(32),
-                  child: Column(
-                    children: [
-                      Icon(Icons.search_off_rounded,
-                          size: 48, color: MelodiTheme.textMuted),
-                      const SizedBox(height: 12),
-                      Text(
-                        AppLocale.tr('no_alternatives'),
-                        style: TextStyle(color: MelodiTheme.onSurfaceVariant),
-                      ),
-                    ],
-                  ),
+                  child: Column(children: [Icon(Icons.search_off_rounded, size: 40, color: s.onSurfaceVariant), const SizedBox(height: 12), Text(AppLocale.tr('no_alternatives'), style: TextStyle(color: s.onSurfaceVariant, fontSize: 13))]),
                 )
               else
                 ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(ctx).size.height * 0.5,
-                  ),
+                  constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.5),
                   child: ListView.builder(
                     shrinkWrap: true,
                     itemCount: alternatives.length,
                     itemBuilder: (context, index) {
                       final alt = alternatives[index];
+                      final sc = Theme.of(context).colorScheme;
                       return ListTile(
                         leading: ClipRRect(
                           borderRadius: BorderRadius.circular(6),
                           child: Container(
                             width: 48,
                             height: 48,
-                            color: MelodiTheme.containerLow,
+                            color: sc.surfaceContainerHighest,
                             child: alt.thumbnailUrl != null
-                                ? Image.network(alt.thumbnailUrl!,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Icon(
-                                        Icons.music_note_rounded,
-                                        color: MelodiTheme.textMuted))
-                                : Icon(Icons.music_note_rounded,
-                                    color: MelodiTheme.textMuted),
+                                ? Image.network(alt.thumbnailUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.music_note_rounded, color: sc.onSurfaceVariant))
+                                : Icon(Icons.music_note_rounded, color: sc.onSurfaceVariant),
                           ),
                         ),
-                        title: Text(
-                          alt.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: MelodiTheme.onSurface,
-                            fontSize: 14,
-                          ),
-                        ),
-                        subtitle: Text(
-                          alt.artist,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: MelodiTheme.onSurfaceVariant,
-                            fontSize: 14,
-                          ),
-                        ),
+                        title: Text(alt.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: sc.onSurface, fontSize: 13)),
+                        subtitle: Text(alt.artist, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: sc.onSurfaceVariant)),
                         onTap: () async {
-                          await service.resolveAndUpdate(
-                              spotifyTrackId, alt.id);
+                          await service.resolveAndUpdate(spotifyTrackId, alt.id);
                           if (ctx.mounted) {
                             Navigator.pop(ctx);
                             onResolved?.call();
-                            ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                    '${AppLocale.tr('wrong_match')} → ${alt.title}'),
-                                backgroundColor: MelodiTheme.primaryGreen,
-                              ),
-                            );
+                            ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('${AppLocale.tr('wrong_match')} → ${alt.title}')));
                           }
                         },
                       );
                     },
                   ),
                 ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
             ],
           ),
         );

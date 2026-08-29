@@ -22,42 +22,23 @@ class _CrossfadeSliderState extends State<CrossfadeSlider> {
 
   Future<void> _load() async {
     final d = await _service.getCrossfadeDuration();
-    if (mounted) {
-      setState(() {
-        _crossfade = d.inSeconds.toDouble();
-        _loaded = true;
-      });
-    }
+    if (mounted) setState(() {_crossfade = d.inSeconds.toDouble(); _loaded = true;});
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_loaded) {
-      return const SizedBox(
-        height: 60,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      );
-    }
-
+    final scheme = Theme.of(context).colorScheme;
+    if (!_loaded) return const SizedBox(height: 60, child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          '${AppLocale.tr('crossfade')}: ${_crossfade.toInt()}s',
-          style: TextStyle(
-            color: MelodiTheme.onSurface,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
+        Text('${AppLocale.tr('crossfade')}: ${_crossfade.toInt()}s', style: Theme.of(context).textTheme.titleSmall?.copyWith(color: scheme.onSurface, fontWeight: FontWeight.w600, fontSize: 14)),
+        const SizedBox(height: 4),
         Slider(
           value: _crossfade,
           min: 0,
           max: 12,
           divisions: 12,
-          activeColor: MelodiTheme.primaryGreen,
-          inactiveColor: MelodiTheme.outlineVariant,
           onChanged: (v) {
             setState(() => _crossfade = v);
             _service.setCrossfadeDuration(Duration(seconds: v.toInt()));
@@ -68,24 +49,13 @@ class _CrossfadeSliderState extends State<CrossfadeSlider> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('0s',
-                  style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
-              Text('12s',
-                  style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
+              Text('0s', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
+              Text('12s', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
             ],
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          _crossfade == 0
-              ? AppLocale.tr('off')
-              : '${_crossfade.toInt()} ${AppLocale.tr('seconds')}',
-          style: TextStyle(
-            color: MelodiTheme.primaryGreen,
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+        Text(_crossfade == 0 ? AppLocale.tr('off') : '${_crossfade.toInt()} ${AppLocale.tr('seconds')}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
       ],
     );
   }

@@ -40,7 +40,7 @@ class HomeContent extends StatelessWidget {
         if (playlists.playlists.isNotEmpty)
           HomePlaylistRail(playlists: playlists, library: library),
         _RecentlyAdded(library: library),
-        const SizedBox(height: 176),
+        const SizedBox(height: 120),
       ],
     );
   }
@@ -60,7 +60,6 @@ class _QuickActions extends StatelessWidget {
     final actions = [
       _ActionData(
         icon: Icons.favorite_rounded,
-        color: const Color(0xFFFF4D78),
         value: '${library.favorites.length}',
         label: 'Favori',
         onTap: () => _open(
@@ -70,7 +69,6 @@ class _QuickActions extends StatelessWidget {
       ),
       _ActionData(
         icon: Icons.download_done_rounded,
-        color: const Color(0xFF32D583),
         value:
             '${library.songs.where(LibrarySourceFilter.device.matches).length}',
         label: 'Aygıtta',
@@ -81,7 +79,6 @@ class _QuickActions extends StatelessWidget {
       ),
       _ActionData(
         icon: Icons.queue_music_rounded,
-        color: const Color(0xFF7C9DFF),
         value: '$playlistCount',
         label: 'Liste',
         onTap: () => _open(
@@ -91,7 +88,6 @@ class _QuickActions extends StatelessWidget {
       ),
       _ActionData(
         icon: Icons.schedule_rounded,
-        color: const Color(0xFFFFB547),
         value: totalMinutes >= 60
             ? '${totalMinutes ~/ 60} sa'
             : '$totalMinutes dk',
@@ -125,13 +121,11 @@ class _QuickActions extends StatelessWidget {
 class _ActionData {
   const _ActionData({
     required this.icon,
-    required this.color,
     required this.value,
     required this.label,
     required this.onTap,
   });
   final IconData icon;
-  final Color color;
   final String value;
   final String label;
   final VoidCallback onTap;
@@ -144,21 +138,25 @@ class _ActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return MelodiPanel(
-      padding: const EdgeInsets.all(13),
+      padding: const EdgeInsets.all(12),
       onTap: data.onTap,
       child: Row(
         children: [
           Container(
-            width: 42,
-            height: 42,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
-              color: data.color .withOpacity(0.14),
-              borderRadius: BorderRadius.circular(14),
+              color: scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: scheme.outlineVariant.withValues(alpha: 0.5),
+              ),
             ),
-            child: Icon(data.icon, color: data.color, size: 21),
+            child: Icon(data.icon, color: scheme.onSurfaceVariant, size: 18),
           ),
-          const SizedBox(width: 11),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -168,14 +166,14 @@ class _ActionCard extends StatelessWidget {
                   data.value,
                   maxLines: 1,
                   style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.3,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
                   ),
                 ),
                 Text(
                   data.label,
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: scheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -193,6 +191,7 @@ class _QuickPicks extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final songs = (library.recent.isNotEmpty
             ? library.recent
             : library.mostPlayed.isNotEmpty
@@ -216,8 +215,8 @@ class _QuickPicks extends StatelessWidget {
         itemBuilder: (context, index) {
           final song = songs[index];
           return Material(
-            color: Theme.of(context).colorScheme.surfaceContainer,
-            borderRadius: BorderRadius.circular(15),
+            color: scheme.surfaceContainer,
+            borderRadius: BorderRadius.circular(10),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: () => context.read<PlayerProvider>().playSong(song),
@@ -226,8 +225,8 @@ class _QuickPicks extends StatelessWidget {
                   ArtworkImage(
                     imageBytes: song.albumArt,
                     title: song.title,
-                    size: 62,
-                    borderRadius: 0,
+                    size: 56,
+                    borderRadius: 8,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -235,8 +234,8 @@ class _QuickPicks extends StatelessWidget {
                       song.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
                     ),
                   ),
@@ -268,29 +267,33 @@ class _RecentlyAdded extends StatelessWidget {
           final song = items[index];
           return ListTile(
             contentPadding: EdgeInsets.zero,
-            minVerticalPadding: 5,
+            minVerticalPadding: 4,
             leading: ArtworkImage(
               imageBytes: song.albumArt,
               title: song.title,
-              size: 52,
-              borderRadius: 13,
+              size: 48,
+              borderRadius: 8,
             ),
             title: Text(
               song.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
             ),
             subtitle: Text(
               '${song.artist} · ${song.album}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             trailing: IconButton(
               tooltip: 'Oynat',
               onPressed: () =>
                   context.read<PlayerProvider>().playFromQueue(items, index),
-              icon: const Icon(Icons.play_arrow_rounded),
+              icon: const Icon(Icons.play_arrow_rounded, size: 20),
             ),
             onTap: () =>
                 context.read<PlayerProvider>().playFromQueue(items, index),

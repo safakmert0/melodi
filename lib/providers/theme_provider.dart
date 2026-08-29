@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../services/database_service.dart';
+import '../theme/app_theme.dart' as spotiflac_theme;
 
 class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
   ThemeProvider() {
@@ -230,8 +231,9 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  ThemeData get lightTheme => _buildLightTheme();
-  ThemeData get darkTheme => _buildDarkTheme();
+  // SpotiFLAC 1:1 theming — delegate to AppTheme so the design is identical.
+  ThemeData get lightTheme => spotiflac_theme.AppTheme.light(seedColor: _accentColor);
+  ThemeData get darkTheme => spotiflac_theme.AppTheme.dark(seedColor: _accentColor, isAmoled: false);
 
   ThemeData get currentTheme {
     switch (_themeMode) {
@@ -259,27 +261,8 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
   Color _darkTextPrimary() => _customTextPrimary ?? Colors.white;
   Color _darkTextSecondary() => _customTextSecondary ?? const Color(0xFFB3B3B3);
 
-  ThemeData _buildLightTheme() {
-    return _buildTheme(
-      brightness: Brightness.light,
-      background: _bg(),
-      surface: _surface(),
-      card: _card(),
-      textPrimary: _textPrimary(),
-      textSecondary: _textSecondary(),
-    );
-  }
-
-  ThemeData _buildDarkTheme() {
-    return _buildTheme(
-      brightness: Brightness.dark,
-      background: _darkBg(),
-      surface: _darkSurface(),
-      card: _darkCard(),
-      textPrimary: _darkTextPrimary(),
-      textSecondary: _darkTextSecondary(),
-    );
-  }
+  ThemeData _buildLightTheme() => lightTheme;
+  ThemeData _buildDarkTheme() => darkTheme;
 
   ThemeData _buildTheme({
     required Brightness brightness,

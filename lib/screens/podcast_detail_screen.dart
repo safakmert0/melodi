@@ -114,47 +114,32 @@ class _PodcastDetailScreenState extends State<PodcastDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final feed = widget.feed;
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: MelodiTheme.background,
+      backgroundColor: colors.surface,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 220,
+            expandedHeight: 180,
             pinned: true,
-            backgroundColor: MelodiTheme.containerLow,
-            foregroundColor: MelodiTheme.onSurface,
+            backgroundColor: colors.surface,
+            foregroundColor: colors.onSurface,
             elevation: 0,
+            scrolledUnderElevation: 0,
+            surfaceTintColor: Colors.transparent,
             flexibleSpace: FlexibleSpaceBar(
               title: Text(feed.title,
-                  style: const TextStyle(fontSize: 16),
+                  style: const TextStyle(fontSize: 15),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis),
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (feed.imageUrl != null && feed.imageUrl!.isNotEmpty)
-                    Image.network(
+              background: feed.imageUrl != null && feed.imageUrl!.isNotEmpty
+                  ? Image.network(
                       feed.imageUrl!,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) =>
-                          Container(color: MelodiTheme.containerLow),
+                          Container(color: colors.surfaceContainer),
                     )
-                  else
-                    Container(color: MelodiTheme.containerLow),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          MelodiTheme.background.withOpacity(0.9),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                  : Container(color: colors.surfaceContainer),
             ),
           ),
           SliverToBoxAdapter(
@@ -214,9 +199,7 @@ class _PodcastDetailScreenState extends State<PodcastDetailScreen> {
                     if (isDown) 'Downloaded',
                   ].join(' · '),
                   style: TextStyle(
-                    color: isDown
-                        ? MelodiTheme.primaryGreen
-                        : MelodiTheme.textMuted,
+                    color: colors.onSurfaceVariant,
                     fontSize: 12,
                   ),
                 ),
@@ -226,30 +209,30 @@ class _PodcastDetailScreenState extends State<PodcastDetailScreen> {
                     IconButton(
                       tooltip: 'Play',
                       icon: Icon(Icons.play_circle_fill_rounded,
-                          color: MelodiTheme.primaryGreen, size: 30),
+                          color: colors.onSurface, size: 28),
                       onPressed: () => _playEpisode(ep),
                     ),
                     if (isDl)
                       SizedBox(
-                        width: 22,
-                        height: 22,
+                        width: 20,
+                        height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: MelodiTheme.primaryGreen,
+                          color: colors.onSurfaceVariant,
                         ),
                       )
                     else if (isDown)
                       IconButton(
                         tooltip: 'Re-download',
                         icon: Icon(Icons.check_circle_rounded,
-                            color: MelodiTheme.primaryGreen, size: 22),
+                            color: colors.onSurfaceVariant, size: 20),
                         onPressed: () => _downloadEpisode(ep),
                       )
                     else
                       IconButton(
                         tooltip: 'Download',
                         icon: Icon(Icons.download_rounded,
-                            color: MelodiTheme.onSurfaceVariant, size: 22),
+                            color: colors.onSurfaceVariant, size: 20),
                         onPressed: () => _downloadEpisode(ep),
                       ),
                   ],

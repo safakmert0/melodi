@@ -71,40 +71,19 @@ class _SearchScreenState extends State<SearchScreen> {
           slivers: [
             SliverAppBar(
               pinned: true,
-              stretch: true,
               elevation: 0,
               scrolledUnderElevation: 0,
-              toolbarHeight: 64,
-              expandedHeight: 146,
-              backgroundColor:
-                  theme.scaffoldBackgroundColor .withOpacity(0.94),
+              backgroundColor: theme.colorScheme.surface,
               surfaceTintColor: Colors.transparent,
+              toolbarHeight: 56,
               title: Text(
-                'MELODI SEARCH',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.8,
-                ),
-              ),
-              flexibleSpace: FlexibleSpaceBar(
-                collapseMode: CollapseMode.parallax,
-                background: Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 78, 18, 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Keşfet.', style: theme.textTheme.headlineLarge),
-                      const SizedBox(height: 3),
-                      Text(
-                        'Aygıtında ve tüm kaynaklarda tek arama.',
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
+                'Ara',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               actions: [
-                IconButton.filledTonal(
+                IconButton(
                   tooltip: 'Müzik kaynakları',
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
@@ -113,7 +92,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                   icon: const Icon(Icons.hub_rounded),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
               ],
             ),
             SliverToBoxAdapter(child: _searchField()),
@@ -162,15 +141,15 @@ class _SearchScreenState extends State<SearchScreen> {
         ],
         elevation: const WidgetStatePropertyAll(0),
         backgroundColor: WidgetStatePropertyAll(
-          theme.colorScheme.surfaceContainerHighest .withOpacity(0.72),
+          theme.colorScheme.surfaceContainerLow,
         ),
         side: WidgetStatePropertyAll(
           BorderSide(
-            color: theme.colorScheme.onSurface .withOpacity(0.07),
+            color: theme.colorScheme.outlineVariant,
           ),
         ),
         shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
         onChanged: (query) {
           setState(() => _selectedSource = null);
@@ -271,23 +250,24 @@ class _ResultHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 22, 16, 10),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
       child: Row(
         children: [
-          Icon(icon, size: 19, color: Theme.of(context).colorScheme.primary),
+          Icon(icon, size: 18, color: scheme.onSurfaceVariant),
           const SizedBox(width: 8),
           Text(
             title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
           ),
           const Spacer(),
           Text(
             '$count sonuç',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
                 ),
           ),
         ],
@@ -365,16 +345,19 @@ class _RecentSearches extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Text(
+              Text(
                 'Son aramalar',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const Spacer(),
               TextButton(
@@ -385,6 +368,7 @@ class _RecentSearches extends StatelessWidget {
           ),
           Wrap(
             spacing: 8,
+            runSpacing: 4,
             children: searches
                 .take(8)
                 .map((search) => InputChip(
@@ -406,30 +390,33 @@ class _ArtistRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final artists = library.artists.take(12).toList();
     if (artists.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 0, 0),
+      padding: const EdgeInsets.fromLTRB(16, 20, 0, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Sanatçılarından başla',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           SizedBox(
-            height: 126,
+            height: 110,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: artists.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 14),
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
               itemBuilder: (context, index) {
                 final artist = artists[index];
                 return SizedBox(
-                  width: 88,
+                  width: 72,
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(44),
+                    borderRadius: BorderRadius.circular(10),
                     onTap: () {
                       final songs = library.songs
                           .where((song) => song.artist == artist.name)
@@ -440,20 +427,33 @@ class _ArtistRail extends StatelessWidget {
                     },
                     child: Column(
                       children: [
-                        CircleAvatar(
-                          radius: 42,
-                          foregroundImage: artist.image == null
-                              ? null
-                              : MemoryImage(artist.image!),
-                          child: const Icon(Icons.person_rounded, size: 34),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: SizedBox(
+                            width: 56,
+                            height: 56,
+                            child: artist.image == null
+                                ? ColoredBox(
+                                    color: theme.colorScheme.surfaceContainerHighest,
+                                    child: Icon(
+                                      Icons.person_rounded,
+                                      size: 28,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  )
+                                : Image.memory(
+                                    artist.image!,
+                                    fit: BoxFit.cover,
+                                  ),
+                          ),
                         ),
-                        const SizedBox(height: 7),
+                        const SizedBox(height: 6),
                         Text(
                           artist.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.labelMedium,
+                          style: theme.textTheme.labelSmall,
                         ),
                       ],
                     ),
@@ -474,42 +474,35 @@ class _GenreGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final genres = library.genres.take(8).toList();
     if (genres.isEmpty) return const SizedBox.shrink();
-    const colors = [
-      Color(0xFF8D67AB),
-      Color(0xFFE8115B),
-      Color(0xFF1E3264),
-      Color(0xFF148A68),
-      Color(0xFFBC462B),
-      Color(0xFF7358FF),
-      Color(0xFF477D95),
-      Color(0xFFB06239),
-    ];
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 28, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Türlere göz at',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 1.75,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 1.9,
             ),
             itemCount: genres.length,
             itemBuilder: (context, index) {
               final genre = genres[index];
               return InkWell(
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(10),
                 onTap: () {
                   final songs = library.songs
                       .where((song) => genre.songIds.contains(song.id))
@@ -519,10 +512,13 @@ class _GenreGrid extends StatelessWidget {
                   }
                 },
                 child: Ink(
-                  padding: const EdgeInsets.all(15),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: colors[index % colors.length],
-                    borderRadius: BorderRadius.circular(18),
+                    color: theme.colorScheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: theme.colorScheme.outlineVariant,
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -531,18 +527,15 @@ class _GenreGrid extends StatelessWidget {
                         genre.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       const Spacer(),
                       Text(
                         '${genre.songCount} şarkı',
-                        style: TextStyle(
-                          color: Colors.white .withOpacity(0.72),
-                          fontSize: 11,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],

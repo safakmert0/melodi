@@ -33,31 +33,31 @@ class AppTokens extends ThemeExtension<AppTokens> {
     required this.motionSlow,
   });
 
-  /// The values every theme in the app uses.
+  /// Sade tokenler — LA Player gibi küçük radius, az boşluk, hızlı motion
   static const AppTokens standard = AppTokens(
-    radiusBadge: 6,
-    radiusThumb: 8,
-    radiusCover: 12,
-    radiusControl: 16,
-    radiusCard: 20,
-    radiusSheet: 28,
+    radiusBadge: 4,
+    radiusThumb: 6,
+    radiusCover: 8,
+    radiusControl: 10,
+    radiusCard: 12,
+    radiusSheet: 16,
     gapXs: 4,
     gapSm: 8,
     gapMd: 12,
     gapLg: 16,
-    gapXl: 24,
+    gapXl: 20,
     coverMini: 44,
     coverCompact: 48,
     coverList: 56,
     badgeFontSize: 11,
     badgePadding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
     minTouchTarget: 48,
-    headerExpandedHeight: 120,
-    headerCollapsedTitleSize: 20,
-    headerExpandedTitleSize: 28,
-    motionFast: Duration(milliseconds: 150),
-    motionMedium: Duration(milliseconds: 250),
-    motionSlow: Duration(milliseconds: 400),
+    headerExpandedHeight: 100,
+    headerCollapsedTitleSize: 18,
+    headerExpandedTitleSize: 24,
+    motionFast: Duration(milliseconds: 120),
+    motionMedium: Duration(milliseconds: 200),
+    motionSlow: Duration(milliseconds: 300),
   );
 
   final double radiusBadge;

@@ -66,7 +66,7 @@ class _LyricsSheetState extends State<LyricsSheet> {
     final offset = (_currentLineIndex * 56.0) - 100;
     _scrollController.animateTo(
       offset.clamp(0.0, _scrollController.position.maxScrollExtent),
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 250),
       curve: Curves.easeOut,
     );
   }
@@ -78,16 +78,12 @@ class _LyricsSheetState extends State<LyricsSheet> {
       if (mounted) setState(() => _loading = false);
       return;
     }
-
     String? lyricsText;
     String? syncedText;
-
     final cachedLyrics = await MetadataService.getLyrics(song.id);
     final cachedSynced = await MetadataService.getSyncedLyrics(song.id);
-
     lyricsText = cachedLyrics;
     syncedText = cachedSynced;
-
     if (song.lyrics != null && song.lyrics!.isNotEmpty) {
       lyricsText ??= song.lyrics;
       final parsed = LrcParser.parse(song.lyrics!);
@@ -95,7 +91,6 @@ class _LyricsSheetState extends State<LyricsSheet> {
         syncedText = song.lyrics;
       }
     }
-
     if (mounted) {
       setState(() {
         _lyrics = lyricsText;
@@ -110,33 +105,25 @@ class _LyricsSheetState extends State<LyricsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       height: MediaQuery.of(context).size.height * 0.65,
       decoration: BoxDecoration(
-        color: MelodiTheme.containerLow,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        color: scheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+        border: Border(top: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5))),
       ),
       child: Column(
         children: [
           Container(
             margin: const EdgeInsets.symmetric(vertical: 12),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: MelodiTheme.outlineVariant,
-              borderRadius: BorderRadius.circular(2),
-            ),
+            width: 32,
+            height: 3,
+            decoration: BoxDecoration(color: scheme.outlineVariant, borderRadius: BorderRadius.circular(2)),
           ),
-          Text(
-            AppLocale.tr('lyrics'),
-            style: TextStyle(
-              color: MelodiTheme.onSurface,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(AppLocale.tr('lyrics'), style: Theme.of(context).textTheme.titleMedium?.copyWith(color: scheme.onSurface, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          Divider(color: MelodiTheme.outlineVariant, height: 1),
+          Divider(color: scheme.outlineVariant.withValues(alpha: 0.5), height: 1),
           Expanded(child: _buildContent()),
         ],
       ),
@@ -144,63 +131,46 @@ class _LyricsSheetState extends State<LyricsSheet> {
   }
 
   Widget _buildContent() {
+    final scheme = Theme.of(context).colorScheme;
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
     }
-
     if (_lyricsLines.isNotEmpty) {
       return _buildSyncedLyrics();
     }
-
     if (_lyrics != null && _lyrics!.isNotEmpty) {
       return _buildPlainLyrics();
     }
-
-    return Center(
-      child: Text(
-        AppLocale.tr('no_lyrics'),
-        style: TextStyle(
-          color: MelodiTheme.onSurfaceVariant,
-          fontSize: 16,
-        ),
-      ),
-    );
+    return Center(child: Text(AppLocale.tr('no_lyrics'), style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 14)));
   }
 
   Widget _buildSyncedLyrics() {
+    final scheme = Theme.of(context).colorScheme;
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.symmetric(vertical: 24),
+      padding: const EdgeInsets.symmetric(vertical: 20),
       itemCount: _lyricsLines.length,
       itemBuilder: (context, index) {
         final line = _lyricsLines[index];
         final isCurrent = index == _currentLineIndex;
         final isPast = index < _currentLineIndex;
-
-        return GestureDetector(
+        return InkWell(
           onTap: () {
             final player = context.read<PlayerProvider>();
             player.seek(Duration(milliseconds: line.timestampMs));
           },
-          child: AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 200),
-            style: TextStyle(
-              color: isCurrent
-                  ? MelodiTheme.primaryGreen
-                  : isPast
-                      ? MelodiTheme.onSurfaceVariant
-                      : MelodiTheme.textMuted,
-              fontSize: isCurrent ? 18 : 14,
-              fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 24),
-              child: Text(
-                line.text,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 24),
+            child: Text(
+              line.text,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: isCurrent ? scheme.onSurface : isPast ? scheme.onSurfaceVariant : scheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    fontSize: isCurrent ? 15 : 13,
+                    fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
+                  ),
             ),
           ),
         );
@@ -209,21 +179,15 @@ class _LyricsSheetState extends State<LyricsSheet> {
   }
 
   Widget _buildPlainLyrics() {
+    final scheme = Theme.of(context).colorScheme;
     final lines = _lyrics!.split('\n');
     return ListView.builder(
       itemCount: lines.length,
-      padding: const EdgeInsets.symmetric(vertical: 24),
+      padding: const EdgeInsets.symmetric(vertical: 20),
       itemBuilder: (context, index) {
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 24),
-          child: Text(
-            lines[index].trim(),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: MelodiTheme.onSurfaceVariant,
-              fontSize: 14,
-            ),
-          ),
+          child: Text(lines[index].trim(), textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
         );
       },
     );

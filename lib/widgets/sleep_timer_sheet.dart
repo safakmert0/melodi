@@ -20,10 +20,7 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
   void initState() {
     super.initState();
     _service.restoreSleepTimer();
-    _state = SleepTimerState(
-      remainingSeconds: _service.getRemainingTime().inSeconds,
-      isActive: _service.isSleepTimerActive,
-    );
+    _state = SleepTimerState(remainingSeconds: _service.getRemainingTime().inSeconds, isActive: _service.isSleepTimerActive);
     _sub = _service.sleepTimerStream.listen((s) {
       if (mounted) setState(() => _state = s);
     });
@@ -38,73 +35,35 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final isActive = _state?.isActive ?? false;
     final remaining = _state?.remainingSeconds ?? 0;
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: MelodiTheme.outlineVariant,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
+            Container(width: 32, height: 3, decoration: BoxDecoration(color: scheme.outlineVariant, borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 16),
-            Icon(Icons.timer_outlined,
-                size: 48,
-                color: isActive
-                    ? MelodiTheme.primaryGreen
-                    : MelodiTheme.onSurfaceVariant),
-            const SizedBox(height: 12),
-            Text(
-              AppLocale.tr('sleep_timer'),
-              style: TextStyle(
-                color: MelodiTheme.onSurface,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Icon(Icons.timer_outlined, size: 36, color: scheme.onSurfaceVariant),
+            const SizedBox(height: 8),
+            Text(AppLocale.tr('sleep_timer'), style: Theme.of(context).textTheme.titleMedium?.copyWith(color: scheme.onSurface, fontWeight: FontWeight.w600)),
             if (isActive) ...[
               const SizedBox(height: 16),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      MelodiTheme.primaryGreen.withOpacity(0.2),
-                      MelodiTheme.primaryGreen.withOpacity(0.05),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      color: MelodiTheme.primaryGreen.withOpacity(0.3)),
+                  color: scheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
                 ),
                 child: Column(
                   children: [
-                    Text(
-                      AppLocale.tr('timer_active'),
-                      style: TextStyle(
-                        color: MelodiTheme.primaryGreen,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    Text(AppLocale.tr('timer_active'), style: Theme.of(context).textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 4),
-                    Text(
-                      _formatDuration(remaining),
-                      style: TextStyle(
-                        color: MelodiTheme.onSurface,
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Text(_formatDuration(remaining), style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: scheme.onSurface, fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
@@ -119,21 +78,18 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                   icon: const Icon(Icons.close, size: 18),
                   label: Text(AppLocale.tr('cancel_timer')),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: MelodiTheme.errorRed,
-                    side: BorderSide(
-                        color: MelodiTheme.errorRed.withOpacity(0.5)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    foregroundColor: scheme.error,
+                    side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
               ),
             ] else ...[
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               Wrap(
-                spacing: 10,
-                runSpacing: 10,
+                spacing: 8,
+                runSpacing: 8,
                 children: [15, 30, 45, 60].map((minutes) {
                   return _QuickButton(
                     label: '$minutes ${AppLocale.tr('minutes')}',
@@ -151,23 +107,19 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                     child: TextField(
                       controller: _customController,
                       keyboardType: TextInputType.number,
+                      style: TextStyle(color: scheme.onSurface, fontSize: 14),
                       decoration: InputDecoration(
                         hintText: AppLocale.tr('minutes'),
-                        hintStyle: TextStyle(color: MelodiTheme.textMuted),
+                        hintStyle: TextStyle(color: scheme.onSurfaceVariant),
                         filled: true,
-                        fillColor: MelodiTheme.containerLow,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
+                        fillColor: scheme.surfaceContainerHighest,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5))),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5))),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
-                      style:
-                          TextStyle(color: MelodiTheme.onSurface, fontSize: 15),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   FilledButton(
                     onPressed: () {
                       final text = _customController.text.trim();
@@ -178,20 +130,16 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
                       }
                     },
                     style: FilledButton.styleFrom(
-                      backgroundColor: MelodiTheme.primaryGreen,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      backgroundColor: scheme.onSurface,
+                      foregroundColor: scheme.surface,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     child: Text(AppLocale.tr('apply')),
                   ),
                 ],
               ),
             ],
-            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -203,9 +151,7 @@ class _SleepTimerSheetState extends State<SleepTimerSheet> {
     final h = d.inHours;
     final m = d.inMinutes.remainder(60);
     final s = d.inSeconds.remainder(60);
-    if (h > 0) {
-      return '$h:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
-    }
+    if (h > 0) return '$h:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
     return '$m:${s.toString().padLeft(2, '0')}';
   }
 }
@@ -218,32 +164,18 @@ class _QuickButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              MelodiTheme.primaryGreen.withOpacity(0.15),
-              MelodiTheme.primaryGreen.withOpacity(0.05),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: MelodiTheme.primaryGreen.withOpacity(0.25),
-          ),
+          color: scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: MelodiTheme.primaryGreen,
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        child: Text(label, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w500)),
       ),
     );
   }

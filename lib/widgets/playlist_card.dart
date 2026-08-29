@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../models/playlist_model.dart';
 import '../core/constants.dart';
 
@@ -20,11 +19,12 @@ class PlaylistCard extends StatelessWidget {
   });
 
   void _showContextMenu(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
-      backgroundColor: MelodiTheme.containerLow,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      backgroundColor: scheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
       ),
       builder: (ctx) => SafeArea(
         child: Column(
@@ -32,43 +32,38 @@ class PlaylistCard extends StatelessWidget {
           children: [
             Container(
               margin: const EdgeInsets.symmetric(vertical: 12),
-              width: 40,
-              height: 4,
+              width: 32,
+              height: 3,
               decoration: BoxDecoration(
-                color: MelodiTheme.outlineVariant,
+                color: scheme.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             ListTile(
-              leading: Icon(Icons.add_circle_outline,
-                  color: MelodiTheme.onSurfaceVariant),
-              title: Text(AppLocale.tr('add_songs'),
-                  style: TextStyle(color: MelodiTheme.onSurface)),
+              leading: Icon(Icons.add_circle_outline, color: scheme.onSurfaceVariant, size: 20),
+              title: Text(AppLocale.tr('add_songs'), style: TextStyle(color: scheme.onSurface, fontSize: 14)),
               onTap: () {
                 Navigator.pop(ctx);
                 onAddSongs?.call();
               },
             ),
             ListTile(
-              leading: Icon(Icons.edit_outlined,
-                  color: MelodiTheme.onSurfaceVariant),
-              title: Text(AppLocale.tr('rename_playlist'),
-                  style: TextStyle(color: MelodiTheme.onSurface)),
+              leading: Icon(Icons.edit_outlined, color: scheme.onSurfaceVariant, size: 20),
+              title: Text(AppLocale.tr('rename_playlist'), style: TextStyle(color: scheme.onSurface, fontSize: 14)),
               onTap: () {
                 Navigator.pop(ctx);
                 onEdit?.call();
               },
             ),
             ListTile(
-              leading: Icon(Icons.delete_outline, color: MelodiTheme.errorRed),
-              title: Text(AppLocale.tr('delete_playlist'),
-                  style: TextStyle(color: MelodiTheme.errorRed)),
+              leading: Icon(Icons.delete_outline, color: scheme.error, size: 20),
+              title: Text(AppLocale.tr('delete_playlist'), style: TextStyle(color: scheme.error, fontSize: 14)),
               onTap: () {
                 Navigator.pop(ctx);
                 onDelete?.call();
               },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
           ],
         ),
       ),
@@ -77,9 +72,11 @@ class PlaylistCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
       onTap: onTap,
       onLongPress: () => _showContextMenu(context),
+      borderRadius: BorderRadius.circular(10),
       child: Container(
         width: 160,
         margin: const EdgeInsets.only(right: 12),
@@ -90,32 +87,18 @@ class PlaylistCard extends StatelessWidget {
               width: 160,
               height: 160,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    MelodiTheme.containerLow,
-                    MelodiTheme.surfaceHigh,
-                    MelodiTheme.containerLow,
-                  ],
-                ),
+                color: scheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.playlist_play_rounded,
-                    size: 48,
-                    color: MelodiTheme.primaryGreen.withOpacity(0.7),
-                  ),
+                  Icon(Icons.playlist_play_rounded, size: 36, color: scheme.onSurfaceVariant),
                   const SizedBox(height: 8),
                   Text(
                     '${playlist.songCount} songs',
-                    style: TextStyle(
-                      color: MelodiTheme.onSurfaceVariant,
-                      fontSize: 14,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -125,15 +108,15 @@ class PlaylistCard extends StatelessWidget {
               playlist.name,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: MelodiTheme.onSurface,
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
             ),
           ],
         ),
-      ).animate().fadeIn(duration: 300.ms).slideX(begin: 0.05),
+      ),
     );
   }
 }

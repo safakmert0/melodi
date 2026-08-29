@@ -68,7 +68,9 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
       backgroundColor: MelodiTheme.background,
       body: _isLoading
           ? Center(
-              child: CircularProgressIndicator(color: MelodiTheme.primaryGreen))
+              child: CircularProgressIndicator(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  strokeWidth: 2))
           : CustomScrollView(
               slivers: [
                 _buildAppBar(context),
@@ -267,52 +269,37 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
   }
 
   Widget _buildAppBar(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return SliverAppBar(
-      expandedHeight: 280,
+      expandedHeight: 200,
       pinned: true,
-      backgroundColor: MelodiTheme.background,
+      backgroundColor: colors.surface,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
       flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (_artist?.imageUrl != null)
-              CachedNetworkImage(
+        background: _artist?.imageUrl != null
+            ? CachedNetworkImage(
                 imageUrl: _artist!.imageUrl!,
                 fit: BoxFit.cover,
                 placeholder: (_, __) => Container(
-                  color: MelodiTheme.containerLow,
+                  color: colors.surfaceContainer,
                   child: Icon(Icons.person_rounded,
-                      size: 80, color: MelodiTheme.textMuted),
+                      size: 56, color: colors.onSurfaceVariant),
                 ),
                 errorWidget: (_, __, ___) => Container(
-                  color: MelodiTheme.containerLow,
+                  color: colors.surfaceContainer,
                   child: Icon(Icons.person_rounded,
-                      size: 80, color: MelodiTheme.textMuted),
+                      size: 56, color: colors.onSurfaceVariant),
                 ),
               )
-            else
-              Container(
-                color: MelodiTheme.containerLow,
+            : Container(
+                color: colors.surfaceContainer,
                 child: Center(
                   child: Icon(Icons.person_rounded,
-                      size: 100, color: MelodiTheme.textMuted),
+                      size: 64, color: colors.onSurfaceVariant),
                 ),
               ),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    MelodiTheme.background,
-                  ],
-                  stops: const [0.5, 1.0],
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -345,7 +332,6 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              if (_topTracks.isNotEmpty) const SizedBox(width: 12),
               if (_topTracks.isNotEmpty)
                 OutlinedButton.icon(
                   onPressed: () {
@@ -363,13 +349,14 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
                     }).toList();
                     context.read<PlayerProvider>().playFromQueue(songs, 0);
                   },
-                  icon: const Icon(Icons.shuffle_rounded, size: 18),
+                  icon: const Icon(Icons.play_arrow_rounded, size: 18),
                   label: Text(AppLocale.tr('play')),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: MelodiTheme.onSurface,
-                    side: BorderSide(color: MelodiTheme.outlineVariant),
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                    side: BorderSide(
+                        color: Theme.of(context).colorScheme.outlineVariant),
                     shape: RoundedRectangleBorder(
-                      borderRadius: context.tokens.borderRadiusCard,
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                 ),
@@ -415,27 +402,32 @@ class _RelatedArtistCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 120,
+        width: 100,
         margin: const EdgeInsets.only(right: 12),
         child: Column(
           children: [
-            CircleAvatar(
-              radius: 45,
-              backgroundColor: MelodiTheme.containerLow,
-              child: CircleAvatar(
-                radius: 43,
-                backgroundColor: MelodiTheme.surfaceHigh,
-                backgroundImage: artist.imageUrl != null
-                    ? CachedNetworkImageProvider(artist.imageUrl!)
-                    : null,
-                child: artist.imageUrl == null
-                    ? Icon(Icons.person_rounded,
-                        size: 36, color: MelodiTheme.textMuted)
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: colors.surfaceContainer,
+                border: Border.all(color: colors.outlineVariant),
+                image: artist.imageUrl != null
+                    ? DecorationImage(
+                        image: CachedNetworkImageProvider(artist.imageUrl!),
+                        fit: BoxFit.cover,
+                      )
                     : null,
               ),
+              child: artist.imageUrl == null
+                  ? Icon(Icons.person_rounded,
+                      size: 28, color: colors.onSurfaceVariant)
+                  : null,
             ),
             const SizedBox(height: 6),
             Text(
@@ -444,8 +436,8 @@ class _RelatedArtistCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: MelodiTheme.onSurface,
-                fontSize: 15,
+                color: colors.onSurface,
+                fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -467,31 +459,36 @@ class _AlbumGridCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: ClipRRect(
-              borderRadius: context.tokens.borderRadiusCover,
-              child: Container(
-                width: double.infinity,
-                color: MelodiTheme.containerLow,
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: colors.surfaceContainer,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: colors.outlineVariant),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(9),
                 child: album.imageUrl != null
                     ? CachedNetworkImage(
                         imageUrl: album.imageUrl!,
                         fit: BoxFit.cover,
                         placeholder: (_, __) => Container(
-                          color: MelodiTheme.containerLow,
+                          color: colors.surfaceContainer,
                           child: Icon(Icons.album_rounded,
-                              size: 40, color: MelodiTheme.textMuted),
+                              size: 32, color: colors.onSurfaceVariant),
                         ),
                         errorWidget: (_, __, ___) => Icon(Icons.album_rounded,
-                            size: 40, color: MelodiTheme.textMuted),
+                            size: 32, color: colors.onSurfaceVariant),
                       )
                     : Icon(Icons.album_rounded,
-                        size: 40, color: MelodiTheme.textMuted),
+                        size: 32, color: colors.onSurfaceVariant),
               ),
             ),
           ),
@@ -501,9 +498,9 @@ class _AlbumGridCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: MelodiTheme.onSurface,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
+              color: colors.onSurface,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
             ),
           ),
           Text(
@@ -511,8 +508,8 @@ class _AlbumGridCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: MelodiTheme.onSurfaceVariant,
-              fontSize: 15,
+              color: colors.onSurfaceVariant,
+              fontSize: 12,
             ),
           ),
         ],

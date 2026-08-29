@@ -77,70 +77,45 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
 
     final theme = Theme.of(context);
-    final accent = _pageAccent(theme, _page);
+    final accent = Theme.of(context).colorScheme.onSurface;
     return Scaffold(
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 500),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    accent .withOpacity(0.18),
-                    theme.scaffoldBackgroundColor,
-                    theme.scaffoldBackgroundColor,
-                  ],
-                  stops: const [0, 0.38, 1],
-                ),
+      backgroundColor: theme.colorScheme.surface,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _TopBar(
+              page: _page,
+              pageCount: _pageCount,
+              onBack: () => _goTo(_page - 1),
+              onSkip: _complete,
+              skipLabel: _copy('Atla', 'Skip', 'Überspringen'),
+            ),
+            Expanded(
+              child: PageView(
+                controller: _controller,
+                physics: const BouncingScrollPhysics(),
+                onPageChanged: (value) => setState(() => _page = value),
+                children: [
+                  _buildWelcome(theme),
+                  _buildLanguage(theme),
+                  _buildTheme(theme),
+                  _buildSources(theme),
+                ],
               ),
             ),
-          ),
-          Positioned(
-            right: -90,
-            top: 90,
-            child: _GlowOrb(color: accent, size: 230),
-          ),
-          SafeArea(
-            child: Column(
-              children: [
-                _TopBar(
-                  page: _page,
-                  pageCount: _pageCount,
-                  onBack: () => _goTo(_page - 1),
-                  onSkip: _complete,
-                  skipLabel: _copy('Atla', 'Skip', 'Überspringen'),
-                ),
-                Expanded(
-                  child: PageView(
-                    controller: _controller,
-                    physics: const BouncingScrollPhysics(),
-                    onPageChanged: (value) => setState(() => _page = value),
-                    children: [
-                      _buildWelcome(theme),
-                      _buildLanguage(theme),
-                      _buildTheme(theme),
-                      _buildSources(theme),
-                    ],
-                  ),
-                ),
-                _BottomDock(
-                  page: _page,
-                  pageCount: _pageCount,
-                  accent: accent,
-                  label: _page == _pageCount - 1
-                      ? _copy('Melodi’yi aç', 'Open Melodi', 'Melodi öffnen')
-                      : _copy('Devam', 'Continue', 'Weiter'),
-                  onPressed: _page == _pageCount - 1
-                      ? _complete
-                      : () => _goTo(_page + 1),
-                ),
-              ],
+            _BottomDock(
+              page: _page,
+              pageCount: _pageCount,
+              accent: accent,
+              label: _page == _pageCount - 1
+                  ? _copy('Melodi’yi aç', 'Open Melodi', 'Melodi öffnen')
+                  : _copy('Devam', 'Continue', 'Weiter'),
+              onPressed: _page == _pageCount - 1
+                  ? _complete
+                  : () => _goTo(_page + 1),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -451,22 +426,31 @@ class _BottomDock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 10, 24, 18),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
       child: SizedBox(
         width: double.infinity,
-        height: 56,
+        height: 44,
         child: FilledButton(
           onPressed: onPressed,
-          style: FilledButton.styleFrom(backgroundColor: accent),
+          style: FilledButton.styleFrom(
+            backgroundColor: colors.onSurface,
+            foregroundColor: colors.surface,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(label),
-              const SizedBox(width: 10),
-              Icon(page == pageCount - 1
-                  ? Icons.check_rounded
-                  : Icons.arrow_forward_rounded),
+              Text(label, style: const TextStyle(fontSize: 14)),
+              const SizedBox(width: 8),
+              Icon(
+                  page == pageCount - 1
+                      ? Icons.check_rounded
+                      : Icons.arrow_forward_rounded,
+                  size: 18),
             ],
           ),
         ),
@@ -524,25 +508,16 @@ class _AlbumTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
-      width: 116,
-      height: 140,
+      width: 96,
+      height: 112,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [color, Color.lerp(color, Colors.black, 0.34)!],
-        ),
-        borderRadius: BorderRadius.circular(26),
-        boxShadow: [
-          BoxShadow(
-            color: color .withOpacity(0.25),
-            blurRadius: 28,
-            offset: const Offset(0, 14),
-          ),
-        ],
+        color: colors.surfaceContainer,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.outlineVariant),
       ),
-      child: Icon(icon, color: Colors.white, size: 40),
+      child: Icon(icon, color: colors.onSurfaceVariant, size: 28),
     );
   }
 }
@@ -554,18 +529,7 @@ class _GlowOrb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [color .withOpacity(0.14), Colors.transparent],
-          ),
-        ),
-      ),
-    );
+    return const SizedBox.shrink();
   }
 }
 
@@ -576,14 +540,16 @@ class _StepIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
-      width: 62,
-      height: 62,
+      width: 48,
+      height: 48,
       decoration: BoxDecoration(
-        color: color .withOpacity(0.15),
-        borderRadius: BorderRadius.circular(21),
+        color: colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.outlineVariant),
       ),
-      child: Icon(icon, color: color, size: 28),
+      child: Icon(icon, color: colors.onSurfaceVariant, size: 22),
     );
   }
 }
@@ -597,18 +563,18 @@ class _FeaturePill extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(99),
+        color: theme.colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: theme.colorScheme.primary),
-          const SizedBox(width: 7),
-          Text(label, style: theme.textTheme.labelMedium),
+          Icon(icon, size: 14, color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Text(label, style: theme.textTheme.labelSmall),
         ],
       ),
     );
@@ -633,32 +599,46 @@ class _ChoiceTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Material(
-      color: selected
-          ? accent .withOpacity(0.13)
-          : theme.colorScheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(20),
+      color: theme.colorScheme.surfaceContainer,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+            color: selected
+                ? theme.colorScheme.onSurface
+                : theme.colorScheme.outlineVariant),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
         child: Padding(
-          padding: const EdgeInsets.all(15),
+          padding: const EdgeInsets.all(12),
           child: Row(
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 36,
+                height: 36,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(14),
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: theme.colorScheme.outlineVariant),
                 ),
-                child: Text(badge, style: theme.textTheme.labelLarge),
+                child: Text(badge,
+                    style: theme.textTheme.labelMedium
+                        ?.copyWith(fontSize: 11)),
               ),
-              const SizedBox(width: 13),
-              Expanded(child: Text(title, style: theme.textTheme.titleMedium)),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: Text(title,
+                      style: theme.textTheme.titleSmall
+                          ?.copyWith(fontSize: 14))),
               Icon(
                   selected ? Icons.check_circle_rounded : Icons.circle_outlined,
-                  color: selected ? accent : theme.colorScheme.outline),
+                  size: 18,
+                  color: selected
+                      ? theme.colorScheme.onSurface
+                      : theme.colorScheme.outline),
             ],
           ),
         ),
@@ -685,29 +665,40 @@ class _ThemePreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Material(
-      color: selected
-          ? accent .withOpacity(0.14)
-          : theme.colorScheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(22),
+      color: theme.colorScheme.surfaceContainer,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+            color: selected
+                ? theme.colorScheme.onSurface
+                : theme.colorScheme.outlineVariant),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
           HapticFeedback.selectionClick();
           onTap();
         },
+        borderRadius: BorderRadius.circular(10),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icon,
-                  color: selected ? accent : theme.colorScheme.onSurface),
-              const SizedBox(width: 9),
+                  size: 18,
+                  color: selected
+                      ? theme.colorScheme.onSurface
+                      : theme.colorScheme.onSurfaceVariant),
+              const SizedBox(width: 8),
               Flexible(
                 child: Text(label,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: selected ? accent : theme.colorScheme.onSurface,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontSize: 13,
+                      color: selected
+                          ? theme.colorScheme.onSurface
+                          : theme.colorScheme.onSurface,
                     )),
               ),
             ],
@@ -734,34 +725,39 @@ class _SourcePreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(20),
+        color: theme.colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Row(
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
-              color: color .withOpacity(0.14),
-              borderRadius: BorderRadius.circular(15),
+              color: theme.colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: theme.colorScheme.outlineVariant),
             ),
-            child: Icon(icon, color: color),
+            child: Icon(icon, color: theme.colorScheme.onSurfaceVariant, size: 18),
           ),
-          const SizedBox(width: 13),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: theme.textTheme.titleMedium),
-                Text(subtitle, style: theme.textTheme.bodySmall),
+                Text(title,
+                    style: theme.textTheme.titleSmall?.copyWith(fontSize: 14)),
+                Text(subtitle,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
               ],
             ),
           ),
-          Icon(Icons.add_circle_outline_rounded,
-              color: theme.colorScheme.onSurfaceVariant),
+          Icon(Icons.chevron_right_rounded,
+              size: 18, color: theme.colorScheme.onSurfaceVariant),
         ],
       ),
     );

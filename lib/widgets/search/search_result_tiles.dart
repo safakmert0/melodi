@@ -9,15 +9,7 @@ import '../../providers/search_provider.dart';
 import '../../services/music_source.dart';
 import '../image_with_fallback.dart';
 
-Color musicSourceColor(MusicSourceType source) => switch (source) {
-      MusicSourceType.youtube => const Color(0xFFFF453A),
-      MusicSourceType.jiosaavn => const Color(0xFF2BC5B4),
-      MusicSourceType.deezer => const Color(0xFFA970FF),
-      MusicSourceType.navidrome => const Color(0xFF6C8CFF),
-      MusicSourceType.hifi => const Color(0xFF1ED760),
-      MusicSourceType.appleMusic => const Color(0xFFFA233B),
-      MusicSourceType.soundcloud => const Color(0xFFFF5500),
-    };
+Color musicSourceColor(MusicSourceType source) => const Color(0xFF3A3A3C);
 
 class LocalSearchResultTile extends StatelessWidget {
   const LocalSearchResultTile({super.key, required this.song});
@@ -30,8 +22,8 @@ class LocalSearchResultTile extends StatelessWidget {
       leading: ArtworkImage(
         imageBytes: song.albumArt,
         title: song.title,
-        size: 52,
-        borderRadius: 13,
+        size: 48,
+        borderRadius: 8,
       ),
       title: Text(
         song.title,
@@ -44,7 +36,7 @@ class LocalSearchResultTile extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      trailing: IconButton.filledTonal(
+      trailing: IconButton(
         tooltip: 'Oynat',
         icon: const Icon(Icons.play_arrow_rounded),
         onPressed: () => context.read<PlayerProvider>().playSong(song),
@@ -69,25 +61,27 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
   @override
   Widget build(BuildContext context) {
     final track = widget.track;
-    final sourceColor = musicSourceColor(track.source);
+    final cs = Theme.of(context).colorScheme;
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       leading: ClipRRect(
         borderRadius: context.tokens.borderRadiusCover,
         child: SizedBox(
-          width: 52,
-          height: 52,
+          width: 48,
+          height: 48,
           child: track.thumbnailUrl == null
               ? ColoredBox(
-                  color: sourceColor .withOpacity(0.15),
-                  child: Icon(Icons.music_note_rounded, color: sourceColor),
+                  color: cs.surfaceContainerHighest,
+                  child: Icon(Icons.music_note_rounded,
+                      color: cs.onSurfaceVariant, size: 22),
                 )
               : Image.network(
                   track.thumbnailUrl!,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => ColoredBox(
-                    color: sourceColor .withOpacity(0.15),
-                    child: Icon(Icons.music_note_rounded, color: sourceColor),
+                    color: cs.surfaceContainerHighest,
+                    child: Icon(Icons.music_note_rounded,
+                        color: cs.onSurfaceVariant, size: 22),
                   ),
                 ),
         ),
@@ -103,17 +97,18 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: sourceColor .withOpacity(0.14),
+              color: cs.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: cs.outlineVariant),
             ),
             child: Text(
               track.source.isPreviewCatalogue
                   ? '${track.sourceLabel} · katalog'
                   : track.sourceLabel,
               style: TextStyle(
-                color: sourceColor,
+                color: cs.onSurfaceVariant,
                 fontSize: 10,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -136,13 +131,13 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
           else
             IconButton(
               tooltip: 'İndir',
-              icon: const Icon(Icons.download_rounded),
+              icon: const Icon(Icons.download_rounded, size: 20),
               onPressed: _download,
             ),
           if (_playing)
             const _BusyIndicator()
           else
-            IconButton.filledTonal(
+            IconButton(
               tooltip: 'Oynat',
               icon: const Icon(Icons.play_arrow_rounded),
               onPressed: _play,
@@ -304,18 +299,16 @@ class SearchSourceFilters extends StatelessWidget {
     int count,
   ) {
     final active = selected == source;
-    final color = source == null
-        ? Theme.of(context).colorScheme.primary
-        : musicSourceColor(source);
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
         selected: active,
         showCheckmark: false,
-        avatar: source == null
-            ? null
-            : CircleAvatar(backgroundColor: color, radius: 4),
-        label: Text('$label $count'),
+        label: Text('$label $count', style: const TextStyle(fontSize: 13)),
+        side: BorderSide(color: cs.outlineVariant),
+        selectedColor: cs.surfaceContainerHighest,
+        backgroundColor: cs.surface,
         onSelected: (_) => onChanged(source),
       ),
     );

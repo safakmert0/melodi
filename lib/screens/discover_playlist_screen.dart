@@ -72,7 +72,6 @@ class _DiscoverPlaylistScreenState extends State<DiscoverPlaylistScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocale.tr('playlist_imported')),
-          backgroundColor: MelodiTheme.primaryGreen,
         ),
       );
       Navigator.of(context).pushReplacement(
@@ -89,34 +88,38 @@ class _DiscoverPlaylistScreenState extends State<DiscoverPlaylistScreen> {
   Widget build(BuildContext context) {
     final color = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: color.surface,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 180,
+            expandedHeight: 160,
             pinned: true,
+            backgroundColor: color.surface,
+            foregroundColor: color.onSurface,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            surfaceTintColor: Colors.transparent,
             flexibleSpace: FlexibleSpaceBar(
-              title: Text(widget.title),
+              title: Text(widget.title,
+                  style: const TextStyle(fontSize: 16)),
               background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      MelodiTheme.primaryGreen.withOpacity(0.5),
-                      color.surface,
-                    ],
-                  ),
-                ),
+                color: color.surfaceContainer,
                 child: Center(
                   child: Padding(
                     padding: const EdgeInsets.only(top: 40),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(context.tokens.radiusControl),
-                      child: MelodiCacheImage(
-                        imageUrl: widget.thumbnailUrl,
-                        width: 110,
-                        height: 110,
-                        fit: BoxFit.cover,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: color.outlineVariant),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(9),
+                        child: MelodiCacheImage(
+                          imageUrl: widget.thumbnailUrl,
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
                   ),
@@ -137,11 +140,14 @@ class _DiscoverPlaylistScreenState extends State<DiscoverPlaylistScreen> {
                             player.playFromQueue(
                                 _items.map(_toSong).toList(), 0);
                           },
-                    icon: const Icon(Icons.play_arrow_rounded),
+                    icon: const Icon(Icons.play_arrow_rounded, size: 18),
                     label: const Text('Tümünü Çal'),
                     style: FilledButton.styleFrom(
-                      backgroundColor: MelodiTheme.primaryGreen,
-                      foregroundColor: Colors.black,
+                      backgroundColor: color.onSurface,
+                      foregroundColor: color.surface,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
                   const SizedBox(width: 12),

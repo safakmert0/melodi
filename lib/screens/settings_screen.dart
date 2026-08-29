@@ -15,7 +15,6 @@ import '../providers/theme_provider.dart';
 import '../services/podcast_service.dart';
 import 'podcast_detail_screen.dart';
 
-import '../providers/player_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/metadata_provider.dart';
 import '../providers/download_provider.dart';
@@ -109,6 +108,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _bluetoothAutoEq = false;
   bool _downloadAsVideo = false;
   String _watchedFolderPath = '';
+  List<WatchedFolder> _watchedFolders = [];
 
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
@@ -119,8 +119,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadWatchedFolder() async {
-    final path = await context.read<LibraryProvider>().getWatchedFolder();
-    if (mounted) setState(() => _watchedFolderPath = path ?? '');
+    final lib = context.read<LibraryProvider>();
+    final folders = await lib.getWatchedFolders();
+    final single = await lib.getWatchedFolder();
+    if (mounted) setState(() {
+      _watchedFolders = folders;
+      _watchedFolderPath = single ?? '';
+    });
   }
 
   @override
@@ -152,6 +157,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // ── 1. GENEL ──
                     _CollapsibleSection(
                       title: AppLocale.tr('general'),
                       children: [
@@ -188,10 +194,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 builder: (_) => _AppearanceSettingsPage()),
                           ),
                         ),
+                        const SizedBox(height: 8),
+                        _SettingsTile(
+                          icon: Icons.widgets,
+                          iconColor: Colors.amber,
+                          title: AppLocale.tr('widget'),
+                          subtitle: AppLocale.tr('widget_desc'),
+                          trailing: Icon(Icons.chevron_right,
+                              color: MelodiTheme.textMuted),
+                          onTap: () => _showWidgetConfigDialog(context),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 24),
                     Divider(color: MelodiTheme.outlineVariant, height: 1),
+                    // ── 2. ÇALMA (aynı ayarlar oynatıcı ekranından da erişilebilir) ──
                     _CollapsibleSection(
                       title: AppLocale.tr('playback'),
                       children: [
@@ -289,10 +306,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 .setSetting('gapless_playback', v.toString());
                           },
                         ),
+                        const SizedBox(height: 8),
+                        _SettingsTile(
+                          icon: Icons.equalizer,
+                          iconColor: MelodiTheme.primaryGreen,
+                          title: AppLocale.tr('audio_effects'),
+                          subtitle: AppLocale.tr('audio_effects_desc'),
+                          trailing: Icon(Icons.chevron_right,
+                              color: MelodiTheme.textMuted),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => const _AudioEffectsPage()),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _SettingsTile(
+                          icon: Icons.bluetooth,
+                          iconColor: Colors.blue,
+                          title: AppLocale.tr('bluetooth_auto_eq'),
+                          subtitle: AppLocale.tr('bluetooth_auto_eq_desc'),
+                          trailing: Switch(
+                            value: _bluetoothAutoEq,
+                            onChanged: (v) {
+                              setState(() => _bluetoothAutoEq = v);
+                              DatabaseService.instance.setSetting(
+                                  'bluetooth_auto_eq', v.toString());
+                            },
+                            activeColor: MelodiTheme.primaryGreen,
+                          ),
+                          onTap: () {
+                            setState(
+                                () => _bluetoothAutoEq = !_bluetoothAutoEq);
+                            DatabaseService.instance.setSetting(
+                                'bluetooth_auto_eq',
+                                _bluetoothAutoEq.toString());
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        Consumer<SettingsProvider>(
+                          builder: (context, settings, _) => _SettingsTile(
+                            icon: Icons.cloud_rounded,
+                            iconColor: Colors.lightBlue,
+                            title: AppLocale.tr('streaming'),
+                            subtitle: settings.streamingEnabled
+                                ? AppLocale.tr('online_mode')
+                                : AppLocale.tr('offline_mode'),
+                            trailing: Icon(Icons.chevron_right,
+                                color: MelodiTheme.textMuted),
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      const _StreamingSettingsPage()),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          child: Text(
+                            'Bu ayarlar oynatıcı ekranındaki ••• menüsünden de değiştirilebilir',
+                            style: TextStyle(
+                                color: MelodiTheme.onSurfaceVariant,
+                                fontSize: 11,
+                                fontStyle: FontStyle.italic),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 24),
                     Divider(color: MelodiTheme.outlineVariant, height: 1),
+                    // ── 3. KÜTÜPHANE & İNDİRMELER ──
                     _CollapsibleSection(
                       title: AppLocale.tr('music_library'),
                       children: [
@@ -325,38 +408,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           icon: Icons.folder_special_rounded,
                           iconColor: Colors.purple,
                           title: AppLocale.tr('import_from_folder_title'),
-                          subtitle: AppLocale.tr('scan_folder_for_music'),
-                          onTap: () => library.importFromDirectory(),
+                          subtitle: _watchedFolders.isEmpty
+                              ? AppLocale.tr('scan_folder_for_music')
+                              : '${_watchedFolders.length} klasör izleniyor (her açılışta taranır)',
+                          trailing: Icon(Icons.add_rounded,
+                              color: MelodiTheme.textMuted),
+                          onTap: () async {
+                            await _pickWatchedFolder(context);
+                            await _loadWatchedFolder();
+                          },
                         ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.folder_rounded,
-                          iconColor: Colors.deepPurple,
-                          title: AppLocale.tr('watched_folder'),
-                          subtitle: _watchedFolderPath.isNotEmpty
-                              ? '${AppLocale.tr('watching')}: $_watchedFolderPath'
-                              : AppLocale.tr('auto_scan_folder'),
-                          trailing: _watchedFolderPath.isNotEmpty
-                              ? IconButton(
-                                  icon: Icon(Icons.close,
-                                      color: MelodiTheme.textMuted, size: 18),
-                                  onPressed: () async {
-                                    await library.clearWatchedFolder();
-                                    setState(() => _watchedFolderPath = '');
-                                  },
-                                )
-                              : null,
-                          onTap: () => _pickWatchedFolder(context),
-                        ),
+                        if (_watchedFolders.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          ..._watchedFolders.map((wf) => Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: _SettingsTile(
+                                  icon: Icons.folder_rounded,
+                                  iconColor: wf.enabled
+                                      ? Colors.deepPurple
+                                      : Colors.grey,
+                                  title: wf.path.split('/').last.isEmpty
+                                      ? wf.path
+                                      : wf.path.split('/').last,
+                                  subtitle: wf.path,
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Switch(
+                                        value: wf.enabled,
+                                        activeColor:
+                                            MelodiTheme.primaryGreen,
+                                        onChanged: (v) async {
+                                          await context
+                                              .read<LibraryProvider>()
+                                              .toggleWatchedFolder(
+                                                  wf.path, v);
+                                          await _loadWatchedFolder();
+                                        },
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.close,
+                                            color: MelodiTheme.textMuted,
+                                            size: 18),
+                                        onPressed: () async {
+                                          await context
+                                              .read<LibraryProvider>()
+                                              .removeWatchedFolder(wf.path);
+                                          await _loadWatchedFolder();
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                  onTap: null,
+                                ),
+                              )),
+                        ],
                         const SizedBox(height: 8),
                         _LibraryHealthSettingsTile(),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Divider(color: MelodiTheme.outlineVariant, height: 1),
-                    _CollapsibleSection(
-                      title: AppLocale.tr('metadata_backfill'),
-                      children: [
+                        const SizedBox(height: 8),
                         Consumer<MetadataProvider>(
                           builder: (context, md, _) => Column(
                             children: [
@@ -406,16 +515,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     : () => md.startBackfillLyrics(),
                               ),
                               const SizedBox(height: 8),
-                              _SettingsTile(
-                                icon: Icons.high_quality_rounded,
-                                iconColor: Colors.amber,
-                                title: AppLocale.tr('high_res_art'),
-                                subtitle: AppLocale.tr('backfill_art'),
-                                onTap: md.isBackfilling
-                                    ? null
-                                    : () => md.startBackfillAlbumArt(),
-                              ),
-                              const SizedBox(height: 8),
                               Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 16),
@@ -452,13 +551,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Divider(color: MelodiTheme.outlineVariant, height: 1),
-                    _CollapsibleSection(
-                      title: AppLocale.tr('storage'),
-                      children: [
+                        const SizedBox(height: 8),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Row(
@@ -496,7 +589,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           onTap: () => _confirmClearLibrary(context),
                         ),
                         const SizedBox(height: 8),
-
                         _SettingsTile(
                           icon: Icons.link_rounded,
                           iconColor: Colors.blue,
@@ -507,190 +599,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 builder: (_) => const SharedUrlsScreen()),
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Divider(color: MelodiTheme.outlineVariant, height: 1),
-                    _CollapsibleSection(
-                      title: AppLocale.tr('accounts'),
-                      children: [
-                        _SettingsTile(
-                          icon: Icons.dns_rounded,
-                          iconColor: MelodiTheme.primaryGreen,
-                          title: 'YT-DLP Backend',
-                          subtitle:
-                              'Gerçek yt-dlp motoru için backend ayarları',
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => BackendSettingsScreen()),
-                          ),
-                        ),
-
-
-
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Divider(color: MelodiTheme.outlineVariant, height: 1),
-                    _CollapsibleSection(
-                      title: AppLocale.tr('audio'),
-                      children: [
-
-                        _SettingsTile(
-                          icon: Icons.equalizer,
-                          iconColor: MelodiTheme.primaryGreen,
-                          title: AppLocale.tr('audio_effects'),
-                          subtitle: AppLocale.tr('audio_effects_desc'),
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const _AudioEffectsPage()),
-                          ),
-                        ),
                         const SizedBox(height: 8),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.queue_music,
-                          iconColor: Colors.cyan,
-                          title: AppLocale.tr('gapless_playback_setting'),
-                          subtitle: AppLocale.tr('gapless_playback_desc'),
-                          trailing: Switch(
-                            value: _gaplessPlayback,
-                            onChanged: (v) {
-                              setState(() => _gaplessPlayback = v);
-                              context
-                                  .read<PlayerProvider>()
-                                  .setGaplessPlayback(v);
-                              DatabaseService.instance
-                                  .setSetting('gapless_playback', v.toString());
-                            },
-                            activeColor: MelodiTheme.primaryGreen,
-                          ),
-                          onTap: () {
-                            final v = !_gaplessPlayback;
-                            setState(() => _gaplessPlayback = v);
-                            context
-                                .read<PlayerProvider>()
-                                .setGaplessPlayback(v);
-                            DatabaseService.instance
-                                .setSetting('gapless_playback', v.toString());
-                          },
-                        ),
-                        _SettingsTile(
-                          icon: Icons.videocam_rounded,
-                          iconColor: Colors.deepOrange,
-                          title: 'İndirme biçimi',
-                          subtitle: _downloadAsVideo
-                              ? 'Video (mp4) olarak indir'
-                              : 'Ses olarak indir',
-                          trailing: Switch(
-                            value: _downloadAsVideo,
-                            onChanged: (v) {
-                              setState(() => _downloadAsVideo = v);
-                              DatabaseService.instance.setSetting(
-                                  'download_as_video', v.toString());
-                            },
-                            activeColor: MelodiTheme.primaryGreen,
-                          ),
-                          onTap: () {
-                            final v = !_downloadAsVideo;
-                            setState(() => _downloadAsVideo = v);
-                            DatabaseService.instance.setSetting(
-                                'download_as_video', v.toString());
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.bluetooth,
-                          iconColor: Colors.blue,
-                          title: AppLocale.tr('bluetooth_auto_eq'),
-                          subtitle: AppLocale.tr('bluetooth_auto_eq_desc'),
-                          trailing: Switch(
-                            value: _bluetoothAutoEq,
-                            onChanged: (v) {
-                              setState(() => _bluetoothAutoEq = v);
-                              DatabaseService.instance.setSetting(
-                                  'bluetooth_auto_eq', v.toString());
-                            },
-                            activeColor: MelodiTheme.primaryGreen,
-                          ),
-                          onTap: () {
-                            setState(
-                                () => _bluetoothAutoEq = !_bluetoothAutoEq);
-                            DatabaseService.instance.setSetting(
-                                'bluetooth_auto_eq',
-                                _bluetoothAutoEq.toString());
-                          },
-                        ),
-                        const SizedBox(height: 8),
-
-
-                        _SettingsTile(
-                          icon: Icons.headphones,
-                          iconColor: Colors.pink,
-                          title: AppLocale.tr('podcast'),
-                          subtitle: AppLocale.tr('podcast_desc'),
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) =>
-                                    const _PodcastSubscriptionsPage()),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        _SettingsTile(
-                          icon: Icons.widgets,
-                          iconColor: Colors.amber,
-                          title: AppLocale.tr('widget'),
-                          subtitle: AppLocale.tr('widget_desc'),
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => _showWidgetConfigDialog(context),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Divider(color: MelodiTheme.outlineVariant, height: 1),
-                    _CollapsibleSection(
-                      title: AppLocale.tr('streaming'),
-                      children: [
-                        Consumer<SettingsProvider>(
-                          builder: (context, settings, _) => _SettingsTile(
-                            icon: Icons.cloud_rounded,
-                            iconColor: Colors.lightBlue,
-                            title: AppLocale.tr('streaming'),
-                            subtitle: settings.streamingEnabled
-                                ? AppLocale.tr('online_mode')
-                                : AppLocale.tr('offline_mode'),
-                            trailing: Icon(Icons.chevron_right,
-                                color: MelodiTheme.textMuted),
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (_) =>
-                                      const _StreamingSettingsPage()),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Divider(color: MelodiTheme.outlineVariant, height: 1),
-                    _CollapsibleSection(
-                      title: AppLocale.tr('lossless'),
-                      children: [
                         _LosslessDownloadsSection(),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Divider(color: MelodiTheme.outlineVariant, height: 1),
-                    _CollapsibleSection(
-                      title: AppLocale.tr('downloads'),
-                      children: [
+                        const SizedBox(height: 8),
                         Consumer<DownloadProvider>(
                           builder: (context, dp, _) => _SettingsTile(
                             icon: Icons.download_rounded,
@@ -708,7 +619,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-
                         _SettingsTile(
                           icon: Platform.isIOS
                               ? Icons.lock_rounded
@@ -789,25 +699,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-
-                        _SettingsTile(
-                          icon: Icons.storage_rounded,
-                          iconColor: Colors.cyan,
-                          title: AppLocale.tr('storage'),
-                          subtitle: Text(
-                            '${_formatBytes(context.read<LibraryProvider>().totalSongSizeBytes)} · ${AppLocale.tr('library_size')}',
-                            style: TextStyle(
-                                color: MelodiTheme.onSurfaceVariant,
-                                fontSize: 12),
-                          ),
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const StorageScreen()),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
                         _SettingsTile(
                           icon: Icons.cached_rounded,
                           iconColor: Colors.cyan,
@@ -828,49 +719,107 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               color: MelodiTheme.textMuted),
                           onTap: () => _showStreamCacheDialog(context),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Divider(color: MelodiTheme.outlineVariant, height: 1),
-                    _SettingsTile(
-                      icon: Icons.volunteer_activism_rounded,
-                      iconColor: MelodiTheme.primaryGreen,
-                      title: 'Destek Ol',
-                      subtitle: 'Bağış yaparak geliştirmeyi destekle',
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const SupportScreen(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Divider(color: MelodiTheme.outlineVariant, height: 1),
-                    _CollapsibleSection(
-                      title: AppLocale.tr('developer'),
-                      children: [
+                        const SizedBox(height: 8),
                         _SettingsTile(
-                          icon: Icons.camera_alt_rounded,
-                          iconColor: const Color(0xFFE1306C),
-                          title: 'Instagram',
-                          subtitle: 'safakmert0',
-                          onTap: () =>
-                              _openUrl('https://instagram.com/safakmert0'),
+                          icon: Icons.storage_rounded,
+                          iconColor: Colors.cyan,
+                          title: AppLocale.tr('storage'),
+                          subtitle: Text(
+                            '${_formatBytes(context.read<LibraryProvider>().totalSongSizeBytes)} · ${AppLocale.tr('library_size')}',
+                            style: TextStyle(
+                                color: MelodiTheme.onSurfaceVariant,
+                                fontSize: 12),
+                          ),
+                          trailing: Icon(Icons.chevron_right,
+                              color: MelodiTheme.textMuted),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => const StorageScreen()),
+                          ),
                         ),
                         const SizedBox(height: 8),
                         _SettingsTile(
-                          icon: Icons.send_rounded,
-                          iconColor: Colors.lightBlue,
-                          title: 'Telegram',
-                          subtitle: '@mertiletisimbot',
-                          onTap: () => _openUrl('https://t.me/mertiletisimbot'),
+                          icon: Icons.videocam_rounded,
+                          iconColor: Colors.deepOrange,
+                          title: 'İndirme biçimi',
+                          subtitle: _downloadAsVideo
+                              ? 'Video (mp4) olarak indir'
+                              : 'Ses olarak indir',
+                          trailing: Switch(
+                            value: _downloadAsVideo,
+                            onChanged: (v) {
+                              setState(() => _downloadAsVideo = v);
+                              DatabaseService.instance.setSetting(
+                                  'download_as_video', v.toString());
+                            },
+                            activeColor: MelodiTheme.primaryGreen,
+                          ),
+                          onTap: () {
+                            final v = !_downloadAsVideo;
+                            setState(() => _downloadAsVideo = v);
+                            DatabaseService.instance.setSetting(
+                                'download_as_video', v.toString());
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        _SettingsTile(
+                          icon: Icons.headphones,
+                          iconColor: Colors.pink,
+                          title: AppLocale.tr('podcast'),
+                          subtitle: AppLocale.tr('podcast_desc'),
+                          trailing: Icon(Icons.chevron_right,
+                              color: MelodiTheme.textMuted),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    const _PodcastSubscriptionsPage()),
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 24),
                     Divider(color: MelodiTheme.outlineVariant, height: 1),
+                    // ── 4. HAKKINDA ──
                     _CollapsibleSection(
                       title: AppLocale.tr('about'),
                       children: [
+                        _SettingsTile(
+                          icon: Icons.dns_rounded,
+                          iconColor: MelodiTheme.primaryGreen,
+                          title: 'YT-DLP Backend',
+                          subtitle:
+                              'Gerçek yt-dlp motoru için backend ayarları',
+                          trailing: Icon(Icons.chevron_right,
+                              color: MelodiTheme.textMuted),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => BackendSettingsScreen()),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _SettingsTile(
+                          icon: Icons.volunteer_activism_rounded,
+                          iconColor: MelodiTheme.primaryGreen,
+                          title: 'Destek Ol',
+                          subtitle: 'Bağış yaparak geliştirmeyi destekle',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const SupportScreen(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _SettingsTile(
+                          icon: Icons.bug_report_rounded,
+                          iconColor: Colors.orange,
+                          title: AppLocale.tr('diagnostics'),
+                          subtitle: AppLocale.tr('crash_reports'),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => const DiagnosticsScreen()),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         _SettingsTile(
                           icon: Icons.info_outline_rounded,
                           iconColor: MelodiTheme.onSurfaceVariant,
@@ -897,14 +846,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         const SizedBox(height: 8),
                         _SettingsTile(
-                          icon: Icons.bug_report_rounded,
-                          iconColor: Colors.orange,
-                          title: AppLocale.tr('diagnostics'),
-                          subtitle: AppLocale.tr('crash_reports'),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const DiagnosticsScreen()),
-                          ),
+                          icon: Icons.camera_alt_rounded,
+                          iconColor: const Color(0xFFE1306C),
+                          title: 'Instagram',
+                          subtitle: 'safakmert0',
+                          onTap: () =>
+                              _openUrl('https://instagram.com/safakmert0'),
+                        ),
+                        const SizedBox(height: 8),
+                        _SettingsTile(
+                          icon: Icons.send_rounded,
+                          iconColor: Colors.lightBlue,
+                          title: 'Telegram',
+                          subtitle: '@mertiletisimbot',
+                          onTap: () => _openUrl('https://t.me/mertiletisimbot'),
                         ),
                       ],
                     ),
@@ -918,7 +873,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       },
     );
   }
-
   void _showStreamCacheDialog(BuildContext context) {
     final streamCache = StreamCache();
     showDialog(

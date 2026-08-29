@@ -1,5 +1,5 @@
-import 'dart:math';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -75,6 +75,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
             return RefreshIndicator(
               onRefresh: library.refresh,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               child: CustomScrollView(
                 key: PageStorageKey<String>(
                     'library-${_source.name}-${_content.name}-$_isGridView'),
@@ -142,7 +143,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     artists: artists,
                     visiblePlaylists: visiblePlaylists,
                   ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 130)),
+                  const SliverToBoxAdapter(child: SizedBox(height: 120)),
                 ],
               ),
             );
@@ -208,8 +209,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
           sliver: SliverGrid.builder(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 14,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
               childAspectRatio: 0.78,
             ),
             itemCount: songs.length,
@@ -268,8 +269,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
           sliver: SliverGrid.builder(
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 14,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
               childAspectRatio: 0.78,
             ),
             itemCount: entries.length,
@@ -280,7 +281,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 subtitle: item.subtitle,
                 icon: item.icon,
                 artwork: item.artwork,
-                gradient: item.gradient,
                 onTap: item.onTap,
               );
             },
@@ -299,7 +299,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
             subtitle: item.subtitle,
             icon: item.icon,
             artwork: item.artwork,
-            gradient: item.gradient,
             onTap: item.onTap,
           );
         },
@@ -379,11 +378,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
         subtitle: '${matchingFavoriteIds.length} parça',
         artwork: _artworkFor(library, matchingFavoriteIds),
         icon: Icons.favorite_rounded,
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF4D2CFF), Color(0xFF63E6BE)],
-        ),
         onTap: () => _openPlaylist(
           PlaylistModel(
             id: 'favorites',
@@ -434,8 +428,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
+      backgroundColor: Theme.of(pageContext).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setSheetState) {
+          final colors = Theme.of(context).colorScheme;
           final query = controller.text.trim();
           final results =
               (query.isEmpty ? library.songs : library.search(query))
@@ -451,7 +450,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     controller: controller,
                     autoFocus: true,
                     hintText: 'Parça, sanatçı veya albüm ara',
-                    leading: const Icon(Icons.search_rounded),
+                    leading: Icon(Icons.search_rounded,
+                        size: 18, color: colors.onSurfaceVariant),
                     trailing: [
                       if (controller.text.isNotEmpty)
                         IconButton(
@@ -459,35 +459,69 @@ class _LibraryScreenState extends State<LibraryScreen> {
                             controller.clear();
                             setSheetState(() {});
                           },
-                          icon: const Icon(Icons.close_rounded),
+                          icon: Icon(Icons.close_rounded,
+                              size: 18, color: colors.onSurfaceVariant),
                         ),
                     ],
                     onChanged: (_) => setSheetState(() {}),
+                    backgroundColor:
+                        WidgetStatePropertyAll(colors.surfaceContainer),
+                    side: WidgetStatePropertyAll(
+                      BorderSide(
+                          color: colors.outlineVariant.withValues(alpha: 0.5)),
+                    ),
+                    shape: WidgetStatePropertyAll(
+                      RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                    elevation: const WidgetStatePropertyAll(0),
+                    textStyle: WidgetStatePropertyAll(
+                      TextStyle(color: colors.onSurface, fontSize: 13),
+                    ),
+                    hintStyle: WidgetStatePropertyAll(
+                      TextStyle(
+                          color: colors.onSurfaceVariant, fontSize: 13),
+                    ),
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
                       Text('${results.length} sonuç',
                           style: TextStyle(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                              fontSize: 12)),
+                              color: colors.onSurfaceVariant, fontSize: 11)),
                       const Spacer(),
-                      Text(_source.label,
-                          style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: colors.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color:
+                                  colors.outlineVariant.withValues(alpha: 0.5)),
+                        ),
+                        child: Text(_source.label,
+                            style: TextStyle(
+                                color: colors.onSurfaceVariant,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 11)),
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
+                Divider(
+                    height: 1,
+                    color: colors.outlineVariant.withValues(alpha: 0.4)),
                 Expanded(
                   child: results.isEmpty
-                      ? const Center(child: Text('Eşleşen müzik bulunamadı'))
+                      ? Center(
+                          child: Text('Eşleşen müzik bulunamadı',
+                              style: TextStyle(
+                                  color: colors.onSurfaceVariant,
+                                  fontSize: 13)))
                       : ListView.builder(
                           itemCount: results.length,
                           itemBuilder: (context, index) {
@@ -515,32 +549,55 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Future<void> _showSortMenu(
       BuildContext context, LibraryProvider library) async {
+    final colors = Theme.of(context).colorScheme;
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      backgroundColor: colors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              title: const Text('Sırala',
-                  style: TextStyle(fontWeight: FontWeight.w700)),
-              trailing: TextButton.icon(
+              title: Text('Sırala',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: colors.onSurface)),
+              trailing: OutlinedButton.icon(
                 onPressed: () {
                   library.toggleSortDirection();
                   Navigator.pop(sheetContext);
                 },
-                icon: Icon(library.sortAscending
-                    ? Icons.arrow_upward_rounded
-                    : Icons.arrow_downward_rounded),
-                label: Text(library.sortAscending ? 'Artan' : 'Azalan'),
+                icon: Icon(
+                    library.sortAscending
+                        ? Icons.arrow_upward_rounded
+                        : Icons.arrow_downward_rounded,
+                    size: 14),
+                label: Text(library.sortAscending ? 'Artan' : 'Azalan',
+                    style: const TextStyle(fontSize: 12)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: colors.onSurfaceVariant,
+                  side: BorderSide(
+                      color: colors.outlineVariant.withValues(alpha: 0.6)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                ),
               ),
             ),
+            Divider(
+                height: 1,
+                color: colors.outlineVariant.withValues(alpha: 0.4)),
             for (final field in SongSortField.values)
               RadioListTile<SongSortField>(
                 value: field,
                 groupValue: library.sortField,
-                title: Text(_sortLabel(field)),
+                activeColor: colors.onSurface,
+                title: Text(_sortLabel(field),
+                    style: TextStyle(fontSize: 13, color: colors.onSurface)),
                 onChanged: (value) {
                   if (value != null) library.setSortField(value);
                   Navigator.pop(sheetContext);
@@ -563,49 +620,60 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Future<void> _showAddMenu(
       BuildContext pageContext, LibraryProvider library) async {
+    final colors = Theme.of(pageContext).colorScheme;
     final action = await showModalBottomSheet<_LibraryAddAction>(
       context: pageContext,
       showDragHandle: true,
+      backgroundColor: colors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             ListTile(
               title: Text('Kitaplığına ekle',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-              subtitle: Text('Yerel müzik veya bağlı bir kaynak seç'),
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: colors.onSurface)),
+              subtitle: Text('Yerel müzik veya bağlı bir kaynak seç',
+                  style: TextStyle(
+                      fontSize: 12, color: colors.onSurfaceVariant)),
             ),
-            _AddActionTile(
+            Divider(
+                height: 1,
+                color: colors.outlineVariant.withValues(alpha: 0.4)),
+            const _AddActionTile(
               icon: Icons.playlist_add_rounded,
               title: 'Çalma listesi oluştur',
               subtitle: 'Parçalarını kendi sıranla düzenle',
               action: _LibraryAddAction.playlist,
             ),
-            _AddActionTile(
+            const _AddActionTile(
               icon: Icons.audio_file_rounded,
               title: 'Dosya seç',
               subtitle: 'Bir veya daha fazla ses dosyası ekle',
               action: _LibraryAddAction.files,
             ),
-            _AddActionTile(
+            const _AddActionTile(
               icon: Icons.folder_copy_rounded,
               title: 'Klasör seç',
               subtitle: 'Bir müzik klasörünü topluca içe aktar',
               action: _LibraryAddAction.folder,
             ),
-            _AddActionTile(
+            const _AddActionTile(
               icon: Icons.manage_search_rounded,
               title: 'Aygıtı yeniden tara',
               subtitle: 'Yeni ve değişen müzik dosyalarını bul',
               action: _LibraryAddAction.scan,
             ),
-            _AddActionTile(
+            const _AddActionTile(
               icon: Icons.hub_rounded,
               title: 'Müzik kaynağı bağla',
               subtitle: 'Spotify, YouTube Music ve diğerleri',
               action: _LibraryAddAction.sources,
             ),
-            _AddActionTile(
+            const _AddActionTile(
               icon: Icons.video_file_rounded,
               title: 'Videodan Zil Sesi Oluştur',
               subtitle: 'Video dosyasından ses çıkarıp zil sesi yap',
@@ -677,11 +745,28 @@ class _AddActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return ListTile(
-      leading: CircleAvatar(child: Icon(icon)),
-      title: Text(title),
-      subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right_rounded),
+      leading: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: colors.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+              color: colors.outlineVariant.withValues(alpha: 0.5)),
+        ),
+        child: Icon(icon, size: 18, color: colors.onSurfaceVariant),
+      ),
+      title: Text(title,
+          style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: colors.onSurface)),
+      subtitle: Text(subtitle,
+          style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
+      trailing: Icon(Icons.chevron_right_rounded,
+          size: 16, color: colors.onSurfaceVariant),
       onTap: () => Navigator.pop(context, action),
     );
   }
@@ -695,17 +780,32 @@ class _LibraryError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    final colors = Theme.of(context).colorScheme;
+    return Container(
       margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainer,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+            color: colors.outlineVariant.withValues(alpha: 0.6)),
+      ),
       child: ListTile(
         leading: Icon(Icons.warning_amber_rounded,
-            color: Theme.of(context).colorScheme.error),
-        title: const Text('Kitaplık yüklenemedi'),
-        subtitle: Text(message, maxLines: 2, overflow: TextOverflow.ellipsis),
+            size: 20, color: colors.onSurfaceVariant),
+        title: Text('Kitaplık yüklenemedi',
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: colors.onSurface)),
+        subtitle: Text(message,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
         trailing: IconButton(
           tooltip: 'Yeniden dene',
           onPressed: onRetry,
-          icon: const Icon(Icons.refresh_rounded),
+          icon: Icon(Icons.refresh_rounded,
+              size: 18, color: colors.onSurfaceVariant),
         ),
       ),
     );
@@ -719,14 +819,12 @@ class _CollectionEntry {
     required this.icon,
     required this.onTap,
     this.artwork,
-    this.gradient,
   });
 
   final String title;
   final String subtitle;
   final IconData icon;
   final Uint8List? artwork;
-  final Gradient? gradient;
   final VoidCallback onTap;
 }
 
