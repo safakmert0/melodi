@@ -5,6 +5,13 @@ All notable changes to Melodi will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.11.1] - 2026-08-30
+
+### 8spine Depo Fix + Kaynak Seçim + Arama Kapsamı
+- **8spine “Depoya erişilemedi” düzeltildi**: `lib/services/extension_service.dart:208` `_fetchRegistry` artık `User-Agent: Melodi/1.0` + `Accept: application/json` header’lı, `timeout` 8→12s, hata mesajı `HTTP x` veya exception detayı ile — 8spine Vercel 8s timeout + bot korumasını tetiklemiyordu; `lib/models/extension.dart:455` `val.first` `Bad state: No element` boş `category:debrid_modules` için parantez fix — artık 14 modül parse ediliyor.
+- **Arama “diğer kaynaklarda”**: `lib/widgets/search/search_result_tiles.dart:392` `SearchSourceFilters` hâlen `Tümü / YouTube / Hi-Fi / Deezer` gösteriyor (doğru — `MusicSourceType` bazlı), ancak kurulu hifi/backend eklentileri Hi-Fi sayacına dahil ve `Hi-Fi` etiketi eklenti varsa genişler; 8spine/zarzet modülleri de `Hi-Fi`/`YouTube` altında toplanır (gelecekte JS runtime ile ayrı kaynaklara bölünebilir).
+- **İndirmede kaynak seçimi**: `lib/widgets/search/search_result_tiles.dart:196` `_download` artık kaynak seçim bottom sheet açar (`_showDownloadSourceSheet`): `Otomatik (önerilen)`, `YouTube`, `Hi-Fi` (kurulu eklenti adı ile, örn. `Hi-Fi · Qobuz`), `JioSaavn`, `Navidrome` — seçim sonrası `_getStreamForSpecificSource` o kaynağa özel arama + `getStreamUrl`, başarısızsa otomatik fallback.
+
 ## [4.11.0] - 2026-08-30
 
 ### Generic Modüller + İzlenecek Klasör

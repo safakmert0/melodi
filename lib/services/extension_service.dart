@@ -27,7 +27,7 @@ class ExtensionService extends ChangeNotifier {
 
   static const String _reposKey = 'extension_repos';
   static const String _installedKey = 'installed_extensions';
-  static const Duration _timeout = Duration(seconds: 8);
+  static const Duration _timeout = Duration(seconds: 12);
 
   final DatabaseService _db = DatabaseService.instance;
 
@@ -207,9 +207,13 @@ class ExtensionService extends ChangeNotifier {
 
   Future<RepoSnapshot> _fetchRegistry(String url) async {
     try {
-      final response = await http
-          .get(Uri.parse(url), headers: {'Accept': 'application/json'})
-          .timeout(_timeout);
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Melodi/1.0 (iOS; +https://github.com/safakmert0/melodi)',
+        },
+      ).timeout(_timeout);
       if (response.statusCode != 200) {
         return RepoSnapshot(
             url: url, error: 'HTTP ${response.statusCode}');
@@ -219,10 +223,10 @@ class ExtensionService extends ChangeNotifier {
         registry: ExtensionRegistry.parse(response.body, url),
       );
     } on TimeoutException {
-      return RepoSnapshot(url: url, error: 'Zaman aşımı');
+      return RepoSnapshot(url: url, error: 'Zaman aşımı (8spine Vercel yavaş olabilir)');
     } catch (e) {
       debugPrint('Extension repo error ($url): $e');
-      return RepoSnapshot(url: url, error: 'Depoya erişilemedi');
+      return RepoSnapshot(url: url, error: 'Depoya erişilemedi: $e');
     }
   }
 
