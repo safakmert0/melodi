@@ -66,7 +66,7 @@ class DownloadManager {
 
   final List<DownloadTask> _tasks = [];
   int _activeDownloads = 0;
-  int _maxParallel = 1;
+  int _maxParallel = 2;
   bool _wifiOnly = false;
   final Map<String, int> _retryCounts = {};
   static const int _maxRetries = 3;
@@ -79,7 +79,7 @@ class DownloadManager {
     try {
       final parallel = await DatabaseService.instance.getSetting('download_parallel');
       final wifi = await DatabaseService.instance.getSetting('download_wifi_only');
-      _maxParallel = int.tryParse(parallel ?? '')?.clamp(1, 3) ?? 1;
+      _maxParallel = int.tryParse(parallel ?? '')?.clamp(1, 3) ?? 2;
       _wifiOnly = wifi == 'true';
     } catch (_) {}
   }
@@ -534,10 +534,10 @@ class DownloadManager {
       // Önce HEAD ile uzantıyı tahmin et (contentType için), sonra resume
       String ext = 'm4a';
       try {
-        final headClient = HttpClient()..connectionTimeout = const Duration(seconds: 10);
+        final headClient = HttpClient()..connectionTimeout = const Duration(seconds: 6);
         final headReq = await headClient.headUrl(Uri.parse(url));
         headReq.headers.set('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
-        final headResp = await headReq.close().timeout(const Duration(seconds: 10));
+        final headResp = await headReq.close().timeout(const Duration(seconds: 6));
         if (headResp.headers.contentType != null) ext = _downloadExtension(url, headResp.headers.contentType);
         headClient.close();
       } catch (_) {
@@ -552,7 +552,7 @@ class DownloadManager {
 
       client = HttpClient()
         ..userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)'
-        ..connectionTimeout = const Duration(seconds: 120);
+        ..connectionTimeout = const Duration(seconds: 60);
       final request = await client.getUrl(Uri.parse(url));
       request.headers.set('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
       if (existing > 1024) {

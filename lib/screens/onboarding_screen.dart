@@ -8,7 +8,6 @@ import '../theme/app_tokens.dart';
 import '../services/database_service.dart';
 import '../widgets/main_shell.dart';
 import '../widgets/splash_screen.dart';
-import 'source_hub_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -18,7 +17,7 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  static const _pageCount = 4;
+  static const _pageCount = 3;
   final PageController _controller = PageController();
   int _page = 0;
   bool _showSplash = true;
@@ -99,7 +98,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _buildWelcome(theme),
                   _buildLanguage(theme),
                   _buildTheme(theme),
-                  _buildSources(theme),
                 ],
               ),
             ),

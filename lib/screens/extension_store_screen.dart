@@ -121,11 +121,14 @@ class _ExtensionStoreScreenState extends State<ExtensionStoreScreen> {
   }
 
   void _toast(String message, {bool error = false}) {
+    final scheme = Theme.of(context).colorScheme;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message),
-      backgroundColor: error
-          ? MelodiTheme.errorRed
-          : Theme.of(context).colorScheme.primary,
+      content: Text(message,
+          style: TextStyle(
+              color: error ? Colors.white : scheme.onInverseSurface)),
+      backgroundColor: error ? MelodiTheme.errorRed : scheme.inverseSurface,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ));
   }
 

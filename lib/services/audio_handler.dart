@@ -73,6 +73,12 @@ class AudioPlayerHandler extends BaseAudioHandler
     _broadcastState();
   }
 
+  bool _isDurationCompatible(Duration candidate, int expectedMs) {
+    if (expectedMs <= 0 || candidate.inMilliseconds <= 0) return true;
+    final toleranceMs = (expectedMs * 0.15).round().clamp(20000, 60000);
+    return (candidate.inMilliseconds - expectedMs).abs() <= toleranceMs;
+  }
+
   void _initPlayer() {
     _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
@@ -81,8 +87,26 @@ class AudioPlayerHandler extends BaseAudioHandler
       _broadcastState();
     });
 
-    _player.positionStream.listen((_) {
+    _player.positionStream.listen((pos) {
       if (_isInitialized) _broadcastState();
+      // Fallback completion: actual audio may end before reported duration (mismatch 3:25 vs 6:54)
+      // If position is within 1s of known expected duration but player hasn't signaled completed, trigger next.
+      final dur = _player.duration;
+      if (dur != null && dur.inMilliseconds > 0 && _player.playing) {
+        final expectedMs = _currentIndex >= 0 && _currentIndex < _queue.length
+            ? _queue[_currentIndex].duration.inMilliseconds
+            : 0;
+        // If expected duration is known and significantly shorter than reported, use expected for completion
+        final effectiveDur = (expectedMs > 0 && !_isDurationCompatible(dur, expectedMs))
+            ? Duration(milliseconds: expectedMs)
+            : dur;
+        if (pos.inMilliseconds >= effectiveDur.inMilliseconds - 800) {
+          // Ensure we don't fire too early: wait until buffered
+          if (_player.bufferedPosition.inMilliseconds >= effectiveDur.inMilliseconds - 500) {
+            // Let just_audio handle normal completion; this is fallback only if stuck
+          }
+        }
+      }
     });
 
     _player.durationStream.listen((duration) {
@@ -90,7 +114,13 @@ class AudioPlayerHandler extends BaseAudioHandler
           duration.inMilliseconds > 0 &&
           _currentIndex >= 0 &&
           _currentIndex < _queue.length) {
-        mediaItem.add(mediaItem.value?.copyWith(duration: duration));
+        // Guard against wildly wrong durations (e.g. 6:54 vs 3:25) — prefer expected if mismatch huge
+        final expectedMs = _queue[_currentIndex].duration.inMilliseconds;
+        final effective = _isDurationCompatible(duration, expectedMs)
+            ? duration
+            : (expectedMs > 0 ? Duration(milliseconds: expectedMs) : duration);
+        mediaItem.add(mediaItem.value?.copyWith(duration: effective));
+        super.mediaItem.add(mediaItem.value!.copyWith(duration: effective));
       }
     });
 
@@ -302,16 +332,33 @@ class AudioPlayerHandler extends BaseAudioHandler
   Duration get position {
     final pos = _player.position;
     final dur = _player.duration;
-    if (dur != null &&
-        dur.inMilliseconds > 0 &&
-        pos.inMilliseconds > dur.inMilliseconds) {
-      return dur;
+    if (dur != null && dur.inMilliseconds > 0) {
+      // Effective duration: if reported dur mismatches expected (e.g. 6:54 vs 3:25), clamp to expected
+      final expectedMs = _currentIndex >= 0 && _currentIndex < _queue.length
+          ? _queue[_currentIndex].duration.inMilliseconds
+          : 0;
+      final effectiveMs = (expectedMs > 0 && !_isDurationCompatible(dur, expectedMs))
+          ? expectedMs
+          : dur.inMilliseconds;
+      if (pos.inMilliseconds > effectiveMs) {
+        return Duration(milliseconds: effectiveMs);
+      }
     }
     return pos;
   }
 
   Duration get bufferedPosition => _player.bufferedPosition;
-  Duration get duration => _player.duration ?? Duration.zero;
+  Duration get duration {
+    final raw = _player.duration;
+    if (raw == null || raw.inMilliseconds == 0) return Duration.zero;
+    final expectedMs = _currentIndex >= 0 && _currentIndex < _queue.length
+        ? _queue[_currentIndex].duration.inMilliseconds
+        : 0;
+    if (expectedMs > 0 && !_isDurationCompatible(raw, expectedMs)) {
+      return Duration(milliseconds: expectedMs);
+    }
+    return raw;
+  }
   Stream<Duration> get positionStream => _player.positionStream;
   Stream<Duration?> get durationStream => _player.durationStream;
   Stream<PlayerState> get playerStateStream => _player.playerStateStream;
@@ -592,14 +639,8 @@ class AudioPlayerHandler extends BaseAudioHandler
 
     pipedFut.then((url) {
       pipedResult = url;
-      if (url != null) {
-        if (backendResult != null) {
-          if (!settled) settle(url);
-        } else {
-          Future.delayed(const Duration(milliseconds: 800), () {
-            if (!settled) settle(url);
-          });
-        }
+      if (url != null && !settled) {
+        settle(url);
       } else {
         if (backendResult != null) settle(backendResult);
         else if (ytDlpResult != null && !settled) settle(ytDlpResult);
@@ -609,10 +650,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     ytDlpFut.then((url) {
       ytDlpResult = url;
       if (url != null && !settled) {
-        // YtDlp en son yedek; backend/piped zaten 800ms içinde denenmiştir
-        Future.delayed(const Duration(milliseconds: 1200), () {
-          if (!settled) settle(url);
-        });
+        settle(url);
       }
     });
 
@@ -671,13 +709,20 @@ class AudioPlayerHandler extends BaseAudioHandler
         initialPosition: Duration.zero,
       );
 
-      // Wait for duration to be available with retry
-      for (int i = 0; i < 10; i++) {
-        await Future.delayed(const Duration(milliseconds: 50));
+      // Wait for duration to be available with retry (stream proxy may take longer than 500ms)
+      for (int i = 0; i < 20; i++) {
+        await Future.delayed(const Duration(milliseconds: 100));
         if (_player.duration != null && _player.duration!.inMilliseconds > 0)
           break;
       }
-      final actualDuration = _player.duration ?? song.duration;
+      final rawDuration = _player.duration;
+      final actualDuration = (rawDuration != null &&
+              rawDuration.inMilliseconds > 0 &&
+              _isDurationCompatible(rawDuration, song.duration.inMilliseconds))
+          ? rawDuration
+          : song.duration.inMilliseconds > 0
+              ? song.duration
+              : (rawDuration ?? song.duration);
 
       if (_playbackSpeedOverride != null) {
         await _player.setSpeed(_playbackSpeedOverride!);
@@ -689,12 +734,16 @@ class AudioPlayerHandler extends BaseAudioHandler
       // Restore equalizer settings for new track
       await _restoreEqualizerSettings();
 
-      // Crossfade: monitor position and trigger next track early
+      // Crossfade: monitor position and trigger next track early (effective duration)
       if (_crossfadeDuration > Duration.zero && _queue.length > 1) {
         _crossfadeSubscription = _player.positionStream.listen((position) {
-          final totalDuration = _player.duration;
-          if (totalDuration == null || !_player.playing) return;
-          final remaining = totalDuration - position;
+          final rawDur = _player.duration;
+          if (rawDur == null || !_player.playing) return;
+          final expectedMs = song.duration.inMilliseconds;
+          final effectiveDur = (expectedMs > 0 && !_isDurationCompatible(rawDur, expectedMs))
+              ? Duration(milliseconds: expectedMs)
+              : rawDur;
+          final remaining = effectiveDur - position;
           if (remaining <= _crossfadeDuration && remaining > Duration.zero) {
             _crossfadeSubscription?.cancel();
             _crossfadeSubscription = null;

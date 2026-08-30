@@ -206,14 +206,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: 'Melodi',
                   subtitle: '${AppLocale.tr('version')} $_appVersion',
                 ),
-                const SizedBox(height: 8),
-                _SettingsTile(
-                  icon: Icons.auto_awesome_rounded,
-                  iconColor: MelodiTheme.primaryGreen,
-                  title: AppLocale.tr('acknowledgments'),
-                  subtitle: 'yt-dlp, Media3 ve diğerleri',
-                  onTap: () => _showAcknowledgments(context),
-                ),
                 const SizedBox(height: 32),
               ],
             ),
@@ -462,15 +454,9 @@ class _AppearanceSettingsPage extends StatelessWidget {
     const m = {
       0xFF1ED760: 'color_green',
       0xFFFA233B: 'color_red',
-      0xFFFF2D55: 'color_pink',
       0xFF007AFF: 'color_blue',
-      0xFF5856D6: 'color_indigo',
       0xFFAF52DE: 'color_purple',
       0xFFFF9500: 'color_orange',
-      0xFFFFCC02: 'color_yellow',
-      0xFF34C759: 'color_mint',
-      0xFF00C7BE: 'color_teal',
-      0xFFFFFFFF: 'color_white',
     };
     final k = m[c.value];
     if (k != null) return AppLocale.tr(k);
@@ -535,17 +521,11 @@ class _AppearanceSettingsPage extends StatelessWidget {
 }
 
 const List<Color> _accentColors = [
-  Color(0xFF1ED760),
-  Color(0xFFFA233B),
-  Color(0xFFFF2D55),
-  Color(0xFF007AFF),
-  Color(0xFF5856D6),
-  Color(0xFFAF52DE),
-  Color(0xFFFF9500),
-  Color(0xFFFFCC02),
-  Color(0xFF34C759),
-  Color(0xFF00C7BE),
-  Color(0xFFFFFFFF),
+  Color(0xFF1ED760), // Yeşil (varsayılan)
+  Color(0xFF007AFF), // Mavi
+  Color(0xFFAF52DE), // Mor
+  Color(0xFFFF9500), // Turuncu
+  Color(0xFFFA233B), // Kırmızı
 ];
 
 class _SettingsTile extends StatelessWidget {

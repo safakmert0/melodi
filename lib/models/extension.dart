@@ -299,28 +299,50 @@ class RegistryEntry {
     Map<dynamic, dynamic> json, {
     String? baseUrl,
   }) {
-    final rawUrl =
-        (json['url'] ?? json['manifest_url'] ?? json['file'])?.toString().trim() ??
-            '';
+    // Melodi native: url/manifest_url/file; SpotiFLAC-compat: download_url
+    final rawUrl = (json['url'] ??
+            json['manifest_url'] ??
+            json['file'] ??
+            json['download_url'])
+        ?.toString()
+        .trim() ??
+        '';
     final url = _resolveUrl(rawUrl, baseUrl);
     if (url == null) return null;
     final uri = Uri.parse(url);
     var id = json['id']?.toString().trim() ?? '';
     if (id.isEmpty) {
-      // Dosya adından id türet: extensions/foo.json -> foo
-      final segments = uri.pathSegments.where((s) => s.endsWith('.json'));
-      id = segments.isEmpty ? '' : segments.last.replaceAll('.json', '');
+      // Dosya adından id türet: extensions/foo.json -> foo veya .sflx için de
+      final lastSeg = uri.pathSegments.isEmpty ? '' : uri.pathSegments.last;
+      if (lastSeg.endsWith('.json')) {
+        id = lastSeg.replaceAll('.json', '');
+      } else if (lastSeg.endsWith('.sflx')) {
+        id = lastSeg.replaceAll('.sflx', '');
+      } else if (lastSeg.endsWith('.spotiflac-ext')) {
+        id = lastSeg.replaceAll('.spotiflac-ext', '');
+      } else {
+        final segs = uri.pathSegments.where((s) => s.endsWith('.json'));
+        id = segs.isEmpty ? '' : segs.last.replaceAll('.json', '');
+      }
     }
     if (id.isEmpty) return null;
+    // name: display_name (SpotiFLAC) öncelikli, yoksa name
+    final displayName = json['display_name']?.toString().trim() ?? '';
+    final rawName = (displayName.isNotEmpty ? displayName : json['name']?.toString().trim() ?? '');
+    // kind: Melodi kind yoksa SpotiFLAC category'den türet
+    var kind = ExtensionKindX.tryParse(json['kind']);
+    if (kind == null) {
+      final cat = json['category']?.toString().trim().toLowerCase();
+      if (cat == 'download') kind = ExtensionKind.hifi;
+      else if (cat == 'integration') kind = ExtensionKind.backend;
+    }
     return RegistryEntry(
       id: id.toLowerCase().replaceAll(RegExp(r'[^a-z0-9._-]'), ''),
-      name: json['name']?.toString().trim().isNotEmpty ?? false
-          ? json['name'].toString().trim()
-          : id,
+      name: rawName.isNotEmpty ? rawName : id,
       url: url,
       version: json['version']?.toString().trim(),
       description: json['description']?.toString().trim(),
-      kind: ExtensionKindX.tryParse(json['kind']),
+      kind: kind,
       author: json['author']?.toString().trim(),
     );
   }
@@ -388,11 +410,17 @@ class ExtensionRegistry {
         entries.add(entry);
       }
     }
+    // name: Melodi 'name' veya SpotiFLAC kök 'version' fallback
+    final rawName = decoded['name']?.toString().trim() ??
+        (decoded['version'] != null ? 'SpotiFLAC Registry' : null);
+    final name = (rawName != null && rawName.isNotEmpty) ? rawName : repoUrl;
+    // updatedAt: camel veya snake
+    final updatedAtRaw = decoded['updatedAt']?.toString() ??
+        decoded['updated_at']?.toString() ??
+        '';
     return ExtensionRegistry(
-      name: decoded['name']?.toString().trim().isNotEmpty ?? false
-          ? decoded['name'].toString()
-          : repoUrl,
-      updatedAt: DateTime.tryParse(decoded['updatedAt']?.toString() ?? ''),
+      name: name,
+      updatedAt: DateTime.tryParse(updatedAtRaw),
       entries: entries,
     );
   }

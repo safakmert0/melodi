@@ -89,7 +89,7 @@ class RobustPipedService {
       final response = await http.get(
         Uri.parse(healthUrl),
         headers: {'Accept': 'application/json'},
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 5));
       
       final latency = stopwatch.elapsedMilliseconds;
       final healthy = response.statusCode == 200;
@@ -158,7 +158,7 @@ class RobustPipedService {
             if (base.contains('invidious')) 'type': 'video',
           }),
           headers: {'Accept': 'application/json'},
-        ).timeout(const Duration(seconds: 12));
+        ).timeout(const Duration(seconds: 6));
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
@@ -190,7 +190,7 @@ class RobustPipedService {
         final response = await http.get(
           Uri.parse(streamsUrl),
           headers: {'Accept': 'application/json'},
-        ).timeout(const Duration(seconds: 12));
+        ).timeout(const Duration(seconds: 6));
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
@@ -221,7 +221,7 @@ class RobustPipedService {
         final response = await http.get(
           Uri.parse(infoUrl),
           headers: {'Accept': 'application/json'},
-        ).timeout(const Duration(seconds: 10));
+        ).timeout(const Duration(seconds: 6));
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
@@ -395,7 +395,7 @@ class RobustPipedService {
         final response = await http.get(
           Uri.parse('$base/api/v1/streams/$videoId'),
           headers: {'Accept': 'application/json'},
-        ).timeout(const Duration(seconds: 12));
+        ).timeout(const Duration(seconds: 6));
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
@@ -431,7 +431,7 @@ class RobustPipedService {
         final response = await http.get(
           Uri.parse('$base/api/v1/videos/$videoId'),
           headers: {'Accept': 'application/json'},
-        ).timeout(const Duration(seconds: 12));
+        ).timeout(const Duration(seconds: 6));
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);

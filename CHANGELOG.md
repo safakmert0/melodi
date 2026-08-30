@@ -5,6 +5,19 @@ All notable changes to Melodi will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.10.1] - 2026-08-30
+
+### Fix & Performance — 8 talep birleştirildi
+- **Onboarding**: "Kaynaklarını birleştir" adımı kaldırıldı (`onboarding_screen.dart:21` `_pageCount` 4→3).
+- **Çevrimiçi çalma hız**: `audio_handler` 800/1200ms gecikmeleri kaldırıldı, `robust_piped`/`piped`/`yt_dlp`/`extension_service`/`backend_api` timeout'ları 30/15→12/6 saniyeye indirildi, piped seed sadece eklenti varsa.
+- **İndirme hız**: `download_manager` `_maxParallel` 1→2 (max 3), HEAD 10→6s, GET 120→60s, retry slot serbest bırakma.
+- **iPhone Dosyalar**: İndirme zaten `Documents/Melodi/Offline` (`storage_manager.dart:41`, `UIFileSharingEnabled=true`) — doğrulandı, özel klasör görünür.
+- **Süre mismatch (3:25 vs 6:54)**: `audio_handler.dart:88` duration mismatch guard (`_isDurationCompatible` 15% / 20-60s), `position`/`duration` getter’ları ve `crossfade` efektif süre kullanır, `durationStream` medya öğesini expected ile doğrular, 500ms poll 2 sn’ye çıkarıldı; ses bitince ilerleme durur ve `completed` tetiklenir.
+- **Tema**: Vurgu rengi 11→5’e indi (`settings_screen.dart:537` yeşil/mavi/mor/turuncu/kırmızı); beyaz/sarı/teal kaldırıldı (kontrast).
+- **Pop-up okunurluk**: `extension_store_screen.dart:123` `_toast` artık `primary` değil `inverseSurface` kullanır (`errorRed` hata için beyaz metin), tema SnackBar `inverseSurface` ile uyumlu.
+- **Ayarlar**: `Teşekkürler` (acknowledgments) kartı kaldırıldı; `Destek Ol` sideload’da `Mağaza kullanılamıyor` bilgisi + `Tekrar dene` + `GitHub’da destekle` fallback eklendi (`support_screen.dart:185`).
+- **Zarzet SpotiFLAC-Extension**: `extension.dart:298` `RegistryEntry` artık `download_url`/`display_name`/`category` ve `updated_at` snake’i destekler; `ExtensionRegistry` 9 zarzet girdisini parse eder; `extension_service.dart:266` `.sflx`/`.spotiflac-ext` için sentetik `hifi`/`backend` manifest üretir (Melodi public backend’e bridge), `https://raw.githubusercontent.com/zarzet/SpotiFLAC-Extension/main/registry.json` eklenince 9 eklenti kurulabilir hale geldi.
+
 ## [4.10.0] - 2026-08-30
 
 ### App Store Hibrit (B) — Temiz Base + Eklenti Premium

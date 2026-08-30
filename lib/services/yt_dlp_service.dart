@@ -106,7 +106,7 @@ class YtDlpService {
   final StreamController<DownloadProgress> _progressController =
       StreamController<DownloadProgress>.broadcast();
 
-  static const Duration _timeout = Duration(seconds: 30);
+  static const Duration _timeout = Duration(seconds: 12);
   static const Duration _downloadTimeout = Duration(seconds: 180);
   static const String _userAgent =
       'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) '

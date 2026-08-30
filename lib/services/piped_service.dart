@@ -37,8 +37,8 @@ class PipedService {
 
   static const String _cacheKey = 'piped_instances_cache';
   static const Duration _listTtl = Duration(hours: 12);
-  static const Duration _searchTimeout = Duration(seconds: 10);
-  static const Duration _streamTimeout = Duration(seconds: 15);
+  static const Duration _searchTimeout = Duration(seconds: 6);
+  static const Duration _streamTimeout = Duration(seconds: 8);
   static const Duration _cooldown = Duration(minutes: 10);
 
   final DatabaseService _db = DatabaseService.instance;

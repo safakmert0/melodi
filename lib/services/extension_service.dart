@@ -27,7 +27,7 @@ class ExtensionService extends ChangeNotifier {
 
   static const String _reposKey = 'extension_repos';
   static const String _installedKey = 'installed_extensions';
-  static const Duration _timeout = Duration(seconds: 15);
+  static const Duration _timeout = Duration(seconds: 8);
 
   final DatabaseService _db = DatabaseService.instance;
 
@@ -263,9 +263,47 @@ class ExtensionService extends ChangeNotifier {
 
   /// Depo kaydındaki manifest'i indirip kurar. Aynı kimlik kuruluysa
   /// sürümü günceller.
+  /// SpotiFLAC-compat: .sflx/.spotiflac-ext uzantıları için sentetik manifest üretilir
+  /// (Melodi bu formatı native çalıştıramaz; bridge olarak Melodi backend'i kullanılır).
   Future<void> installFromEntry(RegistryEntry entry) async {
+    // .sflx / .spotiflac-ext → SpotiFLAC JS bundle, Melodi'de bridge manifest
+    if (entry.url.endsWith('.sflx') || entry.url.endsWith('.spotiflac-ext')) {
+      final synthetic = _syntheticManifestForSflx(entry);
+      await installManifest(synthetic);
+      return;
+    }
     final manifest = await fetchManifest(entry.url);
     await installManifest(manifest);
+  }
+
+  ExtensionManifest _syntheticManifestForSflx(RegistryEntry entry) {
+    // SpotiFLAC download provider'ları Melodi'de hifi (lossless) veya backend olarak bridge'lenir.
+    // Varsayılan backend Melodi public backend'i kullanır; kullanıcı sonra baseUrl'i değiştirebilir.
+    const fallbackBackend = 'https://butterfly-crawford-parenting-spotlight.trycloudflare.com';
+    final kind = entry.kind ?? ExtensionKind.backend;
+    // category'ye göre yetenekler
+    final caps = kind == ExtensionKind.hifi
+        ? ['search', 'playback', 'downloads', 'lossless']
+        : ['search', 'playback', 'downloads'];
+    return ExtensionManifest(
+      id: entry.id,
+      name: entry.name,
+      description:
+          (entry.description ?? '') + ' — SpotiFLAC bridge (Melodi backend ile çalışır)',
+      version: entry.version ?? '1.0.0',
+      author: entry.author ?? 'zarzet',
+      kind: kind,
+      baseUrl: fallbackBackend,
+      protocol: kind == ExtensionKind.hifi
+          ? ExtensionProtocol.ytdlpBackend
+          : ExtensionProtocol.ytdlpBackend,
+      homepage: 'https://github.com/zarzet/SpotiFLAC-Extension',
+      minAppVersion: '4.10.0',
+      capabilities: caps,
+      permissions: [],
+      healthPath: '/',
+      healthMethod: 'GET',
+    );
   }
 
   Future<ExtensionManifest> fetchManifest(String url) async {

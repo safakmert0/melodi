@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/localization.dart';
 import '../theme/app_tokens.dart';
@@ -133,6 +134,13 @@ class _SupportScreenState extends State<SupportScreen> {
     }
   }
 
+  Future<void> _openExternalSupport() async {
+    final uri = Uri.parse('https://github.com/safakmert0/melodi');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   void dispose() {
     _subscription.cancel();
@@ -183,23 +191,55 @@ class _SupportScreenState extends State<SupportScreen> {
           if (_loading)
             const Center(child: CircularProgressIndicator())
           else if (!_storeAvailable)
-            _infoCard(
-              _t(
-                'Mağaza şu anda kullanılamıyor. Bağış yapmak için daha sonra tekrar dene.',
-                'The store is unavailable right now. Please try again later.',
-                'Der Store ist derzeit nicht verfügbar. Bitte später erneut versuchen.',
-              ),
+            Column(
+              children: [
+                _infoCard(
+                  _t(
+                    'Mağaza şu anda kullanılamıyor. Bu, sideload (AltStore/Sideloadly) sürümünde normaldir. App Store sürümünde bağışlar Apple üzerinden çalışır.',
+                    'The store is unavailable right now. This is normal on sideloaded builds (AltStore/Sideloadly). Tips work via Apple on the App Store build.',
+                    'Der Store ist derzeit nicht verfügbar. Das ist normal bei Sideload-Builds. Spenden funktionieren über Apple im App Store Build.',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _loadStore,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: Text(_t('Tekrar dene', 'Retry', 'Erneut versuchen')),
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: _openExternalSupport,
+                  icon: const Icon(Icons.open_in_new_rounded),
+                  label: Text(_t('GitHub’da destekle', 'Support on GitHub', 'Auf GitHub unterstützen')),
+                ),
+              ],
             )
           else if (_products.isEmpty)
-            _infoCard(
-              _t(
-                'Bağış ürünleri henüz yapılandırılmamış. Geliştirici, App Store Connect’te '
-                'ürünleri eklemeli.',
-                'No donation products are configured yet. The developer must add them in '
-                'App Store Connect.',
-                'Noch keine Spendenprodukte konfiguriert. Der Entwickler muss sie in '
-                'App Store Connect anlegen.',
-              ),
+            Column(
+              children: [
+                _infoCard(
+                  _t(
+                    'Bağış ürünleri henüz yapılandırılmamış. Geliştirici, App Store Connect’te '
+                    'ürünleri eklemeli.',
+                    'No donation products are configured yet. The developer must add them in '
+                    'App Store Connect.',
+                    'Noch keine Spendenprodukte konfiguriert. Der Entwickler muss sie in '
+                    'App Store Connect anlegen.',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _loadStore,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: Text(_t('Yenile', 'Refresh', 'Aktualisieren')),
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: _openExternalSupport,
+                  icon: const Icon(Icons.open_in_new_rounded),
+                  label: Text(_t('GitHub’da destekle', 'Support on GitHub', 'Auf GitHub unterstützen')),
+                ),
+              ],
             )
           else
             ..._products.map(_buildTier),

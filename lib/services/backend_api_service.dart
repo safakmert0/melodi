@@ -159,7 +159,7 @@ class BackendApiService {
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({'query': query, 'limit': limit}),
           )
-          .timeout(const Duration(seconds: 30));
+          .timeout(const Duration(seconds: 12));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -184,7 +184,7 @@ class BackendApiService {
           .get(
             Uri.parse('$_baseUrl/api/info/$videoId'),
           )
-          .timeout(const Duration(seconds: 30));
+          .timeout(const Duration(seconds: 12));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -220,7 +220,7 @@ class BackendApiService {
 
       final streamedResponse = await http.Client()
           .send(request)
-          .timeout(const Duration(seconds: 120));
+          .timeout(const Duration(seconds: 60));
 
       if (streamedResponse.statusCode == 200) {
         final dir = await getApplicationDocumentsDirectory();
@@ -288,7 +288,7 @@ class BackendApiService {
 
       final streamedResponse = await http.Client()
           .send(request)
-          .timeout(const Duration(seconds: 180));
+          .timeout(const Duration(seconds: 90));
 
       if (streamedResponse.statusCode == 200) {
         final dir = await getApplicationDocumentsDirectory();
@@ -341,7 +341,7 @@ class BackendApiService {
           .get(
             Uri.parse('$_baseUrl/api/playlist/$playlistId'),
           )
-          .timeout(const Duration(seconds: 30));
+          .timeout(const Duration(seconds: 12));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
