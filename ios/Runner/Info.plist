@@ -86,21 +86,11 @@
 		</dict>
 	</array>
 	<key>NSAppleMusicUsageDescription</key>
-	<string>Melodi needs access to your music library to scan and play your songs.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Melodi uses microphone for audio recording features.</string>
+	<string>Melodi needs access to your Apple Music library to import and play your existing songs and playlists.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Melodi needs access to your photo library to display album art.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Melodi needs permission to save album art to your photo library.</string>
+	<string>Melodi can use your photo library to let you pick a custom cover image for your playlists.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Melodi needs local network access for AirPlay device discovery.</string>
-	<key>NSDownloadsFolderUsageDescription</key>
-	<string>Downloads folder access helps you import and add new audio content to your collection.</string>
-	<key>NSDocumentsFolderUsageDescription</key>
-	<string>Document access enables saving and synchronizing your audio files between different devices.</string>
-	<key>NSDesktopFolderUsageDescription</key>
-	<string>File system access is required to browse and manage audio files stored on your device.</string>
+	<string>Melodi uses local network access to connect to your personal Navidrome/Subsonic music server and to discover AirPlay devices.</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>music</string>

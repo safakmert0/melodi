@@ -4,7 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import '../core/app_config.dart';
+import '../models/extension.dart';
 import 'database_service.dart';
+import 'extension_service.dart';
 import 'storage_manager.dart';
 import 'backend_api_service.dart';
 import 'robust_piped_service.dart';
@@ -33,6 +36,7 @@ class HLSDownloaderService {
 
   /// Download HLS stream to local file
   /// Returns local file path on success, null on failure
+  /// App Store'da eklentisiz bloklu (YouTube indirme).
   Future<String?> downloadHLS({
     required String hlsManifestUrl,
     required String videoId,
@@ -43,6 +47,18 @@ class HLSDownloaderService {
     int? expectedDurationMs,
     Function(double progress)? onProgress,
   }) async {
+    if (AppConfig.disableYtDlpDirect) {
+      try {
+        final hasBackend = ExtensionService.instance.installed
+            .any((e) => e.enabled && e.manifest.kind == ExtensionKind.backend);
+        if (!hasBackend) {
+          debugPrint('HLS download blocked: App Store mode without extension');
+          return null;
+        }
+      } catch (_) {
+        return null;
+      }
+    }
     try {
       final downloadId = videoId;
       

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/app_config.dart';
 import '../core/melodi_design.dart';
 import '../models/extension.dart';
 import '../theme/app_tokens.dart';
@@ -126,6 +127,52 @@ class _SourceHubScreenState extends State<SourceHubScreen> {
                     height: 1.45,
                   ),
             ),
+            if (AppConfig.isAppStoreBuild &&
+                !_extensions.any((e) => e.manifest.kind == ExtensionKind.backend)) ...[
+              MelodiPanel(
+                emphasized: true,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFB020).withValues(alpha: 0.16),
+                        borderRadius: context.tokens.borderRadiusCover,
+                      ),
+                      child: const Icon(Icons.lock_rounded,
+                          color: Color(0xFFFFB020), size: 24),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Premium eklenti ile genişlet',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 4),
+                          Text(
+                            'App Store sürümü varsayılan olarak yalnızca yerel ve kendi sunucunu kullanır. Harici kaynaklar eklenti mağazasından eklenti kurunca görünür.',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             const SizedBox(height: 22),
             for (final source in sources) ...[
               _SourceCard(

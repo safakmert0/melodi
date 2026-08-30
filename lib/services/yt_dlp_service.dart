@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import '../core/app_config.dart';
+import '../models/extension.dart';
+import 'extension_service.dart';
 
 class YtDlpVideo {
   final String id;
@@ -122,9 +125,25 @@ class YtDlpService {
     return _yt!;
   }
 
+  bool _isDirectAllowed() {
+    if (!AppConfig.disableYtDlpDirect) return true;
+    try {
+      final hasBackend = ExtensionService.instance.installed
+          .any((e) => e.enabled && e.manifest.kind == ExtensionKind.backend);
+      return hasBackend;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Doğrudan YouTube ses akış URL'sini döndürür (yt-dlp / youtube_explode).
   /// Backend/Piped başarısız olduğunda çevrim içi dinleme için yedek.
+  /// App Store build'te eklenti olmadan devre dışı (App Review 5.2.3).
   Future<String?> getStreamUrl(String videoId) async {
+    if (!_isDirectAllowed()) {
+      debugPrint('YtDlpService getStreamUrl blocked: App Store mode without extension');
+      return null;
+    }
     try {
       final formats = await getAvailableFormats(videoId);
       if (formats.isEmpty) return null;
@@ -157,6 +176,7 @@ class YtDlpService {
   }
 
   Future<YtDlpVideo?> getVideoInfo(String input) async {
+    if (!_isDirectAllowed()) return null;
     try {
       final videoId = await extractVideoId(input);
       if (videoId == null) return null;
@@ -170,6 +190,7 @@ class YtDlpService {
   }
 
   Future<List<YtDlpVideo>> search(String query, {int limit = 20}) async {
+    if (!_isDirectAllowed()) return [];
     try {
       final results = await _client.search.search(query).timeout(_timeout);
       final videos = <YtDlpVideo>[];
@@ -189,6 +210,7 @@ class YtDlpService {
   }
 
   Future<List<AudioFormat>> getAvailableFormats(String videoId) async {
+    if (!_isDirectAllowed()) return [];
     final formats = <AudioFormat>[];
 
     for (final client in _clients) {
@@ -235,6 +257,10 @@ class YtDlpService {
     AudioFormat? preferredFormat,
     Function(DownloadProgress)? onProgress,
   }) async {
+    if (!_isDirectAllowed()) {
+      debugPrint('YtDlpService downloadAudio blocked: App Store mode');
+      return null;
+    }
     try {
       final formats = await getAvailableFormats(videoId);
       if (formats.isEmpty) return null;
@@ -333,6 +359,7 @@ class YtDlpService {
   }
 
   Future<List<YtDlpVideo>> getPlaylistVideos(String playlistUrl) async {
+    if (!_isDirectAllowed()) return [];
     try {
       final playlistId = _extractPlaylistId(playlistUrl);
       if (playlistId == null) return [];

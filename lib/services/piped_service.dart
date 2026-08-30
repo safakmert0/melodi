@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../core/app_config.dart';
 import '../models/extension.dart';
 import 'database_service.dart';
 import 'extension_service.dart';
@@ -46,16 +47,29 @@ class PipedService {
   bool _listLoading = false;
   final Map<String, DateTime> _badUntil = {};
 
+  bool _allowDirect() {
+    if (!AppConfig.disableYtDlpDirect) return true;
+    try {
+      return ExtensionService.instance.installed
+          .any((e) => e.enabled && e.manifest.kind == ExtensionKind.backend);
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Birleşik örnek listesi; sağlıksız işaretliler sona atılır.
   Future<List<String>> instances() async {
     await _ensureList();
     final fromExtensions = await ExtensionService.instance
         .resolveEndpoints(ExtensionKind.backend, ExtensionProtocol.piped)
         .catchError((_) => <String>[]);
+    // App Store without extension: only extension-provided instances
+    final baseInstances = _allowDirect()
+        ? [..._fetchedInstances, ...seedInstances]
+        : <String>[];
     final all = [
       ...fromExtensions,
-      ..._fetchedInstances,
-      ...seedInstances,
+      ...baseInstances,
     ];
     final seen = <String>{};
     final unique = <String>[];
@@ -79,7 +93,15 @@ class PipedService {
   }
 
   /// Piped araması; hiçbir örnek yanıt vermezse boş liste döner.
+  /// App Store'da eklenti olmadan devre dışı.
   Future<List<OnlineTrack>> search(String query, {int limit = 20}) async {
+    if (!_allowDirect() &&
+        (await ExtensionService.instance
+                .resolveEndpoints(ExtensionKind.backend, ExtensionProtocol.piped)
+                .catchError((_) => <String>[]))
+            .isEmpty) {
+      return const [];
+    }
     final trimmed = query.trim();
     if (trimmed.isEmpty) return const [];
     for (final base in await instances()) {
@@ -124,7 +146,14 @@ class PipedService {
 
   /// Parçanın ses akışını döndürür; tercihen örneğin proxy'si üzerinden
   /// (böylece cihaz IP'sinin YouTube erişimi gerekmez). Bulunamazsa null.
+  /// App Store'da eklenti olmadan devre dışı.
   Future<String?> streamUrl(String videoId) async {
+    if (!_allowDirect()) {
+      final exts = await ExtensionService.instance
+          .resolveEndpoints(ExtensionKind.backend, ExtensionProtocol.piped)
+          .catchError((_) => <String>[]);
+      if (exts.isEmpty) return null;
+    }
     for (final base in await instances()) {
       try {
         final response = await http

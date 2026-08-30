@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/app_config.dart';
 import '../core/constants.dart';
 import '../core/melodi_design.dart';
 import '../theme/app_tokens.dart';
@@ -151,6 +152,10 @@ class _ExtensionStoreScreenState extends State<ExtensionStoreScreen> {
         builder: (context, _) => ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
           children: [
+            if (AppConfig.isAppStoreBuild) ...[
+              _AppStoreBanner(),
+              const SizedBox(height: 16),
+            ],
             _sectionHeader(
               'Kurulu eklentiler',
               '${_service.installed.where((e) => e.enabled).length} etkin',
@@ -587,6 +592,50 @@ class _EmptyHint extends StatelessWidget {
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall
                 ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AppStoreBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return MelodiPanel(
+      emphasized: true,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFB020).withValues(alpha: 0.16),
+              borderRadius: context.tokens.borderRadiusCover,
+            ),
+            child: const Icon(Icons.verified_user_rounded,
+                color: Color(0xFFFFB020), size: 24),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('App Store Sürümü',
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(
+                  'Bu sürüm App Store uyumludur. YouTube/JioSaavn gibi harici kaynaklar varsayılan olarak gizlidir. Premium özellikler yalnızca topluluk eklentisi kurduğunuzda etkinleşir. Eklentiler cihazınız dışında çalışır ve Melodi tarafından barındırılmaz.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

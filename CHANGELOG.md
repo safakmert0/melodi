@@ -5,6 +5,17 @@ All notable changes to Melodi will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.10.0] - 2026-08-30
+
+### App Store Hibrit (B) — Temiz Base + Eklenti Premium
+- **B-Hybrid mimarisi**: App Store IPA'sı varsayılan olarak YouTube/JioSaavn içermez; **eklenti mağazasından** `ytdlpBackend` eklentisi kurulunca premium açılır (Guideline 5.2.3 uyumu).
+- **`AppConfig` (lib/core/app_config.dart)**: `--dart-define=APP_STORE=true` ve `DISABLE_YTDLP_DIRECT=true` ile tüm doğrudan YouTube yolları gate'lendi.
+- **Gate'lenen servisler**: `yt_dlp_service`, `youtube_downloader`, `piped_service`, `robust_piped_service`, `hls_downloader_service`, `multi_source_search` — eklenti `ExtensionKind.backend` yoksa `null`/boş liste döner; `source_catalog` YouTube/JioSaavn kartlarını gizler; `extension_service` resmi repo'yu App Store'da otomatik eklemez.
+- **UI**: `extension_store_screen` ve `source_hub_screen` App Store banner'ları eklendi.
+- **Info.plist temizliği**: Geçersiz `NSDownloadsFolderUsageDescription` / `NSDocumentsFolderUsageDescription` / `NSDesktopFolderUsageDescription` ve `NSMicrophoneUsageDescription` kaldırıldı; `NSAppleMusicUsageDescription` / `NSPhotoLibraryUsageDescription` / `NSLocalNetworkUsageDescription` netleştirildi.
+- **Codemagic**: `melodi-ios` (sideload unsigned, full) korundu; yeni `melodi-ios-app-store` (signed, `flutter build ipa --dart-define=APP_STORE=true`, `fetch-signing-files`, `publish` → TestFlight) eklendi.
+- **Dokümantasyon**: `docs/app-store/REVIEW_NOTES.md`, `APP_STORE_CHECKLIST.md`, `CODMAGIC_SETUP.md` eklendi.
+
 ## [4.6.0] - 2025-08-25
 
 ### App Store Uyumluluk ve Yeniden Yapılanma

@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/app_config.dart';
+import '../models/extension.dart';
+import 'extension_service.dart';
 import 'music_source.dart';
 
 class RobustPipedService {
@@ -131,8 +134,19 @@ class RobustPipedService {
 
   String get currentInstance => _currentInstance ?? _pipedInstances.first;
 
-  // ARAMA - Otomatik fallback ile
+  bool _allowDirect() {
+    if (!AppConfig.disableYtDlpDirect) return true;
+    try {
+      return ExtensionService.instance.installed
+          .any((e) => e.enabled && e.manifest.kind == ExtensionKind.backend);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ARAMA - Otomatik fallback ile (App Store'da eklenti olmadan devre dışı)
   Future<List<OnlineTrack>> search(String query, {int limit = 20}) async {
+    if (!_allowDirect()) return [];
     final instances = _getHealthyInstances();
     
     for (final base in instances) {
@@ -163,8 +177,9 @@ class RobustPipedService {
     return [];
   }
 
-  // STREAM URL - Proxy ile (IP gizleme)
+  // STREAM URL - Proxy ile (IP gizleme) — App Store'da eklentisiz bloklu
   Future<String?> getStreamUrl(String videoId) async {
+    if (!_allowDirect()) return null;
     final instances = _getHealthyInstances();
 
     for (final base in instances) {
@@ -372,7 +387,9 @@ class RobustPipedService {
   }
 
   /// Get HLS manifest URL for native iOS downloading (AVAssetDownloadTask)
+  /// App Store'da eklentisiz bloklu (YouTube indirme).
   Future<String?> getHLSManifestUrl(String videoId) async {
+    if (!_allowDirect()) return null;
     for (final base in _getHealthyInstances()) {
       try {
         final response = await http.get(

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../core/app_config.dart';
 import '../models/extension.dart';
 import 'database_service.dart';
 import 'music_source.dart';
@@ -66,11 +67,19 @@ class ExtensionService extends ChangeNotifier {
             : <String>[];
       }
       if (_repos.isEmpty) {
-        _repos = [officialRepoUrl];
+        // App Store build: no pre-filled YouTube backend repo — user must
+        // manually add a community registry if they want premium features.
+        // This keeps the base binary free of YouTube download capability
+        // for App Review (Guideline 5.2.3).
+        if (AppConfig.isAppStoreBuild) {
+          _repos = [];
+        } else {
+          _repos = [officialRepoUrl];
+        }
         await _persistRepos();
       }
     } catch (_) {
-      _repos = [officialRepoUrl];
+      _repos = AppConfig.isAppStoreBuild ? [] : [officialRepoUrl];
     }
     try {
       _installed = InstalledExtension.listFromJson(
@@ -232,7 +241,9 @@ class ExtensionService extends ChangeNotifier {
   Future<void> removeRepo(String url) async {
     await ensureLoaded();
     _repos = _repos.where((r) => r != url).toList();
-    if (_repos.isEmpty) _repos = [officialRepoUrl];
+    if (_repos.isEmpty && !AppConfig.isAppStoreBuild) {
+      _repos = [officialRepoUrl];
+    }
     await _persistRepos();
     notifyListeners();
   }

@@ -1,6 +1,6 @@
 workflows:
   melodi-ios:
-    name: Melodi iOS Build
+    name: Melodi iOS (Sideload - Unsigned)
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
@@ -18,8 +18,9 @@ workflows:
         script: |
           flutter analyze --no-fatal-warnings --no-fatal-infos
           flutter test
-      - name: Build iOS (unsigned .ipa)
+      - name: Build iOS (unsigned .ipa - full features)
         script: |
+          # Sideload build = full premium features (yt-dlp direct enabled)
           flutter build ios --release --no-codesign
           mkdir -p build/unsigned_ipa/Payload
           cp -r build/ios/iphoneos/Runner.app build/unsigned_ipa/Payload/
@@ -28,3 +29,57 @@ workflows:
     artifacts:
       - build/Melodi-unsigned.ipa
       - build/ios/iphoneos/Runner.app
+
+  melodi-ios-app-store:
+    name: Melodi iOS (App Store - Signed)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      vars:
+        APP_ID: com.melodi.app
+        APP_NAME: Melodi
+        XCODE_WORKSPACE: "ios/Runner.xcworkspace"
+        XCODE_SCHEME: "Runner"
+      groups:
+        - appstore_credentials
+    triggering:
+      manual: true
+    scripts:
+      - name: Set up keychain and provisioning profiles
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$APP_ID" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Install dependencies
+        script: |
+          flutter pub get
+          cd ios && pod install && cd ..
+      - name: Analyze and test
+        script: |
+          flutter analyze --no-fatal-warnings --no-fatal-infos
+          flutter test
+      - name: Build iOS (signed .ipa - App Store compliant)
+        script: |
+          # App Store build = clean base (YouTube/yt-dlp direct blocked, only via extension)
+          flutter build ipa --release \
+            --dart-define=APP_STORE=true \
+            --dart-define=DISABLE_YTDLP_DIRECT=true \
+            --export-options-plist=ios/ExportOptions.plist
+      - name: Publish to TestFlight
+        script: |
+          app-store-connect publish --path build/ios/ipa/*.ipa
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_API_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+        beta_groups:
+          - Melodi Beta

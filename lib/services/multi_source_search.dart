@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import '../core/app_config.dart';
+import '../models/extension.dart';
+import 'extension_service.dart';
 import 'music_source.dart';
 import 'sources/youtube_music_source.dart';
 import 'sources/jiosaavn_source.dart';
@@ -24,7 +27,22 @@ class MultiSourceSearch {
     SoundCloudSource(),
   ];
 
-  List<MusicSource> get sources => List.unmodifiable(_sources);
+  List<MusicSource> get _filteredSources {
+    if (!AppConfig.isAppStoreBuild) return _sources;
+    try {
+      final hasBackend = ExtensionService.instance.installed
+          .any((e) => e.enabled && e.manifest.kind == ExtensionKind.backend);
+      if (hasBackend) return _sources;
+    } catch (_) {}
+    // App Store without premium extension: hide YouTube/JioSaavn full-track
+    return _sources
+        .where((s) =>
+            s.type != MusicSourceType.youtube &&
+            s.type != MusicSourceType.jiosaavn)
+        .toList();
+  }
+
+  List<MusicSource> get sources => List.unmodifiable(_filteredSources);
 
   /// Display ranking for search results. Full-track sources (those that can
   /// actually play/download the whole song) are shown first; preview-only
@@ -69,7 +87,7 @@ class MultiSourceSearch {
 
   Future<List<OnlineTrack>> searchAllSync(String query,
       {int limitPerSource = 10}) async {
-    final futures = _sources.map((source) async {
+    final futures = _filteredSources.map((source) async {
       try {
         return await source.search(query, limit: limitPerSource);
       } catch (e) {
@@ -89,7 +107,7 @@ class MultiSourceSearch {
     if (controller == null || controller.isClosed) return;
     try {
       final allTracks = <OnlineTrack>[];
-      final futures = _sources.map((source) async {
+      final futures = _filteredSources.map((source) async {
         try {
           final tracks = await source.search(query, limit: limitPerSource);
           allTracks.addAll(tracks);
@@ -115,12 +133,25 @@ class MultiSourceSearch {
     // Deezer's public API exposes metadata and a 30-second preview only.
     // Never let preview-only sources enter the playback/download pipeline.
     if (!track.source.supportsFullTrack) return null;
+    // App Store without extension: block YouTube/JioSaavn direct fetches
+    if (AppConfig.isAppStoreBuild) {
+      try {
+        final hasBackend = ExtensionService.instance.installed
+            .any((e) => e.enabled && e.manifest.kind == ExtensionKind.backend);
+        if (!hasBackend &&
+            (track.source == MusicSourceType.youtube ||
+                track.source == MusicSourceType.jiosaavn)) {
+          return null;
+        }
+      } catch (_) {}
+    }
     final cacheKey = '${track.source}:${track.id}';
     final cached = _streamUrlCache[cacheKey];
     if (cached != null && !cached.isExpired) return cached.url;
-    final source = _sources.firstWhere(
+    final source = _filteredSources.firstWhere(
       (s) => s.type == track.source,
-      orElse: () => _sources.first,
+      orElse: () => _sources.firstWhere((s) => s.type == track.source,
+          orElse: () => _sources.first),
     );
     final url = await source.getStreamUrl(track);
     if (url != null) _streamUrlCache[cacheKey] = _CachedStreamUrl(url);
@@ -153,9 +184,11 @@ class MultiSourceSearch {
     }
 
     // 1. Try the track's own source only if it can provide a full track.
-    final primarySource = _sources.firstWhere(
+    final primarySource = _filteredSources.firstWhere(
       (s) => s.type == track.source,
-      orElse: () => _sources.first,
+      orElse: () => _filteredSources.isNotEmpty
+          ? _filteredSources.first
+          : _sources.first,
     );
     if (primarySource.type.supportsFullTrack) {
       try {
@@ -168,7 +201,7 @@ class MultiSourceSearch {
     // Use the selected result's exact metadata; a broad UI query can resolve
     // to an unrelated first result.
     final searchQuery = '${track.artist} - ${track.title}'.trim();
-    final fallbackOrder = _sources
+    final fallbackOrder = _filteredSources
         .where((s) => s.type != track.source && s.type.supportsFullTrack)
         .toList();
     // Prefer the user's own server, then broad public full-track sources.

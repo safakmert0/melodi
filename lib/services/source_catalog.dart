@@ -1,3 +1,4 @@
+import '../core/app_config.dart';
 import '../models/extension.dart';
 import '../models/source_descriptor.dart';
 
@@ -13,6 +14,11 @@ class SourceCatalog {
     bool navidromeConnected = false,
     List<InstalledExtension> extensions = const [],
   }) {
+    final hasBackendExtension = extensions
+        .any((e) => e.enabled && e.manifest.kind == ExtensionKind.backend);
+    final showYouTube =
+        AppConfig.youtubeCatalogVisible(hasBackendExtension);
+
     return [
       const SourceDescriptor(
         kind: SourceKind.local,
@@ -49,16 +55,17 @@ class SourceCatalog {
           SourceCapability.lossless,
         },
       ),
-      const SourceDescriptor(
-        kind: SourceKind.youtube,
-        name: 'YouTube',
-        description: 'Arama ve eşleşen ses akışları',
-        status: SourceStatus.available,
-        capabilities: {
-          SourceCapability.search,
-          SourceCapability.playback,
-        },
-      ),
+      if (showYouTube)
+        const SourceDescriptor(
+          kind: SourceKind.youtube,
+          name: 'YouTube',
+          description: 'Arama ve eşleşen ses akışları (eklenti ile)',
+          status: SourceStatus.available,
+          capabilities: {
+            SourceCapability.search,
+            SourceCapability.playback,
+          },
+        ),
       const SourceDescriptor(
         kind: SourceKind.deezer,
         name: 'Deezer',
@@ -70,16 +77,17 @@ class SourceCatalog {
           SourceCapability.recommendations,
         },
       ),
-      const SourceDescriptor(
-        kind: SourceKind.jioSaavn,
-        name: 'JioSaavn',
-        description: 'Arama ve uygun bölgelerde ses akışı',
-        status: SourceStatus.available,
-        capabilities: {
-          SourceCapability.search,
-          SourceCapability.playback,
-        },
-      ),
+      if (showYouTube)
+        const SourceDescriptor(
+          kind: SourceKind.jioSaavn,
+          name: 'JioSaavn',
+          description: 'Arama ve uygun bölgelerde ses akışı (eklenti ile)',
+          status: SourceStatus.available,
+          capabilities: {
+            SourceCapability.search,
+            SourceCapability.playback,
+          },
+        ),
       // Eklenti mağazasından kurulan topluluk sağlayıcıları.
       for (final extension in extensions)
         if (extension.enabled)
