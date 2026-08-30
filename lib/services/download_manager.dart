@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import '../models/song_model.dart';
 import 'artwork_embedding_service.dart';
@@ -59,15 +60,43 @@ class DownloadTask {
 class DownloadManager {
   static final DownloadManager _instance = DownloadManager._();
   factory DownloadManager() => _instance;
-  DownloadManager._();
+  DownloadManager._() {
+    _loadConfig();
+  }
 
   final List<DownloadTask> _tasks = [];
   int _activeDownloads = 0;
-  static const int _maxParallel = 1;
+  int _maxParallel = 1;
+  bool _wifiOnly = false;
+  final Map<String, int> _retryCounts = {};
+  static const int _maxRetries = 3;
   final StreamController<List<DownloadTask>> _controller =
       StreamController<List<DownloadTask>>.broadcast();
   final YouTubeDownloader _youtubeDownloader = YouTubeDownloader();
   final MultiSourceSearch _multiSource = MultiSourceSearch();
+
+  Future<void> _loadConfig() async {
+    try {
+      final parallel = await DatabaseService.instance.getSetting('download_parallel');
+      final wifi = await DatabaseService.instance.getSetting('download_wifi_only');
+      _maxParallel = int.tryParse(parallel ?? '')?.clamp(1, 3) ?? 1;
+      _wifiOnly = wifi == 'true';
+    } catch (_) {}
+  }
+
+  Future<void> setWifiOnly(bool v) async {
+    _wifiOnly = v;
+    await DatabaseService.instance.setSetting('download_wifi_only', v.toString());
+  }
+
+  Future<void> setMaxParallel(int v) async {
+    _maxParallel = v.clamp(1, 3);
+    await DatabaseService.instance.setSetting('download_parallel', _maxParallel.toString());
+    _processQueue();
+  }
+
+  bool get wifiOnly => _wifiOnly;
+  int get maxParallel => _maxParallel;
 
   /// Callback when a download completes - triggers library refresh
   VoidCallback? onDownloadComplete;
@@ -162,6 +191,18 @@ class DownloadManager {
   }
 
   Future<void> _processQueue() async {
+    // Wi-Fi only kontrolü — Evermusic/SpotiFLAC esintili
+    if (_wifiOnly) {
+      try {
+        final conn = await Connectivity().checkConnectivity();
+        final isWifi = conn.contains(ConnectivityResult.wifi) || conn.contains(ConnectivityResult.ethernet);
+        final isMobile = conn.contains(ConnectivityResult.mobile);
+        if (isMobile && !isWifi) {
+          // Mobilde beklet, Wi-Fi gelince otomatik devam edecek (queue paused)
+          return;
+        }
+      } catch (_) {}
+    }
     while (_activeDownloads < _maxParallel) {
       final pending =
           _tasks.where((t) => t.state == DownloadState.pending).toList();
@@ -170,6 +211,9 @@ class DownloadManager {
       _downloadTrack(pending.first);
     }
   }
+
+  /// Ağ değişiminde kuyruğu uyandır (SpotiFLAC retryAfterReconnect)
+  void onConnectivityChanged() => _processQueue();
 
   Future<void> _downloadTrack(DownloadTask task) async {
     task.state = DownloadState.downloading;
@@ -358,10 +402,25 @@ class DownloadManager {
         if (task.cancelled) {
           task.state = DownloadState.failed;
           task.error = 'İptal edildi';
-        } else {
-          task.state = DownloadState.failed;
-          task.error = 'İndirme başarısız';
+          _notify();
+          _activeDownloads--;
+          _processQueue();
+          return;
         }
+        // SpotiFLAC-8Spine esintili: exponential backoff retry
+        final retries = _retryCounts[task.id] ?? 0;
+        if (retries < _maxRetries) {
+          _retryCounts[task.id] = retries + 1;
+          task.state = DownloadState.pending;
+          task.error = 'Yeniden deneniyor (${retries + 1}/$_maxRetries)...';
+          task.progress = 0;
+          _notify();
+          _activeDownloads--;
+          Future.delayed(Duration(seconds: (1 << retries) * 2), () => _processQueue());
+          return;
+        }
+        task.state = DownloadState.failed;
+        task.error = 'İndirme başarısız';
         _notify();
         _activeDownloads--;
         _processQueue();
@@ -400,9 +459,21 @@ class DownloadManager {
         task.error = 'İptal edildi';
       }
     } catch (e) {
+      final retries = _retryCounts[task.id] ?? 0;
+      if (retries < _maxRetries && !task.cancelled) {
+        _retryCounts[task.id] = retries + 1;
+        task.state = DownloadState.pending;
+        task.error = 'Yeniden deneniyor (${retries + 1}/$_maxRetries)...';
+        task.progress = 0;
+        _notify();
+        _activeDownloads--;
+        Future.delayed(Duration(seconds: (1 << retries) * 2), () => _processQueue());
+        return;
+      }
       task.state = DownloadState.failed;
       task.error = e.toString();
     }
+    _retryCounts.remove(task.id);
     _notify();
     _activeDownloads--;
     _processQueue();
@@ -453,41 +524,65 @@ class DownloadManager {
 
   Future<String?> _downloadFromUrl(
       String url, String title, Directory dir) async {
+    // JollyTone/Evermusic/SpotiFLAC esintili: Range resume + background-friendly
+    File? partFile;
+    HttpClient? client;
     try {
       final sanitized = title.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
       String safeTitle = sanitized.isEmpty ? 'download' : sanitized;
 
-      final client = HttpClient()
+      // Önce HEAD ile uzantıyı tahmin et (contentType için), sonra resume
+      String ext = 'm4a';
+      try {
+        final headClient = HttpClient()..connectionTimeout = const Duration(seconds: 10);
+        final headReq = await headClient.headUrl(Uri.parse(url));
+        headReq.headers.set('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
+        final headResp = await headReq.close().timeout(const Duration(seconds: 10));
+        if (headResp.headers.contentType != null) ext = _downloadExtension(url, headResp.headers.contentType);
+        headClient.close();
+      } catch (_) {
+        ext = _downloadExtension(url, null);
+      }
+
+      final filePath = '${dir.path}/${safeTitle}_${DateTime.now().millisecondsSinceEpoch}.$ext';
+      final partPath = '$filePath.part';
+      partFile = File(partPath);
+      int existing = 0;
+      if (await partFile.exists()) existing = await partFile.length();
+
+      client = HttpClient()
         ..userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)'
         ..connectionTimeout = const Duration(seconds: 120);
-      try {
-        final request = await client.getUrl(Uri.parse(url));
-        request.headers.set('User-Agent',
-            'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
-        final response = await request.close();
-        if (response.statusCode != 200) {
-          return null;
-        }
-        final extension = _downloadExtension(url, response.headers.contentType);
-        final filePath =
-            '${dir.path}/${safeTitle}_${DateTime.now().millisecondsSinceEpoch}.$extension';
-        final file = File(filePath);
-        if (await file.exists()) return filePath;
-        final sink = file.openWrite();
-        await response.pipe(sink);
-        await sink.close();
-        final len = await file.length();
-        if (len < 1000) {
-          await file.delete();
-          return null;
-        }
-        return filePath;
-      } finally {
-        client.close();
+      final request = await client.getUrl(Uri.parse(url));
+      request.headers.set('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
+      if (existing > 1024) {
+        request.headers.set(HttpHeaders.rangeHeader, 'bytes=$existing-');
       }
+      final response = await request.close();
+      if (response.statusCode != 200 && response.statusCode != 206) {
+        if (existing > 0 && response.statusCode == 416) {
+          // Range not satisfiable, restart
+          await partFile.delete();
+          return await _downloadFromUrl(url, title, dir);
+        }
+        return null;
+      }
+      // 206 ise append, 200 ise overwrite
+      final sink = partFile.openWrite(mode: existing > 0 && response.statusCode == 206 ? FileMode.append : FileMode.write);
+      await response.pipe(sink);
+      await sink.close();
+      final len = await partFile.length();
+      if (len < 1000) {
+        await partFile.delete();
+        return null;
+      }
+      await partFile.rename(filePath);
+      return filePath;
     } catch (e) {
       debugPrint('Download from URL error: $e');
       return null;
+    } finally {
+      client?.close(force: true);
     }
   }
 

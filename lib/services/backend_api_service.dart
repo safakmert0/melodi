@@ -6,7 +6,6 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import '../models/extension.dart';
-import 'database_service.dart';
 import 'extension_service.dart';
 
 class BackendVideo {
@@ -89,17 +88,13 @@ class BackendApiService {
   String _baseUrl = '';
   final StreamController<DownloadProgress> _progressController =
       StreamController<DownloadProgress>.broadcast();
-  bool _initialized = false;
 
   Stream<DownloadProgress> get progressStream => _progressController.stream;
 
-  void setBaseUrl(String url) {
-    _baseUrl = url;
-  }
-
   String get baseUrl => _baseUrl;
 
-  /// Etkin bir backend eklentisi ya da kayıtlı manuel adres varsa döndürür.
+  /// Yalnızca kurulu bir backend eklentisi varsa döndürür.
+  /// Manuel IP girişi tamamen kaldırıldı — yt-dlp sadece eklenti ile aktif olur.
   Future<String?> resolveEndpoint() async {
     await _resolveEndpointOverride();
     return _baseUrl.isEmpty ? null : _baseUrl;
@@ -112,43 +107,32 @@ class BackendApiService {
     return '$base/api/stream/$videoId';
   }
 
-  Future<void> _ensureInitialized() async {
-    if (_initialized) return;
-    _initialized = true;
-    try {
-      final saved =
-          await DatabaseService.instance.getSetting('backend_api_url');
-      if (saved != null && saved.isNotEmpty) {
-        _baseUrl = saved;
-      }
-    } catch (_) {}
-  }
-
-  /// Etkin bir backend eklentisi varsa adresi eklenti belirler.
-  /// Manuel girilen adres yalnızca eklenti yokken kullanılır.
   Future<void> _resolveEndpointOverride() async {
-    await _ensureInitialized();
     try {
+      final exts = await ExtensionService.instance
+          .resolveEndpoints(ExtensionKind.backend, ExtensionProtocol.ytdlpBackend);
+      for (final ep in exts) {
+        // SpotiFLAC tarzı sağlık kontrolü + izin kontrolü
+        final matches = ExtensionService.instance.installed
+            .where((e) => e.manifest.baseUrl == ep && e.enabled)
+            .toList();
+        final holder = matches.isNotEmpty ? matches.first : null;
+        if (holder != null) {
+          final healthy = await ExtensionService.instance.checkHealth(holder);
+          if (!healthy) continue;
+          if (!holder.manifest.isUrlAllowed(ep)) continue;
+        }
+        _baseUrl = ep;
+        return;
+      }
+      // Fallback: ilk endpoint (sağlık kontrolsüz)
       final endpoint = await ExtensionService.instance.resolveEndpoint(
         ExtensionKind.backend,
         protocol: ExtensionProtocol.ytdlpBackend.wireName,
       );
-      if (endpoint != null && endpoint.isNotEmpty) {
-        _baseUrl = endpoint;
-      }
-    } catch (_) {}
-  }
-
-  /// Verilen adrese doğrudan health-check yapar (ayar ekranı kullanır).
-  static Future<bool> testConnection(String url) async {
-    try {
-      final response = await http
-          .get(Uri.parse('$url/'))
-          .timeout(const Duration(seconds: 8));
-      return response.statusCode == 200;
-    } catch (e) {
-      debugPrint('Backend test connection error: $e');
-      return false;
+      _baseUrl = endpoint ?? '';
+    } catch (_) {
+      _baseUrl = '';
     }
   }
 

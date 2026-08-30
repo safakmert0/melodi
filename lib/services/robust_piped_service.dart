@@ -11,23 +11,24 @@ class RobustPipedService {
   factory RobustPipedService() => _instance;
   static RobustPipedService get instance => _instance;
 
-  // Resmi + güvenilir Piped instance'ları (2024 aktif)
+  // Güncel Piped/Invidious örnekleri - 2026'da en az bir tanesi ayakta olmalı
+  // private.coffee şu an arama için çalışıyor; diğerleri yedek. Bozuk örnekler
+  // otomatik olarak sağlıksız işaretlenip atlanır.
   static const List<String> _pipedInstances = [
+    'https://api.piped.private.coffee',
     'https://pipedapi.kavin.rocks',
-    'https://piped-api.jaydp.xyz', 
+    'https://pipedapi.adminforge.de',
     'https://piped.mha.fi',
-    'https://piped.privacydev.net',
-    'https://piped.tilder.org',
     'https://piped.lunar.icu',
-    'https://piped.kavin.rocks',
+    'https://piped.privacydev.net',
   ];
 
   // Invidious fallback instance'ları
   static const List<String> _invidiousInstances = [
     'https://yewtu.be',
-    'https://invidious.snopyta.org',
-    'https://invidious.fdn.fr',
+    'https://inv.nadeko.net',
     'https://invidious.nerdvpn.de',
+    'https://invidious.fdn.fr',
   ];
 
   final Map<String, InstanceHealth> _health = {};

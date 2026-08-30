@@ -196,6 +196,16 @@ class _PlaylistImportScreenState extends State<PlaylistImportScreen> {
         return 'YouTube Music';
       case PlaylistImportSource.deezer:
         return 'Deezer';
+      case PlaylistImportSource.appleMusic:
+        return 'Apple Music';
+      case PlaylistImportSource.tidal:
+        return 'Tidal';
+      case PlaylistImportSource.soundCloud:
+        return 'SoundCloud';
+      case PlaylistImportSource.m3u:
+        return 'M3U';
+      case PlaylistImportSource.cue:
+        return 'CUE';
       case PlaylistImportSource.unknown:
         return '';
     }

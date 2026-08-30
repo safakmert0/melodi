@@ -2,10 +2,12 @@ import 'dart:async';
 import '../backend_api_service.dart';
 import '../music_source.dart';
 import '../robust_piped_service.dart';
+import '../yt_dlp_service.dart';
 
 class YouTubeMusicSource implements MusicSource {
   final BackendApiService _backend = BackendApiService.instance;
   final RobustPipedService _piped = RobustPipedService.instance;
+  final YtDlpService _ytDlp = YtDlpService.instance;
 
   @override
   MusicSourceType get type => MusicSourceType.youtube;
@@ -43,6 +45,19 @@ class YouTubeMusicSource implements MusicSource {
       if (results.length >= limit) return results.take(limit).toList();
     } catch (_) {}
 
+    // 3. Doğrudan YouTube (youtube_explode) - her zaman çalışır, backend/piped kapalıyken hayat kurtarır
+    try {
+      final ytVideos = await _ytDlp.search(query, limit: limit - results.length);
+      results.addAll(ytVideos.map((v) => OnlineTrack(
+            id: v.id,
+            title: v.title,
+            artist: v.author,
+            duration: v.duration,
+            thumbnailUrl: v.thumbnailUrl,
+            source: MusicSourceType.youtube,
+          )));
+    } catch (_) {}
+
     return results.take(limit).toList();
   }
 
@@ -56,7 +71,13 @@ class YouTubeMusicSource implements MusicSource {
 
     // 2. Robust Piped - otomatik instance failover, proxy ile
     try {
-      return await _piped.getStreamUrl(track.id);
+      final piped = await _piped.getStreamUrl(track.id);
+      if (piped != null) return piped;
+    } catch (_) {}
+
+    // 3. Doğrudan YouTube stream (youtube_explode) - backend/piped kapalıyken
+    try {
+      return await _ytDlp.getStreamUrl(track.id);
     } catch (_) {}
 
     return null;

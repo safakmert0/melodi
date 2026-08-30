@@ -64,6 +64,9 @@ class ExtensionManifest {
     this.homepage,
     this.minAppVersion,
     this.capabilities = const [],
+    this.permissions = const [],
+    this.healthPath = '/',
+    this.healthMethod = 'GET',
   });
 
   final String id;
@@ -77,6 +80,12 @@ class ExtensionManifest {
   final String? homepage;
   final String? minAppVersion;
   final List<String> capabilities;
+  /// SpotiFLAC/DebridMusic tarzı ağ izinleri — boş ise tüm https izinli
+  final List<String> permissions;
+  /// Sağlık kontrol yolu, örn. "/" veya "/health"
+  final String healthPath;
+  /// HEAD veya GET
+  final String healthMethod;
 
   static ExtensionManifest fromJson(Map<dynamic, dynamic> json) {
     final id = _cleanId(json['id']);
@@ -105,6 +114,19 @@ class ExtensionManifest {
         .map((c) => c.toString().trim().toLowerCase())
         .where((c) => c.isNotEmpty)
         .toList(growable: false);
+    final permissions = (json['permissions'] as List? ??
+            json['network_permissions'] as List? ??
+            const [])
+        .map((c) => c.toString().trim())
+        .where((c) => c.isNotEmpty)
+        .toList(growable: false);
+    final healthPath = json['health_path']?.toString().trim() ??
+        json['healthPath']?.toString().trim() ??
+        '/';
+    final healthMethod = (json['health_method']?.toString().trim() ??
+            json['healthMethod']?.toString().trim() ??
+            'GET')
+        .toUpperCase();
 
     final protocol = ExtensionProtocol.tryParse(json['protocol']);
     if (json['protocol'] != null && protocol == null) {
@@ -120,11 +142,13 @@ class ExtensionManifest {
       author: json['author']?.toString().trim() ?? 'Bilinmeyen',
       kind: kind,
       baseUrl: baseUrl,
-      protocol:
-          protocol ?? ExtensionProtocol.ytdlpBackend,
+      protocol: protocol ?? ExtensionProtocol.ytdlpBackend,
       homepage: _optionalUrl(json['homepage']),
       minAppVersion: json['minAppVersion']?.toString().trim(),
       capabilities: capabilities,
+      permissions: permissions,
+      healthPath: healthPath.isEmpty ? '/' : healthPath,
+      healthMethod: (healthMethod == 'HEAD' ? 'HEAD' : 'GET'),
     );
   }
 
@@ -140,6 +164,9 @@ class ExtensionManifest {
         if (homepage != null) 'homepage': homepage,
         if (minAppVersion != null) 'minAppVersion': minAppVersion,
         'capabilities': capabilities,
+        if (permissions.isNotEmpty) 'permissions': permissions,
+        'health_path': healthPath,
+        'health_method': healthMethod,
       };
 
   static String? _cleanId(Object? value) {
@@ -167,6 +194,26 @@ class ExtensionManifest {
     final uri = Uri.tryParse(raw);
     if (uri == null || !uri.hasScheme) return null;
     return raw;
+  }
+
+  /// SpotiFLAC tarzı ağ izin kontrolü — permissions boşsa tüm https izinli.
+  bool isUrlAllowed(String url) {
+    if (permissions.isEmpty) return true;
+    final uri = Uri.tryParse(url);
+    if (uri == null || !uri.hasScheme) return false;
+    final host = uri.host.toLowerCase();
+    for (final p in permissions) {
+      final allowed = p.toLowerCase();
+      if (host == allowed || host.endsWith('.$allowed') || url.toLowerCase().startsWith(allowed)) return true;
+    }
+    return false;
+  }
+
+  /// Health check URL
+  String get healthUrl {
+    final base = baseUrl.replaceAll(RegExp(r'/+$'), '');
+    final path = healthPath.startsWith('/') ? healthPath : '/$healthPath';
+    return '$base$path';
   }
 }
 

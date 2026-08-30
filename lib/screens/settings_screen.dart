@@ -1,94 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:io';
 import 'dart:math';
-import 'package:intl/intl.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
 import '../providers/library_provider.dart';
-import '../providers/player_provider.dart';
 import '../providers/theme_provider.dart';
-
-import '../services/podcast_service.dart';
-import 'podcast_detail_screen.dart';
-
-import '../providers/settings_provider.dart';
-import '../providers/metadata_provider.dart';
-import '../providers/download_provider.dart';
 import '../services/database_service.dart';
-import '../services/library_health_service.dart';
-import '../services/playback_service.dart';
-
-import '../services/stream_cache.dart';
-import 'audio_quality_screen.dart';
 import 'support_screen.dart';
-import '../widgets/sleep_timer_sheet.dart';
-
-import 'diagnostics_screen.dart';
-
 import 'downloads_screen.dart';
-
-import 'shared_urls_screen.dart';
-import 'library_health_screen.dart';
 import 'storage_screen.dart';
-
-import 'backend_settings_screen.dart';
 import 'extension_store_screen.dart';
-import 'source_hub_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
-
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late String _selectedLanguage;
-  String _downloadPath = '';
-  String _settingsSearch = '';
   String _appVersion = AppConstants.appVersion;
 
   @override
   void initState() {
     super.initState();
     _selectedLanguage = _localeName(AppLocale.currentLocale);
-    _loadWatchedFolder();
-    _loadPlaybackSettings();
-    _loadDownloadPath();
     PackageInfo.fromPlatform().then((info) {
       if (mounted) setState(() => _appVersion = info.version);
     });
-  }
-
-  Future<void> _loadPlaybackSettings() async {
-    final db = DatabaseService.instance;
-    final crossfade = await db.getSetting('crossfade_seconds');
-    final shuffle = await db.getSetting('auto_shuffle');
-    final gapless = await db.getSetting('gapless_playback');
-    final btAutoEq = await db.getSetting('bluetooth_auto_eq');
-    final dlVideo = await db.getSetting('download_as_video');
-    if (mounted) {
-      setState(() {
-        _crossfadeSeconds = double.tryParse(crossfade ?? '') ?? 0;
-        _autoShuffle = shuffle == 'true';
-        _gaplessPlayback = gapless != 'false';
-        _bluetoothAutoEq = btAutoEq == 'true';
-        _downloadAsVideo = dlVideo == 'true';
-      });
-    }
-  }
-
-  Future<void> _loadDownloadPath() async {
-    final path = await DatabaseService.instance.getSetting('download_path');
-    if (mounted) {
-      setState(() {
-        _downloadPath = path ?? '';
-      });
-    }
   }
 
   String _localeName(String code) {
@@ -102,14 +43,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  double _crossfadeSeconds = 0;
-  bool _autoShuffle = false;
-  bool _gaplessPlayback = true;
-  bool _bluetoothAutoEq = false;
-  bool _downloadAsVideo = false;
-  String _watchedFolderPath = '';
-  List<WatchedFolder> _watchedFolders = [];
-
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
@@ -118,989 +51,174 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 
-  Future<void> _loadWatchedFolder() async {
-    final lib = context.read<LibraryProvider>();
-    final folders = await lib.getWatchedFolders();
-    final single = await lib.getWatchedFolder();
-    if (mounted) setState(() {
-      _watchedFolders = folders;
-      _watchedFolderPath = single ?? '';
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Consumer3<LibraryProvider, PlayerProvider, LocaleNotifier>(
-      builder: (context, library, player, locale, _) {
-        return Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          body: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              SliverAppBar(
-                backgroundColor:
-                    Theme.of(context).appBarTheme.backgroundColor ??
-                        Theme.of(context).scaffoldBackgroundColor,
-                surfaceTintColor: Colors.transparent,
-                title: Text(
-                  AppLocale.tr('settings'),
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                floating: true,
-                pinned: false,
+    final theme = Theme.of(context);
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            backgroundColor: theme.appBarTheme.backgroundColor ??
+                theme.scaffoldBackgroundColor,
+            surfaceTintColor: Colors.transparent,
+            title: Text(
+              AppLocale.tr('settings'),
+              style: TextStyle(
+                color: theme.colorScheme.onSurface,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
               ),
-              SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── 1. GENEL ──
-                    _CollapsibleSection(
-                      title: AppLocale.tr('general'),
-                      children: [
-                        _SettingsTile(
-                          icon: Icons.language_rounded,
-                          iconColor: Colors.teal,
-                          title: AppLocale.tr('app_language'),
-                          subtitle: _selectedLanguage,
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => _showLanguagePicker(context),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.dark_mode_rounded,
-                          iconColor: Colors.amber,
-                          title: AppLocale.tr('theme'),
-                          subtitle: Consumer<ThemeProvider>(
-                            builder: (context, tp, _) => Text(
-                              tp.isDark
-                                  ? AppLocale.tr('dark')
-                                  : tp.isLight
-                                      ? AppLocale.tr('light')
-                                      : AppLocale.tr('system'),
-                              style: TextStyle(
-                                  color: MelodiTheme.onSurfaceVariant,
-                                  fontSize: 13),
-                            ),
-                          ),
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => _AppearanceSettingsPage()),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.widgets,
-                          iconColor: Colors.amber,
-                          title: AppLocale.tr('widget'),
-                          subtitle: AppLocale.tr('widget_desc'),
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => _showWidgetConfigDialog(context),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Divider(color: MelodiTheme.outlineVariant, height: 1),
-                    // ── 2. ÇALMA (aynı ayarlar oynatıcı ekranından da erişilebilir) ──
-                    _CollapsibleSection(
-                      title: AppLocale.tr('playback'),
-                      children: [
-                        _PlaybackTile(
-                          icon: Icons.dark_mode_rounded,
-                          iconColor: Colors.indigo,
-                          title: AppLocale.tr('sleep_timer'),
-                          subtitleBuilder: () {
-                            final svc = PlaybackService.instance;
-                            if (svc.isSleepTimerActive) {
-                              final rem = svc.getRemainingTime();
-                              final m = rem.inMinutes;
-                              final s = rem.inSeconds.remainder(60);
-                              return '${AppLocale.tr('timer_active')} ($m:${s.toString().padLeft(2, '0')})';
-                            }
-                            return null;
-                          },
-                          onTap: () {
-                            showModalBottomSheet(
-                              context: context,
-                              backgroundColor: MelodiTheme.containerLow,
-                              shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(20)),
-                              ),
-                              builder: (_) => const SleepTimerSheet(),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        _PlaybackTile(
-                          icon: Icons.swap_horiz_rounded,
-                          iconColor: Colors.indigo,
-                          title: AppLocale.tr('crossfade'),
-                          subtitleBuilder: () {
-                            final crossfade = _crossfadeSeconds.toInt();
-                            if (crossfade > 0)
-                              return '$crossfade ${AppLocale.tr('seconds')}';
-                            return AppLocale.tr('off');
-                          },
-                          onTap: () {
-                            final player = context.read<PlayerProvider>();
-                            _showCrossfadeSlider(context, player);
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.shuffle_rounded,
-                          iconColor: Colors.amber,
-                          title: AppLocale.tr('auto_shuffle'),
-                          subtitle: AppLocale.tr('automatically_shuffle'),
-                          trailing: Switch(
-                            value: _autoShuffle,
-                            onChanged: (v) {
-                              setState(() => _autoShuffle = v);
-                              context.read<PlayerProvider>().setAutoShuffle(v);
-                              DatabaseService.instance
-                                  .setSetting('auto_shuffle', v.toString());
-                            },
-                            activeColor: MelodiTheme.primaryGreen,
-                          ),
-                          onTap: () {
-                            final v = !_autoShuffle;
-                            setState(() => _autoShuffle = v);
-                            context.read<PlayerProvider>().setAutoShuffle(v);
-                            DatabaseService.instance
-                                .setSetting('auto_shuffle', v.toString());
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.waves_rounded,
-                          iconColor: Colors.pink,
-                          title: AppLocale.tr('gapless_playback'),
-                          subtitle: AppLocale.tr('seamless_transition'),
-                          trailing: Switch(
-                            value: _gaplessPlayback,
-                            onChanged: (v) {
-                              setState(() => _gaplessPlayback = v);
-                              context
-                                  .read<PlayerProvider>()
-                                  .setGaplessPlayback(v);
-                              DatabaseService.instance
-                                  .setSetting('gapless_playback', v.toString());
-                            },
-                            activeColor: MelodiTheme.primaryGreen,
-                          ),
-                          onTap: () {
-                            final v = !_gaplessPlayback;
-                            setState(() => _gaplessPlayback = v);
-                            context
-                                .read<PlayerProvider>()
-                                .setGaplessPlayback(v);
-                            DatabaseService.instance
-                                .setSetting('gapless_playback', v.toString());
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.equalizer,
-                          iconColor: MelodiTheme.primaryGreen,
-                          title: AppLocale.tr('audio_effects'),
-                          subtitle: AppLocale.tr('audio_effects_desc'),
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const _AudioEffectsPage()),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.bluetooth,
-                          iconColor: Colors.blue,
-                          title: AppLocale.tr('bluetooth_auto_eq'),
-                          subtitle: AppLocale.tr('bluetooth_auto_eq_desc'),
-                          trailing: Switch(
-                            value: _bluetoothAutoEq,
-                            onChanged: (v) {
-                              setState(() => _bluetoothAutoEq = v);
-                              DatabaseService.instance.setSetting(
-                                  'bluetooth_auto_eq', v.toString());
-                            },
-                            activeColor: MelodiTheme.primaryGreen,
-                          ),
-                          onTap: () {
-                            setState(
-                                () => _bluetoothAutoEq = !_bluetoothAutoEq);
-                            DatabaseService.instance.setSetting(
-                                'bluetooth_auto_eq',
-                                _bluetoothAutoEq.toString());
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        Consumer<SettingsProvider>(
-                          builder: (context, settings, _) => _SettingsTile(
-                            icon: Icons.cloud_rounded,
-                            iconColor: Colors.lightBlue,
-                            title: AppLocale.tr('streaming'),
-                            subtitle: settings.streamingEnabled
-                                ? AppLocale.tr('online_mode')
-                                : AppLocale.tr('offline_mode'),
-                            trailing: Icon(Icons.chevron_right,
-                                color: MelodiTheme.textMuted),
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (_) =>
-                                      const _StreamingSettingsPage()),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                          child: Text(
-                            'Bu ayarlar oynatıcı ekranındaki ••• menüsünden de değiştirilebilir',
-                            style: TextStyle(
-                                color: MelodiTheme.onSurfaceVariant,
-                                fontSize: 11,
-                                fontStyle: FontStyle.italic),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Divider(color: MelodiTheme.outlineVariant, height: 1),
-                    // ── 3. KÜTÜPHANE & İNDİRMELER ──
-                    _CollapsibleSection(
-                      title: AppLocale.tr('music_library'),
-                      children: [
-                        _SettingsTile(
-                          icon: Icons.refresh_rounded,
-                          iconColor: MelodiTheme.primaryGreen,
-                          title: AppLocale.tr('rescan_library'),
-                          subtitle: AppLocale.tr('scan_device_for_music'),
-                          trailing: library.isScanning
-                              ? SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: MelodiTheme.primaryGreen),
-                                )
-                              : null,
-                          onTap: () => library.scanMusic(),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.folder_open_rounded,
-                          iconColor: Colors.orange,
-                          title: AppLocale.tr('import_from_files'),
-                          subtitle: AppLocale.tr('browse_and_import'),
-                          onTap: () => library.importFromFiles(),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.folder_special_rounded,
-                          iconColor: Colors.purple,
-                          title: AppLocale.tr('import_from_folder_title'),
-                          subtitle: _watchedFolders.isEmpty
-                              ? AppLocale.tr('scan_folder_for_music')
-                              : '${_watchedFolders.length} klasör izleniyor (her açılışta taranır)',
-                          trailing: Icon(Icons.add_rounded,
-                              color: MelodiTheme.textMuted),
-                          onTap: () async {
-                            await _pickWatchedFolder(context);
-                            await _loadWatchedFolder();
-                          },
-                        ),
-                        if (_watchedFolders.isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          ..._watchedFolders.map((wf) => Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: _SettingsTile(
-                                  icon: Icons.folder_rounded,
-                                  iconColor: wf.enabled
-                                      ? Colors.deepPurple
-                                      : Colors.grey,
-                                  title: wf.path.split('/').last.isEmpty
-                                      ? wf.path
-                                      : wf.path.split('/').last,
-                                  subtitle: wf.path,
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Switch(
-                                        value: wf.enabled,
-                                        activeColor:
-                                            MelodiTheme.primaryGreen,
-                                        onChanged: (v) async {
-                                          await context
-                                              .read<LibraryProvider>()
-                                              .toggleWatchedFolder(
-                                                  wf.path, v);
-                                          await _loadWatchedFolder();
-                                        },
-                                      ),
-                                      IconButton(
-                                        icon: Icon(Icons.close,
-                                            color: MelodiTheme.textMuted,
-                                            size: 18),
-                                        onPressed: () async {
-                                          await context
-                                              .read<LibraryProvider>()
-                                              .removeWatchedFolder(wf.path);
-                                          await _loadWatchedFolder();
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                  onTap: null,
-                                ),
-                              )),
-                        ],
-                        const SizedBox(height: 8),
-                        _LibraryHealthSettingsTile(),
-                        const SizedBox(height: 8),
-                        Consumer<MetadataProvider>(
-                          builder: (context, md, _) => Column(
-                            children: [
-                              _SettingsTile(
-                                icon: Icons.image_rounded,
-                                iconColor: Colors.indigo,
-                                title: AppLocale.tr('backfill_art'),
-                                subtitle: md.isBackfilling
-                                    ? '${AppLocale.tr('backfill_progress')}: ${md.backfillProgress}/${md.backfillTotal}'
-                                    : md.lastBackfilledAt != null
-                                        ? '${AppLocale.tr('last_backfilled')}: ${_formatDateTime(md.lastBackfilledAt!)}${md.backfillFailed > 0 ? '  •  ${md.backfillFailed} failed' : ''}'
-                                        : null,
-                                trailing: md.isBackfilling
-                                    ? SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: MelodiTheme.primaryGreen),
-                                      )
-                                    : null,
-                                onTap: md.isBackfilling
-                                    ? null
-                                    : () => md.startBackfillAlbumArt(),
-                              ),
-                              const SizedBox(height: 8),
-                              _SettingsTile(
-                                icon: Icons.article_rounded,
-                                iconColor: Colors.pink,
-                                title: AppLocale.tr('backfill_lyrics'),
-                                subtitle: md.isBackfilling
-                                    ? '${AppLocale.tr('backfill_progress')}: ${md.backfillProgress}/${md.backfillTotal}'
-                                    : md.lastBackfilledAt != null
-                                        ? '${AppLocale.tr('last_backfilled')}: ${_formatDateTime(md.lastBackfilledAt!)}${md.backfillFailed > 0 ? '  •  ${md.backfillFailed} failed' : ''}'
-                                        : null,
-                                trailing: md.isBackfilling
-                                    ? SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: MelodiTheme.primaryGreen),
-                                      )
-                                    : null,
-                                onTap: md.isBackfilling
-                                    ? null
-                                    : () => md.startBackfillLyrics(),
-                              ),
-                              const SizedBox(height: 8),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  child: OutlinedButton.icon(
-                                    onPressed: md.isBackfilling
-                                        ? null
-                                        : () => md.startBackfillAll(),
-                                    icon: md.isBackfilling
-                                        ? SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                color:
-                                                    MelodiTheme.primaryGreen),
-                                          )
-                                        : Icon(Icons.refresh_rounded, size: 18),
-                                    label: Text(AppLocale.tr('backfill_all')),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: MelodiTheme.primaryGreen,
-                                      side: BorderSide(
-                                          color: MelodiTheme.primaryGreen),
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Row(
-                            children: [
-                              Icon(Icons.storage_rounded,
-                                  color: MelodiTheme.onSurfaceVariant,
-                                  size: 20),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(AppLocale.tr('local_songs'),
-                                        style: TextStyle(
-                                            color: MelodiTheme.onSurface,
-                                            fontSize: 15)),
-                                    Text(
-                                      '${library.songCount} ${AppLocale.tr('songs_in_library')} · ${_formatBytes(library.totalSongSizeBytes)}',
-                                      style: TextStyle(
-                                          color: MelodiTheme.onSurfaceVariant,
-                                          fontSize: 13),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.delete_sweep_rounded,
-                          iconColor: MelodiTheme.errorRed,
-                          title: AppLocale.tr('clear_library'),
-                          subtitle: AppLocale.tr('remove_cached_data'),
-                          onTap: () => _confirmClearLibrary(context),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.link_rounded,
-                          iconColor: Colors.blue,
-                          title: AppLocale.tr('shared_links'),
-                          subtitle: AppLocale.tr('no_shared_links'),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const SharedUrlsScreen()),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _LosslessDownloadsSection(),
-                        const SizedBox(height: 8),
-                        Consumer<DownloadProvider>(
-                          builder: (context, dp, _) => _SettingsTile(
-                            icon: Icons.download_rounded,
-                            iconColor: Colors.green,
-                            title: AppLocale.tr('downloads'),
-                            subtitle: dp.isDownloading
-                                ? '${dp.activeCount} active · ${dp.completedCount} completed'
-                                : '${dp.completedCount} ${AppLocale.tr('completed')}',
-                            trailing: Icon(Icons.chevron_right,
-                                color: MelodiTheme.textMuted),
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (_) => const DownloadsScreen()),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Platform.isIOS
-                              ? Icons.lock_rounded
-                              : Icons.folder_rounded,
-                          iconColor: Colors.orange,
-                          title: AppLocale.tr('download_location'),
-                          subtitle: Text(
-                            Platform.isIOS
-                                ? 'Melodi içinde · özel çevrimdışı alan'
-                                : _downloadPath.isNotEmpty
-                                    ? _downloadPath
-                                    : 'Documents/downloads',
-                            style: TextStyle(
-                                color: MelodiTheme.onSurfaceVariant,
-                                fontSize: 12),
-                          ),
-                          trailing: Icon(
-                              Platform.isIOS
-                                  ? Icons.info_outline_rounded
-                                  : Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: Platform.isIOS
-                              ? () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                          'İndirilenler Melodi içinde saklanır ve Dosyalar uygulamasında görünmez.'),
-                                    ),
-                                  );
-                                }
-                              : () async {
-                                  try {
-                                    final result = await FilePicker.platform
-                                        .getDirectoryPath();
-                                    if (result == null || !context.mounted)
-                                      return;
-                                    await DatabaseService.instance
-                                        .setSetting('download_path', result);
-                                    if (!context.mounted) return;
-                                    setState(() {
-                                      _downloadPath = result;
-                                    });
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                            '${AppLocale.tr('download_location')}: $result'),
-                                        backgroundColor:
-                                            MelodiTheme.primaryGreen,
-                                      ),
-                                    );
-                                  } catch (e) {
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text(_downloadPath.isNotEmpty
-                                              ? _downloadPath
-                                              : 'Documents/downloads'),
-                                          backgroundColor:
-                                              MelodiTheme.primaryGreen,
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.tune_rounded,
-                          iconColor: Colors.pink,
-                          title: AppLocale.tr('audio_quality'),
-                          subtitle: AppLocale.tr('streaming_quality'),
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const AudioQualityScreen()),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.cached_rounded,
-                          iconColor: Colors.cyan,
-                          title: AppLocale.tr('stream_cache'),
-                          subtitle: FutureBuilder<int>(
-                            future: StreamCache().getCacheSize(),
-                            builder: (_, snap) {
-                              final size = snap.data ?? 0;
-                              return Text(
-                                _formatBytes(size),
-                                style: TextStyle(
-                                    color: MelodiTheme.onSurfaceVariant,
-                                    fontSize: 13),
-                              );
-                            },
-                          ),
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => _showStreamCacheDialog(context),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.storage_rounded,
-                          iconColor: Colors.cyan,
-                          title: AppLocale.tr('storage'),
-                          subtitle: Text(
-                            '${_formatBytes(context.read<LibraryProvider>().totalSongSizeBytes)} · ${AppLocale.tr('library_size')}',
-                            style: TextStyle(
-                                color: MelodiTheme.onSurfaceVariant,
-                                fontSize: 12),
-                          ),
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const StorageScreen()),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.videocam_rounded,
-                          iconColor: Colors.deepOrange,
-                          title: 'İndirme biçimi',
-                          subtitle: _downloadAsVideo
-                              ? 'Video (mp4) olarak indir'
-                              : 'Ses olarak indir',
-                          trailing: Switch(
-                            value: _downloadAsVideo,
-                            onChanged: (v) {
-                              setState(() => _downloadAsVideo = v);
-                              DatabaseService.instance.setSetting(
-                                  'download_as_video', v.toString());
-                            },
-                            activeColor: MelodiTheme.primaryGreen,
-                          ),
-                          onTap: () {
-                            final v = !_downloadAsVideo;
-                            setState(() => _downloadAsVideo = v);
-                            DatabaseService.instance.setSetting(
-                                'download_as_video', v.toString());
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.headphones,
-                          iconColor: Colors.pink,
-                          title: AppLocale.tr('podcast'),
-                          subtitle: AppLocale.tr('podcast_desc'),
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) =>
-                                    const _PodcastSubscriptionsPage()),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Divider(color: MelodiTheme.outlineVariant, height: 1),
-                    // ── 4. HAKKINDA ──
-                    _CollapsibleSection(
-                      title: AppLocale.tr('about'),
-                      children: [
-                        _SettingsTile(
-                          icon: Icons.dns_rounded,
-                          iconColor: MelodiTheme.primaryGreen,
-                          title: 'YT-DLP Backend',
-                          subtitle:
-                              'Gerçek yt-dlp motoru için backend ayarları',
-                          trailing: Icon(Icons.chevron_right,
-                              color: MelodiTheme.textMuted),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => BackendSettingsScreen()),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.volunteer_activism_rounded,
-                          iconColor: MelodiTheme.primaryGreen,
-                          title: 'Destek Ol',
-                          subtitle: 'Bağış yaparak geliştirmeyi destekle',
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const SupportScreen(),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.bug_report_rounded,
-                          iconColor: Colors.orange,
-                          title: AppLocale.tr('diagnostics'),
-                          subtitle: AppLocale.tr('crash_reports'),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const DiagnosticsScreen()),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.info_outline_rounded,
-                          iconColor: MelodiTheme.onSurfaceVariant,
-                          title: 'Melodi',
-                          subtitle:
-                              '${AppLocale.tr('version')} $_appVersion',
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.auto_awesome_rounded,
-                          iconColor: MelodiTheme.primaryGreen,
-                          title: AppLocale.tr('acknowledgments'),
-                          subtitle:
-                              'yt-dlp, Media3, ytmusicapi, JioSaavn, Deezer, Last.fm ve diğerleri',
-                          onTap: () => _showAcknowledgments(context),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.favorite_rounded,
-                          iconColor: MelodiTheme.primaryGreen,
-                          title: AppLocale.tr('credits'),
-                          subtitle: AppLocale.tr('open_source_licenses'),
-                          onTap: () => _showCredits(context),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.camera_alt_rounded,
-                          iconColor: const Color(0xFFE1306C),
-                          title: 'Instagram',
-                          subtitle: 'safakmert0',
-                          onTap: () =>
-                              _openUrl('https://instagram.com/safakmert0'),
-                        ),
-                        const SizedBox(height: 8),
-                        _SettingsTile(
-                          icon: Icons.send_rounded,
-                          iconColor: Colors.lightBlue,
-                          title: 'Telegram',
-                          subtitle: '@mertiletisimbot',
-                          onTap: () => _openUrl('https://t.me/mertiletisimbot'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                  ],
-                ),
-              ),
-            ],
+            ),
+            floating: true,
+            pinned: false,
           ),
-        );
-      },
-    );
-  }
-  void _showStreamCacheDialog(BuildContext context) {
-    final streamCache = StreamCache();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: MelodiTheme.containerLow,
-        title: Text(AppLocale.tr('stream_cache'),
-            style: TextStyle(color: MelodiTheme.onSurface)),
-        content: FutureBuilder<int>(
-          future: streamCache.getCacheSize(),
-          builder: (_, snap) {
-            final size = snap.data ?? 0;
-            return Column(
-              mainAxisSize: MainAxisSize.min,
+          SliverToBoxAdapter(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    SizedBox(
-                      width: 100,
-                      child: Text(AppLocale.tr('cache_size'),
-                          style: TextStyle(
-                              color: MelodiTheme.onSurfaceVariant,
-                              fontSize: 14)),
+                _SectionTitle(AppLocale.tr('general')),
+                _SettingsTile(
+                  icon: Icons.language_rounded,
+                  iconColor: Colors.teal,
+                  title: AppLocale.tr('app_language'),
+                  subtitle: _selectedLanguage,
+                  trailing:
+                      Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
+                  onTap: () => _showLanguagePicker(context),
+                ),
+                const SizedBox(height: 8),
+                _SettingsTile(
+                  icon: Icons.dark_mode_rounded,
+                  iconColor: Colors.amber,
+                  title: AppLocale.tr('theme'),
+                  subtitle: Consumer<ThemeProvider>(
+                    builder: (context, tp, _) => Text(
+                      tp.isDark
+                          ? AppLocale.tr('dark')
+                          : tp.isLight
+                              ? AppLocale.tr('light')
+                              : AppLocale.tr('system'),
+                      style: TextStyle(
+                          color: MelodiTheme.onSurfaceVariant, fontSize: 13),
                     ),
-                    Expanded(
-                      child: Text(_formatBytes(size),
-                          style: TextStyle(
-                              color: MelodiTheme.onSurface, fontSize: 14)),
-                    ),
-                  ],
+                  ),
+                  trailing:
+                      Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const _AppearanceSettingsPage()),
+                  ),
                 ),
                 const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      await streamCache.clearCache();
-                      if (ctx.mounted) {
-                        Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(AppLocale.tr('cache_cleared')),
-                            backgroundColor: MelodiTheme.primaryGreen,
-                          ),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                    label: Text(AppLocale.tr('clear_cache')),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: MelodiTheme.errorRed,
-                      side: BorderSide(color: MelodiTheme.errorRed),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                Divider(color: MelodiTheme.outlineVariant, height: 1),
+                _SectionTitle(AppLocale.tr('music_library')),
+                Consumer<LibraryProvider>(
+                  builder: (context, library, _) => _SettingsTile(
+                    icon: Icons.refresh_rounded,
+                    iconColor: MelodiTheme.primaryGreen,
+                    title: AppLocale.tr('rescan_library'),
+                    subtitle: AppLocale.tr('scan_device_for_music'),
+                    trailing: library.isScanning
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: MelodiTheme.primaryGreen),
+                          )
+                        : null,
+                    onTap: () => library.scanMusic(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Consumer<LibraryProvider>(
+                  builder: (context, library, _) => _SettingsTile(
+                    icon: Icons.folder_open_rounded,
+                    iconColor: Colors.orange,
+                    title: AppLocale.tr('import_from_files'),
+                    subtitle: AppLocale.tr('browse_and_import'),
+                    onTap: () => library.importFromFiles(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _SettingsTile(
+                  icon: Icons.download_rounded,
+                  iconColor: Colors.green,
+                  title: AppLocale.tr('downloads'),
+                  subtitle: AppLocale.tr('downloads'),
+                  trailing:
+                      Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const DownloadsScreen()),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Consumer<LibraryProvider>(
+                  builder: (context, library, _) => _SettingsTile(
+                    icon: Icons.storage_rounded,
+                    iconColor: Colors.cyan,
+                    title: AppLocale.tr('storage'),
+                    subtitle: Text(
+                      '${_formatBytes(library.totalSongSizeBytes)} · ${AppLocale.tr('library_size')}',
+                      style: TextStyle(
+                          color: MelodiTheme.onSurfaceVariant, fontSize: 12),
+                    ),
+                    trailing:
+                        Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const StorageScreen()),
                     ),
                   ),
                 ),
+                const SizedBox(height: 16),
+                Divider(color: MelodiTheme.outlineVariant, height: 1),
+                _SectionTitle('Eklentiler'),
+                _SettingsTile(
+                  icon: Icons.extension_rounded,
+                  iconColor: MelodiTheme.primaryGreen,
+                  title: 'Eklenti Mağazası',
+                  subtitle: 'yt-dlp ve diğer sağlayıcıları kur',
+                  trailing:
+                      Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const ExtensionStoreScreen()),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Divider(color: MelodiTheme.outlineVariant, height: 1),
+                _SectionTitle(AppLocale.tr('about')),
+                _SettingsTile(
+                  icon: Icons.volunteer_activism_rounded,
+                  iconColor: MelodiTheme.primaryGreen,
+                  title: 'Destek Ol',
+                  subtitle: 'Bağış yaparak geliştirmeyi destekle',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SupportScreen()),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _SettingsTile(
+                  icon: Icons.info_outline_rounded,
+                  iconColor: MelodiTheme.onSurfaceVariant,
+                  title: 'Melodi',
+                  subtitle: '${AppLocale.tr('version')} $_appVersion',
+                ),
+                const SizedBox(height: 8),
+                _SettingsTile(
+                  icon: Icons.auto_awesome_rounded,
+                  iconColor: MelodiTheme.primaryGreen,
+                  title: AppLocale.tr('acknowledgments'),
+                  subtitle: 'yt-dlp, Media3 ve diğerleri',
+                  onTap: () => _showAcknowledgments(context),
+                ),
+                const SizedBox(height: 32),
               ],
-            );
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(AppLocale.tr('cancel'),
-                style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
+            ),
           ),
         ],
-      ),
-    );
-  }
-
-  // Kept while the legacy settings layout is migrated to the page component.
-  // ignore: unused_element
-  void _showThemePicker(BuildContext context, ThemeProvider themeProvider) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: MelodiTheme.containerLow,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: MelodiTheme.outlineVariant,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Text(AppLocale.tr('theme'),
-                style: TextStyle(
-                    color: MelodiTheme.onSurface,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: Icon(Icons.dark_mode_rounded,
-                  color: themeProvider.isDark
-                      ? MelodiTheme.primaryGreen
-                      : MelodiTheme.textMuted),
-              title: Text(AppLocale.tr('dark'),
-                  style: TextStyle(color: MelodiTheme.onSurface)),
-              trailing: themeProvider.isDark
-                  ? Icon(Icons.check, color: MelodiTheme.primaryGreen)
-                  : null,
-              onTap: () {
-                themeProvider.setThemeMode(ThemeMode.dark);
-                Navigator.pop(ctx);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.light_mode_rounded,
-                  color: themeProvider.isLight
-                      ? MelodiTheme.primaryGreen
-                      : MelodiTheme.textMuted),
-              title: Text(AppLocale.tr('light'),
-                  style: TextStyle(color: MelodiTheme.onSurface)),
-              trailing: themeProvider.isLight
-                  ? Icon(Icons.check, color: MelodiTheme.primaryGreen)
-                  : null,
-              onTap: () {
-                themeProvider.setThemeMode(ThemeMode.light);
-                Navigator.pop(ctx);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.settings_brightness_rounded,
-                  color: themeProvider.isSystem
-                      ? MelodiTheme.primaryGreen
-                      : MelodiTheme.textMuted),
-              title: Text(AppLocale.tr('system'),
-                  style: TextStyle(color: MelodiTheme.onSurface)),
-              trailing: themeProvider.isSystem
-                  ? Icon(Icons.check, color: MelodiTheme.primaryGreen)
-                  : null,
-              onTap: () {
-                themeProvider.setThemeMode(ThemeMode.system);
-                Navigator.pop(ctx);
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // (moved to top level)
-
-  // ignore: unused_element
-  void _showAccentColorPicker(
-      BuildContext context, ThemeProvider themeProvider) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: MelodiTheme.containerLow,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: MelodiTheme.outlineVariant,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Text(AppLocale.tr('accent_color'),
-                style: TextStyle(
-                    color: MelodiTheme.onSurface,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: _accentColors.map((color) {
-                  final isSelected =
-                      themeProvider.accentColor.value == color.value;
-                  return GestureDetector(
-                    onTap: () {
-                      themeProvider.setAccentColor(color);
-                      Navigator.pop(ctx);
-                    },
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isSelected ? Colors.white : Colors.transparent,
-                          width: 3,
-                        ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                    color: color.withValues(alpha: 0.5),
-                                    blurRadius: 8)
-                              ]
-                            : null,
-                      ),
-                      child: isSelected
-                          ? const Icon(Icons.check,
-                              color: Colors.black, size: 20)
-                          : null,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
       ),
     );
   }
@@ -1110,8 +228,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       backgroundColor: MelodiTheme.containerLow,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1121,9 +238,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: MelodiTheme.outlineVariant,
-                borderRadius: BorderRadius.circular(2),
-              ),
+                  color: MelodiTheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2)),
             ),
             Text(AppLocale.tr('app_language'),
                 style: TextStyle(
@@ -1160,92 +276,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showCrossfadeSlider(BuildContext context, PlayerProvider player) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: MelodiTheme.containerLow,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        double localCrossfade = _crossfadeSeconds;
-        return StatefulBuilder(
-          builder: (ctx, setSheetState) => SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: MelodiTheme.outlineVariant,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  Text(AppLocale.tr('crossfade'),
-                      style: TextStyle(
-                          color: MelodiTheme.onSurface,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Text('${localCrossfade.toInt()} ${AppLocale.tr('seconds')}',
-                      style: TextStyle(
-                          color: MelodiTheme.primaryGreen,
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold)),
-                  Slider(
-                    value: localCrossfade,
-                    min: 0,
-                    max: 12,
-                    divisions: 12,
-                    activeColor: MelodiTheme.primaryGreen,
-                    inactiveColor: MelodiTheme.outlineVariant,
-                    onChanged: (v) {
-                      setSheetState(() => localCrossfade = v);
-                    },
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(AppLocale.tr('off'),
-                          style: TextStyle(
-                              color: MelodiTheme.textMuted, fontSize: 12)),
-                      Text('12s',
-                          style: TextStyle(
-                              color: MelodiTheme.textMuted, fontSize: 12)),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () {
-                        setState(() => _crossfadeSeconds = localCrossfade);
-                        player.setCrossfade(
-                            Duration(seconds: localCrossfade.toInt()));
-                        DatabaseService.instance.setSetting(
-                            'crossfade_seconds', localCrossfade.toString());
-                        Navigator.pop(ctx);
-                      },
-                      style: FilledButton.styleFrom(
-                        backgroundColor: MelodiTheme.primaryGreen,
-                        foregroundColor: Colors.black,
-                      ),
-                      child: Text(AppLocale.tr('apply')),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   void _showAcknowledgments(BuildContext context) {
     const projects = <({String name, String role, String url})>[
       (
@@ -1259,54 +289,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         url: 'https://github.com/androidx/media'
       ),
       (
-        name: 'ytmusicapi',
-        role: 'YouTube Music API araştırması',
-        url: 'https://github.com/sigma67/ytmusicapi'
-      ),
-      (
         name: 'youtube_explode_dart',
         role: 'YouTube akış çözümleme',
         url: 'https://github.com/Hexer10/youtube_explode_dart'
       ),
       (
-        name: 'LRCLIB',
-        role: 'Senkronize şarkı sözleri',
-        url: 'https://github.com/tranxuanthang/lrclib'
-      ),
-      (
-        name: 'JioSaavn',
-        role: 'Çevrim içi müzik kataloğu',
-        url: 'https://www.jiosaavn.com'
-      ),
-      (
-        name: 'Deezer',
-        role: 'Katalog ve metadata',
-        url: 'https://developers.deezer.com'
-      ),
-      (
-        name: 'Last.fm',
-        role: 'Scrobble ve müzik verisi',
-        url: 'https://www.last.fm/api'
-      ),
-      (
         name: 'just_audio',
         role: 'Çapraz platform oynatıcı',
         url: 'https://github.com/ryanheise/just_audio'
-      ),
-      (
-        name: 'flutter_secure_storage',
-        role: 'Güvenli hesap saklama',
-        url: 'https://github.com/mogol/flutter_secure_storage'
-      ),
-      (
-        name: 'sqflite',
-        role: 'Yerel kitaplık veritabanı',
-        url: 'https://github.com/tekartik/sqflite'
-      ),
-      (
-        name: 'palette_generator',
-        role: 'Kapaktan dinamik renk üretimi',
-        url: 'https://pub.dev/packages/palette_generator'
       ),
     ];
     showDialog(
@@ -1319,13 +309,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Icon(Icons.auto_awesome_rounded,
                 color: MelodiTheme.primaryGreen, size: 24),
             const SizedBox(width: 12),
-            Text(
-              AppLocale.tr('acknowledgments'),
-              style: TextStyle(
-                  color: MelodiTheme.onSurface,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold),
-            ),
+            Text(AppLocale.tr('acknowledgments'),
+                style: TextStyle(
+                    color: MelodiTheme.onSurface,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold)),
           ],
         ),
         content: SizedBox(
@@ -1334,32 +322,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Melodi, açık kaynak topluluğunun emeğiyle gelişiyor. Projeyi açmak için dokun.',
-                style: TextStyle(
-                    color: MelodiTheme.onSurfaceVariant, fontSize: 14),
-              ),
+              Text('Melodi, açık kaynak topluluğunun emeğiyle gelişiyor.',
+                  style: TextStyle(
+                      color: MelodiTheme.onSurfaceVariant, fontSize: 14)),
               const SizedBox(height: 12),
               Expanded(
                 child: ListView.separated(
                   itemCount: projects.length,
-                  separatorBuilder: (_, __) => Divider(
-                    color: MelodiTheme.outlineVariant,
-                    height: 1,
-                  ),
-                  itemBuilder: (_, index) {
-                    final project = projects[index];
+                  separatorBuilder: (_, __) =>
+                      Divider(color: MelodiTheme.outlineVariant, height: 1),
+                  itemBuilder: (_, i) {
+                    final p = projects[i];
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: Text(project.name,
+                      title: Text(p.name,
                           style: TextStyle(color: MelodiTheme.onSurface)),
-                      subtitle: Text(project.role,
+                      subtitle: Text(p.role,
                           style: TextStyle(
                               color: MelodiTheme.onSurfaceVariant,
                               fontSize: 12)),
                       trailing: Icon(Icons.open_in_new_rounded,
                           color: MelodiTheme.primaryGreen, size: 18),
-                      onTap: () => _openUrl(project.url),
+                      onTap: () => _openUrl(p.url),
                     );
                   },
                 ),
@@ -1369,123 +353,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Kapat',
-                style: TextStyle(color: MelodiTheme.primaryGreen)),
-          ),
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text('Kapat',
+                  style: TextStyle(color: MelodiTheme.primaryGreen))),
         ],
       ),
     );
-  }
-
-  void _showCredits(BuildContext context) {
-    showLicensePage(
-      context: context,
-      applicationName: 'Melodi',
-      applicationVersion: AppConstants.appVersion,
-      applicationIcon: Container(
-        width: 64,
-        height: 64,
-        decoration: BoxDecoration(
-          color: MelodiTheme.primaryGreen,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child:
-            const Icon(Icons.music_note_rounded, color: Colors.black, size: 32),
-      ),
-      applicationLegalese: 'Built with Flutter & Love',
-    );
-  }
-
-  Future<void> _pickWatchedFolder(BuildContext context) async {
-    final lib = context.read<LibraryProvider>();
-    String? selectedDirectory;
-
-    if (Platform.isIOS) {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowMultiple: true,
-        allowedExtensions: const [
-          'mp3',
-          'm4a',
-          'flac',
-          'wav',
-          'aac',
-          'ogg',
-          'wma',
-          'alac',
-          'aiff',
-          'opus',
-          'ape',
-          'wv',
-        ],
-      );
-      if (result != null &&
-          result.files.isNotEmpty &&
-          result.files.first.path != null) {
-        final firstPath = result.files.first.path!;
-        selectedDirectory = firstPath.substring(0, firstPath.lastIndexOf('/'));
-        final paths = result.files
-            .where((f) => f.path != null)
-            .map((f) => f.path!)
-            .toList();
-        if (paths.isNotEmpty) {
-          await lib.importFromFilePaths(paths);
-        }
-      }
-    } else {
-      try {
-        selectedDirectory = await FilePicker.platform.getDirectoryPath();
-      } catch (_) {
-        // Fallback to file picker on platforms where getDirectoryPath is not supported
-        final result = await FilePicker.platform.pickFiles(
-          type: FileType.custom,
-          allowMultiple: true,
-          allowedExtensions: const [
-            'mp3',
-            'm4a',
-            'flac',
-            'wav',
-            'aac',
-            'ogg',
-            'wma',
-            'alac',
-            'aiff',
-            'opus',
-            'ape',
-            'wv',
-          ],
-        );
-        if (result != null &&
-            result.files.isNotEmpty &&
-            result.files.first.path != null) {
-          final firstPath = result.files.first.path!;
-          selectedDirectory =
-              firstPath.substring(0, firstPath.lastIndexOf('/'));
-          final paths = result.files
-              .where((f) => f.path != null)
-              .map((f) => f.path!)
-              .toList();
-          if (paths.isNotEmpty) {
-            await lib.importFromFilePaths(paths);
-          }
-        }
-      }
-    }
-
-    final dir = selectedDirectory;
-    if (dir != null && dir.isNotEmpty) {
-      await lib.setWatchedFolder(dir);
-      setState(() => _watchedFolderPath = dir);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${AppLocale.tr('watching')}: $dir'),
-            backgroundColor: MelodiTheme.primaryGreen,
-          ),
-        );
-      }
-    }
   }
 
   Future<void> _openUrl(String url) async {
@@ -1496,209 +369,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocale.tr('could_not_open_link')),
-            backgroundColor: MelodiTheme.errorRed,
-          ),
+              content: Text(AppLocale.tr('could_not_open_link')),
+              backgroundColor: MelodiTheme.errorRed),
         );
       }
     }
-  }
-
-  String _formatDateTime(DateTime dt) {
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inMinutes < 1)
-      return AppLocale.currentLocale == 'tr' ? 'az önce' : 'just now';
-    if (diff.inMinutes < 60)
-      return AppLocale.currentLocale == 'tr'
-          ? '${diff.inMinutes}dk önce'
-          : '${diff.inMinutes}m ago';
-    if (diff.inHours < 24)
-      return AppLocale.currentLocale == 'tr'
-          ? '${diff.inHours}sa önce'
-          : '${diff.inHours}h ago';
-    if (diff.inDays < 7)
-      return AppLocale.currentLocale == 'tr'
-          ? '${diff.inDays}g önce'
-          : '${diff.inDays}d ago';
-    return '${dt.day}/${dt.month}';
-  }
-
-  void _confirmClearLibrary(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: MelodiTheme.containerLow,
-        title: Text(AppLocale.tr('clear_library_title'),
-            style: TextStyle(color: MelodiTheme.onSurface)),
-        content: Text(
-          AppLocale.tr('clear_library_confirm'),
-          style: TextStyle(color: MelodiTheme.onSurfaceVariant),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppLocale.tr('cancel'),
-                style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
-          ),
-          TextButton(
-            onPressed: () {
-              context.read<LibraryProvider>().clearLibrary();
-              Navigator.pop(context);
-            },
-            child: Text(AppLocale.tr('delete'),
-                style: TextStyle(color: MelodiTheme.errorRed)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PlaybackTile extends StatefulWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String? Function() subtitleBuilder;
-  final VoidCallback onTap;
-
-  const _PlaybackTile({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.subtitleBuilder,
-    required this.onTap,
-  });
-
-  @override
-  State<_PlaybackTile> createState() => _PlaybackTileState();
-}
-
-class _PlaybackTileState extends State<_PlaybackTile> {
-  @override
-  void initState() {
-    super.initState();
-    if (widget.title == AppLocale.tr('sleep_timer')) {
-      PlaybackService.instance.sleepTimerStream.listen((_) {
-        if (mounted) setState(() {});
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final subtitle = widget.subtitleBuilder();
-    return _SettingsTile(
-      icon: widget.icon,
-      iconColor: widget.iconColor,
-      title: widget.title,
-      subtitle: subtitle,
-      trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
-      onTap: widget.onTap,
-    );
-  }
-}
-
-class _CollapsibleSection extends StatefulWidget {
-  final String title;
-  final List<Widget> children;
-  final bool startExpanded;
-
-  const _CollapsibleSection({
-    required this.title,
-    required this.children,
-  }) : startExpanded = true;
-
-  @override
-  State<_CollapsibleSection> createState() => _CollapsibleSectionState();
-}
-
-class _CollapsibleSectionState extends State<_CollapsibleSection> {
-  late bool _expanded;
-
-  @override
-  void initState() {
-    super.initState();
-    _expanded = widget.startExpanded;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        InkWell(
-          onTap: () => setState(() => _expanded = !_expanded),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    widget.title.toUpperCase(),
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                ),
-                Icon(
-                  _expanded ? Icons.expand_less : Icons.expand_more,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 20,
-                ),
-              ],
-            ),
-          ),
-        ),
-        AnimatedCrossFade(
-          firstChild: Column(children: widget.children),
-          secondChild: const SizedBox.shrink(),
-          crossFadeState:
-              _expanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-          duration: const Duration(milliseconds: 250),
-          sizeCurve: Curves.easeInOut,
-        ),
-      ],
-    );
   }
 }
 
 class _SectionTitle extends StatelessWidget {
   final String title;
-
   const _SectionTitle(this.title);
-
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-      child: Text(
-        title.toUpperCase(),
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.primary,
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 1.5,
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+        child: Text(
+          title.toUpperCase(),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.primary,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1.5,
+          ),
         ),
-      ),
-    );
-  }
+      );
 }
 
 class _AppearanceSettingsPage extends StatelessWidget {
   const _AppearanceSettingsPage();
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Text(AppLocale.tr('appearance')),
-      ),
+      appBar: AppBar(title: Text(AppLocale.tr('appearance'))),
       body: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, _) {
+        builder: (context, tp, _) {
           return ListView(
             padding: const EdgeInsets.symmetric(vertical: 8),
             children: [
@@ -1707,21 +412,20 @@ class _AppearanceSettingsPage extends StatelessWidget {
                 icon: Icons.dark_mode_rounded,
                 iconColor: Colors.amber,
                 title: AppLocale.tr('theme'),
-                subtitle: themeProvider.isDark
+                subtitle: tp.isDark
                     ? AppLocale.tr('dark')
-                    : themeProvider.isLight
+                    : tp.isLight
                         ? AppLocale.tr('light')
                         : AppLocale.tr('system'),
                 trailing: Icon(Icons.chevron_right,
                     color: Theme.of(context).colorScheme.onSurfaceVariant),
-                onTap: () => _showThemePicker(context, themeProvider),
+                onTap: () => _showThemePicker(context, tp),
               ),
               const SizedBox(height: 16),
               _SectionTitle(AppLocale.tr('accent_color')),
               const SizedBox(height: 8),
-              ...(_accentColors.map((c) {
-                final isSelected =
-                    themeProvider.accentColor.value == c.value;
+              ..._accentColors.map((c) {
+                final sel = tp.accentColor.value == c.value;
                 return ListTile(
                   leading: Container(
                     width: 32,
@@ -1730,76 +434,23 @@ class _AppearanceSettingsPage extends StatelessWidget {
                       color: c,
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: isSelected ? Colors.white : Colors.transparent,
-                        width: 2,
-                      ),
+                          color: sel ? Colors.white : Colors.transparent,
+                          width: 2),
                     ),
-                    child: isSelected
+                    child: sel
                         ? const Icon(Icons.check, color: Colors.black, size: 16)
                         : null,
                   ),
-                  title: Text(
-                    _accentColorName(c),
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  trailing: isSelected
+                  title: Text(_accentColorName(c),
+                      style: Theme.of(context).textTheme.titleMedium),
+                  trailing: sel
                       ? Icon(Icons.check_circle,
                           color: Theme.of(context).colorScheme.primary,
                           size: 20)
                       : null,
-                  onTap: () => themeProvider.setAccentColor(c),
+                  onTap: () => tp.setAccentColor(c),
                 );
-              })),
-              const SizedBox(height: 16),
-              _SectionTitle(AppLocale.tr('custom_colors')),
-              _CustomColorTile(
-                label: AppLocale.tr('background'),
-                icon: Icons.wallpaper_rounded,
-                currentColor: themeProvider.customBackground,
-                defaultColor: Theme.of(context).scaffoldBackgroundColor,
-                onChanged: (c) => themeProvider.setCustomBackground(c),
-              ),
-              _CustomColorTile(
-                label: AppLocale.tr('surface'),
-                icon: Icons.square_rounded,
-                currentColor: themeProvider.customSurface,
-                defaultColor: Theme.of(context).colorScheme.surface,
-                onChanged: (c) => themeProvider.setCustomSurface(c),
-              ),
-              _CustomColorTile(
-                label: AppLocale.tr('card'),
-                icon: Icons.crop_square_rounded,
-                currentColor: themeProvider.customCard,
-                defaultColor: Theme.of(context).colorScheme.surfaceContainer,
-                onChanged: (c) => themeProvider.setCustomCard(c),
-              ),
-              _CustomColorTile(
-                label: AppLocale.tr('text_primary'),
-                icon: Icons.text_fields_rounded,
-                currentColor: themeProvider.customTextPrimary,
-                defaultColor: Theme.of(context).colorScheme.onSurface,
-                onChanged: (c) => themeProvider.setCustomTextPrimary(c),
-              ),
-              _CustomColorTile(
-                label: AppLocale.tr('text_secondary'),
-                icon: Icons.text_fields_rounded,
-                currentColor: themeProvider.customTextSecondary,
-                defaultColor: Theme.of(context).colorScheme.onSurfaceVariant,
-                onChanged: (c) => themeProvider.setCustomTextSecondary(c),
-              ),
-              if (themeProvider.customBackground != null ||
-                  themeProvider.customSurface != null ||
-                  themeProvider.customCard != null ||
-                  themeProvider.customTextPrimary != null ||
-                  themeProvider.customTextSecondary != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: TextButton.icon(
-                    onPressed: () => themeProvider.resetCustomColors(),
-                    icon: const Icon(Icons.restore_rounded, size: 18),
-                    label: Text(AppLocale.tr('reset_colors')),
-                  ),
-                ),
+              }),
             ],
           );
         },
@@ -1808,8 +459,7 @@ class _AppearanceSettingsPage extends StatelessWidget {
   }
 
   String _accentColorName(Color c) {
-    const nameKeys = {
-      0xFFFF4D8D: 'color_pink',
+    const m = {
       0xFF1ED760: 'color_green',
       0xFFFA233B: 'color_red',
       0xFFFF2D55: 'color_pink',
@@ -1821,21 +471,13 @@ class _AppearanceSettingsPage extends StatelessWidget {
       0xFF34C759: 'color_mint',
       0xFF00C7BE: 'color_teal',
       0xFFFFFFFF: 'color_white',
-      0xFFE91E63: 'color_rose',
-      0xFF9C27B0: 'color_deep_purple',
-      0xFF2196F3: 'color_light_blue',
-      0xFF00BCD4: 'color_cyan',
-      0xFF4CAF50: 'color_material_green',
-      0xFFFF5722: 'color_deep_orange',
-      0xFF795548: 'color_brown',
-      0xFF607D8B: 'color_blue_grey',
     };
-    final key = nameKeys[c.value];
-    if (key != null) return AppLocale.tr(key);
+    final k = m[c.value];
+    if (k != null) return AppLocale.tr(k);
     return '#${c.value.toRadixString(16).substring(2).toUpperCase()}';
   }
 
-  void _showThemePicker(BuildContext context, ThemeProvider themeProvider) {
+  void _showThemePicker(BuildContext context, ThemeProvider tp) {
     showModalBottomSheet(
       context: context,
       builder: (ctx) => SafeArea(
@@ -1848,17 +490,16 @@ class _AppearanceSettingsPage extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Theme.of(ctx).colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+                    color: Theme.of(ctx).colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(2)),
               ),
               const SizedBox(height: 16),
               Text(AppLocale.tr('theme'),
                   style: Theme.of(ctx).textTheme.headlineSmall),
               const SizedBox(height: 24),
-              _themeOption(ctx, themeProvider, AppLocale.tr('system'), null),
-              _themeOption(ctx, themeProvider, AppLocale.tr('light'), false),
-              _themeOption(ctx, themeProvider, AppLocale.tr('dark'), true),
+              _themeOption(ctx, tp, AppLocale.tr('system'), null),
+              _themeOption(ctx, tp, AppLocale.tr('light'), false),
+              _themeOption(ctx, tp, AppLocale.tr('dark'), true),
               const SizedBox(height: 24),
             ],
           ),
@@ -1867,298 +508,28 @@ class _AppearanceSettingsPage extends StatelessWidget {
     );
   }
 
-  Widget _themeOption(BuildContext ctx, ThemeProvider themeProvider,
-      String label, bool? isDark) {
-    final selected = isDark == null
-        ? themeProvider.themeMode == ThemeMode.system
+  Widget _themeOption(
+      BuildContext ctx, ThemeProvider tp, String label, bool? isDark) {
+    final sel = isDark == null
+        ? tp.themeMode == ThemeMode.system
         : isDark
-            ? themeProvider.isDark
-            : themeProvider.isLight;
-    final colors = Theme.of(ctx).colorScheme;
+            ? tp.isDark
+            : tp.isLight;
+    final cs = Theme.of(ctx).colorScheme;
     return ListTile(
-      leading: Icon(
-        selected ? Icons.radio_button_checked : Icons.radio_button_off,
-        color: selected ? colors.primary : colors.onSurfaceVariant,
-      ),
-      title: Text(label, style: TextStyle(color: colors.onSurface)),
+      leading: Icon(sel ? Icons.radio_button_checked : Icons.radio_button_off,
+          color: sel ? cs.primary : cs.onSurfaceVariant),
+      title: Text(label, style: TextStyle(color: cs.onSurface)),
       onTap: () {
         if (isDark == null) {
-          themeProvider.setThemeMode(ThemeMode.system);
+          tp.setThemeMode(ThemeMode.system);
         } else if (isDark) {
-          themeProvider.setThemeMode(ThemeMode.dark);
+          tp.setThemeMode(ThemeMode.dark);
         } else {
-          themeProvider.setThemeMode(ThemeMode.light);
+          tp.setThemeMode(ThemeMode.light);
         }
         Navigator.pop(ctx);
       },
-    );
-  }
-}
-
-class _PlaybackSettingsPage extends StatefulWidget {
-  final double crossfadeSeconds;
-  final bool autoShuffle;
-  final bool gaplessPlayback;
-  final ValueChanged<double> onCrossfadeChanged;
-  final ValueChanged<bool> onAutoShuffleChanged;
-  final ValueChanged<bool> onGaplessChanged;
-
-  const _PlaybackSettingsPage({
-    required this.crossfadeSeconds,
-    required this.autoShuffle,
-    required this.gaplessPlayback,
-    required this.onCrossfadeChanged,
-    required this.onAutoShuffleChanged,
-    required this.onGaplessChanged,
-  });
-
-  @override
-  State<_PlaybackSettingsPage> createState() => _PlaybackSettingsPageState();
-}
-
-class _PlaybackSettingsPageState extends State<_PlaybackSettingsPage> {
-  late double _crossfade;
-
-  @override
-  void initState() {
-    super.initState();
-    _crossfade = widget.crossfadeSeconds;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final player = context.read<PlayerProvider>();
-    final theme = Theme.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(AppLocale.tr('playback')),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        children: [
-          _SettingsTile(
-            icon: Icons.shuffle_rounded,
-            iconColor: Colors.amber,
-            title: AppLocale.tr('auto_shuffle'),
-            subtitle: AppLocale.tr('automatically_shuffle'),
-            trailing: Switch(
-              value: widget.autoShuffle,
-              onChanged: (v) {
-                widget.onAutoShuffleChanged(v);
-                player.setAutoShuffle(v);
-                DatabaseService.instance
-                    .setSetting('auto_shuffle', v.toString());
-              },
-              activeTrackColor: theme.colorScheme.primary,
-            ),
-            onTap: () {
-              final v = !widget.autoShuffle;
-              widget.onAutoShuffleChanged(v);
-              player.setAutoShuffle(v);
-              DatabaseService.instance.setSetting('auto_shuffle', v.toString());
-            },
-          ),
-          _SettingsTile(
-            icon: Icons.waves_rounded,
-            iconColor: Colors.pink,
-            title: AppLocale.tr('gapless_playback'),
-            subtitle: AppLocale.tr('seamless_transition'),
-            trailing: Switch(
-              value: widget.gaplessPlayback,
-              onChanged: (v) {
-                widget.onGaplessChanged(v);
-                player.setGaplessPlayback(v);
-                DatabaseService.instance
-                    .setSetting('gapless_playback', v.toString());
-              },
-              activeTrackColor: theme.colorScheme.primary,
-            ),
-            onTap: () {
-              final v = !widget.gaplessPlayback;
-              widget.onGaplessChanged(v);
-              player.setGaplessPlayback(v);
-              DatabaseService.instance
-                  .setSetting('gapless_playback', v.toString());
-            },
-          ),
-          _SettingsTile(
-            icon: Icons.swap_horiz_rounded,
-            iconColor: Colors.indigo,
-            title: AppLocale.tr('crossfade'),
-            subtitle:
-                '${_crossfade.toInt()} ${AppLocale.tr('seconds_crossfade')}',
-            trailing: Icon(Icons.chevron_right,
-                color: theme.colorScheme.onSurfaceVariant),
-            onTap: () => _showCrossfadeSlider(context),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showCrossfadeSlider(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Theme.of(ctx).colorScheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(AppLocale.tr('crossfade'),
-                    style: Theme.of(ctx).textTheme.headlineSmall),
-                const SizedBox(height: 8),
-                Text(
-                  '${_crossfade.toInt()} ${AppLocale.tr('seconds_crossfade')}',
-                  style: TextStyle(
-                      color: Theme.of(ctx).colorScheme.primary,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold),
-                ),
-                Slider(
-                  value: _crossfade,
-                  min: 0,
-                  max: 12,
-                  divisions: 12,
-                  activeColor: Theme.of(ctx).colorScheme.primary,
-                  inactiveColor: Theme.of(ctx).colorScheme.outlineVariant,
-                  onChanged: (v) => setSheetState(() => _crossfade = v),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      widget.onCrossfadeChanged(_crossfade);
-                      final player = context.read<PlayerProvider>();
-                      player
-                          .setCrossfade(Duration(seconds: _crossfade.toInt()));
-                      DatabaseService.instance.setSetting(
-                          'crossfade_seconds', _crossfade.toInt().toString());
-                      Navigator.pop(ctx);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(ctx).colorScheme.primary,
-                      foregroundColor: Theme.of(ctx).colorScheme.onPrimary,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: Text(AppLocale.tr('apply')),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StreamingSettingsPage extends StatefulWidget {
-  const _StreamingSettingsPage();
-
-  @override
-  State<_StreamingSettingsPage> createState() => _StreamingSettingsPageState();
-}
-
-class _StreamingSettingsPageState extends State<_StreamingSettingsPage> {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: MelodiTheme.background,
-      appBar: AppBar(
-        title: Text(AppLocale.tr('streaming')),
-        backgroundColor: MelodiTheme.containerLow,
-        foregroundColor: MelodiTheme.onSurface,
-        elevation: 0,
-      ),
-      body: Consumer<SettingsProvider>(
-        builder: (context, settings, _) {
-          return ListView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            children: [
-              _SettingsTile(
-                icon: Icons.cloud_rounded,
-                iconColor: Colors.lightBlue,
-                title: AppLocale.tr('online_mode'),
-                subtitle: AppLocale.tr('streaming'),
-                trailing: Switch(
-                  value: settings.streamingEnabled,
-                  onChanged: (v) {
-                    settings.setStreamingEnabled(v);
-                    context.read<PlayerProvider>().setStreamingEnabled(v);
-                  },
-                  activeColor: MelodiTheme.primaryGreen,
-                ),
-                onTap: () {
-                  final v = !settings.streamingEnabled;
-                  settings.setStreamingEnabled(v);
-                  context.read<PlayerProvider>().setStreamingEnabled(v);
-                },
-              ),
-              const SizedBox(height: 8),
-              _SettingsTile(
-                icon: Icons.signal_cellular_alt_rounded,
-                iconColor: Colors.green,
-                title: AppLocale.tr('stream_on_cellular'),
-                subtitle: AppLocale.tr('streaming'),
-                trailing: Switch(
-                  value: settings.streamOnCellular,
-                  onChanged: (v) => settings.setStreamOnCellular(v),
-                  activeColor: MelodiTheme.primaryGreen,
-                ),
-                onTap: () {
-                  final v = !settings.streamOnCellular;
-                  settings.setStreamOnCellular(v);
-                },
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-
-class _InfoRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _InfoRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-                color: MelodiTheme.onSurface,
-                fontSize: 14,
-                fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -2175,340 +546,7 @@ const List<Color> _accentColors = [
   Color(0xFF34C759),
   Color(0xFF00C7BE),
   Color(0xFFFFFFFF),
-  Color(0xFFE91E63),
-  Color(0xFF9C27B0),
-  Color(0xFF2196F3),
-  Color(0xFF00BCD4),
-  Color(0xFF4CAF50),
-  Color(0xFFFF5722),
-  Color(0xFF795548),
-  Color(0xFF607D8B),
 ];
-
-class _CustomColorTile extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color? currentColor;
-  final Color defaultColor;
-  final ValueChanged<Color?> onChanged;
-
-  const _CustomColorTile({
-    required this.label,
-    required this.icon,
-    required this.currentColor,
-    required this.defaultColor,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = currentColor ?? defaultColor;
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, color: color, size: 20),
-      ),
-      title: Text(label,
-          style: TextStyle(color: MelodiTheme.onSurface, fontSize: 15)),
-      subtitle: Text(
-        currentColor != null
-            ? '#${currentColor!.value.toRadixString(16).substring(2).toUpperCase()}'
-            : AppLocale.tr('default_color'),
-        style: TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 12),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (currentColor != null)
-            IconButton(
-              icon: const Icon(Icons.close, size: 16),
-              onPressed: () => onChanged(null),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              color: MelodiTheme.textMuted,
-            ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () => _showColorPicker(context),
-            child: Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-                border: Border.all(color: MelodiTheme.textMuted, width: 2),
-              ),
-            ),
-          ),
-        ],
-      ),
-      onTap: () => _showColorPicker(context),
-    );
-  }
-
-  void _showColorPicker(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: MelodiTheme.containerLow,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: MelodiTheme.outlineVariant,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Text(label,
-                style: TextStyle(
-                    color: MelodiTheme.onSurface,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: _accentColors.map((c) {
-                  final isSelected = currentColor?.value == c.value;
-                  return GestureDetector(
-                    onTap: () {
-                      onChanged(c);
-                      Navigator.pop(ctx);
-                    },
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: c,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isSelected ? Colors.white : Colors.transparent,
-                          width: 3,
-                        ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                    color: c.withValues(alpha: 0.5), blurRadius: 8)
-                              ]
-                            : null,
-                      ),
-                      child: isSelected
-                          ? const Icon(Icons.check,
-                              color: Colors.black, size: 20)
-                          : null,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            if (currentColor != null) ...[
-              const SizedBox(height: 12),
-              TextButton.icon(
-                onPressed: () {
-                  onChanged(null);
-                  Navigator.pop(ctx);
-                },
-                icon: const Icon(Icons.restore_rounded, size: 18),
-                label: Text(AppLocale.tr('default_color')),
-              ),
-            ],
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LosslessDownloadsSection extends StatefulWidget {
-  @override
-  State<_LosslessDownloadsSection> createState() =>
-      _LosslessDownloadsSectionState();
-}
-
-class _LosslessDownloadsSectionState extends State<_LosslessDownloadsSection> {
-  bool _losslessQuality = true;
-  String _coverResolution = 'high';
-  bool _embedMetadata = true;
-  bool _loudnessNorm = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSettings();
-  }
-
-  Future<void> _loadSettings() async {
-    final db = DatabaseService.instance;
-    final lossless = await db.getSetting('lossless_quality');
-    final cover = await db.getSetting('cover_resolution');
-    final embed = await db.getSetting('embed_metadata');
-    final loudness = await db.getSetting('loudness_norm');
-    if (mounted) {
-      setState(() {
-        _losslessQuality = lossless != 'false';
-        _coverResolution = cover ?? 'high';
-        _embedMetadata = embed != 'false';
-        _loudnessNorm = loudness == 'true';
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _SettingsTile(
-          icon: Icons.high_quality_rounded,
-          iconColor: Colors.amber,
-          title: AppLocale.tr('lossless_quality'),
-          subtitle: AppLocale.tr('lossless'),
-          trailing: Switch(
-            value: _losslessQuality,
-            onChanged: (v) {
-              setState(() => _losslessQuality = v);
-              DatabaseService.instance
-                  .setSetting('lossless_quality', v.toString());
-            },
-            activeColor: MelodiTheme.primaryGreen,
-          ),
-          onTap: () {
-            final v = !_losslessQuality;
-            setState(() => _losslessQuality = v);
-            DatabaseService.instance
-                .setSetting('lossless_quality', v.toString());
-          },
-        ),
-        const SizedBox(height: 8),
-        _SettingsTile(
-          icon: Icons.image_rounded,
-          iconColor: Colors.indigo,
-          title: AppLocale.tr('cover_resolution'),
-          subtitle: _coverResolution == 'high'
-              ? AppLocale.tr('high')
-              : _coverResolution == 'medium'
-                  ? AppLocale.tr('medium')
-                  : AppLocale.tr('low'),
-          trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
-          onTap: () => _showResolutionPicker(context),
-        ),
-        const SizedBox(height: 8),
-        _SettingsTile(
-          icon: Icons.description_rounded,
-          iconColor: Colors.teal,
-          title: AppLocale.tr('embed_metadata'),
-          subtitle: AppLocale.tr('metadata_backfill'),
-          trailing: Switch(
-            value: _embedMetadata,
-            onChanged: (v) {
-              setState(() => _embedMetadata = v);
-              DatabaseService.instance
-                  .setSetting('embed_metadata', v.toString());
-            },
-            activeColor: MelodiTheme.primaryGreen,
-          ),
-          onTap: () {
-            final v = !_embedMetadata;
-            setState(() => _embedMetadata = v);
-            DatabaseService.instance.setSetting('embed_metadata', v.toString());
-          },
-        ),
-        const SizedBox(height: 8),
-        _SettingsTile(
-          icon: Icons.volume_up_rounded,
-          iconColor: Colors.orange,
-          title: AppLocale.tr('loudness_norm'),
-          subtitle: AppLocale.tr('audio'),
-          trailing: Switch(
-            value: _loudnessNorm,
-            onChanged: (v) {
-              setState(() => _loudnessNorm = v);
-              DatabaseService.instance
-                  .setSetting('loudness_norm', v.toString());
-            },
-            activeColor: MelodiTheme.primaryGreen,
-          ),
-          onTap: () {
-            final v = !_loudnessNorm;
-            setState(() => _loudnessNorm = v);
-            DatabaseService.instance.setSetting('loudness_norm', v.toString());
-          },
-        ),
-      ],
-    );
-  }
-
-  void _showResolutionPicker(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: MelodiTheme.containerLow,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: MelodiTheme.outlineVariant,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Text(AppLocale.tr('cover_resolution'),
-                style: TextStyle(
-                    color: MelodiTheme.onSurface,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            ...[
-              (AppLocale.tr('high'), 'high'),
-              (AppLocale.tr('medium'), 'medium'),
-              (AppLocale.tr('low'), 'low'),
-            ].map((entry) {
-              final selected = _coverResolution == entry.$2;
-              return ListTile(
-                leading: Icon(
-                  selected
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_off,
-                  color: selected
-                      ? MelodiTheme.primaryGreen
-                      : MelodiTheme.textMuted,
-                ),
-                title: Text(entry.$1,
-                    style: TextStyle(color: MelodiTheme.onSurface)),
-                onTap: () {
-                  setState(() => _coverResolution = entry.$2);
-                  DatabaseService.instance
-                      .setSetting('cover_resolution', entry.$2);
-                  Navigator.pop(ctx);
-                },
-              );
-            }),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _SettingsTile extends StatelessWidget {
   final IconData icon;
@@ -2517,16 +555,13 @@ class _SettingsTile extends StatelessWidget {
   final dynamic subtitle;
   final Widget? trailing;
   final VoidCallback? onTap;
-
-  const _SettingsTile({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    this.subtitle,
-    this.trailing,
-    this.onTap,
-  });
-
+  const _SettingsTile(
+      {required this.icon,
+      required this.iconColor,
+      required this.title,
+      this.subtitle,
+      this.trailing,
+      this.onTap});
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -2538,20 +573,17 @@ class _SettingsTile extends StatelessWidget {
     } else if (subtitle is Widget) {
       subtitleWidget = subtitle as Widget;
     }
-
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: theme.cardTheme.color ?? theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-      ),
+          color: theme.cardTheme.color ?? theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: iconColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
+              color: iconColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8)),
           child: Icon(icon, color: iconColor, size: 20),
         ),
         title: Text(title,
@@ -2562,478 +594,4 @@ class _SettingsTile extends StatelessWidget {
       ),
     );
   }
-}
-
-class _LibraryHealthSettingsTile extends StatefulWidget {
-  @override
-  State<_LibraryHealthSettingsTile> createState() =>
-      _LibraryHealthSettingsTileState();
-}
-
-class _LibraryHealthSettingsTileState
-    extends State<_LibraryHealthSettingsTile> {
-  double? _cachedScore;
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final svc = LibraryHealthService();
-    await svc.scanLibrary();
-    if (mounted) {
-      setState(() {
-        _cachedScore = svc.getHealthScore();
-        _loading = false;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _SettingsTile(
-      icon: Icons.favorite_rounded,
-      iconColor: Colors.pink,
-      title: AppLocale.tr('library_health'),
-      subtitle: _loading
-          ? AppLocale.tr('scan_library')
-          : _cachedScore != null
-              ? '${AppLocale.tr('health_score')}: ${_cachedScore!.round()}%'
-              : AppLocale.tr('scan_library'),
-      trailing: _loading
-          ? SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, color: MelodiTheme.primaryGreen),
-            )
-          : Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const LibraryHealthScreen()),
-      ),
-    );
-  }
-}
-
-class _AudioEffectsPage extends StatefulWidget {
-  const _AudioEffectsPage();
-
-  @override
-  State<_AudioEffectsPage> createState() => _AudioEffectsPageState();
-}
-
-class _AudioEffectsPageState extends State<_AudioEffectsPage> {
-  bool _spatialAudio = false;
-  bool _reverb = false;
-  bool _bassBoost = false;
-  bool _virtualizer = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSettings();
-  }
-
-  Future<void> _loadSettings() async {
-    final db = DatabaseService.instance;
-    final spatial = await db.getSetting('spatial_audio');
-    final reverb = await db.getSetting('reverb');
-    final bass = await db.getSetting('bass_boost');
-    final virt = await db.getSetting('virtualizer');
-    setState(() {
-      _spatialAudio = spatial == 'true';
-      _reverb = reverb == 'true';
-      _bassBoost = bass == 'true';
-      _virtualizer = virt == 'true';
-    });
-  }
-
-  Future<void> _saveSetting(String key, bool value) async {
-    await DatabaseService.instance.setSetting(key, value.toString());
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: MelodiTheme.background,
-      appBar: AppBar(
-        title: Text(AppLocale.tr('audio_effects')),
-        backgroundColor: MelodiTheme.containerLow,
-        foregroundColor: MelodiTheme.onSurface,
-        elevation: 0,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        children: [
-          _SettingsTile(
-            icon: Icons.spatial_audio_off,
-            iconColor: Colors.purple,
-            title: AppLocale.tr('spatial_audio'),
-            subtitle: AppLocale.tr('spatial_audio_desc'),
-            trailing: Switch(
-              value: _spatialAudio,
-              onChanged: (v) {
-                setState(() => _spatialAudio = v);
-                _saveSetting('spatial_audio', v);
-              },
-              activeColor: MelodiTheme.primaryGreen,
-            ),
-          ),
-          const SizedBox(height: 8),
-          _SettingsTile(
-            icon: Icons.waves,
-            iconColor: Colors.blue,
-            title: AppLocale.tr('reverb'),
-            subtitle: AppLocale.tr('reverb_desc'),
-            trailing: Switch(
-              value: _reverb,
-              onChanged: (v) {
-                setState(() => _reverb = v);
-                _saveSetting('reverb', v);
-              },
-              activeColor: MelodiTheme.primaryGreen,
-            ),
-          ),
-          const SizedBox(height: 8),
-          _SettingsTile(
-            icon: Icons.graphic_eq,
-            iconColor: Colors.orange,
-            title: AppLocale.tr('bass_boost'),
-            subtitle: AppLocale.tr('bass_boost_desc'),
-            trailing: Switch(
-              value: _bassBoost,
-              onChanged: (v) {
-                setState(() => _bassBoost = v);
-                _saveSetting('bass_boost', v);
-              },
-              activeColor: MelodiTheme.primaryGreen,
-            ),
-          ),
-          const SizedBox(height: 8),
-          _SettingsTile(
-            icon: Icons.hearing,
-            iconColor: Colors.teal,
-            title: AppLocale.tr('virtualizer'),
-            subtitle: AppLocale.tr('virtualizer_desc'),
-            trailing: Switch(
-              value: _virtualizer,
-              onChanged: (v) {
-                setState(() => _virtualizer = v);
-                _saveSetting('virtualizer', v);
-              },
-              activeColor: MelodiTheme.primaryGreen,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _VoiceControlPage extends StatefulWidget {
-  const _VoiceControlPage();
-
-  @override
-  State<_VoiceControlPage> createState() => _VoiceControlPageState();
-}
-
-class _VoiceControlPageState extends State<_VoiceControlPage> {
-  bool _siriEnabled = false;
-  bool _voiceFeedbackEnabled = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSettings();
-  }
-
-  Future<void> _loadSettings() async {
-    final siri = await DatabaseService.instance.getSetting('siri_integration');
-    final feedback =
-        await DatabaseService.instance.getSetting('voice_feedback');
-    setState(() {
-      _siriEnabled = siri == 'true';
-      _voiceFeedbackEnabled = feedback == 'true';
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: MelodiTheme.background,
-      appBar: AppBar(
-        title: Text(AppLocale.tr('siri_shortcuts')),
-        backgroundColor: MelodiTheme.containerLow,
-        foregroundColor: MelodiTheme.onSurface,
-        elevation: 0,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        children: [
-          _SettingsTile(
-            icon: Icons.mic,
-            iconColor: Colors.orange,
-            title: AppLocale.tr('siri_integration'),
-            subtitle: AppLocale.tr('siri_integration_desc'),
-            trailing: Switch(
-              value: _siriEnabled,
-              onChanged: (v) {
-                setState(() => _siriEnabled = v);
-                DatabaseService.instance
-                    .setSetting('siri_integration', v.toString());
-              },
-              activeColor: MelodiTheme.primaryGreen,
-            ),
-          ),
-          const SizedBox(height: 8),
-          _SettingsTile(
-            icon: Icons.shortcut,
-            iconColor: Colors.teal,
-            title: AppLocale.tr('custom_shortcuts'),
-            subtitle: AppLocale.tr('custom_shortcuts_desc'),
-            trailing: Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(AppLocale.tr('siri_shortcuts_info')),
-                  backgroundColor: MelodiTheme.primaryGreen,
-                  duration: const Duration(seconds: 3),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 8),
-          _SettingsTile(
-            icon: Icons.record_voice_over,
-            iconColor: Colors.indigo,
-            title: AppLocale.tr('voice_feedback'),
-            subtitle: AppLocale.tr('voice_feedback_desc'),
-            trailing: Switch(
-              value: _voiceFeedbackEnabled,
-              onChanged: (v) {
-                setState(() => _voiceFeedbackEnabled = v);
-                DatabaseService.instance
-                    .setSetting('voice_feedback', v.toString());
-              },
-              activeColor: MelodiTheme.primaryGreen,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PodcastSubscriptionsPage extends StatefulWidget {
-  const _PodcastSubscriptionsPage();
-
-  @override
-  State<_PodcastSubscriptionsPage> createState() =>
-      _PodcastSubscriptionsPageState();
-}
-
-class _PodcastSubscriptionsPageState extends State<_PodcastSubscriptionsPage> {
-  final PodcastService _service = PodcastService.instance;
-  List<PodcastFeed> _subscriptions = [];
-  bool _loading = true;
-  final TextEditingController _urlController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final subs = await _service.getSubscriptions();
-    if (mounted)
-      setState(() {
-        _subscriptions = subs;
-        _loading = false;
-      });
-  }
-
-  Future<void> _addByUrl() async {
-    final url = _urlController.text.trim();
-    if (url.isEmpty) return;
-    _urlController.clear();
-    showDialog(
-        context: context,
-        builder: (_) => const Center(child: CircularProgressIndicator()),
-        barrierDismissible: false);
-    try {
-      final feed = await _service.resolveUrl(url);
-      await _service.subscribe(feed);
-      if (mounted) Navigator.of(context).pop();
-      if (mounted) {
-        await Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => PodcastDetailScreen(feed: feed),
-          ),
-        );
-      }
-      await _load();
-    } catch (e) {
-      if (mounted) Navigator.of(context).pop();
-      if (mounted)
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
-    }
-  }
-
-  Future<void> _unsubscribe(PodcastFeed feed) async {
-    await _service.unsubscribe(feed.id);
-    await _load();
-  }
-
-  void _showEpisodes(PodcastFeed feed) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => PodcastDetailScreen(feed: feed),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: MelodiTheme.background,
-      appBar: AppBar(
-        title: Text(AppLocale.tr('podcast')),
-        backgroundColor: MelodiTheme.containerLow,
-        foregroundColor: MelodiTheme.onSurface,
-        elevation: 0,
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(children: [
-                  Expanded(
-                      child: TextField(
-                    controller: _urlController,
-                    decoration: InputDecoration(
-                      hintText: 'Paste RSS feed URL...',
-                      hintStyle: TextStyle(color: MelodiTheme.textMuted),
-                      filled: true,
-                      fillColor: MelodiTheme.container,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
-                    ),
-                    style:
-                        TextStyle(color: MelodiTheme.onSurface, fontSize: 14),
-                    onSubmitted: (_) => _addByUrl(),
-                  )),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: _addByUrl,
-                    icon: const Icon(Icons.add_circle,
-                        color: MelodiTheme.primaryGreen, size: 36),
-                  ),
-                ]),
-              ),
-              if (_subscriptions.isEmpty)
-                Expanded(
-                    child: Center(
-                        child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.headphones,
-                        size: 64, color: MelodiTheme.textMuted),
-                    const SizedBox(height: 16),
-                    Text('No subscriptions yet',
-                        style: TextStyle(
-                            color: MelodiTheme.onSurfaceVariant, fontSize: 16)),
-                    const SizedBox(height: 8),
-                    Text('Paste an RSS feed URL above to subscribe',
-                        style: TextStyle(
-                            color: MelodiTheme.textMuted, fontSize: 13)),
-                  ],
-                )))
-              else
-                Expanded(
-                    child: ListView.builder(
-                  itemCount: _subscriptions.length,
-                  itemBuilder: (ctx, i) {
-                    final feed = _subscriptions[i];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: MelodiTheme.containerHigh,
-                        child: const Icon(Icons.podcasts,
-                            color: MelodiTheme.primaryGreen),
-                      ),
-                      title: Text(feed.title,
-                          style: TextStyle(
-                              color: MelodiTheme.onSurface, fontSize: 15)),
-                      subtitle: Text('${feed.episodes.length} episodes',
-                          style: TextStyle(
-                              color: MelodiTheme.textMuted, fontSize: 12)),
-                      trailing: IconButton(
-                        icon: Icon(Icons.remove_circle_outline,
-                            color: MelodiTheme.errorRed, size: 20),
-                        onPressed: () => _unsubscribe(feed),
-                      ),
-                      onTap: () => _showEpisodes(feed),
-                    );
-                  },
-                )),
-            ]),
-    );
-  }
-}
-
-void _showWidgetConfigDialog(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      backgroundColor: const Color(0xFF201f1f),
-      title: Text('Araç Takımı Yapılandırması',
-          style: TextStyle(
-              color: MelodiTheme.onSurface,
-              fontSize: 20,
-              fontWeight: FontWeight.bold)),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Ana ekranda gösterilecek araç takımlarını seçin:',
-              style:
-                  TextStyle(color: MelodiTheme.onSurfaceVariant, fontSize: 14)),
-          const SizedBox(height: 16),
-          _widgetOption(ctx, 'Şimdi Çalıyor', Icons.music_note, true),
-          _widgetOption(ctx, 'Hızlı Çalma', Icons.play_arrow, false),
-          _widgetOption(ctx, 'Favoriler', Icons.favorite, false),
-          _widgetOption(ctx, 'Son Çalınanlar', Icons.history, false),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child:
-              Text('Tamam', style: TextStyle(color: MelodiTheme.primaryGreen)),
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _widgetOption(
-    BuildContext ctx, String name, IconData icon, bool enabled) {
-  return ListTile(
-    leading: Icon(icon, color: MelodiTheme.primaryGreen, size: 20),
-    title: Text(name,
-        style: const TextStyle(color: Color(0xFFe5e2e1), fontSize: 15)),
-    trailing: Switch(
-      value: enabled,
-      onChanged: (v) {},
-      activeColor: MelodiTheme.primaryGreen,
-    ),
-  );
 }

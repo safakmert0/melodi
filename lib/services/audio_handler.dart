@@ -14,6 +14,7 @@ import 'track_matcher.dart';
 import 'multi_source_search.dart';
 import 'music_source.dart';
 import 'youtube_downloader.dart';
+import 'yt_dlp_service.dart';
 import 'navidrome_service.dart';
 
 class AudioPlayerHandler extends BaseAudioHandler
@@ -557,20 +558,20 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   /// Resolves a playable YouTube stream URL as fast as possible.
   ///
-  /// The backend proxy and Piped are queried concurrently; the first one that
-  /// returns a usable URL wins. The backend is given a short head start so it
-  /// is preferred when it is responsive, but we never block on it longer than
-  /// Piped needs — if the backend is slow or unreachable, playback starts from
-  /// the Piped result without waiting for the backend to time out.
+  /// Priority: backend proxy → Piped → doğrudan YouTube (youtube_explode).
+  /// Backend/Piped paralel sorgulanır; ikisi de başarısızsa yt_dlp dener.
   Future<String?> _resolveYoutubeStream(String videoId) async {
     final backendFut =
         BackendApiService.instance.streamUrl(videoId).catchError((_) => null);
     final pipedFut =
         RobustPipedService.instance.getStreamUrl(videoId).catchError((_) => null);
+    final ytDlpFut =
+        YtDlpService.instance.getStreamUrl(videoId).catchError((_) => null);
 
     final completer = Completer<String?>();
     String? backendResult;
     String? pipedResult;
+    String? ytDlpResult;
     var settled = false;
 
     void settle(String? url) {
@@ -581,12 +582,11 @@ class AudioPlayerHandler extends BaseAudioHandler
 
     backendFut.then((url) {
       backendResult = url;
-      // Backend finished: prefer it immediately when it has a result.
       if (url != null) {
         settle(url);
       } else {
-        // Backend failed fast: fall back to Piped as soon as it lands.
         if (pipedResult != null) settle(pipedResult);
+        else if (ytDlpResult != null) settle(ytDlpResult);
       }
     });
 
@@ -594,25 +594,35 @@ class AudioPlayerHandler extends BaseAudioHandler
       pipedResult = url;
       if (url != null) {
         if (backendResult != null) {
-          // Both succeeded; backend was already preferred above, but if it
-          // hadn't settled yet we still honour it via the backend branch.
           if (!settled) settle(url);
         } else {
-          // Backend still pending: give it a brief grace period to win on
-          // quality before accepting the (already working) Piped URL.
-          Future.delayed(const Duration(milliseconds: 1200), () {
+          Future.delayed(const Duration(milliseconds: 800), () {
             if (!settled) settle(url);
           });
         }
       } else {
         if (backendResult != null) settle(backendResult);
+        else if (ytDlpResult != null && !settled) settle(ytDlpResult);
       }
     });
 
-    // Both sources finished without producing a usable URL: don't leave the
-    // future hanging, signal failure so the caller can fall back to download.
-    Future.wait([backendFut, pipedFut]).then((_) {
-      if (!settled) completer.complete(null);
+    ytDlpFut.then((url) {
+      ytDlpResult = url;
+      if (url != null && !settled) {
+        // YtDlp en son yedek; backend/piped zaten 800ms içinde denenmiştir
+        Future.delayed(const Duration(milliseconds: 1200), () {
+          if (!settled) settle(url);
+        });
+      }
+    });
+
+    Future.wait([backendFut, pipedFut, ytDlpFut]).then((_) {
+      if (!settled) {
+        if (backendResult != null) completer.complete(backendResult);
+        else if (pipedResult != null) completer.complete(pipedResult);
+        else if (ytDlpResult != null) completer.complete(ytDlpResult);
+        else completer.complete(null);
+      }
     });
 
     return completer.future;

@@ -94,6 +94,11 @@ class DownloadProgress {
 }
 
 class YtDlpService {
+  YtDlpService._();
+  static final YtDlpService _instance = YtDlpService._();
+  factory YtDlpService() => _instance;
+  static YtDlpService get instance => _instance;
+
   YoutubeExplode? _yt;
   final StreamController<DownloadProgress> _progressController =
       StreamController<DownloadProgress>.broadcast();
@@ -115,6 +120,19 @@ class YtDlpService {
   YoutubeExplode get _client {
     _yt ??= YoutubeExplode();
     return _yt!;
+  }
+
+  /// Doğrudan YouTube ses akış URL'sini döndürür (yt-dlp / youtube_explode).
+  /// Backend/Piped başarısız olduğunda çevrim içi dinleme için yedek.
+  Future<String?> getStreamUrl(String videoId) async {
+    try {
+      final formats = await getAvailableFormats(videoId);
+      if (formats.isEmpty) return null;
+      return selectBestFormat(formats).streamInfo.url.toString();
+    } catch (e) {
+      debugPrint('YtDlpService getStreamUrl error: $e');
+      return null;
+    }
   }
 
   Future<String?> extractVideoId(String input) async {
