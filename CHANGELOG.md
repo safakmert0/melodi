@@ -5,6 +5,11 @@ All notable changes to Melodi will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.10.2] - 2026-08-30
+
+### Hotfix — 4.10.1 build hatası
+- `lib/screens/onboarding_screen.dart:335` `const SourceHubScreen()` “Not a constant expression” build hatası düzeltildi: ölü `_buildSources` metodu tamamen kaldırıldı (import da kaldırılmıştı).
+
 ## [4.10.1] - 2026-08-30
 
 ### Fix & Performance — 8 talep birleştirildi

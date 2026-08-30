@@ -289,59 +289,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildSources(ThemeData theme) {
-    final accent = _pageAccent(theme, 3);
-    return _pageBody(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _StepIcon(icon: Icons.hub_rounded, color: accent),
-          const SizedBox(height: 26),
-          Text(
-              _copy('Kaynaklarını birleştir', 'Bring your sources together',
-                  'Verbinde deine Quellen'),
-              style: theme.textTheme.headlineLarge),
-          const SizedBox(height: 10),
-          Text(
-            _copy(
-              'Hesap bağlamak isteğe bağlıdır. Yerel müzik ve çevrim içi arama hemen kullanılabilir.',
-              'Connecting accounts is optional. Local music and online search work right away.',
-              'Konten sind optional. Lokale Musik und Online-Suche funktionieren sofort.',
-            ),
-            style: theme.textTheme.bodyLarge,
-          ),
-          const SizedBox(height: 26),
-          _SourcePreview(
-            icon: Icons.music_note_rounded,
-            title: 'Spotify',
-            subtitle: _copy('Kitaplık ve çalma listeleri',
-                'Library and playlists', 'Mediathek und Playlists'),
-            color: const Color(0xFF1ED760),
-          ),
-          const SizedBox(height: 10),
-          _SourcePreview(
-            icon: Icons.play_arrow_rounded,
-            title: 'YouTube Music',
-            subtitle: _copy(
-                'Tam parça kaynağı ve keşif',
-                'Full-track source and discovery',
-                'Volltitel-Quelle und Entdecken'),
-            color: const Color(0xFFFF3B30),
-          ),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const SourceHubScreen()),
-            ),
-            icon: const Icon(Icons.tune_rounded),
-            label: Text(_copy(
-                'Kaynakları yönet', 'Manage sources', 'Quellen verwalten')),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _TopBar extends StatelessWidget {
