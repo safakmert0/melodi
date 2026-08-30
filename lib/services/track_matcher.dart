@@ -1,8 +1,7 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'database_service.dart';
-import 'multi_source_search.dart';
-import 'music_source.dart';
+import 'ytmusic_service.dart';
 
 class MatchResult {
   final String ytVideoId;
@@ -27,9 +26,9 @@ class MatchResult {
 }
 
 class TrackMatcher {
-  final MultiSourceSearch _multiSource = MultiSourceSearch();
+  final Future<List<YTMusicTrack>> Function(String query) _searchFn;
 
-  TrackMatcher([Function? searchFunction]);
+  TrackMatcher(this._searchFn);
 
   String normalizeTitle(String title) {
     final normalized = _normalizeUnicode(title);
@@ -65,11 +64,6 @@ class TrackMatcher {
         .replaceAll(RegExp(r'\s*&\s*'), ' and ')
         .replaceAll(RegExp(r'\s*,\s*'), ' and ')
         .replaceAll(RegExp(r'\s*x\s*'), ' and ')
-        // YouTube / VEVO kanallarındaki "Artist - Topic", "Artist VEVO",
-        // "Artist Official" gibi ekleri temizle ki eşleşme oranı artsın.
-        .replaceAll(RegExp(r'\b(topic|vevo|official)\b', caseSensitive: false),
-            '')
-        .replaceAll(RegExp(r'-?\s*topic\s*songs?', caseSensitive: false), '')
         .replaceAll(RegExp(r'[^\w\s]'), '')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
@@ -200,8 +194,12 @@ class TrackMatcher {
         if (durationDiff <= 5000) {
           confidence = (confidence + 0.1).clamp(0.0, 1.0);
           reasons.add('duration_close');
-        } else if (durationDiff > 30000) {
-          confidence *= 0.5;
+        } else {
+          final toleranceMs = (durationMs * 0.10).round().clamp(12000, 30000);
+          if (durationDiff > toleranceMs) {
+            confidence *= 0.15;
+            reasons.add('duration_mismatch');
+          }
         }
       }
 
@@ -241,32 +239,24 @@ class TrackMatcher {
       '$title $artist',
       '$title $artist audio',
       '$artist $title lyrics',
-      '$title $artist official audio',
-      if (album != null && album.isNotEmpty) '$title $artist $album',
-      '$title topic',
     ];
 
     final seen = <String>{};
     final results = <Map<String, dynamic>>[];
 
-    for (final query in queries) {
-      try {
-        final tracks = await _multiSource.searchAllSync(query, limitPerSource: 10);
-        final ytTracks = tracks.where((t) => t.source == MusicSourceType.youtube);
-        for (final track in ytTracks) {
-          if (seen.add(track.id)) {
-            results.add({
-              'videoId': track.id,
-              'title': track.title,
-              'artists': track.artist,
-              'album': track.album,
-              'durationMs': track.duration.inMilliseconds,
-              'thumbnailUrl': track.thumbnailUrl,
-            });
-          }
+    final batches = await Future.wait(
+      queries.map((query) async {
+        try {
+          return await _searchFn(query);
+        } catch (e) {
+          debugPrint('TrackMatcher search error for "$query": $e');
+          return <YTMusicTrack>[];
         }
-      } catch (e) {
-        debugPrint('TrackMatcher search error for "$query": $e');
+      }),
+    );
+    for (final tracks in batches) {
+      for (final track in tracks) {
+        if (seen.add(track.videoId)) results.add(track.toJson());
       }
     }
 
@@ -330,7 +320,7 @@ class TrackMatcher {
 
   static double score(String queryTitle, String queryArtist, String targetTitle,
       String targetArtist) {
-    final matcher = TrackMatcher();
+    final matcher = TrackMatcher((_) async => []);
     final normQueryTitle = matcher.normalizeTitle(queryTitle);
     final normQueryArtist = matcher.normalizeArtist(queryArtist);
     final normTargetTitle = matcher.normalizeTitle(targetTitle);
@@ -359,15 +349,12 @@ class TrackMatcher {
     if (base < 0.01) return 0.0;
 
     if (queryDurationMs > 0 && targetDurationMs > 0) {
-      final ratio = queryDurationMs / targetDurationMs;
-      if (ratio < 0.5 || ratio > 2.0) return base * 0.3;
-      if (ratio < 0.7 || ratio > 1.4) return base * 0.7;
+      final delta = (queryDurationMs - targetDurationMs).abs();
+      final toleranceMs = (queryDurationMs * 0.10).round().clamp(12000, 30000);
+      if (delta > toleranceMs) return base * 0.15;
+      if (delta <= 5000) return (base + 0.08).clamp(0.0, 1.0);
     }
 
     return base;
-  }
-
-  void dispose() {
-    _multiSource.dispose();
   }
 }

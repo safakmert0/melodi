@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../core/constants.dart';
-import '../theme/app_tokens.dart';
 import '../services/diagnostics_service.dart';
+import '../providers/spotify_provider.dart';
+import '../providers/ytmusic_provider.dart';
 
 class DiagnosticsScreen extends StatefulWidget {
   const DiagnosticsScreen({super.key});
@@ -64,9 +65,9 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
     // Online playback
     features.add({
       'name': 'Çevrimiçi Oynatma',
-      'status': 'partial',
+      'status': 'working',
       'description':
-          'YouTube şarkılarını doğrudan streaming ile çalma (bazen kesinti olabilir)',
+          'Ön hazırlıklı kaynak çözümü, gerçek parça süresi ve otomatik yedek kaynak',
     });
 
     // Download
@@ -104,6 +105,14 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
       'description': 'Şarkılar arası geçiş efekti',
     });
 
+    // Playlist sync
+    features.add({
+      'name': 'Çalma Listesi Senkronizasyonu',
+      'status': 'working',
+      'description':
+          'Spotify/YTMusic listelerini içe aktarma, birleştirme ve yenileme (oturum gerekli)',
+    });
+
     // Background playback
     features.add({
       'name': 'Arka Plan Çalma',
@@ -116,6 +125,13 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
       'name': 'Widget',
       'status': 'working',
       'description': 'Ana ekran widget\'ı ile kontrol',
+    });
+
+    // AirPlay
+    features.add({
+      'name': 'AirPlay',
+      'status': 'working',
+      'description': 'AirPlay ile kablosuz ses aktarımı',
     });
 
     return features;
@@ -131,6 +147,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Export failed: $e'),
+            backgroundColor: MelodiTheme.errorRed,
           ),
         );
       }
@@ -144,6 +161,7 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocale.tr('clear_logs')),
+          backgroundColor: MelodiTheme.primaryGreen,
         ),
       );
     }
@@ -151,17 +169,13 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: colors.surface,
+      backgroundColor: MelodiTheme.background,
       appBar: AppBar(
-        title: Text(AppLocale.tr('diagnostics'),
-            style: const TextStyle(fontSize: 16)),
-        backgroundColor: colors.surface,
-        foregroundColor: colors.onSurface,
+        title: Text(AppLocale.tr('diagnostics')),
+        backgroundColor: MelodiTheme.containerLow,
+        foregroundColor: MelodiTheme.onSurface,
         elevation: 0,
-        scrolledUnderElevation: 0,
-        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
@@ -209,17 +223,48 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                       value: '${(_bundle!['tableCounts'] as Map)['playlists']}',
                     ),
                     const SizedBox(height: 16),
+                    _SectionTitle(AppLocale.tr('service_status')),
+                    Consumer2<SpotifyProvider, YTMusicProvider>(
+                      builder: (context, spotify, ytmusic, _) {
+                        return Column(
+                          children: [
+                            _InfoRow(
+                              label: 'Spotify',
+                              value: spotify.isConnected
+                                  ? 'Connected (${spotify.username ?? ''})'
+                                  : 'Not Connected',
+                              valueColor: spotify.isConnected
+                                  ? Colors.green
+                                  : MelodiTheme.textMuted,
+                            ),
+                            _InfoRow(
+                              label: 'YouTube Music',
+                              value: ytmusic.isConnected
+                                  ? 'Connected'
+                                  : 'Not Connected',
+                              valueColor: ytmusic.isConnected
+                                  ? Colors.green
+                                  : MelodiTheme.textMuted,
+                            ),
+                          ],
+                        );
+                      },
+                    ),
                     const SizedBox(height: 16),
                     _SectionTitle('ÖZELLİK DURUMU'),
                     ..._features.map((feature) {
                       final status = feature['status'] as String;
-                      final isOk = status == 'working';
-                      final statusIcon = isOk
+                      final statusColor = status == 'working'
+                          ? Colors.green
+                          : status == 'partial'
+                              ? Colors.orange
+                              : Colors.red;
+                      final statusIcon = status == 'working'
                           ? Icons.check_circle_rounded
                           : status == 'partial'
                               ? Icons.warning_rounded
                               : Icons.error_rounded;
-                      final statusText = isOk
+                      final statusText = status == 'working'
                           ? 'Çalışıyor'
                           : status == 'partial'
                               ? 'Kısmi'
@@ -229,14 +274,13 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                             horizontal: 16, vertical: 4),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: colors.surfaceContainer,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: colors.outlineVariant),
+                          color: MelodiTheme.containerLow,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: MelodiTheme.outlineVariant),
                         ),
                         child: Row(
                           children: [
-                            Icon(statusIcon,
-                                color: colors.onSurfaceVariant, size: 18),
+                            Icon(statusIcon, color: statusColor, size: 20),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
@@ -245,8 +289,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                   Text(
                                     feature['name'] as String,
                                     style: TextStyle(
-                                      color: colors.onSurface,
-                                      fontSize: 13,
+                                      color: MelodiTheme.onSurface,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -254,8 +298,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                   Text(
                                     feature['description'] as String,
                                     style: TextStyle(
-                                      color: colors.onSurfaceVariant,
-                                      fontSize: 11,
+                                      color: MelodiTheme.textMuted,
+                                      fontSize: 12,
                                     ),
                                   ),
                                 ],
@@ -265,15 +309,14 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: colors.surfaceContainerHighest,
+                                color: statusColor.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: colors.outlineVariant),
                               ),
                               child: Text(
                                 statusText,
                                 style: TextStyle(
-                                  color: colors.onSurfaceVariant,
-                                  fontSize: 11,
+                                  color: statusColor,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -303,9 +346,10 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                               horizontal: 16, vertical: 4),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: colors.surfaceContainer,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: colors.outlineVariant),
+                            color: MelodiTheme.containerLow,
+                            borderRadius: BorderRadius.circular(12),
+                            border:
+                                Border.all(color: MelodiTheme.outlineVariant),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -316,17 +360,16 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: colors.surfaceContainerHighest,
+                                      color: MelodiTheme.errorRed
+                                          .withOpacity(0.15),
                                       borderRadius: BorderRadius.circular(4),
-                                      border:
-                                          Border.all(color: colors.outlineVariant),
                                     ),
                                     child: Text(
                                       '#${_errors.length - i}',
                                       style: TextStyle(
-                                        color: colors.onSurfaceVariant,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
+                                        color: MelodiTheme.errorRed,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
@@ -335,8 +378,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                     child: Text(
                                       error['context'] as String? ?? '',
                                       style: TextStyle(
-                                        color: colors.onSurface,
-                                        fontSize: 13,
+                                        color: MelodiTheme.onSurface,
+                                        fontSize: 15,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -345,8 +388,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                     _formatTimestamp(
                                         error['createdAt'] as String? ?? ''),
                                     style: TextStyle(
-                                      color: colors.onSurfaceVariant,
-                                      fontSize: 12,
+                                      color: MelodiTheme.textMuted,
+                                      fontSize: 15,
                                     ),
                                   ),
                                 ],
@@ -355,8 +398,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                               Text(
                                 error['message'] as String? ?? '',
                                 style: TextStyle(
-                                  color: colors.onSurfaceVariant,
-                                  fontSize: 13,
+                                  color: MelodiTheme.onSurfaceVariant,
+                                  fontSize: 14,
                                 ),
                                 maxLines: 3,
                                 overflow: TextOverflow.ellipsis,
@@ -371,8 +414,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                   child: Text(
                                     'View stack trace',
                                     style: TextStyle(
-                                      color: colors.onSurface,
-                                      fontSize: 13,
+                                      color: MelodiTheme.primaryGreen,
+                                      fontSize: 15,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -394,18 +437,18 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                 size: 18),
                             label: Text(AppLocale.tr('clear_logs')),
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: colors.error,
+                              foregroundColor: MelodiTheme.errorRed,
                               side: BorderSide(
-                                  color: colors.error.withValues(alpha: 0.5)),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                                  color: MelodiTheme.errorRed.withOpacity(0.5)),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: SizedBox(
@@ -415,12 +458,11 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                           icon: const Icon(Icons.file_upload_rounded, size: 18),
                           label: Text(AppLocale.tr('export_diagnostics')),
                           style: FilledButton.styleFrom(
-                            backgroundColor: colors.onSurface,
-                            foregroundColor: colors.surface,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            backgroundColor: MelodiTheme.primaryGreen,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                         ),
@@ -433,13 +475,12 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
   }
 
   void _showStackTrace(BuildContext context, String trace) {
-    final colors = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
-      backgroundColor: colors.surface,
+      backgroundColor: MelodiTheme.containerLow,
       isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => SafeArea(
         child: Padding(
@@ -453,16 +494,16 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: colors.outlineVariant,
+                  color: MelodiTheme.outlineVariant,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               Text(
                 'Stack Trace',
                 style: TextStyle(
-                  color: colors.onSurface,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                  color: MelodiTheme.onSurface,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 12),
@@ -471,8 +512,9 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                   child: SelectableText(
                     trace,
                     style: TextStyle(
-                      color: colors.onSurfaceVariant,
-                      fontSize: 13,
+                      color: MelodiTheme.onSurfaceVariant,
+                      fontSize: 15,
+                      fontFamily: 'monospace',
                       height: 1.5,
                     ),
                   ),

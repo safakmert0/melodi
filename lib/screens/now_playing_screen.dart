@@ -22,7 +22,6 @@ import '../widgets/seek_bar.dart';
 import '../widgets/queue_sheet.dart';
 import '../widgets/image_with_fallback.dart';
 import '../widgets/sleep_timer_sheet.dart';
-import '../widgets/equalizer_sheet.dart';
 import '../widgets/crossfade_slider.dart';
 import 'lyrics_screen.dart';
 import 'cover_flow_screen.dart';
@@ -74,37 +73,33 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     _lyricsTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
       if (!mounted) return;
       final player = context.read<PlayerProvider>();
-      final pos = player.position;
-      final dur = player.duration;
-      final clampedMs = dur.inMilliseconds > 0
-          ? pos.inMilliseconds.clamp(0, dur.inMilliseconds)
-          : pos.inMilliseconds;
-      if (_lyricsLines.isNotEmpty) {
-        final lyricPosition = LyricsTiming.lyricPositionMs(
-          playbackPositionMs: clampedMs,
-          manualOffsetMs: _lyricsOffsetMs,
-          playbackDurationMs: dur.inMilliseconds,
-          lyricsDurationMs: _lyricsResult?.durationMs ?? 0,
-        );
-        _updateCurrentLine(lyricPosition);
-      }
+      _syncLyricsToPlayback(player.position, player);
     });
   }
 
-  void _updateCurrentLine(int positionMs) {
-    var idx = LyricsTiming.findLineIndex(_lyricsLines, positionMs);
-    // If at end of song and no line matched, show last line
-    if (idx == -1 && _lyricsLines.isNotEmpty) {
-      final player = context.read<PlayerProvider>();
-      if (player.duration.inMilliseconds > 0 &&
-          positionMs >= player.duration.inMilliseconds - 1000) {
-        idx = _lyricsLines.length - 1;
-      }
+  void _syncLyricsToPlayback(Duration position, PlayerProvider player) {
+    if (_lyricsLines.isEmpty) return;
+    final durationMs = player.duration.inMilliseconds;
+    final playbackMs = durationMs > 0
+        ? position.inMilliseconds.clamp(0, durationMs)
+        : position.inMilliseconds;
+    final index = LyricsTiming.findLineIndexAtPlayback(
+      lines: _lyricsLines,
+      playbackPositionMs: playbackMs,
+      manualOffsetMs: _lyricsOffsetMs,
+      playbackDurationMs: durationMs,
+      lyricsDurationMs: _lyricsResult?.durationMs ?? 0,
+    );
+    if (index != _currentLineIndex && mounted) {
+      setState(() => _currentLineIndex = index);
     }
-    if (idx != _currentLineIndex) {
-      _currentLineIndex = idx;
-      if (mounted) setState(() {});
-    }
+  }
+
+  Future<void> _seekAndSync(Duration position) async {
+    final player = context.read<PlayerProvider>();
+    _syncLyricsToPlayback(position, player);
+    await player.seek(position);
+    if (mounted) _syncLyricsToPlayback(player.position, player);
   }
 
   void _autoFetch(SongModel song) {
@@ -225,22 +220,20 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
         final song = player.currentSong;
         if (song != null) _autoFetch(song);
         if (song == null) {
-          final cs = Theme.of(context).colorScheme;
           return Scaffold(
-            backgroundColor: cs.surface,
+            backgroundColor: const Color(0xFF131313),
             appBar: AppBar(
-              backgroundColor: cs.surface,
-              surfaceTintColor: Colors.transparent,
+              backgroundColor: Colors.transparent,
               elevation: 0,
               leading: IconButton(
-                icon: Icon(Icons.keyboard_arrow_down_rounded,
-                    size: 28, color: cs.onSurface),
+                icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                    size: 28, color: Color(0xFFe5e2e1)),
                 onPressed: () => Navigator.pop(context),
               ),
               title: Text(
                 AppLocale.tr('now_playing'),
-                style: TextStyle(
-                  color: cs.onSurface,
+                style: const TextStyle(
+                  color: Color(0xFFe5e2e1),
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 1.5,
@@ -252,12 +245,13 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.music_note_rounded,
-                      size: 80, color: cs.onSurfaceVariant),
+                  const Icon(Icons.music_note_rounded,
+                      size: 80, color: Color(0xFFbccbb9)),
                   const SizedBox(height: 24),
                   Text(
                     AppLocale.tr('no_song_playing'),
-                    style: TextStyle(color: cs.onSurface, fontSize: 18),
+                    style:
+                        const TextStyle(color: Color(0xFFe5e2e1), fontSize: 18),
                   ),
                 ],
               ),
@@ -275,13 +269,42 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
             }
           },
           child: Scaffold(
-            backgroundColor: Theme.of(context).colorScheme.surface,
+            backgroundColor: Colors.transparent,
             body: Stack(
               fit: StackFit.expand,
               children: [
+                if (hasArt) ...[
+                  Positioned.fill(
+                    child: ImageFiltered(
+                      imageFilter: ui.ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                      child: Image.memory(
+                        song.albumArt!,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child:
+                        Container(color: Colors.black.withValues(alpha: 0.5)),
+                  ),
+                ] else
+                  Positioned.fill(
+                      child: Container(color: const Color(0xFF131313))),
                 Positioned.fill(
-                    child: Container(
-                        color: Theme.of(context).colorScheme.surface)),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: const Alignment(0, -0.65),
+                        radius: 1.35,
+                        colors: [
+                          MelodiTheme.primaryGreen.withValues(alpha: 0.34),
+                          const Color(0xB8121414),
+                          const Color(0xF5121414),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
                 // Top bar
                 Positioned(
                   top: 0,
@@ -294,10 +317,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                       child: Row(
                         children: [
                           IconButton(
-                            icon: Icon(Icons.expand_more_rounded,
-                                size: 30,
-                                color:
-                                    Theme.of(context).colorScheme.onSurface),
+                            icon: const Icon(Icons.expand_more_rounded,
+                                size: 30, color: Colors.white),
                             onPressed: () => Navigator.pop(context),
                           ),
                           Expanded(
@@ -306,12 +327,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                 Text(
                                   AppLocale.tr('now_playing').toUpperCase(),
                                   style: TextStyle(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 1.2,
+                                    color: Colors.white.withValues(alpha: 0.6),
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 2,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -319,10 +338,9 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                   song.title,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
-                                    fontSize: 14,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -330,10 +348,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             ),
                           ),
                           IconButton(
-                            icon: Icon(Icons.more_vert_rounded,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant),
+                            icon: const Icon(Icons.more_vert_rounded,
+                                color: Colors.white70),
                             onPressed: () => _showOptions(context, player),
                           ),
                         ],
@@ -360,9 +376,9 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -372,10 +388,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                                fontSize: 13,
+                                color: MelodiTheme.primaryGreen,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -394,13 +408,12 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               : player.position,
                           duration: player.duration,
                           bufferedPosition: player.handler.bufferedPosition,
-                          onSeek: player.seek,
-                          activeColor:
-                              Theme.of(context).colorScheme.onSurface,
+                          onSeek: _seekAndSync,
+                          activeColor: MelodiTheme.primaryGreen,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      // Main controls
+                      // Main controls - BIG buttons
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -408,64 +421,67 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             icon: Icon(
                               Icons.shuffle_rounded,
                               color: player.isShuffled
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                              size: 22,
+                                  ? MelodiTheme.primaryGreen
+                                  : Colors.white54,
+                              size: 24,
                             ),
                             onPressed: player.toggleShuffle,
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 20),
                           IconButton(
-                            icon: Icon(Icons.skip_previous_rounded,
-                                color: Theme.of(context).colorScheme.onSurface,
-                                size: 36),
+                            icon: const Icon(Icons.skip_previous_rounded,
+                                color: Colors.white, size: 40),
                             onPressed: player.skipToPrevious,
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 12),
+                          // Play/Pause - BIG with green glow
                           Container(
-                            width: 64,
-                            height: 64,
+                            width: 76,
+                            height: 76,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Theme.of(context).colorScheme.primary,
+                              color: MelodiTheme.primaryGreen,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: MelodiTheme.primaryGreen
+                                      .withValues(alpha: 0.5),
+                                  blurRadius: 24,
+                                  spreadRadius: 2,
+                                ),
+                              ],
                             ),
                             child: IconButton(
                               icon: Icon(
                                 player.isPlaying
                                     ? Icons.pause_rounded
                                     : Icons.play_arrow_rounded,
-                                color: Theme.of(context).colorScheme.onPrimary,
-                                size: 36,
+                                color: const Color(0xFF131313),
+                                size: 42,
                               ),
                               onPressed: player.playPause,
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 12),
                           IconButton(
-                            icon: Icon(Icons.skip_next_rounded,
-                                color: Theme.of(context).colorScheme.onSurface,
-                                size: 36),
+                            icon: const Icon(Icons.skip_next_rounded,
+                                color: Colors.white, size: 40),
                             onPressed: player.skipToNext,
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 20),
                           IconButton(
                             icon: Icon(
                               Icons.repeat_rounded,
                               color: player.repeatMode != LoopStyle.off
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                              size: 22,
+                                  ? MelodiTheme.primaryGreen
+                                  : Colors.white54,
+                              size: 24,
                             ),
                             onPressed: player.cycleRepeatMode,
                           ),
                         ],
                       ),
                       const SizedBox(height: 6),
-                      // Supplementary actions
+                      // Supplementary actions row - bigger icons
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Row(
@@ -474,9 +490,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                             _SpeedButton(
                                 player: player,
                                 speedOptions: _speedOptions,
-                                accentColor:
-                                    Theme.of(context).colorScheme.primary),
-                            const SizedBox(width: 6),
+                                accentColor: MelodiTheme.primaryGreen),
+                            const SizedBox(width: 8),
                             Consumer<LibraryProvider>(
                               builder: (context, lib, _) {
                                 final isFav =
@@ -487,13 +502,9 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                         ? Icons.favorite
                                         : Icons.favorite_border,
                                     color: isFav
-                                        ? Theme.of(context)
-                                            .colorScheme
-                                            .primary
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant,
-                                    size: 22,
+                                        ? MelodiTheme.primaryGreen
+                                        : Colors.white54,
+                                    size: 24,
                                   ),
                                   onPressed: () => lib.toggleFavorite(song),
                                 );
@@ -520,13 +531,9 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                             ? Icons.hourglass_top_rounded
                                             : Icons.download_outlined,
                                     color: isDownloaded
-                                        ? Theme.of(context)
-                                            .colorScheme
-                                            .primary
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant,
-                                    size: 22,
+                                        ? MelodiTheme.primaryGreen
+                                        : Colors.white54,
+                                    size: 24,
                                   ),
                                   onPressed: isDownloaded || isDownloading
                                       ? null
@@ -561,9 +568,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                                                     ? '${song.title} indiriliyor...'
                                                     : 'Bu şarkı zaten indirilmiş veya sırada'),
                                                 backgroundColor: queued
-                                                    ? Theme.of(context)
-                                                        .colorScheme
-                                                        .primary
+                                                    ? MelodiTheme.primaryGreen
                                                     : Theme.of(context)
                                                         .colorScheme
                                                         .surfaceContainerHighest,
@@ -577,63 +582,35 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                               },
                             ),
                             IconButton(
-                              icon: Icon(Icons.queue_music_rounded,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                  size: 22),
+                              icon: const Icon(Icons.queue_music_rounded,
+                                  color: Colors.white54, size: 24),
                               onPressed: () => _showQueue(context),
                             ),
                             IconButton(
                               icon: Icon(
                                 Icons.dark_mode_rounded,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                                size: 22,
+                                color: Colors.white54,
+                                size: 24,
                               ),
                               onPressed: () {
                                 showModalBottomSheet(
                                   context: context,
-                                  backgroundColor: Theme.of(context)
-                                      .colorScheme
-                                      .surface,
-                                  shape: RoundedRectangleBorder(
+                                  backgroundColor: MelodiTheme.containerLow,
+                                  shape: const RoundedRectangleBorder(
                                     borderRadius: BorderRadius.vertical(
-                                        top: Radius.circular(12)),
+                                        top: Radius.circular(20)),
                                   ),
                                   builder: (_) => const SleepTimerSheet(),
                                 );
                               },
                             ),
-                            IconButton(
-                              icon: Icon(Icons.equalizer_rounded,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                  size: 22),
-                              onPressed: () {
-                                showModalBottomSheet(
-                                  context: context,
-                                  backgroundColor: Theme.of(context)
-                                      .colorScheme
-                                      .surface,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.vertical(
-                                        top: Radius.circular(12)),
-                                  ),
-                                  builder: (_) => const EqualizerSheet(),
-                                );
-                              },
-                            ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 8),
                             _VolumeBoostButton(
                               player: player,
                               showSlider: _showVolumeSlider,
                               onToggle: () => setState(
                                   () => _showVolumeSlider = !_showVolumeSlider),
-                              accentColor:
-                                  Theme.of(context).colorScheme.primary,
+                              accentColor: MelodiTheme.primaryGreen,
                             ),
                           ],
                         ),
@@ -643,29 +620,20 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 32),
                           child: Row(
                             children: [
-                              Icon(Icons.volume_down_rounded,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                  size: 16),
+                              const Icon(Icons.volume_down_rounded,
+                                  color: Colors.white54, size: 16),
                               Expanded(
                                 child: Slider(
                                   value: player.volumeBoost.clamp(0.5, 2.0),
                                   min: 0.5,
                                   max: 2.0,
                                   onChanged: (v) => player.setVolume(v),
-                                  activeColor:
-                                      Theme.of(context).colorScheme.primary,
-                                  inactiveColor: Theme.of(context)
-                                      .colorScheme
-                                      .outlineVariant,
+                                  activeColor: MelodiTheme.primaryGreen,
+                                  inactiveColor: Colors.white24,
                                 ),
                               ),
-                              Icon(Icons.volume_up_rounded,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                  size: 16),
+                              const Icon(Icons.volume_up_rounded,
+                                  color: Colors.white54, size: 16),
                             ],
                           ),
                         ),
@@ -708,25 +676,44 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
           child: Center(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(14, 0, 14, 2),
-                  child: AspectRatio(
+              child: AspectRatio(
                 aspectRatio: 1,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
+                    if (hasArt)
+                      Positioned.fill(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: MelodiTheme.primaryGreen
+                                    .withValues(alpha: 0.26),
+                                blurRadius: 64,
+                                spreadRadius: 6,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     GestureDetector(
                       onTap: _openCoverFlow,
                       child: Hero(
                         tag: 'album_art_${song.id}',
                         child: Container(
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .outlineVariant),
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.42),
+                                blurRadius: 32,
+                                offset: const Offset(0, 12),
+                              ),
+                            ],
                           ),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(11),
+                            borderRadius: BorderRadius.circular(24),
                             child: hasArt
                                 ? Image.memory(
                                     song.albumArt!,
@@ -743,27 +730,19 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                       ),
                     ),
                     Positioned(
-                      right: 8,
-                      bottom: 8,
+                      right: 10,
+                      bottom: 10,
                       child: IgnorePointer(
                         child: Container(
-                          padding: const EdgeInsets.all(6),
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .outlineVariant),
+                            color: Colors.black.withValues(alpha: 0.58),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(
+                          child: const Icon(
                             Icons.view_carousel_rounded,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
-                            size: 16,
+                            color: Colors.white,
+                            size: 19,
                           ),
                         ),
                       ),
@@ -785,14 +764,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(22, 8, 22, 10),
       child: Material(
-        color: colors.surfaceContainer,
-        borderRadius: BorderRadius.circular(12),
-        shape: RoundedRectangleBorder(
-          side: BorderSide(color: colors.outlineVariant),
-          borderRadius: BorderRadius.circular(12),
-        ),
+        color: Colors.black.withValues(alpha: 0.24),
+        borderRadius: BorderRadius.circular(26),
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(26),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
               builder: (_) => LyricsScreen(
@@ -801,34 +776,34 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(Icons.lyrics_rounded,
-                        size: 18, color: colors.onSurface),
+                    const Icon(Icons.lyrics_rounded,
+                        size: 18, color: Colors.white),
                     const SizedBox(width: 8),
-                    Text('Canlı sözler',
+                    const Text('Canlı sözler',
                         style: TextStyle(
-                            color: colors.onSurface,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600)),
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700)),
                     const Spacer(),
                     if (_lyricsLines.isNotEmpty)
                       Text('SENKRON',
                           style: TextStyle(
                               color: colors.primary,
                               fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.0)),
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2)),
                     const SizedBox(width: 4),
                     Icon(Icons.open_in_full_rounded,
-                        size: 14, color: colors.onSurfaceVariant),
+                        size: 15, color: Colors.white.withValues(alpha: 0.58)),
                   ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
                 Expanded(child: _buildLyricsSurfaceBody(player)),
               ],
             ),
@@ -858,8 +833,15 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
           children: [
             for (var offset = 0; offset < visible.length; offset++)
               GestureDetector(
-                onTap: () => player
-                    .seek(Duration(milliseconds: visible[offset].timestampMs)),
+                onTap: () {
+                  final position = LyricsTiming.playbackPositionMs(
+                    lyricPositionMs: visible[offset].timestampMs,
+                    manualOffsetMs: _lyricsOffsetMs,
+                    playbackDurationMs: player.duration.inMilliseconds,
+                    lyricsDurationMs: _lyricsResult?.durationMs ?? 0,
+                  );
+                  _seekAndSync(Duration(milliseconds: position));
+                },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Text(
@@ -869,12 +851,12 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: start + offset == focus
-                          ? Theme.of(context).colorScheme.onSurface
-                          : Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontSize: start + offset == focus ? 17 : 13,
-                      height: 1.2,
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.42),
+                      fontSize: start + offset == focus ? 19 : 14,
+                      height: 1.15,
                       fontWeight: start + offset == focus
-                          ? FontWeight.w700
+                          ? FontWeight.w800
                           : FontWeight.w500,
                     ),
                   ),
@@ -893,10 +875,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
           plainText,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontSize: 15,
-            height: 1.5,
-            fontWeight: FontWeight.w500,
+            color: Colors.white.withValues(alpha: 0.86),
+            fontSize: 17,
+            height: 1.55,
+            fontWeight: FontWeight.w600,
           ),
         ),
       );
@@ -907,16 +889,14 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.music_note_rounded,
-              size: 32,
-              color: Theme.of(context).colorScheme.onSurfaceVariant),
+              size: 38, color: Colors.white.withValues(alpha: 0.52)),
           const SizedBox(height: 12),
           Text(
             _lyricsResult?.instrumental == true
                 ? AppLocale.tr('instrumental')
                 : 'Bu parça için söz bulunamadı',
             textAlign: TextAlign.center,
-            style:
-                TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.64)),
           ),
           const SizedBox(height: 10),
           TextButton(
@@ -932,11 +912,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 
   Widget _buildQueueSurface(PlayerProvider player) {
     final queue = player.queue;
-    final cs = Theme.of(context).colorScheme;
     if (queue.isEmpty) {
       return Center(
         child: Text('Sıra boş',
-            style: TextStyle(color: cs.onSurfaceVariant)),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.64))),
       );
     }
     final current = player.currentIndex.clamp(0, queue.length - 1);
@@ -949,23 +928,23 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
       padding: const EdgeInsets.fromLTRB(22, 8, 22, 10),
       child: Container(
         decoration: BoxDecoration(
-          color: cs.surfaceContainer,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: cs.outlineVariant),
+          color: Colors.black.withValues(alpha: 0.24),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 10, 6),
+              padding: const EdgeInsets.fromLTRB(18, 14, 10, 6),
               child: Row(
                 children: [
-                  Icon(Icons.queue_music_rounded,
-                      color: cs.onSurface, size: 18),
+                  const Icon(Icons.queue_music_rounded,
+                      color: Colors.white, size: 19),
                   const SizedBox(width: 8),
                   Text('${queue.length} parçalık sıra',
-                      style: TextStyle(
-                          color: cs.onSurface,
-                          fontWeight: FontWeight.w600,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
                           fontSize: 13)),
                   const Spacer(),
                   TextButton(
@@ -993,9 +972,9 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                           ? Container(
                               width: 38,
                               height: 38,
-                              color: cs.surfaceContainerHighest,
-                              child: Icon(Icons.music_note_rounded,
-                                  size: 18, color: cs.onSurfaceVariant),
+                              color: Colors.white.withValues(alpha: 0.1),
+                              child: const Icon(Icons.music_note_rounded,
+                                  size: 18, color: Colors.white54),
                             )
                           : Image.memory(song.albumArt!,
                               width: 38, height: 38, fit: BoxFit.cover),
@@ -1004,21 +983,26 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            color: active ? cs.primary : cs.onSurface,
+                            color: active
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.white,
                             fontSize: 13,
                             fontWeight:
-                                active ? FontWeight.w600 : FontWeight.w500)),
+                                active ? FontWeight.w700 : FontWeight.w500)),
                     subtitle: Text(song.artist,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            color: cs.onSurfaceVariant, fontSize: 11)),
+                            color: Colors.white.withValues(alpha: 0.48),
+                            fontSize: 11)),
                     trailing: active
                         ? Icon(Icons.equalizer_rounded,
-                            size: 18, color: cs.primary)
+                            size: 18,
+                            color: Theme.of(context).colorScheme.primary)
                         : Text('${index + 1}',
                             style: TextStyle(
-                                color: cs.onSurfaceVariant, fontSize: 11)),
+                                color: Colors.white.withValues(alpha: 0.35),
+                                fontSize: 11)),
                     onTap: () => player.playFromQueue(queue, index),
                   );
                 },
@@ -1072,35 +1056,33 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
         if (song != null) await _loadLyricsOffset(song);
       },
       child: Container(
-        height: 48,
+        height: 52,
         margin: const EdgeInsets.symmetric(horizontal: 28),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainer,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-              color: Theme.of(context).colorScheme.outlineVariant),
+          color: Colors.black.withValues(alpha: 0.38),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
         ),
         child: Row(
           children: [
             if (_lyricsLoading)
-              Padding(
-                padding: const EdgeInsets.only(right: 10),
+              const Padding(
+                padding: EdgeInsets.only(right: 10),
                 child: SizedBox(
-                  width: 14,
-                  height: 14,
+                  width: 15,
+                  height: 15,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    color: Colors.white70,
                   ),
                 ),
               )
             else
-              Padding(
-                padding: const EdgeInsets.only(right: 10),
-                child: Icon(Icons.lyrics_rounded,
-                    size: 16,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant),
+              const Padding(
+                padding: EdgeInsets.only(right: 10),
+                child:
+                    Icon(Icons.lyrics_rounded, size: 17, color: Colors.white70),
               ),
             Expanded(
               child: LayoutBuilder(
@@ -1122,14 +1104,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                           maxLines: 1,
                           softWrap: false,
                           style: TextStyle(
-                            color: hasTiming
-                                ? Theme.of(context).colorScheme.onSurface
-                                : Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                            fontSize: hasTiming ? 15 : 13,
+                            color: hasTiming ? Colors.white : Colors.white70,
+                            fontSize: hasTiming ? 16 : 13,
                             fontWeight:
-                                hasTiming ? FontWeight.w600 : FontWeight.w500,
+                                hasTiming ? FontWeight.w700 : FontWeight.w500,
                           ),
                         ),
                       ),
@@ -1138,11 +1116,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                 },
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(left: 10),
+            const Padding(
+              padding: EdgeInsets.only(left: 10),
               child: Icon(Icons.open_in_full_rounded,
-                  size: 14,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  size: 15, color: Colors.white54),
             ),
           ],
         ),
@@ -1157,18 +1134,11 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   }
 
   void _showSongInfo(BuildContext context, SongModel song) {
-    final cs = Theme.of(context).colorScheme;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: cs.surface,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: cs.outlineVariant),
-        ),
-        title: Text(song.title,
-            style: TextStyle(color: cs.onSurface, fontSize: 16)),
+        backgroundColor: MelodiTheme.containerLow,
+        title: Text(song.title, style: TextStyle(color: MelodiTheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1198,7 +1168,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(AppLocale.tr('cancel'),
-                style: TextStyle(color: cs.onSurfaceVariant)),
+                style: TextStyle(color: MelodiTheme.onSurfaceVariant)),
           ),
         ],
       ),
@@ -1206,7 +1176,6 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   }
 
   Widget _infoRow(String label, String value) {
-    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -1215,11 +1184,12 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
           SizedBox(
             width: 80,
             child: Text(label,
-                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
+                style: TextStyle(
+                    color: MelodiTheme.onSurfaceVariant, fontSize: 13)),
           ),
           Expanded(
             child: Text(value,
-                style: TextStyle(color: cs.onSurface, fontSize: 13)),
+                style: TextStyle(color: MelodiTheme.onSurface, fontSize: 13)),
           ),
         ],
       ),
@@ -1233,7 +1203,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Paylaşım bu aygıtta kullanılamıyor'),
-            backgroundColor: Theme.of(context).colorScheme.error,
+            backgroundColor: MelodiTheme.errorRed,
           ),
         );
       }
@@ -1243,7 +1213,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocale.tr('share')),
-            backgroundColor: Theme.of(context).colorScheme.error,
+            backgroundColor: MelodiTheme.errorRed,
           ),
         );
       }
@@ -1251,13 +1221,12 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   }
 
   void _showSleepTimer(BuildContext context, PlayerProvider player) {
-    final cs = Theme.of(context).colorScheme;
     final durations = [5, 10, 15, 30, 45, 60, 90, 120];
     showModalBottomSheet(
       context: context,
-      backgroundColor: cs.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      backgroundColor: MelodiTheme.containerLow,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => SafeArea(
         child: Column(
@@ -1265,18 +1234,18 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
           children: [
             Container(
               margin: const EdgeInsets.symmetric(vertical: 12),
-              width: 32,
-              height: 3,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
-                color: cs.outlineVariant,
+                color: MelodiTheme.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             Text(AppLocale.tr('sleep_timer'),
                 style: TextStyle(
-                    color: cs.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600)),
+                    color: MelodiTheme.onSurface,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             ...durations.map((minutes) {
               final label = minutes >= 60
@@ -1285,14 +1254,17 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               final isSelected = minutes == player.sleepTimerMinutes;
               return ListTile(
                 leading: Icon(Icons.timer_outlined,
-                    color: isSelected ? cs.primary : cs.onSurfaceVariant,
-                    size: 20),
+                    color: isSelected
+                        ? MelodiTheme.primaryGreen
+                        : MelodiTheme.onSurfaceVariant),
                 title: Text(label,
                     style: TextStyle(
-                        color: isSelected ? cs.primary : cs.onSurface,
-                        fontSize: 14)),
+                        color: isSelected
+                            ? MelodiTheme.primaryGreen
+                            : MelodiTheme.onSurface)),
                 trailing: isSelected
-                    ? Icon(Icons.check, color: cs.primary, size: 18)
+                    ? Icon(Icons.check,
+                        color: MelodiTheme.primaryGreen, size: 20)
                     : null,
                 onTap: () {
                   final timerDuration = Duration(minutes: minutes);
@@ -1301,21 +1273,23 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('${AppLocale.tr('sleep_timer')}: $label'),
+                      backgroundColor: MelodiTheme.primaryGreen,
                     ),
                   );
                 },
               );
             }),
             ListTile(
-              leading: Icon(Icons.close, color: cs.error, size: 20),
+              leading: Icon(Icons.close, color: MelodiTheme.errorRed),
               title: Text(AppLocale.tr('off'),
-                  style: TextStyle(color: cs.error, fontSize: 14)),
+                  style: TextStyle(color: MelodiTheme.errorRed)),
               onTap: () {
                 player.handler.setSleepTimer(Duration.zero);
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(AppLocale.tr('sleep_timer_canceled')),
+                    backgroundColor: MelodiTheme.primaryGreen,
                   ),
                 );
               },
@@ -1328,14 +1302,13 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   }
 
   void _showOptions(BuildContext context, PlayerProvider player) {
-    final cs = Theme.of(context).colorScheme;
     final song = player.currentSong;
     if (song == null) return;
     showModalBottomSheet(
       context: context,
-      backgroundColor: cs.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      backgroundColor: MelodiTheme.containerLow,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (sheetContext) => SafeArea(
         child: Column(
@@ -1343,37 +1316,40 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
           children: [
             Container(
               margin: const EdgeInsets.symmetric(vertical: 12),
-              width: 32,
-              height: 3,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
-                color: cs.outlineVariant,
+                color: MelodiTheme.outlineVariant,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             ListTile(
-              leading: Icon(Icons.playlist_add, color: cs.onSurfaceVariant, size: 20),
+              leading:
+                  Icon(Icons.playlist_add, color: MelodiTheme.onSurfaceVariant),
               title: Text(AppLocale.tr('add_to_playlist'),
-                  style: TextStyle(color: cs.onSurface, fontSize: 14)),
+                  style: TextStyle(color: MelodiTheme.onSurface)),
               onTap: () {
                 Navigator.pop(sheetContext);
                 _showAddToPlaylist(context, song);
               },
             ),
             ListTile(
-              leading: Icon(Icons.info_outline, color: cs.onSurfaceVariant, size: 20),
+              leading:
+                  Icon(Icons.info_outline, color: MelodiTheme.onSurfaceVariant),
               title: Text(AppLocale.tr('song_info'),
-                  style: TextStyle(color: cs.onSurface, fontSize: 14)),
+                  style: TextStyle(color: MelodiTheme.onSurface)),
               onTap: () {
                 Navigator.pop(sheetContext);
                 _showSongInfo(context, song);
               },
             ),
             ListTile(
-              leading: Icon(Icons.share_outlined, color: cs.onSurfaceVariant, size: 20),
+              leading: Icon(Icons.share_outlined,
+                  color: MelodiTheme.onSurfaceVariant),
               title: Text(AppLocale.tr('share'),
-                  style: TextStyle(color: cs.onSurface, fontSize: 14)),
+                  style: TextStyle(color: MelodiTheme.onSurface)),
               subtitle: Text(AppLocale.tr('share_file'),
-                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
+                  style: TextStyle(color: MelodiTheme.textMuted, fontSize: 12)),
               onTap: () {
                 Navigator.pop(sheetContext);
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1382,26 +1358,27 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.timer, color: cs.onSurfaceVariant, size: 20),
+              leading: Icon(Icons.timer, color: MelodiTheme.onSurfaceVariant),
               title: Text(AppLocale.tr('sleep_timer'),
-                  style: TextStyle(color: cs.onSurface, fontSize: 14)),
+                  style: TextStyle(color: MelodiTheme.onSurface)),
               onTap: () {
                 Navigator.pop(sheetContext);
                 _showSleepTimer(context, player);
               },
             ),
             ListTile(
-              leading: Icon(Icons.swap_horiz_rounded, color: cs.onSurfaceVariant, size: 20),
+              leading: Icon(Icons.swap_horiz_rounded,
+                  color: MelodiTheme.onSurfaceVariant),
               title: Text(AppLocale.tr('crossfade'),
-                  style: TextStyle(color: cs.onSurface, fontSize: 14)),
+                  style: TextStyle(color: MelodiTheme.onSurface)),
               onTap: () {
                 Navigator.pop(sheetContext);
                 showModalBottomSheet(
                   context: context,
-                  backgroundColor: cs.surface,
-                  shape: RoundedRectangleBorder(
+                  backgroundColor: MelodiTheme.containerLow,
+                  shape: const RoundedRectangleBorder(
                     borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(12)),
+                        BorderRadius.vertical(top: Radius.circular(20)),
                   ),
                   builder: (_) => SafeArea(
                     child: Padding(
@@ -1410,10 +1387,10 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            width: 32,
-                            height: 3,
+                            width: 40,
+                            height: 4,
                             decoration: BoxDecoration(
-                              color: cs.outlineVariant,
+                              color: MelodiTheme.outlineVariant,
                               borderRadius: BorderRadius.circular(2),
                             ),
                           ),
@@ -1478,7 +1455,7 @@ class _SpeedButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white .withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Colors.white24),
         ),
@@ -1525,8 +1502,8 @@ class _VolumeBoostButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: showSlider
-              ? accentColor .withOpacity(0.2)
-              : Colors.white .withOpacity(0.1),
+              ? accentColor.withValues(alpha: 0.2)
+              : Colors.white.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: showSlider ? accentColor : Colors.white24,

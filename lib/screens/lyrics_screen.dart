@@ -74,13 +74,13 @@ class _LyricsScreenState extends State<LyricsScreen> {
   }
 
   void _updateCurrentLine(PlayerProvider player) {
-    final lyricPosition = LyricsTiming.lyricPositionMs(
+    final index = LyricsTiming.findLineIndexAtPlayback(
+      lines: _lyricsLines,
       playbackPositionMs: player.position.inMilliseconds,
       manualOffsetMs: _manualOffsetMs,
       playbackDurationMs: player.duration.inMilliseconds,
       lyricsDurationMs: widget.lyricsDurationMs,
     );
-    final index = LyricsTiming.findLineIndex(_lyricsLines, lyricPosition);
     if (index == _currentLineIndex) return;
     _currentLineIndex = index;
     if (mounted) setState(() {});

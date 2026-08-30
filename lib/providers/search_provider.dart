@@ -4,6 +4,7 @@ import '../models/song_model.dart';
 import '../services/database_service.dart';
 import '../services/multi_source_search.dart';
 import '../services/music_source.dart';
+import '../services/youtube_audio_source.dart';
 
 class SearchProvider extends ChangeNotifier {
   final DatabaseService _db = DatabaseService.instance;
@@ -62,6 +63,7 @@ class SearchProvider extends ChangeNotifier {
       _onlineSub = _multiSource.searchAll(query).listen(
         (tracks) {
           _onlineResults = tracks;
+          _warmOnlinePlayback(tracks);
           _isSearchingOnline = false;
           notifyListeners();
         },
@@ -77,6 +79,14 @@ class SearchProvider extends ChangeNotifier {
         },
       );
     });
+  }
+
+  void _warmOnlinePlayback(List<OnlineTrack> tracks) {
+    for (final track in tracks
+        .where((item) => item.source == MusicSourceType.youtube)
+        .take(3)) {
+      unawaited(YouTubeAudioSource.prefetch(track.id));
+    }
   }
 
   Future<String?> getStreamUrl(OnlineTrack track) async {

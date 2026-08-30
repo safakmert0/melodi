@@ -75,4 +75,32 @@ void main() {
       closeTo(60000, 1),
     );
   });
+
+  test('lyrics seek resolves the target line from the playback timeline', () {
+    final lines = [
+      const LrcLine(10000, 'first'),
+      const LrcLine(60000, 'second'),
+      const LrcLine(120000, 'third'),
+    ];
+
+    expect(
+      LyricsTiming.findLineIndexAtPlayback(
+        lines: lines,
+        playbackPositionMs: 121000,
+        playbackDurationMs: 180000,
+        lyricsDurationMs: 180000,
+      ),
+      2,
+    );
+    expect(
+      LyricsTiming.findLineIndexAtPlayback(
+        lines: lines,
+        playbackPositionMs: 61000,
+        manualOffsetMs: 2000,
+        playbackDurationMs: 180000,
+        lyricsDurationMs: 180000,
+      ),
+      0,
+    );
+  });
 }

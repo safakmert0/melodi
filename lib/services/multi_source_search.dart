@@ -247,10 +247,13 @@ class MultiSourceSearch {
     final candidateSeconds = candidate.duration.inSeconds;
     if (requestedSeconds > 0 && candidateSeconds > 0) {
       final delta = (requestedSeconds - candidateSeconds).abs();
+      final toleranceSeconds = (requestedSeconds * 0.10).round().clamp(12, 30);
       if (delta <= 3) {
-        score += 2;
-      } else if (delta > 20) {
-        score -= 2;
+        score += 3;
+      } else if (delta > toleranceSeconds) {
+        // Title/artist alone must never select an extended mix, video outro or
+        // unrelated upload that is minutes longer than the requested track.
+        score -= 9;
       }
     }
     return score;

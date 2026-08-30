@@ -425,6 +425,8 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
         backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        titleTextStyle: typography.titleLarge?.copyWith(color: textPrimary),
+        contentTextStyle: typography.bodyMedium?.copyWith(color: textSecondary),
       ),
       popupMenuTheme: PopupMenuThemeData(
         color: surface,

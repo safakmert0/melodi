@@ -1,5 +1,4 @@
 name: Build iOS
-
 on:
   push:
     tags:
@@ -32,18 +31,14 @@ jobs:
 
       - name: Setup iOS project
         run: |
-          # Save our custom Swift handlers before flutter create overwrites ios/
           cp ios/Runner/MelodiPlatformHandlers.swift /tmp/MelodiPlatformHandlers.swift 2>/dev/null || true
           cp ios/Runner/Runner.entitlements /tmp/Runner.entitlements 2>/dev/null || true
 
-          # flutter create sets up iOS project structure + plugin references
           flutter create . --platforms=ios
 
-          # Restore our custom Swift handlers
           cp /tmp/MelodiPlatformHandlers.swift ios/Runner/MelodiPlatformHandlers.swift
           cp /tmp/Runner.entitlements ios/Runner/Runner.entitlements
 
-          # Add the Swift file to Xcode project
           python3 << 'PYEOF'
           import uuid
           import hashlib
@@ -52,27 +47,21 @@ jobs:
           with open(pbx) as f:
               content = f.read()
 
-          # Check if MelodiPlatformHandlers.swift is already in the project
           if 'MelodiPlatformHandlers.swift' not in content:
-              # Generate a deterministic ID from the filename
               file_ref_id = hashlib.md5(b'MelodiPlatformHandlers.swift').hexdigest()[:24].upper()
               build_file_id = hashlib.md5(b'MelodiPlatformHandlers.swift.build').hexdigest()[:24].upper()
 
-              # Add PBXFileReference
               file_ref = f'\t\t{file_ref_id} /* MelodiPlatformHandlers.swift */ = {{isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MelodiPlatformHandlers.swift; sourceTree = "<group>"; }};'
               content = content.replace('/* End PBXFileReference section */', f'/* End PBXFileReference section */\n{file_ref}')
 
-              # Add PBXBuildFile
               build_file = f'\t\t{build_file_id} /* MelodiPlatformHandlers.swift in Sources */ = {{isa = PBXBuildFile; fileRef = {file_ref_id} /* MelodiPlatformHandlers.swift */; }};'
               content = content.replace('/* End PBXBuildFile section */', f'/* End PBXBuildFile section */\n{build_file}')
 
-              # Add to Runner group children (before AppDelegate.swift)
               content = content.replace(
                   '74858FAE1ED2DC5600515810 /* AppDelegate.swift */,',
                   f'{file_ref_id} /* MelodiPlatformHandlers.swift */,\n\t\t\t\t74858FAE1ED2DC5600515810 /* AppDelegate.swift */,'
               )
 
-              # Add to Sources build phase
               content = content.replace(
                   '74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,',
                   f'{build_file_id} /* MelodiPlatformHandlers.swift in Sources */,\n\t\t\t\t74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,'
@@ -85,14 +74,11 @@ jobs:
               print("MelodiPlatformHandlers.swift already in project")
           PYEOF
 
-          # iOS 16+ hedefi, yerel proje ve güncel Flutter ile aynı tutulur.
           sed -i '' 's/platform :ios, .*/platform :ios, '\''16.0'\''/' ios/Podfile
 
-          # Set development team
           echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Debug.xcconfig
           echo "DEVELOPMENT_TEAM = 0000000000" >> ios/Flutter/Release.xcconfig
 
-          # Patch project.pbxproj: bundle ID and entitlements
           python3 << 'PYEOF'
           pbx = "ios/Runner.xcodeproj/project.pbxproj"
           with open(pbx) as f:
