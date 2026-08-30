@@ -34,6 +34,7 @@ import 'screens/onboarding_screen.dart';
 import 'widgets/main_shell.dart';
 import 'services/robust_piped_service.dart';
 import 'services/hls_downloader_service.dart';
+import 'services/watched_folder_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -117,6 +118,13 @@ Future<void> main() async {
       VoiceControlService.instance.registerShortcuts();
     } catch (e) {
       AppLogger.e('VoiceControlService init failed: $e');
+    }
+
+    // İzlenecek klasör: her açılışta otomatik tara (arka planda, UI bloklamadan)
+    try {
+      unawaited(WatchedFolderService.instance.scanOnLaunchIfEnabled());
+    } catch (e) {
+      AppLogger.e('WatchedFolder scan failed: $e');
     }
 
     AppLogger.i('Services initialized');
@@ -234,6 +242,17 @@ class _AppEntryState extends State<_AppEntry> {
     super.initState();
     _checkOnboarding();
     _refreshExtensions();
+    _scanWatchedFolder();
+  }
+
+  Future<void> _scanWatchedFolder() async {
+    try {
+      final count = await WatchedFolderService.instance.scanWatchedFolder();
+      if (count > 0 && mounted) {
+        // LibraryProvider henüz hazır değilse main'deki scan yeterli; burada sadece log
+        AppLogger.i('WatchedFolder: $count yeni parça eklendi (on launch)');
+      }
+    } catch (_) {}
   }
 
   /// Kurulu eklentileri depo sürümleriyle arka planda günceller; sunucu

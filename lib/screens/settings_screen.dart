@@ -8,6 +8,7 @@ import '../core/localization.dart';
 import '../providers/library_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/database_service.dart';
+import '../services/watched_folder_service.dart';
 import 'support_screen.dart';
 import 'downloads_screen.dart';
 import 'storage_screen.dart';
@@ -22,6 +23,9 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late String _selectedLanguage;
   String _appVersion = AppConstants.appVersion;
+  String? _watchedFolder;
+  bool _watchedAutoScan = true;
+  bool _watchedLoading = false;
 
   @override
   void initState() {
@@ -30,6 +34,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
     PackageInfo.fromPlatform().then((info) {
       if (mounted) setState(() => _appVersion = info.version);
     });
+    _loadWatchedFolder();
+  }
+
+  Future<void> _loadWatchedFolder() async {
+    final folder = await WatchedFolderService.instance.getWatchedFolder();
+    final auto = await WatchedFolderService.instance.isAutoScanEnabled();
+    if (mounted) setState(() {
+      _watchedFolder = folder;
+      _watchedAutoScan = auto;
+    });
+  }
+
+  Future<void> _pickWatchedFolder() async {
+    setState(() => _watchedLoading = true);
+    final path = await WatchedFolderService.instance.pickAndSaveWatchedFolder();
+    if (mounted) {
+      setState(() => _watchedLoading = false);
+      if (path != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('İzlenecek klasör: $path')),
+        );
+        await _loadWatchedFolder();
+        // Hemen tara
+        final count = await WatchedFolderService.instance.scanWatchedFolder();
+        if (mounted && count > 0) {
+          context.read<LibraryProvider>().refresh();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$count yeni parça kitaplığa eklendi')),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _clearWatchedFolder() async {
+    await WatchedFolderService.instance.clearWatchedFolder();
+    await _loadWatchedFolder();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('İzlenecek klasör temizlendi')),
+      );
+    }
   }
 
   String _localeName(String code) {
@@ -172,6 +218,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 8),
+                _SettingsTile(
+                  icon: Icons.folder_special_rounded,
+                  iconColor: Colors.deepPurple,
+                  title: 'İzlenecek Klasör',
+                  subtitle: _watchedFolder == null
+                      ? 'Seçilmedi — her açılışta taranacak klasör'
+                      : _watchedFolder!.length > 48
+                          ? '...${_watchedFolder!.substring(_watchedFolder!.length - 48)}'
+                          : _watchedFolder!,
+                  trailing: _watchedLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
+                  onTap: _pickWatchedFolder,
+                ),
+                if (_watchedFolder != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                        color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12)),
+                    child: SwitchListTile(
+                      secondary: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                            color: Colors.deepPurple.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8)),
+                        child: const Icon(Icons.autorenew_rounded, color: Colors.deepPurple, size: 20),
+                      ),
+                      title: Text('Otomatik tara',
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15)),
+                      subtitle: Text('Her açılışta yeni dosyaları ekle',
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
+                      value: _watchedAutoScan,
+                      onChanged: (v) async {
+                        await WatchedFolderService.instance.setAutoScanEnabled(v);
+                        if (mounted) setState(() => _watchedAutoScan = v);
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () async {
+                              final c = await WatchedFolderService.instance.scanWatchedFolder();
+                              if (mounted) {
+                                context.read<LibraryProvider>().refresh();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(c == 0 ? 'Yeni dosya yok' : '$c yeni parça eklendi')),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.sync_rounded, size: 18),
+                            label: const Text('Şimdi tara'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _clearWatchedFolder,
+                            icon: const Icon(Icons.clear_rounded, size: 18),
+                            label: const Text('Temizle'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 Divider(color: MelodiTheme.outlineVariant, height: 1),
                 _SectionTitle('Eklentiler'),

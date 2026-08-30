@@ -5,6 +5,15 @@ All notable changes to Melodi will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.11.0] - 2026-08-30
+
+### Generic Modüller + İzlenecek Klasör
+- **8spine generic parser**: `lib/models/extension.dart:428` `Registry` artık `extensions` yoksa tüm `category:*` listelerini toplar (8spine `index.json` 14 modül), `download`/`file`/`pkg`/`download_url` tüm varyantları, `category`/`tags`/`type`’dan `hifi`/`backend` heuristiği, `version`/`updated_at`/`generated_at` snake/camel hepsi.
+- **.8spine/.js bridge**: `lib/services/extension_service.dart:268` `.8spine`/`.js`/`.sflx` hepsi sentetik `hifi`/`backend` manifest’e bridge’lenir (Melodi public backend `butterfly-crawford...trycloudflare.com`), SpotiFLAC bot doğrulaması bypass — `https://8spine-modules.vercel.app/index.json` ve `zarzet` ile gelecek tüm yapılar otomatik.
+- **İzlenecek klasör**: `lib/services/watched_folder_service.dart:1` yeni servis — `FilePicker.getDirectoryPath` ile klasör seç, `watched_folder`/`watched_folder_auto_scan` DB’de saklanır, `WatchedFolderService.scanOnLaunchIfEnabled()` her açılışta (debounce 2dk) `MusicScannerService.scanDirectoryAndSync` ile yeni dosyaları kitaplığa ekler; `lib/main.dart:36` launch’ta ve `MainShell` sonrası `LibraryProvider.refresh()` ile senkron.
+- **Ayarlar UI**: `lib/screens/settings_screen.dart:204` “İzlenecek Klasör” kartı (yol_truncate + loading), `Otomatik tara` Switch, “Şimdi tara” ve “Temizle” butonları eklendi.
+- **Test**: `https://8spine-modules.vercel.app/index.json` (14), `https://raw.githubusercontent.com/zarzet/.../registry.json` (9), `https://raw.githubusercontent.com/safakmert0/melodi-extensions/.../registry.json` (3) hepsi parse edildi.
+
 ## [4.10.2] - 2026-08-30
 
 ### Hotfix — 4.10.1 build hatası

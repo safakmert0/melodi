@@ -298,12 +298,14 @@ class RegistryEntry {
   static RegistryEntry? fromJson(
     Map<dynamic, dynamic> json, {
     String? baseUrl,
+    String? categoryHint,
   }) {
-    // Melodi native: url/manifest_url/file; SpotiFLAC-compat: download_url
+    // Melodi native: url/manifest_url/file; SpotiFLAC-compat: download_url; 8spine: download/file/pkg (download öncelikli - klasör bilgisi için)
     final rawUrl = (json['url'] ??
             json['manifest_url'] ??
-            json['file'] ??
-            json['download_url'])
+            json['download'] ??
+            json['download_url'] ??
+            json['file'])
         ?.toString()
         .trim() ??
         '';
@@ -311,8 +313,10 @@ class RegistryEntry {
     if (url == null) return null;
     final uri = Uri.parse(url);
     var id = json['id']?.toString().trim() ?? '';
+    // 8spine may use pkg as id fallback
+    if (id.isEmpty) id = json['pkg']?.toString().trim() ?? '';
     if (id.isEmpty) {
-      // Dosya adından id türet: extensions/foo.json -> foo veya .sflx için de
+      // Dosya adından id türet: extensions/foo.json -> foo veya .sflx/.8spine/.js için
       final lastSeg = uri.pathSegments.isEmpty ? '' : uri.pathSegments.last;
       if (lastSeg.endsWith('.json')) {
         id = lastSeg.replaceAll('.json', '');
@@ -320,6 +324,10 @@ class RegistryEntry {
         id = lastSeg.replaceAll('.sflx', '');
       } else if (lastSeg.endsWith('.spotiflac-ext')) {
         id = lastSeg.replaceAll('.spotiflac-ext', '');
+      } else if (lastSeg.endsWith('.8spine')) {
+        id = lastSeg.replaceAll('.8spine', '');
+      } else if (lastSeg.endsWith('.js')) {
+        id = lastSeg.replaceAll('.js', '');
       } else {
         final segs = uri.pathSegments.where((s) => s.endsWith('.json'));
         id = segs.isEmpty ? '' : segs.last.replaceAll('.json', '');
@@ -329,18 +337,41 @@ class RegistryEntry {
     // name: display_name (SpotiFLAC) öncelikli, yoksa name
     final displayName = json['display_name']?.toString().trim() ?? '';
     final rawName = (displayName.isNotEmpty ? displayName : json['name']?.toString().trim() ?? '');
-    // kind: Melodi kind yoksa SpotiFLAC category'den türet
+    // kind: Melodi kind yoksa SpotiFLAC category veya 8spine tags/categoryHint'den türet
     var kind = ExtensionKindX.tryParse(json['kind']);
     if (kind == null) {
       final cat = json['category']?.toString().trim().toLowerCase();
       if (cat == 'download') kind = ExtensionKind.hifi;
       else if (cat == 'integration') kind = ExtensionKind.backend;
+      else if (categoryHint != null) {
+        final hint = categoryHint.toLowerCase();
+        if (hint.contains('hifi') || hint.contains('lossless') || hint.contains('debrid')) {
+          kind = ExtensionKind.hifi;
+        } else if (hint.contains('artwork')) {
+          kind = ExtensionKind.backend;
+        } else if (hint.contains('geolier') || hint.contains('livie') || hint.contains('ricky')) {
+          kind = ExtensionKind.hifi;
+        }
+      }
+      // Fallback via tags/type/folder heuristics (8spine)
+      if (kind == null) {
+        final tags = (json['tags'] as List? ?? const []).map((e) => e.toString().toLowerCase()).toList();
+        final type = json['type']?.toString().toLowerCase() ?? '';
+        final folder = json['folder']?.toString().toLowerCase() ?? '';
+        final desc = json['description']?.toString().toLowerCase() ?? '';
+        final hasLossless = tags.any((t) => t.contains('lossless') || t.contains('hi-res') || t.contains('flac') || t.contains('hires')) ||
+            desc.contains('lossless') || desc.contains('hi-res') || desc.contains('flac') ||
+            type == 'module' && (tags.contains('qobuz') || tags.contains('tidal') || tags.contains('deezer'));
+        if (hasLossless) kind = ExtensionKind.hifi;
+        else if (folder == 'modules' || type == 'module') kind = ExtensionKind.backend;
+        else if (type == 'artwork') kind = ExtensionKind.backend;
+      }
     }
     return RegistryEntry(
       id: id.toLowerCase().replaceAll(RegExp(r'[^a-z0-9._-]'), ''),
       name: rawName.isNotEmpty ? rawName : id,
       url: url,
-      version: json['version']?.toString().trim(),
+      version: (json['version'] ?? json['code'])?.toString().trim(),
       description: json['description']?.toString().trim(),
       kind: kind,
       author: json['author']?.toString().trim(),
@@ -395,28 +426,71 @@ class ExtensionRegistry {
 
   static ExtensionRegistry parse(String body, String repoUrl) {
     final decoded = jsonDecodeMap(body);
-    final rawEntries = decoded['extensions'];
-    if (rawEntries is! List) {
-      throw const FormatException('registry: "extensions" listesi eksik');
-    }
     final entries = <RegistryEntry>[];
-    for (final item in rawEntries) {
-      if (item is! Map) continue;
-      final entry = RegistryEntry.fromJson(
-        Map<dynamic, dynamic>.from(item),
-        baseUrl: repoUrl,
-      );
-      if (entry != null && !entries.any((e) => e.id == entry.id)) {
-        entries.add(entry);
+    // 1) Melodi / SpotiFLAC native: decoded['extensions'] is List
+    final rawEntries = decoded['extensions'];
+    if (rawEntries is List) {
+      for (final item in rawEntries) {
+        if (item is! Map) continue;
+        final entry = RegistryEntry.fromJson(
+          Map<dynamic, dynamic>.from(item),
+          baseUrl: repoUrl,
+        );
+        if (entry != null && !entries.any((e) => e.id == entry.id)) {
+          entries.add(entry);
+        }
+      }
+    } else {
+      // 2) Generic: aggregate all category:* and other module lists (8spine etc)
+      // 8spine uses keys like "category:modules", "category:geolier_modules", etc.
+      // Future registries may use any shape — collect any List that looks like modules.
+      for (final kv in decoded.entries) {
+        final key = kv.key.toString();
+        final val = kv.value;
+        if (val is! List) continue;
+        // Skip known non-module lists
+        if (key == 'external_sources' || key == 'generated_at' || key == 'updated_at' || key == 'updatedAt' || key == 'version' || key == 'name') continue;
+        // Heuristic: category:* or any list containing maps with id/pkg/download
+        final isCategory = key.startsWith('category:');
+        final sampleHasModuleShape = val.isNotEmpty &&
+            val.first is Map &&
+            ((val.first as Map).containsKey('id') || (val.first as Map).containsKey('pkg'));
+        if (!isCategory && !sampleHasModuleShape) {
+          // For generic future registries, also try if list contains module-like maps
+          final anyModuleLike = val.any((e) => e is Map && (e.containsKey('download') || e.containsKey('file') || e.containsKey('pkg') || e.containsKey('url')));
+          if (!anyModuleLike) continue;
+        }
+        for (final item in val) {
+          if (item is! Map) continue;
+          final entry = RegistryEntry.fromJson(
+            Map<dynamic, dynamic>.from(item),
+            baseUrl: repoUrl,
+            categoryHint: key,
+          );
+          if (entry != null && !entries.any((e) => e.id == entry.id)) {
+            entries.add(entry);
+          }
+        }
+      }
+      // If still empty, throw to surface error
+      if (entries.isEmpty) {
+        // Check if external_sources exists — treat as valid but empty registry (user will see external sources)
+        if (decoded.containsKey('external_sources')) {
+          // keep empty but not error
+        } else {
+          throw const FormatException('registry: "extensions" listesi eksik');
+        }
       }
     }
-    // name: Melodi 'name' veya SpotiFLAC kök 'version' fallback
+    // name: Melodi 'name' veya SpotiFLAC kök 'version' fallback veya 8spine host
     final rawName = decoded['name']?.toString().trim() ??
-        (decoded['version'] != null ? 'SpotiFLAC Registry' : null);
-    final name = (rawName != null && rawName.isNotEmpty) ? rawName : repoUrl;
-    // updatedAt: camel veya snake
+        (decoded['version'] != null ? 'SpotiFLAC Registry' : null) ??
+        (decoded['generated_at'] != null ? '8spine Registry' : null);
+    final name = (rawName != null && rawName.isNotEmpty) ? rawName : Uri.tryParse(repoUrl)?.host ?? repoUrl;
+    // updatedAt: camel, snake, generated_at
     final updatedAtRaw = decoded['updatedAt']?.toString() ??
         decoded['updated_at']?.toString() ??
+        decoded['generated_at']?.toString() ??
         '';
     return ExtensionRegistry(
       name: name,

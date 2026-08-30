@@ -263,12 +263,19 @@ class ExtensionService extends ChangeNotifier {
 
   /// Depo kaydındaki manifest'i indirip kurar. Aynı kimlik kuruluysa
   /// sürümü günceller.
-  /// SpotiFLAC-compat: .sflx/.spotiflac-ext uzantıları için sentetik manifest üretilir
-  /// (Melodi bu formatı native çalıştıramaz; bridge olarak Melodi backend'i kullanılır).
+  /// Generic: .sflx/.spotiflac-ext/.8spine/.js uzantıları için sentetik manifest
+  /// (JS bundle'lar Melodi'de native çalıştırılamaz; bridge olarak Melodi backend'i kullanılır,
+  /// böylece SpotiFLAC bot doğrulaması bypass edilir).
   Future<void> installFromEntry(RegistryEntry entry) async {
-    // .sflx / .spotiflac-ext → SpotiFLAC JS bundle, Melodi'de bridge manifest
-    if (entry.url.endsWith('.sflx') || entry.url.endsWith('.spotiflac-ext')) {
-      final synthetic = _syntheticManifestForSflx(entry);
+    final lowerUrl = entry.url.toLowerCase();
+    final isBundle = lowerUrl.endsWith('.sflx') ||
+        lowerUrl.endsWith('.spotiflac-ext') ||
+        lowerUrl.endsWith('.8spine') ||
+        lowerUrl.endsWith('.js') ||
+        lowerUrl.contains('.8spine') ||
+        lowerUrl.contains('8spine.js');
+    if (isBundle) {
+      final synthetic = _syntheticManifestForBundle(entry);
       await installManifest(synthetic);
       return;
     }
@@ -276,28 +283,37 @@ class ExtensionService extends ChangeNotifier {
     await installManifest(manifest);
   }
 
-  ExtensionManifest _syntheticManifestForSflx(RegistryEntry entry) {
-    // SpotiFLAC download provider'ları Melodi'de hifi (lossless) veya backend olarak bridge'lenir.
+  ExtensionManifest _syntheticManifestForSflx(RegistryEntry entry) =>
+      _syntheticManifestForBundle(entry);
+
+  ExtensionManifest _syntheticManifestForBundle(RegistryEntry entry) {
+    // 8spine/SpotiFLAC JS bundle'ları Melodi'de hifi (lossless) veya backend olarak bridge'lenir.
     // Varsayılan backend Melodi public backend'i kullanır; kullanıcı sonra baseUrl'i değiştirebilir.
+    // Bot doğrulaması gerektiren SpotiFLAC modülleri de bridge ile bypass edilir (sunucu taraflı çözüm).
     const fallbackBackend = 'https://butterfly-crawford-parenting-spotlight.trycloudflare.com';
     final kind = entry.kind ?? ExtensionKind.backend;
-    // category'ye göre yetenekler
     final caps = kind == ExtensionKind.hifi
         ? ['search', 'playback', 'downloads', 'lossless']
         : ['search', 'playback', 'downloads'];
+    // Homepage: 8spine vs zarzet
+    final is8spine = entry.url.contains('8spine') || entry.id.contains('8spine') || entry.id.contains('morgk') || entry.id.contains('tidal') && entry.url.contains('vercel');
+    final homepage = is8spine
+        ? 'https://8spine-modules.vercel.app'
+        : 'https://github.com/zarzet/SpotiFLAC-Extension';
+    final author = entry.author ?? (is8spine ? '8spine' : 'zarzet');
     return ExtensionManifest(
       id: entry.id,
       name: entry.name,
-      description:
-          (entry.description ?? '') + ' — SpotiFLAC bridge (Melodi backend ile çalışır)',
+      description: (entry.description ?? '') +
+          (entry.url.toLowerCase().endsWith('.js') || entry.url.contains('8spine.js')
+              ? ' — 8spine bridge (Melodi backend ile çalışır, bot doğrulama bypass)'
+              : ' — SpotiFLAC/8spine bridge (Melodi backend ile çalışır, bot doğrulama bypass)'),
       version: entry.version ?? '1.0.0',
-      author: entry.author ?? 'zarzet',
+      author: author,
       kind: kind,
       baseUrl: fallbackBackend,
-      protocol: kind == ExtensionKind.hifi
-          ? ExtensionProtocol.ytdlpBackend
-          : ExtensionProtocol.ytdlpBackend,
-      homepage: 'https://github.com/zarzet/SpotiFLAC-Extension',
+      protocol: ExtensionProtocol.ytdlpBackend,
+      homepage: homepage,
       minAppVersion: '4.10.0',
       capabilities: caps,
       permissions: [],
