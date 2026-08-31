@@ -21,6 +21,7 @@ class _SearchScreenState extends State<SearchScreen> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
   MusicSourceType? _selectedSource;
+  String? _selectedExtensionId;
 
   bool get _hasQuery => _controller.text.trim().isNotEmpty;
 

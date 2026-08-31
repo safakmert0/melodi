@@ -9,6 +9,7 @@ import '../../providers/search_provider.dart';
 import '../../services/extension_service.dart';
 import '../../services/multi_source_search.dart';
 import '../../services/music_source.dart';
+import '../../services/sources/extension_source.dart';
 import '../image_with_fallback.dart';
 
 Color musicSourceColor(MusicSourceType source) => const Color(0xFF3A3A3C);
@@ -197,20 +198,18 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
 
   Future<void> _download() async {
     if (_downloading) return;
-    // Kaynak seçim ekranı
-    final selected = await _showDownloadSourceSheet(context, widget.track);
-    if (selected == _DownloadChoice.cancelled) return;
+    final selection = await _showDownloadSourceSheet(context, widget.track);
+    if (selection.choice == _DownloadChoice.cancelled) return;
     if (!mounted) return;
     setState(() => _downloading = true);
     try {
       String? url;
-      if (selected == _DownloadChoice.auto) {
+      if (selection.choice == _DownloadChoice.auto) {
         url = await context.read<SearchProvider>().getStreamUrlWithFallback(widget.track);
       } else {
-        url = await _getStreamForSpecificSource(selected, widget.track);
-        // Fallback to auto if specific source fails
+        url = await _getStreamForSpecificSource(selection, widget.track);
         if (url == null || url.isEmpty) {
-          _message('${_downloadSourceLabel(selected)} kaynağında bulunamadı, otomatik deneniyor...', error: false);
+          _message('${_downloadSourceLabel(selection.choice, extensionName: selection.extensionName)} kaynağında bulunamadı, otomatik deneniyor...', error: false);
           url = await context.read<SearchProvider>().getStreamUrlWithFallback(widget.track);
         }
       }
@@ -230,7 +229,8 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
             expectedDurationMs: track.duration.inMilliseconds,
             directUrl: url,
           );
-      _message('${track.title} indirme kuyruğuna eklendi (${selected == _DownloadChoice.auto ? 'otomatik' : _downloadSourceLabel(selected)})');
+      final label = selection.choice == _DownloadChoice.auto ? 'otomatik' : _downloadSourceLabel(selection.choice, extensionName: selection.extensionName);
+      _message('${track.title} indirme kuyruğuna eklendi ($label)');
     } catch (error) {
       if (mounted) _message('İndirme hatası: $error', error: true);
     } finally {
@@ -239,27 +239,53 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
   }
 
   Future<String?> _getStreamForSpecificSource(
-      _DownloadChoice choice, OnlineTrack track) async {
+      _DownloadSelection selection, OnlineTrack track) async {
     try {
-      final type = _choiceToSourceType(choice);
+      // Extension-specific: try that extension directly
+      if (selection.extensionId != null && selection.extensionId!.isNotEmpty) {
+        try {
+          final extSources = MultiSourceSearch().allSourcesForUi.whereType<ExtensionMusicSource>().where((s) => s.id == selection.extensionId).toList();
+          if (extSources.isNotEmpty) {
+            final src = extSources.first;
+            // If track already from that extension, try direct
+            if (track.extensionId == selection.extensionId) {
+              final direct = await src.getStreamUrl(track);
+              if (direct != null) return direct;
+            }
+            final query = '${track.artist} - ${track.title}'.trim();
+            final results = await src.search(query, limit: 5);
+            if (results.isNotEmpty) {
+              results.sort((a, b) {
+                final da = (a.duration.inMilliseconds - track.duration.inMilliseconds).abs();
+                final db = (b.duration.inMilliseconds - track.duration.inMilliseconds).abs();
+                return da.compareTo(db);
+              });
+              for (final cand in results) {
+                final url = await src.getStreamUrl(cand);
+                if (url != null) return url;
+              }
+            }
+          }
+        } catch (_) {}
+      }
+      final type = _choiceToSourceType(selection.choice);
       if (type == null) return null;
-      // Try direct stream from that source's track (if same source)
-      if (track.source == type) {
+      if (track.source == type && track.extensionId == selection.extensionId) {
         final direct = await MultiSourceSearch().getStreamUrl(track);
         if (direct != null) return direct;
       }
-      // Search that source for the track and pick best match
       final query = '${track.artist} - ${track.title}'.trim();
       final results = await MultiSourceSearch().searchAllSync(query, limitPerSource: 5);
-      final candidates = results.where((t) => t.source == type).toList();
-      if (candidates.isEmpty) return null;
-      // Simple best by duration closeness
-      candidates.sort((a, b) {
+      final candidates = results.where((t) => t.source == type && (selection.extensionId == null || t.extensionId == selection.extensionId)).toList();
+      // Fallback to any of that type if extension-specific empty
+      final filtered = candidates.isEmpty ? results.where((t) => t.source == type).toList() : candidates;
+      if (filtered.isEmpty) return null;
+      filtered.sort((a, b) {
         final da = (a.duration.inMilliseconds - track.duration.inMilliseconds).abs();
         final db = (b.duration.inMilliseconds - track.duration.inMilliseconds).abs();
         return da.compareTo(db);
       });
-      for (final cand in candidates) {
+      for (final cand in filtered) {
         final url = await MultiSourceSearch().getStreamUrl(cand);
         if (url != null) return url;
       }
@@ -269,19 +295,19 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
     }
   }
 
-  Future<_DownloadChoice> _showDownloadSourceSheet(
+  Future<_DownloadSelection> _showDownloadSourceSheet(
       BuildContext context, OnlineTrack track) async {
     final installed = ExtensionService.instance.installed.where((e) => e.enabled).toList();
     final hasHifiExt = installed.any((e) => e.manifest.kind.name == 'hifi');
     final hasBackendExt = installed.any((e) => e.manifest.kind.name == 'backend');
-    return await showModalBottomSheet<_DownloadChoice>(
+    final result = await showModalBottomSheet<_DownloadSelection>(
           context: context,
           backgroundColor: Theme.of(context).colorScheme.surface,
           shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
           builder: (ctx) {
             final cs = Theme.of(ctx).colorScheme;
-            Widget tile(_DownloadChoice c, String title, String subtitle, IconData icon, Color color) {
+            Widget tile(_DownloadChoice c, String title, String subtitle, IconData icon, Color color, {String? extensionId}) {
               return ListTile(
                 leading: Container(
                   width: 44,
@@ -295,7 +321,7 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
                 title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: Text(subtitle, style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
                 trailing: const Icon(Icons.chevron_right_rounded, size: 20),
-                onTap: () => Navigator.of(ctx).pop(c),
+                onTap: () => Navigator.of(ctx).pop(_DownloadSelection(c, extensionId: extensionId)),
               );
             }
             return SafeArea(
@@ -321,31 +347,34 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
                     ),
                     const SizedBox(height: 12),
                     tile(_DownloadChoice.auto, 'Otomatik (önerilen)', 'En iyi eşleşme tüm kaynaklarda aranır', Icons.auto_awesome_rounded, cs.primary),
-                    tile(_DownloadChoice.youtube, 'YouTube', hasBackendExt ? 'Eklenti ile · yt-dlp backend' : 'Açık kaynak · Piped/yt-dlp', Icons.brush, const Color(0xFFFF3B30)),
+                    tile(_DownloadChoice.youtube, 'YouTube', hasBackendExt ? 'Eklenti ile · yt-dlp backend' : 'Açık kaynak · Piped/yt-dlp', Icons.smart_display_rounded, const Color(0xFFFF3B30)),
                     if (hasHifiExt)
-                      for (final ext in installed.where((e) => e.manifest.kind.name == 'hifi').take(2))
-                        tile(_DownloadChoice.hifi, 'Hi-Fi · ${ext.manifest.name}', '${ext.manifest.author} · ${ext.manifest.version} · Lossless', Icons.headphones, const Color(0xFF1ED760)),
-                    if (!hasHifiExt) tile(_DownloadChoice.hifi, 'Hi-Fi', 'Lossless sunucu (eklenti gerekli)', Icons.headphones, const Color(0xFF1ED760)),
-                    tile(_DownloadChoice.jiosaavn, 'JioSaavn', '320kbps · Hindistan kataloğu', Icons.music_note, const Color(0xFF2BC5B4)),
-                    tile(_DownloadChoice.navidrome, 'Navidrome', 'Kendi sunucun', Icons.settings, const Color(0xFF6C8CFF)),
+                      for (final ext in installed.where((e) => e.manifest.kind.name == 'hifi').take(3))
+                        tile(_DownloadChoice.hifi, 'Hi-Fi · ${ext.manifest.name}', '${ext.manifest.author} · ${ext.manifest.version} · Lossless', Icons.graphic_eq_rounded, const Color(0xFF1ED760), extensionId: ext.manifest.id),
+                    if (!hasHifiExt) tile(_DownloadChoice.hifi, 'Hi-Fi', 'Lossless sunucu (eklenti gerekli)', Icons.graphic_eq_rounded, const Color(0xFF1ED760)),
+                    tile(_DownloadChoice.jiosaavn, 'JioSaavn', '320kbps · Hindistan kataloğu', Icons.waves_rounded, const Color(0xFF2BC5B4)),
+                    tile(_DownloadChoice.navidrome, 'Navidrome', 'Kendi sunucun', Icons.dns_rounded, const Color(0xFF6C8CFF)),
                     const SizedBox(height: 8),
                   ],
                 ),
               ),
             );
           },
-        ) ??
-        _DownloadChoice.cancelled;
+        );
+    return result ?? _DownloadSelection(_DownloadChoice.cancelled);
   }
 
-  String _downloadSourceLabel(_DownloadChoice c) => switch (c) {
-        _DownloadChoice.youtube => 'YouTube',
-        _DownloadChoice.hifi => 'Hi-Fi',
-        _DownloadChoice.jiosaavn => 'JioSaavn',
-        _DownloadChoice.navidrome => 'Navidrome',
-        _DownloadChoice.auto => 'Otomatik',
-        _DownloadChoice.cancelled => 'İptal',
-      };
+  String _downloadSourceLabel(_DownloadChoice c, {String? extensionName}) {
+    if (c == _DownloadChoice.hifi && extensionName != null && extensionName.isNotEmpty) return 'Hi-Fi · $extensionName';
+    return switch (c) {
+      _DownloadChoice.youtube => 'YouTube',
+      _DownloadChoice.hifi => 'Hi-Fi',
+      _DownloadChoice.jiosaavn => 'JioSaavn',
+      _DownloadChoice.navidrome => 'Navidrome',
+      _DownloadChoice.auto => 'Otomatik',
+      _DownloadChoice.cancelled => 'İptal',
+    };
+  }
 
   MusicSourceType? _choiceToSourceType(_DownloadChoice c) => switch (c) {
         _DownloadChoice.youtube => MusicSourceType.youtube,
@@ -455,3 +484,10 @@ class SearchSourceFilters extends StatelessWidget {
 }
 
 enum _DownloadChoice { auto, youtube, hifi, jiosaavn, navidrome, cancelled }
+
+class _DownloadSelection {
+  const _DownloadSelection(this.choice, {this.extensionId, this.extensionName});
+  final _DownloadChoice choice;
+  final String? extensionId;
+  final String? extensionName;
+}

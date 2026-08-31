@@ -5,6 +5,15 @@ All notable changes to Melodi will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.12.1] - 2026-08-31
+
+### Her Eklenti Ayrı Kaynak + İndirme Per-Eklenti
+- `lib/services/music_source.dart:17` `OnlineTrack` artık `extensionId`/`extensionName` taşır, `sourceLabel` eklenti adını gösterir
+- `lib/services/sources/extension_source.dart:1` yeni `ExtensionMusicSource` — SpotiFLAC `.sflx` için `JsExtensionService` (A), 8spine `jiosaavn`/`soundcloud` için native Dart (B), diğerleri bridge; `id`/`bundleUrl` korunur (`homepage` → orijinal `.sflx` URL)
+- `lib/services/multi_source_search.dart:30` `_extensionSources` + `_allSourcesForSearch` — arama artık kurulu her eklentiyi ayrı kaynak olarak sorgular, `getStreamUrl` extensionId’ye göre doğru kaynağa yönlenir, fallback’e eklentiler dahil
+- `lib/widgets/search/search_result_tiles.dart:198` indirme sheet artık `_DownloadSelection` (`choice` + `extensionId`/`extensionName`) ile her `hifi` eklentisini ayrı satır (`Hi-Fi · <eklenti>`) gösterir, ` _getStreamForSpecificSource` extension-specific search yapar
+- `lib/screens/search_screen.dart:1` arama filtreleri ileride eklenti bazlı chip’lere genişletilebilir (şu an `Tümü / YouTube / Hi-Fi / Deezer` altında toplanır, indirme’de ayrı)
+
 ## [4.12.0] - 2026-08-31
 
 ### Hibrit JS + Native — SpotiFLAC (A) + 8spine (B)
