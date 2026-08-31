@@ -56,7 +56,8 @@ jobs:
       - name: Download Go dependencies
         working-directory: ./go_backend
         run: |
-          go mod download -x
+          go mod tidy
+          go mod verify
 
       - name: Verify Go code compiles
         working-directory: ./go_backend
