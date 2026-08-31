@@ -42,6 +42,9 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
+        env:
+          GOPROXY: https://proxy.golang.org,direct
+          GOSUMDB: sum.golang.org
 
       - name: Install gomobile
         run: |
@@ -52,18 +55,18 @@ jobs:
       - name: Download Go dependencies
         working-directory: ./go_backend
         run: |
-          go mod tidy
-          go mod vendor
+          go mod download
+          go mod verify
 
       - name: Verify Go code compiles
         working-directory: ./go_backend
-        run: go build -mod=vendor -v ./cmd/melodicore
+        run: go build -v ./cmd/melodicore
 
       - name: Build XCFramework for iOS
         id: xcframework
         working-directory: ./go_backend
         run: |
-          gomobile bind -target=ios -mod=vendor -o MelodiCore.xcframework ./cmd/melodicore
+          gomobile bind -target=ios -o MelodiCore.xcframework ./cmd/melodicore
           echo "path=$(pwd)/MelodiCore.xcframework" >> $GITHUB_OUTPUT
 
       - name: Verify XCFramework
