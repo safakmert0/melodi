@@ -60,7 +60,8 @@ jobs:
 
       - name: Verify Go code compiles
         working-directory: ./go_backend
-        run: go build -v ./cmd/melodicore
+        run: |
+          go build -x -v ./cmd/melodicore 2>&1
 
       - name: Build XCFramework for iOS
         id: xcframework
