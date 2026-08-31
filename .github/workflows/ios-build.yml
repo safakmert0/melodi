@@ -50,8 +50,7 @@ jobs:
           gomobile init
 
       - name: Download Go dependencies
-        working-directory: ./go_backend
-        run: go mod download
+        run: go mod download ./go_backend
 
       - name: Verify Go code compiles
         working-directory: ./go_backend
