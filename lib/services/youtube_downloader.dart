@@ -17,7 +17,7 @@ class YouTubeDownloader {
     if (!AppConfig.disableYtDlpDirect) return true;
     try {
       return ExtensionService.instance.installed
-          .any((e) => e.enabled && e.manifest.kind == ExtensionKind.backend);
+          .any((e) => e.enabled);
     } catch (_) {
       return false;
     }

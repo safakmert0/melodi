@@ -5,6 +5,14 @@ All notable changes to Melodi will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.11.3] - 2026-08-31
+
+### Fix İzleme/İndirme + Build (4.11.1 Hotfix Üstüne)
+- **Build fix** (`search_result_tiles.dart:324` icon): `4.11.1` `Color → IconData` 5 hata düzeltildi, `4.11.2` üzerine
+- **İzleme klasör**: `watched_folder_service.dart:47` `setWatchedFolder` artık `lastScan` sıfırlar (debounce 2dk→60s), `scanWatchedFolder` `exists()` atlanıp direkt `scanDirectoryAndSync` dener, iOS security-scope loglandı — “doğru çalışmıyor” sebebi buydu
+- **İndirme hatası**: `_allowDirect` artık `any((e)=>e.enabled)` (sadece `backend` değil `hifi` de unlock), Hi-Fi eklentisi varken YouTube fallback bloklanıyordu — “çevrim içi çalışıyor ama indirme hata” düzeltildi
+- **SpotiFLAC/8spine kaynak kapsamı**: `SearchSourceFilters` hâlen `Tümü / YouTube / Hi-Fi / Deezer` (doğru), eklenti varsa indirme sheet’te `Hi-Fi · <eklenti>` görünür
+
 ## [4.11.1] - 2026-08-30
 
 ### 8spine Depo Fix + Kaynak Seçim + Arama Kapsamı

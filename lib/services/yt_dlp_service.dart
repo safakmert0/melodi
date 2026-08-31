@@ -129,7 +129,7 @@ class YtDlpService {
     if (!AppConfig.disableYtDlpDirect) return true;
     try {
       final hasBackend = ExtensionService.instance.installed
-          .any((e) => e.enabled && e.manifest.kind == ExtensionKind.backend);
+          .any((e) => e.enabled);
       return hasBackend;
     } catch (_) {
       return false;
