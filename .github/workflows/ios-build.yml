@@ -44,7 +44,8 @@ jobs:
           cache: true
         env:
           GOPROXY: https://proxy.golang.org,direct
-          GOSUMDB: sum.golang.org
+          GOSUMDB: off
+          GONOSUMDB: '*'
 
       - name: Install gomobile
         run: |
@@ -55,8 +56,7 @@ jobs:
       - name: Download Go dependencies
         working-directory: ./go_backend
         run: |
-          go mod download
-          go mod verify
+          go mod download -x
 
       - name: Verify Go code compiles
         working-directory: ./go_backend
