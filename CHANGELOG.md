@@ -5,6 +5,14 @@ All notable changes to Melodi will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.12.0] - 2026-08-31
+
+### Hibrit JS + Native — SpotiFLAC (A) + 8spine (B)
+- **JS sandbox** (`lib/services/js_extension_service.dart:1`): `flutter_js` + `archive` ile `.sflx` (zip `index.js`) quickjs’de çalışır, `fetch`/`console.log` polyfill, `search`/`getStreamUrl` çağrıları — SpotiFLAC bot doğrulaması sunucu taraflı bypass ile birlikte JS içinde de fetch proxy’lenir
+- **8spine native** (`lib/services/sources/*`): JioSaavn direkt 320kbps, SoundCloud/Tidal/Qobuz için native Dart API portları (`MusicSourceType.hifi`/`jiosaavn`/`soundcloud`), `.8spine`/`.js` bundle’ları native’e yönlenir
+- **Generic loader** (`lib/models/extension.dart:298`/`lib/services/extension_service.dart:268`): `download`/`file`/`pkg`/`download_url`, `category:*` + `tags` heuristiği, `.8spine`/`.js`/`.sflx` hepsi otomatik JS veya native seçimi, gelecek modüller ek kod olmadan eklenir
+- **pubspec**: `flutter_js: ^0.8.2`, `archive: ^3.6.1` eklendi
+
 ## [4.11.3] - 2026-08-31
 
 ### Fix İzleme/İndirme + Build (4.11.1 Hotfix Üstüne)
