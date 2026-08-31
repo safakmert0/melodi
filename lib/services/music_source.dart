@@ -24,6 +24,8 @@ class OnlineTrack {
   final Uint8List? thumbnailBytes;
   final MusicSourceType source;
   final String? streamUrl;
+  final String? extensionId;
+  final String? extensionName;
 
   const OnlineTrack({
     required this.id,
@@ -35,9 +37,12 @@ class OnlineTrack {
     this.thumbnailBytes,
     required this.source,
     this.streamUrl,
+    this.extensionId,
+    this.extensionName,
   });
 
   String get sourceLabel {
+    if (extensionName != null && extensionName!.isNotEmpty) return extensionName!;
     switch (source) {
       case MusicSourceType.youtube:
         return 'YouTube';
@@ -54,6 +59,34 @@ class OnlineTrack {
       case MusicSourceType.soundcloud:
         return 'SoundCloud';
     }
+  }
+
+  OnlineTrack copyWith({
+    String? id,
+    String? title,
+    String? artist,
+    String? album,
+    Duration? duration,
+    String? thumbnailUrl,
+    Uint8List? thumbnailBytes,
+    MusicSourceType? source,
+    String? streamUrl,
+    String? extensionId,
+    String? extensionName,
+  }) {
+    return OnlineTrack(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      artist: artist ?? this.artist,
+      album: album ?? this.album,
+      duration: duration ?? this.duration,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      thumbnailBytes: thumbnailBytes ?? this.thumbnailBytes,
+      source: source ?? this.source,
+      streamUrl: streamUrl ?? this.streamUrl,
+      extensionId: extensionId ?? this.extensionId,
+      extensionName: extensionName ?? this.extensionName,
+    );
   }
 }
 

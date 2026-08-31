@@ -50,7 +50,7 @@ class HLSDownloaderService {
     if (AppConfig.disableYtDlpDirect) {
       try {
         final hasBackend = ExtensionService.instance.installed
-            .any((e) => e.enabled && e.manifest.kind == ExtensionKind.backend);
+            .any((e) => e.enabled);
         if (!hasBackend) {
           debugPrint('HLS download blocked: App Store mode without extension');
           return null;

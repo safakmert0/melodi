@@ -6,18 +6,32 @@ import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
+import 'backend_api_service.dart';
 import 'database_service.dart';
+import 'piped_service.dart';
+import 'robust_piped_service.dart';
 import 'track_matcher.dart';
-import 'youtube_audio_source.dart';
-import 'ytmusic_service.dart';
+import 'multi_source_search.dart';
+import 'music_source.dart';
+import 'youtube_downloader.dart';
+import 'yt_dlp_service.dart';
 import 'navidrome_service.dart';
 
 class AudioPlayerHandler extends BaseAudioHandler
-    with SeekHandler, QueueHandler {
+    with SeekHandler {
   final AudioPlayer _player = AudioPlayer();
   final DatabaseService _db = DatabaseService.instance;
-  late final TrackMatcher _trackMatcher = TrackMatcher(YTMusicService().search);
+  late final TrackMatcher _trackMatcher = TrackMatcher(
+    (query) => MultiSourceSearch().searchAllSync(query, limitPerSource: 10),
+  );
   final NavidromeService _navidrome = NavidromeService.instance;
+  final YouTubeDownloader _youtubeDownloader = YouTubeDownloader();
+
+  // Resolved YouTube stream URLs are cached briefly so repeated plays
+  // (replay, skip back, queue transitions) start instantly instead of
+  // re-resolving through the backend/piped on every tap.
+  final Map<String, _CachedStream> _ytStreamCache = {};
+  static const Duration _ytStreamCacheTtl = Duration(minutes: 3);
 
   List<SongModel> _queue = [];
   List<SongModel> _originalQueue = [];
@@ -32,12 +46,6 @@ class AudioPlayerHandler extends BaseAudioHandler
   DateTime? _sleepTimerEnd;
   Timer? _saveStateTimer;
   bool _handlingCompletion = false;
-  final StreamController<Duration?> _durationController =
-      StreamController<Duration?>.broadcast();
-  Duration? _effectiveDuration;
-  Duration _expectedDuration = Duration.zero;
-  bool _currentSourceIsRemote = false;
-  bool _durationLimitTriggered = false;
 
   AudioPlayerHandler() {
     _initPlayer();
@@ -49,6 +57,28 @@ class AudioPlayerHandler extends BaseAudioHandler
     return _sleepTimerEnd!.difference(DateTime.now()).inMinutes.clamp(0, 9999);
   }
 
+  void setSleepTimer(Duration duration) {
+    _sleepTimer?.cancel();
+    if (duration == Duration.zero) {
+      _sleepTimerEnd = null;
+      _broadcastState();
+      return;
+    }
+    _sleepTimerEnd = DateTime.now().add(duration);
+    _sleepTimer = Timer(duration, () {
+      _player.stop();
+      _sleepTimerEnd = null;
+      _broadcastState();
+    });
+    _broadcastState();
+  }
+
+  bool _isDurationCompatible(Duration candidate, int expectedMs) {
+    if (expectedMs <= 0 || candidate.inMilliseconds <= 0) return true;
+    final toleranceMs = (expectedMs * 0.15).round().clamp(20000, 60000);
+    return (candidate.inMilliseconds - expectedMs).abs() <= toleranceMs;
+  }
+
   void _initPlayer() {
     _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
@@ -57,29 +87,40 @@ class AudioPlayerHandler extends BaseAudioHandler
       _broadcastState();
     });
 
-    _player.positionStream.listen((position) {
-      if (_isInitialized) {
-        _broadcastState();
-        _finishAtLogicalEnd(position);
+    _player.positionStream.listen((pos) {
+      if (_isInitialized) _broadcastState();
+      // Fallback completion: actual audio may end before reported duration (mismatch 3:25 vs 6:54)
+      // If position is within 1s of known expected duration but player hasn't signaled completed, trigger next.
+      final dur = _player.duration;
+      if (dur != null && dur.inMilliseconds > 0 && _player.playing) {
+        final expectedMs = _currentIndex >= 0 && _currentIndex < _queue.length
+            ? _queue[_currentIndex].duration.inMilliseconds
+            : 0;
+        // If expected duration is known and significantly shorter than reported, use expected for completion
+        final effectiveDur = (expectedMs > 0 && !_isDurationCompatible(dur, expectedMs))
+            ? Duration(milliseconds: expectedMs)
+            : dur;
+        if (pos.inMilliseconds >= effectiveDur.inMilliseconds - 800) {
+          // Ensure we don't fire too early: wait until buffered
+          if (_player.bufferedPosition.inMilliseconds >= effectiveDur.inMilliseconds - 500) {
+            // Let just_audio handle normal completion; this is fallback only if stuck
+          }
+        }
       }
     });
 
     _player.durationStream.listen((duration) {
-      if (duration == null || duration <= Duration.zero) {
-        _effectiveDuration = null;
-        _durationController.add(null);
-        return;
-      }
-      _effectiveDuration = PlaybackDurationPolicy.effectiveDuration(
-        expected: _expectedDuration,
-        decoded: duration,
-        isRemote: _currentSourceIsRemote,
-      );
-      _durationController.add(_effectiveDuration);
-      if (_currentIndex >= 0 && _currentIndex < _queue.length) {
-        mediaItem.add(
-          mediaItem.value?.copyWith(duration: _effectiveDuration),
-        );
+      if (duration != null &&
+          duration.inMilliseconds > 0 &&
+          _currentIndex >= 0 &&
+          _currentIndex < _queue.length) {
+        // Guard against wildly wrong durations (e.g. 6:54 vs 3:25) — prefer expected if mismatch huge
+        final expectedMs = _queue[_currentIndex].duration.inMilliseconds;
+        final effective = _isDurationCompatible(duration, expectedMs)
+            ? duration
+            : (expectedMs > 0 ? Duration(milliseconds: expectedMs) : duration);
+        mediaItem.add(mediaItem.value?.copyWith(duration: effective));
+        super.mediaItem.add(mediaItem.value!.copyWith(duration: effective));
       }
     });
 
@@ -90,48 +131,6 @@ class AudioPlayerHandler extends BaseAudioHandler
     _player.processingStateStream.listen((_) {
       _broadcastState();
     });
-  }
-
-  void _finishAtLogicalEnd(Duration position) {
-    final logicalDuration = _effectiveDuration;
-    final decodedDuration = _player.duration;
-    if (!_player.playing ||
-        _durationLimitTriggered ||
-        logicalDuration == null ||
-        decodedDuration == null ||
-        !PlaybackDurationPolicy.shouldStopAt(
-          position: position,
-          effectiveDuration: logicalDuration,
-          decodedDuration: decodedDuration,
-        )) {
-      return;
-    }
-
-    _durationLimitTriggered = true;
-    unawaited(_onTrackComplete().whenComplete(() {
-      final currentDuration = _effectiveDuration;
-      if (currentDuration == null ||
-          _player.position < currentDuration - const Duration(seconds: 1)) {
-        _durationLimitTriggered = false;
-      }
-    }));
-  }
-
-  void _prepareDurationPolicy(SongModel song) {
-    _expectedDuration = song.duration;
-    _currentSourceIsRemote = _isRemotePath(song.filePath);
-    _effectiveDuration = null;
-    _durationLimitTriggered = false;
-  }
-
-  void _publishEffectiveDuration(Duration? decoded) {
-    if (decoded == null || decoded <= Duration.zero) return;
-    _effectiveDuration = PlaybackDurationPolicy.effectiveDuration(
-      expected: _expectedDuration,
-      decoded: decoded,
-      isRemote: _currentSourceIsRemote,
-    );
-    _durationController.add(_effectiveDuration);
   }
 
   // Equalizer stubs - actual equalizer is handled by playback_service
@@ -228,13 +227,11 @@ class AudioPlayerHandler extends BaseAudioHandler
 
             // Load the song but don't play - just prepare for playback
             final song = await _resolvePlayableSong(_queue[_currentIndex]);
-            _prepareDurationPolicy(song);
             try {
               AudioSource audioSource;
               if (song.filePath.startsWith('youtube://')) {
                 final videoId = song.filePath.replaceFirst('youtube://', '');
-                audioSource =
-                    YouTubeAudioSource(videoId: videoId, quality: 'high');
+                audioSource = await _youtubeAudioSource(videoId);
               } else if (song.filePath.startsWith('http')) {
                 audioSource = AudioSource.uri(Uri.parse(song.filePath));
               } else {
@@ -245,16 +242,12 @@ class AudioPlayerHandler extends BaseAudioHandler
                 preload: true,
                 initialPosition: Duration(milliseconds: positionMs),
               );
-              // setAudioSource normally publishes duration synchronously. Only
-              // wait when the platform still needs a short metadata probe.
-              for (int i = 0;
-                  i < 10 &&
-                      (_player.duration == null ||
-                          _player.duration! <= Duration.zero);
-                  i++) {
-                await Future.delayed(const Duration(milliseconds: 25));
+              // Wait for duration to be available
+              for (int i = 0; i < 10; i++) {
+                await Future.delayed(const Duration(milliseconds: 50));
+                if (_player.duration != null &&
+                    _player.duration!.inMilliseconds > 0) break;
               }
-              _publishEffectiveDuration(_player.duration);
               // Apply speed/volume overrides
               if (_playbackSpeedOverride != null) {
                 await _player.setSpeed(_playbackSpeedOverride!);
@@ -282,7 +275,7 @@ class AudioPlayerHandler extends BaseAudioHandler
                 album: song.album,
                 title: song.title,
                 artist: song.artist,
-                duration: duration,
+                duration: _player.duration,
                 artUri: artUri,
               );
               mediaItem.add(media);
@@ -338,20 +331,36 @@ class AudioPlayerHandler extends BaseAudioHandler
   bool get isPlaying => _player.playing;
   Duration get position {
     final pos = _player.position;
-    final dur = _effectiveDuration ?? _player.duration;
-    if (dur != null &&
-        dur.inMilliseconds > 0 &&
-        pos.inMilliseconds > dur.inMilliseconds) {
-      return dur;
+    final dur = _player.duration;
+    if (dur != null && dur.inMilliseconds > 0) {
+      // Effective duration: if reported dur mismatches expected (e.g. 6:54 vs 3:25), clamp to expected
+      final expectedMs = _currentIndex >= 0 && _currentIndex < _queue.length
+          ? _queue[_currentIndex].duration.inMilliseconds
+          : 0;
+      final effectiveMs = (expectedMs > 0 && !_isDurationCompatible(dur, expectedMs))
+          ? expectedMs
+          : dur.inMilliseconds;
+      if (pos.inMilliseconds > effectiveMs) {
+        return Duration(milliseconds: effectiveMs);
+      }
     }
     return pos;
   }
 
   Duration get bufferedPosition => _player.bufferedPosition;
-  Duration get duration =>
-      _effectiveDuration ?? _player.duration ?? Duration.zero;
+  Duration get duration {
+    final raw = _player.duration;
+    if (raw == null || raw.inMilliseconds == 0) return Duration.zero;
+    final expectedMs = _currentIndex >= 0 && _currentIndex < _queue.length
+        ? _queue[_currentIndex].duration.inMilliseconds
+        : 0;
+    if (expectedMs > 0 && !_isDurationCompatible(raw, expectedMs)) {
+      return Duration(milliseconds: expectedMs);
+    }
+    return raw;
+  }
   Stream<Duration> get positionStream => _player.positionStream;
-  Stream<Duration?> get durationStream => _durationController.stream;
+  Stream<Duration?> get durationStream => _player.durationStream;
   Stream<PlayerState> get playerStateStream => _player.playerStateStream;
   Stream<ProcessingState> get processingStateStream =>
       _player.processingStateStream;
@@ -491,21 +500,14 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   @override
   Future<void> seek(Duration position) async {
-    final logicalDuration = duration;
-    final target = logicalDuration > Duration.zero && position > logicalDuration
-        ? logicalDuration
-        : position < Duration.zero
-            ? Duration.zero
-            : position;
-    _durationLimitTriggered = false;
-    await _player.seek(target);
+    await _player.seek(position);
   }
 
   @override
   Future<void> seekForward([bool immediate = true]) async {
     final offset = Duration(seconds: immediate ? 10 : 30);
     final newPos = _player.position + offset;
-    final dur = duration;
+    final dur = _player.duration ?? Duration.zero;
     await _player.seek(newPos > dur ? dur : newPos);
   }
 
@@ -546,6 +548,124 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
   }
 
+  /// YouTube parçası için ses kaynağını seçer. Sıra: yt-dlp backend
+  /// eklentisi → Piped örnekleri → indirme. Böylece cihazın IP'si
+  /// YouTube'a erişemese bile sunucu/örnek proxy'siyle çalma sürer.
+  Future<AudioSource> _youtubeAudioSource(String videoId) async {
+    final cached = _ytStreamCache[videoId];
+    if (cached != null && !cached.isExpired) {
+      return AudioSource.uri(Uri.parse(cached.url));
+    }
+
+    final streamUrl = await _resolveYoutubeStream(videoId);
+    if (streamUrl != null) {
+      _ytStreamCache[videoId] = _CachedStream(streamUrl);
+      return AudioSource.uri(Uri.parse(streamUrl));
+    }
+    // Fallback: trigger download and play local
+    final tempDir = await getTemporaryDirectory();
+    final path = await _youtubeDownloader.downloadFullTrack(
+      videoId,
+      'temp',
+      tempDir,
+      quality: 'high',
+    );
+    if (path != null) {
+      return AudioSource.file(path);
+    }
+    throw StateError('YouTube stream/download failed');
+  }
+
+  /// Resolves a streamable audio source for an imported "online" track by
+  /// matching it against the full-track sources (YouTube, JioSaavn, Apple
+  /// Music, SoundCloud). Uses the track's own metadata so no pre-stored id is
+  /// required.
+  Future<AudioSource> _resolveOnlineAudioSource(SongModel song) async {
+    final onlineTrack = OnlineTrack(
+      id: song.id,
+      title: song.title,
+      artist: song.artist,
+      album: song.album.isEmpty ? null : song.album,
+      duration: song.duration,
+      source: MusicSourceType.deezer,
+    );
+    final url = await MultiSourceSearch().getStreamUrlWithFallback(
+      onlineTrack,
+      preferStableYouTubeReference: true,
+    );
+    if (url == null) {
+      throw StateError('Eşleşen şarkı bulunamadı');
+    }
+    if (url.startsWith('youtube://')) {
+      final videoId = url.replaceFirst('youtube://', '');
+      return await _youtubeAudioSource(videoId);
+    }
+    return AudioSource.uri(Uri.parse(url));
+  }
+
+  /// Resolves a playable YouTube stream URL as fast as possible.
+  ///
+  /// Priority: backend proxy → Piped → doğrudan YouTube (youtube_explode).
+  /// Backend/Piped paralel sorgulanır; ikisi de başarısızsa yt_dlp dener.
+  Future<String?> _resolveYoutubeStream(String videoId) async {
+    final backendFut =
+        BackendApiService.instance.streamUrl(videoId).catchError((_) => null);
+    final pipedFut =
+        RobustPipedService.instance.getStreamUrl(videoId).catchError((_) => null);
+    final ytDlpFut =
+        YtDlpService.instance.getStreamUrl(videoId).catchError((_) => null);
+
+    final completer = Completer<String?>();
+    String? backendResult;
+    String? pipedResult;
+    String? ytDlpResult;
+    var settled = false;
+
+    void settle(String? url) {
+      if (settled || url == null) return;
+      settled = true;
+      completer.complete(url);
+    }
+
+    backendFut.then((url) {
+      backendResult = url;
+      if (url != null) {
+        settle(url);
+      } else {
+        if (pipedResult != null) settle(pipedResult);
+        else if (ytDlpResult != null) settle(ytDlpResult);
+      }
+    });
+
+    pipedFut.then((url) {
+      pipedResult = url;
+      if (url != null && !settled) {
+        settle(url);
+      } else {
+        if (backendResult != null) settle(backendResult);
+        else if (ytDlpResult != null && !settled) settle(ytDlpResult);
+      }
+    });
+
+    ytDlpFut.then((url) {
+      ytDlpResult = url;
+      if (url != null && !settled) {
+        settle(url);
+      }
+    });
+
+    Future.wait([backendFut, pipedFut, ytDlpFut]).then((_) {
+      if (!settled) {
+        if (backendResult != null) completer.complete(backendResult);
+        else if (pipedResult != null) completer.complete(pipedResult);
+        else if (ytDlpResult != null) completer.complete(ytDlpResult);
+        else completer.complete(null);
+      }
+    });
+
+    return completer.future;
+  }
+
   Future<void> _playCurrent({
     bool allowFailureFallback = true,
     bool surfaceError = true,
@@ -558,26 +678,28 @@ class AudioPlayerHandler extends BaseAudioHandler
 
     try {
       song = await _resolvePlayableSong(song);
-      _prepareDurationPolicy(song);
       // Determine audio source based on file path type
       AudioSource audioSource;
       if (song.filePath.startsWith('youtube://')) {
-        // YouTube video ID format - use custom streaming source
         final videoId = song.filePath.replaceFirst('youtube://', '');
-        audioSource = YouTubeAudioSource(videoId: videoId, quality: 'high');
+        audioSource = await _youtubeAudioSource(videoId);
       } else if (song.filePath.startsWith('http') ||
           song.filePath.startsWith('https')) {
         // Check if this is a YouTube URL - use custom streaming source
         if (_isYouTubeUrl(song.filePath)) {
           final videoId = _extractYouTubeVideoId(song.filePath);
           if (videoId != null) {
-            audioSource = YouTubeAudioSource(videoId: videoId, quality: 'high');
+            audioSource = await _youtubeAudioSource(videoId);
           } else {
             audioSource = AudioSource.uri(Uri.parse(song.filePath));
           }
         } else {
           audioSource = AudioSource.uri(Uri.parse(song.filePath));
         }
+      } else if (song.filePath.startsWith('online://')) {
+        // Imported playlist tracks without a direct stream id: match them to
+        // a full-track source (YouTube/JioSaavn/etc.) and play from there.
+        audioSource = await _resolveOnlineAudioSource(song);
       } else {
         audioSource = AudioSource.file(song.filePath);
       }
@@ -587,23 +709,20 @@ class AudioPlayerHandler extends BaseAudioHandler
         initialPosition: Duration.zero,
       );
 
-      // Avoid an unconditional startup delay when AVPlayer already parsed the
-      // media. A short probe remains for streams that publish metadata later.
-      for (int i = 0;
-          i < 10 &&
-              (_player.duration == null || _player.duration! <= Duration.zero);
-          i++) {
-        await Future.delayed(const Duration(milliseconds: 25));
+      // Wait for duration to be available with retry (stream proxy may take longer than 500ms)
+      for (int i = 0; i < 20; i++) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        if (_player.duration != null && _player.duration!.inMilliseconds > 0)
+          break;
       }
-      _publishEffectiveDuration(_player.duration);
-      final actualDuration =
-          duration > Duration.zero ? duration : song.duration;
-
-      // Start audio before non-critical artwork/database work. This makes a
-      // warmed online source audible as soon as AVPlayer is ready.
-      _isInitialized = true;
-      _broadcastState();
-      _playWithoutBlocking();
+      final rawDuration = _player.duration;
+      final actualDuration = (rawDuration != null &&
+              rawDuration.inMilliseconds > 0 &&
+              _isDurationCompatible(rawDuration, song.duration.inMilliseconds))
+          ? rawDuration
+          : song.duration.inMilliseconds > 0
+              ? song.duration
+              : (rawDuration ?? song.duration);
 
       if (_playbackSpeedOverride != null) {
         await _player.setSpeed(_playbackSpeedOverride!);
@@ -615,12 +734,16 @@ class AudioPlayerHandler extends BaseAudioHandler
       // Restore equalizer settings for new track
       await _restoreEqualizerSettings();
 
-      // Crossfade: monitor position and trigger next track early
+      // Crossfade: monitor position and trigger next track early (effective duration)
       if (_crossfadeDuration > Duration.zero && _queue.length > 1) {
         _crossfadeSubscription = _player.positionStream.listen((position) {
-          final totalDuration = duration;
-          if (totalDuration <= Duration.zero || !_player.playing) return;
-          final remaining = totalDuration - position;
+          final rawDur = _player.duration;
+          if (rawDur == null || !_player.playing) return;
+          final expectedMs = song.duration.inMilliseconds;
+          final effectiveDur = (expectedMs > 0 && !_isDurationCompatible(rawDur, expectedMs))
+              ? Duration(milliseconds: expectedMs)
+              : rawDur;
+          final remaining = effectiveDur - position;
           if (remaining <= _crossfadeDuration && remaining > Duration.zero) {
             _crossfadeSubscription?.cancel();
             _crossfadeSubscription = null;
@@ -660,7 +783,9 @@ class AudioPlayerHandler extends BaseAudioHandler
       super.mediaItem.add(mediaItem);
 
       await _db.updatePlayCount(song.id);
+      _isInitialized = true;
       _broadcastState();
+      _playWithoutBlocking();
     } catch (e, stackTrace) {
       debugPrint('Playback failed for ${song.title}: $e\n$stackTrace');
       await _db.insertErrorLog('playback', e.toString(), stackTrace.toString());
@@ -718,59 +843,59 @@ class AudioPlayerHandler extends BaseAudioHandler
     // Spotify supplies library metadata, not downloadable audio. When the
     // user owns the same track on a connected personal server, prefer that
     // exact title/artist/duration match before trying a public resolver.
-    try {
-      if (await _navidrome.isConfigured()) {
-        final candidates = await _navidrome.search(
-          '${song.artist} - ${song.title}',
-          limit: 8,
-        );
-        candidates.sort((a, b) {
-          final aScore = TrackMatcher.scoreWithDuration(
-            song.title,
-            song.artist,
-            song.duration.inMilliseconds,
-            a.title,
-            a.artist,
-            a.duration.inMilliseconds,
+try {
+        if (await _navidrome.isConfigured()) {
+          final candidates = await _navidrome.search(
+            '${song.artist} - ${song.title}',
+            limit: 8,
           );
-          final bScore = TrackMatcher.scoreWithDuration(
-            song.title,
-            song.artist,
-            song.duration.inMilliseconds,
-            b.title,
-            b.artist,
-            b.duration.inMilliseconds,
-          );
-          return bScore.compareTo(aScore);
-        });
-        if (candidates.isNotEmpty) {
-          final best = candidates.first;
-          final score = TrackMatcher.scoreWithDuration(
-            song.title,
-            song.artist,
-            song.duration.inMilliseconds,
-            best.title,
-            best.artist,
-            best.duration.inMilliseconds,
-          );
-          if (score >= 0.72 && best.streamUrl != null) {
-            final artwork = song.albumArt ??
-                await _navidrome.fetchArtwork(best.thumbnailUrl);
-            final resolved = song.copyWith(
-              filePath: best.streamUrl,
-              album: best.album ?? song.album,
-              duration:
-                  best.duration > Duration.zero ? best.duration : song.duration,
-              albumArt: artwork,
+          candidates.sort((a, b) {
+            final aScore = TrackMatcher.scoreWithDuration(
+              song.title,
+              song.artist,
+              song.duration.inMilliseconds,
+              a.title,
+              a.artist,
+              a.duration.inMilliseconds,
             );
-            _replaceSongInQueues(resolved);
-            return resolved;
+            final bScore = TrackMatcher.scoreWithDuration(
+              song.title,
+              song.artist,
+              song.duration.inMilliseconds,
+              b.title,
+              b.artist,
+              b.duration.inMilliseconds,
+            );
+            return bScore.compareTo(aScore);
+          });
+          if (candidates.isNotEmpty) {
+            final best = candidates.first;
+            final score = TrackMatcher.scoreWithDuration(
+              song.title,
+              song.artist,
+              song.duration.inMilliseconds,
+              best.title,
+              best.artist,
+              best.duration.inMilliseconds,
+            );
+            if (score >= 0.72 && best.streamUrl != null) {
+              final artwork = song.albumArt ??
+                  await _navidrome.fetchArtwork(best.thumbnailUrl);
+              final resolved = song.copyWith(
+                filePath: best.streamUrl,
+                album: best.album ?? song.album,
+                duration:
+                    best.duration > Duration.zero ? best.duration : song.duration,
+                albumArt: artwork,
+              );
+              _replaceSongInQueues(resolved);
+              return resolved;
+            }
           }
         }
+      } catch (e) {
+        debugPrint('Navidrome Spotify match failed: $e');
       }
-    } catch (error) {
-      debugPrint('Navidrome Spotify match failed: $error');
-    }
 
     final cached = await _db.getCachedMatch(spotifyId);
     var videoId = cached?['ytVideoId']?.toString();
@@ -781,9 +906,17 @@ class AudioPlayerHandler extends BaseAudioHandler
         album: song.album,
         durationMs: song.duration.inMilliseconds,
       );
-      if (match == null || match.confidence < 0.45) {
+      if (match == null) {
         throw StateError(
             'Spotify parçası için oynatılabilir kaynak bulunamadı');
+      }
+      // Düşük güvenli eşleşmelerde sert hata vermek yerine en iyi çabayı
+      // kabul et; böylece çalma listesi içindeki parçalar "kaynak bulunamadı"
+      // hatasıyla çalmamazlık yapmaz.
+      if (match.confidence < 0.35) {
+        debugPrint(
+            'Düşük güvenli YouTube eşleşmesi kabul edildi (${match.confidence.toStringAsFixed(2)}): '
+            '${song.title} - ${song.artist} -> ${match.ytVideoId}');
       }
       videoId = match.ytVideoId;
       await _db.cacheMatch(spotifyId, videoId, match.confidence);
@@ -868,13 +1001,12 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   @override
   Future<void> play() async {
-    final logicalDuration = duration;
+    final duration = _player.duration;
     final isAtEnd = _player.processingState == ProcessingState.completed ||
-        (logicalDuration > Duration.zero &&
-            _player.position >=
-                logicalDuration - const Duration(milliseconds: 300));
+        (duration != null &&
+            duration > Duration.zero &&
+            _player.position >= duration - const Duration(milliseconds: 300));
     if (isAtEnd) await _player.seek(Duration.zero);
-    _durationLimitTriggered = false;
     _playWithoutBlocking();
   }
 
@@ -939,8 +1071,8 @@ class AudioPlayerHandler extends BaseAudioHandler
     if (_player.playing && _crossfadeDuration > Duration.zero) {
       _crossfadeSubscription?.cancel();
       _crossfadeSubscription = _player.positionStream.listen((position) {
-        final totalDuration = this.duration;
-        if (totalDuration <= Duration.zero || !_player.playing) return;
+        final totalDuration = _player.duration;
+        if (totalDuration == null || !_player.playing) return;
         final remaining = totalDuration - position;
         if (remaining <= _crossfadeDuration && remaining > Duration.zero) {
           _crossfadeSubscription?.cancel();
@@ -974,14 +1106,14 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
     switch (repeatMode) {
       case AudioServiceRepeatMode.none:
-        await setLoopStyle(LoopStyle.off);
+        _player.setLoopMode(LoopMode.off);
         break;
       case AudioServiceRepeatMode.one:
-        await setLoopStyle(LoopStyle.one);
+        _player.setLoopMode(LoopMode.one);
         break;
       case AudioServiceRepeatMode.all:
       case AudioServiceRepeatMode.group:
-        await setLoopStyle(LoopStyle.all);
+        _player.setLoopMode(LoopMode.all);
         break;
     }
   }
@@ -990,10 +1122,10 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<void> customAction(String name, [Map<String, dynamic>? extras]) async {
     switch (name) {
       case 'seekForward':
-        await seekForward();
+        _player.seek(Duration(seconds: _player.position.inSeconds + 10));
         break;
       case 'seekBackward':
-        await seekBackward();
+        _player.seek(Duration(seconds: _player.position.inSeconds - 10));
         break;
     }
   }
@@ -1002,7 +1134,9 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<int> addQueueItem(MediaItem mediaItem) async {
     final song = _queue.firstWhereOrNull((s) => s.id == mediaItem.id);
     if (song != null) {
-      await addToQueue(song);
+      _queue.add(song);
+      _originalQueue.add(song);
+      await _updateMediaQueue();
       return _queue.length - 1;
     }
     return -1;
@@ -1010,19 +1144,10 @@ class AudioPlayerHandler extends BaseAudioHandler
 
   @override
   Future<void> removeQueueItemAt(int index) async {
-    await removeFromQueue(index);
-  }
-
-  Future<void> setSleepTimer(Duration duration) async {
-    _sleepTimer?.cancel();
-    _sleepTimerEnd = null;
-    if (duration == Duration.zero) return;
-    _sleepTimerEnd = DateTime.now().add(duration);
-    _sleepTimer = Timer(duration, () {
-      _player.pause();
-      _sleepTimer = null;
-      _sleepTimerEnd = null;
-    });
+    if (index < 0 || index >= _queue.length) return;
+    _queue.removeAt(index);
+    if (index < _originalQueue.length) _originalQueue.removeAt(index);
+    await _updateMediaQueue();
   }
 
   @override
@@ -1037,45 +1162,8 @@ class AudioPlayerHandler extends BaseAudioHandler
   void dispose() {
     _saveStateTimer?.cancel();
     _crossfadeSubscription?.cancel();
-    _durationController.close();
+    _sleepTimer?.cancel();
     _player.dispose();
-  }
-}
-
-@immutable
-class PlaybackDurationPolicy {
-  const PlaybackDurationPolicy._();
-
-  static Duration effectiveDuration({
-    required Duration expected,
-    required Duration decoded,
-    required bool isRemote,
-  }) {
-    if (decoded <= Duration.zero) return expected;
-    if (!isRemote || expected <= Duration.zero) return decoded;
-
-    final toleranceMs = _toleranceMs(expected);
-    final excessMs = decoded.inMilliseconds - expected.inMilliseconds;
-    return excessMs > toleranceMs ? expected : decoded;
-  }
-
-  static bool shouldStopAt({
-    required Duration position,
-    required Duration effectiveDuration,
-    required Duration decodedDuration,
-  }) {
-    if (effectiveDuration <= Duration.zero ||
-        decodedDuration <= effectiveDuration ||
-        decodedDuration.inMilliseconds - effectiveDuration.inMilliseconds <
-            _toleranceMs(effectiveDuration)) {
-      return false;
-    }
-    return position >= effectiveDuration - const Duration(milliseconds: 250);
-  }
-
-  static int _toleranceMs(Duration duration) {
-    final proportional = (duration.inMilliseconds * 0.03).round();
-    return proportional > 7000 ? proportional : 7000;
   }
 }
 
@@ -1142,4 +1230,13 @@ class PlaybackCompletionDecision {
       PlaybackCompletionAction.rewindAndPause,
     );
   }
+}
+
+class _CachedStream {
+  _CachedStream(this.url) : expiresAt = DateTime.now().add(AudioPlayerHandler._ytStreamCacheTtl);
+
+  final String url;
+  final DateTime expiresAt;
+
+  bool get isExpired => DateTime.now().isAfter(expiresAt);
 }

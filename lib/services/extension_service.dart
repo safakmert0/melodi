@@ -299,11 +299,9 @@ class ExtensionService extends ChangeNotifier {
     final caps = kind == ExtensionKind.hifi
         ? ['search', 'playback', 'downloads', 'lossless']
         : ['search', 'playback', 'downloads'];
-    // Homepage: 8spine vs zarzet
+    // Homepage: orijinal JS bundle URL'si (JS sandbox için), generic değil spesifik
+    final homepage = entry.url;
     final is8spine = entry.url.contains('8spine') || entry.id.contains('8spine') || entry.id.contains('morgk') || entry.id.contains('tidal') && entry.url.contains('vercel');
-    final homepage = is8spine
-        ? 'https://8spine-modules.vercel.app'
-        : 'https://github.com/zarzet/SpotiFLAC-Extension';
     final author = entry.author ?? (is8spine ? '8spine' : 'zarzet');
     return ExtensionManifest(
       id: entry.id,

@@ -3,7 +3,39 @@
 All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+
+## [4.12.2] - 2026-08-31
+
+### Fix Build — Büyük Ayarlar Birleştirmesi Geri Alındı
+- `lib/screens/settings_screen.dart:1` 6108 satırlık hatalı birleştirme (`SyncProvider`/`SpotifyProvider`/`YTMusicProvider` eksik) geri alındı — 681 satırlık stabil sürüme dönüldü, `flutter analyze` 0 error, `iOS Build` tekrar yeşil
+- `lib/services/audio_handler.dart`/`now_playing`/`diagnostics` vb. aynı birleştirmedeki hatalı değişiklikler geri alındı
+- Sürüm `4.12.1+27` → `4.12.2+28`
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [4.12.1] - 2026-08-31
+
+### Her Eklenti Ayrı Kaynak + İndirme Per-Eklenti
+- `lib/services/music_source.dart:17` `OnlineTrack` artık `extensionId`/`extensionName` taşır, `sourceLabel` eklenti adını gösterir
+- `lib/services/sources/extension_source.dart:1` yeni `ExtensionMusicSource` — SpotiFLAC `.sflx` için `JsExtensionService` (A), 8spine `jiosaavn`/`soundcloud` için native Dart (B), diğerleri bridge; `id`/`bundleUrl` korunur (`homepage` → orijinal `.sflx` URL)
+- `lib/services/multi_source_search.dart:30` `_extensionSources` + `_allSourcesForSearch` — arama artık kurulu her eklentiyi ayrı kaynak olarak sorgular, `getStreamUrl` extensionId’ye göre doğru kaynağa yönlenir, fallback’e eklentiler dahil
+- `lib/widgets/search/search_result_tiles.dart:198` indirme sheet artık `_DownloadSelection` (`choice` + `extensionId`/`extensionName`) ile her `hifi` eklentisini ayrı satır (`Hi-Fi · <eklenti>`) gösterir, ` _getStreamForSpecificSource` extension-specific search yapar
+- `lib/screens/search_screen.dart:1` arama filtreleri ileride eklenti bazlı chip’lere genişletilebilir (şu an `Tümü / YouTube / Hi-Fi / Deezer` altında toplanır, indirme’de ayrı)
+
+## [4.12.0] - 2026-08-31
+
+### Hibrit JS + Native — SpotiFLAC (A) + 8spine (B)
+- **JS sandbox** (`lib/services/js_extension_service.dart:1`): `flutter_js` + `archive` ile `.sflx` (zip `index.js`) quickjs’de çalışır, `fetch`/`console.log` polyfill, `search`/`getStreamUrl` çağrıları — SpotiFLAC bot doğrulaması sunucu taraflı bypass ile birlikte JS içinde de fetch proxy’lenir
+- **8spine native** (`lib/services/sources/*`): JioSaavn direkt 320kbps, SoundCloud/Tidal/Qobuz için native Dart API portları (`MusicSourceType.hifi`/`jiosaavn`/`soundcloud`), `.8spine`/`.js` bundle’ları native’e yönlenir
+- **Generic loader** (`lib/models/extension.dart:298`/`lib/services/extension_service.dart:268`): `download`/`file`/`pkg`/`download_url`, `category:*` + `tags` heuristiği, `.8spine`/`.js`/`.sflx` hepsi otomatik JS veya native seçimi, gelecek modüller ek kod olmadan eklenir
+- **pubspec**: `flutter_js: ^0.8.2`, `archive: ^3.6.1` eklendi
+
+## [4.11.3] - 2026-08-31
+
+### Fix İzleme/İndirme + Build (4.11.1 Hotfix Üstüne)
+- **Build fix** (`search_result_tiles.dart:324` icon): `4.11.1` `Color → IconData` 5 hata düzeltildi, `4.11.2` üzerine
+- **İzleme klasör**: `watched_folder_service.dart:47` `setWatchedFolder` artık `lastScan` sıfırlar (debounce 2dk→60s), `scanWatchedFolder` `exists()` atlanıp direkt `scanDirectoryAndSync` dener, iOS security-scope loglandı — “doğru çalışmıyor” sebebi buydu
+- **İndirme hatası**: `_allowDirect` artık `any((e)=>e.enabled)` (sadece `backend` değil `hifi` de unlock), Hi-Fi eklentisi varken YouTube fallback bloklanıyordu — “çevrim içi çalışıyor ama indirme hata” düzeltildi
+- **SpotiFLAC/8spine kaynak kapsamı**: `SearchSourceFilters` hâlen `Tümü / YouTube / Hi-Fi / Deezer` (doğru), eklenti varsa indirme sheet’te `Hi-Fi · <eklenti>` görünür
 
 ## [4.11.1] - 2026-08-30
 

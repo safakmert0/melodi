@@ -11,6 +11,7 @@ import 'sources/navidrome_source.dart';
 import 'sources/hifi_source.dart';
 import 'sources/apple_music_source.dart';
 import 'sources/soundcloud_source.dart';
+import 'sources/extension_source.dart';
 
 class MultiSourceSearch {
   static final MultiSourceSearch _instance = MultiSourceSearch._();
@@ -31,7 +32,7 @@ class MultiSourceSearch {
     if (!AppConfig.isAppStoreBuild) return _sources;
     try {
       final hasBackend = ExtensionService.instance.installed
-          .any((e) => e.enabled && e.manifest.kind == ExtensionKind.backend);
+          .any((e) => e.enabled);
       if (hasBackend) return _sources;
     } catch (_) {}
     // App Store without premium extension: hide YouTube/JioSaavn full-track
@@ -42,7 +43,25 @@ class MultiSourceSearch {
         .toList();
   }
 
+  List<MusicSource> get _extensionSources {
+    try {
+      final installed = ExtensionService.instance.installed.where((e) => e.enabled).toList();
+      return installed.map((e) => ExtensionMusicSource(e)).toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  List<MusicSource> get _allSourcesForSearch {
+    final base = _filteredSources;
+    final ext = _extensionSources;
+    if (ext.isEmpty) return base;
+    // Extension sources are shown as separate entries in filters, but search both base and extensions
+    return [...base, ...ext];
+  }
+
   List<MusicSource> get sources => List.unmodifiable(_filteredSources);
+  List<MusicSource> get allSourcesForUi => List.unmodifiable(_allSourcesForSearch);
 
   /// Display ranking for search results. Full-track sources (those that can
   /// actually play/download the whole song) are shown first; preview-only
@@ -87,7 +106,7 @@ class MultiSourceSearch {
 
   Future<List<OnlineTrack>> searchAllSync(String query,
       {int limitPerSource = 10}) async {
-    final futures = _filteredSources.map((source) async {
+    final futures = _allSourcesForSearch.map((source) async {
       try {
         return await source.search(query, limit: limitPerSource);
       } catch (e) {
@@ -107,7 +126,7 @@ class MultiSourceSearch {
     if (controller == null || controller.isClosed) return;
     try {
       final allTracks = <OnlineTrack>[];
-      final futures = _filteredSources.map((source) async {
+      final futures = _allSourcesForSearch.map((source) async {
         try {
           final tracks = await source.search(query, limit: limitPerSource);
           allTracks.addAll(tracks);
@@ -130,18 +149,31 @@ class MultiSourceSearch {
   }
 
   Future<String?> getStreamUrl(OnlineTrack track) async {
-    // Deezer's public API exposes metadata and a 30-second preview only.
-    // Never let preview-only sources enter the playback/download pipeline.
     if (!track.source.supportsFullTrack) return null;
-    // App Store without extension: block YouTube/JioSaavn direct fetches
     if (AppConfig.isAppStoreBuild) {
       try {
         final hasBackend = ExtensionService.instance.installed
-            .any((e) => e.enabled && e.manifest.kind == ExtensionKind.backend);
+            .any((e) => e.enabled);
         if (!hasBackend &&
             (track.source == MusicSourceType.youtube ||
                 track.source == MusicSourceType.jiosaavn)) {
           return null;
+        }
+      } catch (_) {}
+    }
+    // Extension-specific track: delegate to that extension's source (separate stream handling)
+    if (track.extensionId != null && track.extensionId!.isNotEmpty) {
+      try {
+        final extSources = _extensionSources;
+        for (final src in extSources) {
+          if (src is ExtensionMusicSource && (src as ExtensionMusicSource).id == track.extensionId) {
+            final cacheKeyExt = '${track.extensionId}:${track.id}';
+            final cachedExt = _streamUrlCache[cacheKeyExt];
+            if (cachedExt != null && !cachedExt.isExpired) return cachedExt.url;
+            final url = await src.getStreamUrl(track);
+            if (url != null) _streamUrlCache[cacheKeyExt] = _CachedStreamUrl(url);
+            return url;
+          }
         }
       } catch (_) {}
     }
@@ -201,9 +233,17 @@ class MultiSourceSearch {
     // Use the selected result's exact metadata; a broad UI query can resolve
     // to an unrelated first result.
     final searchQuery = '${track.artist} - ${track.title}'.trim();
-    final fallbackOrder = _filteredSources
+    final baseFallback = _filteredSources
         .where((s) => s.type != track.source && s.type.supportsFullTrack)
         .toList();
+    final extFallback = _extensionSources.where((s) {
+      // For extension tracks, include even if same type but different extension
+      if (track.extensionId != null && s is ExtensionMusicSource) {
+        return s.id != track.extensionId;
+      }
+      return s.type != track.source && s.type.supportsFullTrack;
+    }).toList();
+    final fallbackOrder = [...baseFallback, ...extFallback];
     // Prefer the user's own server, then broad public full-track sources.
     fallbackOrder.sort((a, b) {
       const priority = {

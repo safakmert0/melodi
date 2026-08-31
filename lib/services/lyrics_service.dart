@@ -129,29 +129,6 @@ class LyricsTiming {
     }
     return found;
   }
-
-  /// Resolves the active lyric directly from the playback timeline.
-  ///
-  /// Keeping this conversion in one place is important after a seek: both the
-  /// compact player and the full lyrics screen must apply the same duration
-  /// correction and manual offset before choosing a line.
-  static int findLineIndexAtPlayback({
-    required List<LrcLine> lines,
-    required int playbackPositionMs,
-    int manualOffsetMs = 0,
-    int playbackDurationMs = 0,
-    int lyricsDurationMs = 0,
-  }) {
-    return findLineIndex(
-      lines,
-      lyricPositionMs(
-        playbackPositionMs: playbackPositionMs,
-        manualOffsetMs: manualOffsetMs,
-        playbackDurationMs: playbackDurationMs,
-        lyricsDurationMs: lyricsDurationMs,
-      ),
-    );
-  }
 }
 
 class LyricsResult {
