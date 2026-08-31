@@ -40,17 +40,17 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: true
+          go-version-file: ./go_backend/go.mod
+          cache-dependency-path: ./go_backend/go.sum
         env:
           GOPROXY: https://proxy.golang.org,direct
           GOSUMDB: off
           GONOSUMDB: '*'
 
       - name: Install gomobile
+        working-directory: ./go_backend
         run: |
           go install golang.org/x/mobile/cmd/gomobile@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
           gomobile init
 
       - name: Download Go dependencies

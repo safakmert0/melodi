@@ -4,7 +4,10 @@ go 1.23
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0
-	github.com/dop251/goja v0.0.0-20241126163657-0b7b5c5b5c5b
+	github.com/dop251/goja v0.0.0-20260806115107-493f22071ef6
+	github.com/go-flac/flacpicture/v2 v2.0.2
+	github.com/go-flac/flacvorbis/v2 v2.0.2
+	github.com/go-flac/go-flac/v2 v2.0.4
 	github.com/klauspost/compress v1.17.7
 	github.com/klauspost/cpuid/v2 v2.2.8
 	github.com/pierrec/lz4/v4 v4.1.18
