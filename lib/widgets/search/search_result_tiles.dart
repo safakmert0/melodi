@@ -321,13 +321,13 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
                     ),
                     const SizedBox(height: 12),
                     tile(_DownloadChoice.auto, 'Otomatik (önerilen)', 'En iyi eşleşme tüm kaynaklarda aranır', Icons.auto_awesome_rounded, cs.primary),
-                    tile(_DownloadChoice.youtube, 'YouTube', hasBackendExt ? 'Eklenti ile · yt-dlp backend' : 'Açık kaynak · Piped/yt-dlp', const Color(0xFFFF3B30), const Color(0xFFFF3B30)),
+                    tile(_DownloadChoice.youtube, 'YouTube', hasBackendExt ? 'Eklenti ile · yt-dlp backend' : 'Açık kaynak · Piped/yt-dlp', Icons.smart_display_rounded, const Color(0xFFFF3B30)),
                     if (hasHifiExt)
                       for (final ext in installed.where((e) => e.manifest.kind.name == 'hifi').take(2))
-                        tile(_DownloadChoice.hifi, 'Hi-Fi · ${ext.manifest.name}', '${ext.manifest.author} · ${ext.manifest.version} · Lossless', const Color(0xFF1ED760), const Color(0xFF1ED760)),
-                    if (!hasHifiExt) tile(_DownloadChoice.hifi, 'Hi-Fi', 'Lossless sunucu (eklenti gerekli)', const Color(0xFF1ED760), const Color(0xFF1ED760)),
-                    tile(_DownloadChoice.jiosaavn, 'JioSaavn', '320kbps · Hindistan kataloğu', const Color(0xFF2BC5B4), const Color(0xFF2BC5B4)),
-                    tile(_DownloadChoice.navidrome, 'Navidrome', 'Kendi sunucun', const Color(0xFF6C8CFF), const Color(0xFF6C8CFF)),
+                        tile(_DownloadChoice.hifi, 'Hi-Fi · ${ext.manifest.name}', '${ext.manifest.author} · ${ext.manifest.version} · Lossless', Icons.graphic_eq_rounded, const Color(0xFF1ED760)),
+                    if (!hasHifiExt) tile(_DownloadChoice.hifi, 'Hi-Fi', 'Lossless sunucu (eklenti gerekli)', Icons.graphic_eq_rounded, const Color(0xFF1ED760)),
+                    tile(_DownloadChoice.jiosaavn, 'JioSaavn', '320kbps · Hindistan kataloğu', Icons.waves_rounded, const Color(0xFF2BC5B4)),
+                    tile(_DownloadChoice.navidrome, 'Navidrome', 'Kendi sunucun', Icons.dns_rounded, const Color(0xFF6C8CFF)),
                     const SizedBox(height: 8),
                   ],
                 ),

@@ -47,7 +47,8 @@ class WatchedFolderService {
   Future<void> setWatchedFolder(String path) async {
     try {
       await _db.setSetting(_watchedFolderKey, path.trim());
-      await _db.setSetting(_watchedFolderLastScanKey, DateTime.now().toIso8601String());
+      // Son tarama zamanını sıfırla — bir sonraki açılışta hemen taransın
+      await _db.setSetting(_watchedFolderLastScanKey, '');
     } catch (e) {
       debugPrint('WatchedFolder set failed: $e');
     }
@@ -94,22 +95,24 @@ class WatchedFolderService {
   }
 
   /// Seçili klasörü tarar ve yeni şarkıları kitaplığa ekler.
-  /// Dönüş: eklenen yeni şarkı sayısı.
+  /// Dönüş: eklenen yeni şarkı sayısı. iOS Files app güvenlik kapsamı kaybolsa bile dene.
   Future<int> scanWatchedFolder() async {
     final folder = await getWatchedFolder();
     if (folder == null || folder.isEmpty) return 0;
-    final dir = Directory(folder);
-    if (!await dir.exists()) {
-      debugPrint('WatchedFolder not exists: $folder');
-      return 0;
-    }
     try {
+      // exists() iOS Files app için yetersiz — direkt tara, hata olursa sync fallback dene
       final newSongs = await _scanner.scanDirectoryAndSync(folder);
       await _db.setSetting(_watchedFolderLastScanKey, DateTime.now().toIso8601String());
       debugPrint('WatchedFolder scan: +${newSongs.length} in $folder');
       return newSongs.length;
     } catch (e) {
       debugPrint('WatchedFolder scan failed: $e');
+      // exists kontrolünü atlayarak bir kez daha dene (security scope)
+      try {
+        final dir = Directory(folder);
+        final exists = await dir.exists().timeout(const Duration(seconds: 2), onTimeout: () => false);
+        debugPrint('WatchedFolder exists check after fail: $exists for $folder');
+      } catch (_) {}
       return 0;
     }
   }
@@ -121,11 +124,12 @@ class WatchedFolderService {
       if (folder == null || folder.isEmpty) return;
       final enabled = await isAutoScanEnabled();
       if (!enabled) return;
-      // Debounce: son taramadan 2dk geçmediyse atla (hızlı restart koruması)
+      // Debounce: son başarılı taramadan 60sn geçmediyse atla (hızlı restart koruması)
+      // Boş / başarısız taramalar lastScan güncellenmediği için tekrar denenecek
       final lastStr = await _db.getSetting(_watchedFolderLastScanKey);
       if (lastStr != null && lastStr.isNotEmpty) {
         final last = DateTime.tryParse(lastStr);
-        if (last != null && DateTime.now().difference(last).inMinutes < 2) {
+        if (last != null && DateTime.now().difference(last).inSeconds < 60) {
           debugPrint('WatchedFolder: recent scan skipped');
           return;
         }

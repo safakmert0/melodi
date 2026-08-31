@@ -5,6 +5,15 @@ All notable changes to Melodi will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.11.2] - 2026-08-30
+
+### Fix 8spine + Kaynak Seçim Build + İzleme/İndirme
+- **Build fix** (`search_result_tiles.dart:324` `Color` → `IconData`): `4.11.1` `Error: The argument type 'Color' can't be assigned to parameter type 'IconData'` 5 hata düzeltildi (`Icons.smart_display_rounded`/`graphic_eq_rounded`/etc.)
+- **8spine “Depoya erişilemedi”**: `extension_service.dart:208` `User-Agent` + `12s` timeout + detaylı hata — 14 modül artık stabil
+- **İzleme klasör**: `watched_folder_service.dart:47` set’te `lastScan` sıfırlanır (debounce 2dk→60s), `scanWatchedFolder` `exists()` atlanıp direkt `scanDirectoryAndSync` dener, iOS security-scope fallback loglandı — “doğru çalışmıyor” boş scan + debounce kaynaklıydı
+- **İndirme hatası**: `yt_dlp_service`/`youtube_downloader`/`piped`/`robust_piped`/`hls`/`multi_source` `_allowDirect` artık `any((e)=>e.enabled)` (sadece `backend` değil `hifi` de unlock), Hi-Fi eklentisi varken YouTube fallback bloklanmıyordu — “çevrim içi çalışıyor ama indirme hata” sebebi buydu; indirme bottom sheet de icon fix ile artık açılır
+- **Arama kapsamı**: `SearchSourceFilters` hâlen `Tümü / YouTube / Hi-Fi / Deezer` (doğru), eklentiler Hi-Fi sayacına dahil
+
 ## [4.11.1] - 2026-08-30
 
 ### 8spine Depo Fix + Kaynak Seçim + Arama Kapsamı

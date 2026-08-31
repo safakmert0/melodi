@@ -31,7 +31,7 @@ class MultiSourceSearch {
     if (!AppConfig.isAppStoreBuild) return _sources;
     try {
       final hasBackend = ExtensionService.instance.installed
-          .any((e) => e.enabled && e.manifest.kind == ExtensionKind.backend);
+          .any((e) => e.enabled);
       if (hasBackend) return _sources;
     } catch (_) {}
     // App Store without premium extension: hide YouTube/JioSaavn full-track
@@ -137,7 +137,7 @@ class MultiSourceSearch {
     if (AppConfig.isAppStoreBuild) {
       try {
         final hasBackend = ExtensionService.instance.installed
-            .any((e) => e.enabled && e.manifest.kind == ExtensionKind.backend);
+            .any((e) => e.enabled);
         if (!hasBackend &&
             (track.source == MusicSourceType.youtube ||
                 track.source == MusicSourceType.jiosaavn)) {
