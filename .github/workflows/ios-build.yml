@@ -1,0 +1,262 @@
+name: iOS Build & IPA
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - debug
+      flutter_version:
+        description: 'Flutter version'
+        required: false
+        default: '3.24.3'
+        type: string
+
+env:
+  FLUTTER_VERSION: ${{ github.event.inputs.flutter_version || '3.24.3' }}
+  BUILD_TYPE: ${{ github.event.inputs.build_type || 'release' }}
+  IOS_DEPLOYMENT_TARGET: '15.0'
+  GO_VERSION: '1.23'
+
+jobs:
+  build-go-core:
+    name: Build Go Core (iOS)
+    runs-on: macos-14
+    timeout-minutes: 60
+    outputs:
+      xcframework_path: ${{ steps.xcframework.outputs.path }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Install gomobile
+        run: |
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+          gomobile init
+
+      - name: Download Go dependencies
+        working-directory: ./go_backend
+        run: go mod download
+
+      - name: Verify Go code compiles
+        working-directory: ./go_backend
+        run: go build -v ./cmd/melodicore
+
+      - name: Build XCFramework for iOS
+        id: xcframework
+        working-directory: ./go_backend
+        run: |
+          gomobile bind -target=ios -o MelodiCore.xcframework ./cmd/melodicore
+          echo "path=$(pwd)/MelodiCore.xcframework" >> $GITHUB_OUTPUT
+
+      - name: Verify XCFramework
+        run: |
+          ls -la ${{ steps.xcframework.outputs.path }}
+
+      - name: Upload XCFramework as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MelodiCore-xcframework
+          path: go_backend/MelodiCore.xcframework
+          retention-days: 7
+
+  build-flutter-ios:
+    name: Build Flutter iOS App
+    runs-on: macos-14
+    needs: build-go-core
+    timeout-minutes: 90
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Download XCFramework
+        uses: actions/download-artifact@v4
+        with:
+          name: MelodiCore-xcframework
+          path: go_backend/MelodiCore.xcframework
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Verify Flutter
+        run: flutter --version
+
+      - name: Get Flutter dependencies
+        working-directory: ./melodi-app
+        run: flutter pub get
+
+      - name: Generate localized files
+        working-directory: ./melodi-app
+        run: flutter gen-l10n
+
+      - name: Configure iOS project for MelodiCore
+        run: |
+          chmod +x scripts/configure-ios.sh
+          ./scripts/configure-ios.sh
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.4'
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: Install CocoaPods
+        run: |
+          sudo gem install cocoapods -v 1.15.2
+          pod --version
+
+      - name: Install Pods
+        working-directory: ./melodi-app/ios
+        run: |
+          pod install --repo-update
+
+      - name: Build Flutter iOS (Release)
+        if: env.BUILD_TYPE == 'release'
+        working-directory: ./melodi-app
+        run: |
+          flutter build ios --release --no-codesign \
+            --build-name=$(grep '^version:' pubspec.yaml | cut -d' ' -f2 | cut -d'+' -f1) \
+            --build-number=$(grep '^version:' pubspec.yaml | cut -d'+' -f2)
+
+      - name: Build Flutter iOS (Debug)
+        if: env.BUILD_TYPE == 'debug'
+        working-directory: ./melodi-app
+        run: |
+          flutter build ios --debug --no-codesign \
+            --build-name=$(grep '^version:' pubspec.yaml | cut -d' ' -f2 | cut -d'+' -f1) \
+            --build-number=$(grep '^version:' pubspec.yaml | cut -d'+' -f2)
+
+      - name: Archive for IPA (Release)
+        if: env.BUILD_TYPE == 'release'
+        working-directory: ./melodi-app
+        run: |
+          xcodebuild -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -archivePath build/Runner.xcarchive \
+            -sdk iphoneos \
+            -allowProvisioningUpdates \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            clean archive
+
+      - name: Archive for IPA (Debug)
+        if: env.BUILD_TYPE == 'debug'
+        working-directory: ./melodi-app
+        run: |
+          xcodebuild -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Debug \
+            -archivePath build/Runner.xcarchive \
+            -sdk iphoneos \
+            -allowProvisioningUpdates \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            clean archive
+
+      - name: Export IPA (Unsigned)
+        working-directory: ./melodi-app
+        run: |
+          cat > exportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>ad-hoc</string>
+              <key>teamID</key>
+              <string></string>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>stripSwiftSymbols</key>
+              <true/>
+              <key>compileBitcode</key>
+              <false/>
+              <key>generateAppStoreInformation</key>
+              <false/>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild -exportArchive \
+            -archivePath build/Runner.xcarchive \
+            -exportPath build/ipa \
+            -exportOptionsPlist exportOptions.plist \
+            -allowProvisioningUpdates
+
+      - name: Verify IPA
+        working-directory: ./melodi-app
+        run: |
+          ls -la build/ipa/
+          file build/ipa/*.ipa
+          unzip -l build/ipa/*.ipa | head -30
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: melodi-ipa-${{ env.BUILD_TYPE }}
+          path: melodi-app/build/ipa/*.ipa
+          retention-days: 30
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build-flutter-ios
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'release'
+    permissions:
+      contents: write
+    steps:
+      - name: Download IPA
+        uses: actions/download-artifact@v4
+        with:
+          name: melodi-ipa-release
+          path: ./ipa
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(grep '^version:' melodi-app/pubspec.yaml | cut -d' ' -f2 | cut -d'+' -f1)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Melodi v${{ steps.version.outputs.version }} (iOS)
+          body: |
+            ## Melodi v${{ steps.version.outputs.version }} - iOS Build
+            
+            Built from commit: ${{ github.sha }}
+            
+            ### Changes
+            - Go Core architecture (Flutter + Go)
+            - Extension system with sandboxed JS runtime
+            - Provider-based search/match/resolve/download
+            - Local-first, cloud-optional design
+          files: ./ipa/*.ipa
+          draft: false
+          prerelease: false
