@@ -14,11 +14,11 @@ on:
       flutter_version:
         description: 'Flutter version'
         required: false
-        default: '3.24.3'
+        default: '3.35.4'
         type: string
 
 env:
-  FLUTTER_VERSION: ${{ github.event.inputs.flutter_version || '3.24.3' }}
+  FLUTTER_VERSION: ${{ github.event.inputs.flutter_version || '3.35.4' }}
   BUILD_TYPE: ${{ github.event.inputs.build_type || 'release' }}
   IOS_DEPLOYMENT_TARGET: '15.0'
   GO_VERSION: '1.25'
