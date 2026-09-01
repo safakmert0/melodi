@@ -194,7 +194,7 @@ class DownloadManager {
     // Wi-Fi only kontrolü — Evermusic/SpotiFLAC esintili
     if (_wifiOnly) {
       try {
-        final conn = await Connectivity().checkConnectivity();
+        final conn = await Connectivity().checkConnectivity().timeout(const Duration(seconds: 5), onTimeout: () => [ConnectivityResult.wifi]);
         final isWifi = conn.contains(ConnectivityResult.wifi) || conn.contains(ConnectivityResult.ethernet);
         final isMobile = conn.contains(ConnectivityResult.mobile);
         if (isMobile && !isWifi) {
@@ -234,7 +234,14 @@ class DownloadManager {
       List<OnlineTrack> allTracks = const [];
 
       if (streamUrl == null || streamUrl.isEmpty) {
-        allTracks = await _multiSource.searchAllSync(query, limitPerSource: 3);
+        try {
+          allTracks = await _multiSource.searchAllSync(query, limitPerSource: 3).timeout(const Duration(seconds: 15));
+        } on TimeoutException {
+          debugPrint('Download search timeout for "$query"');
+          allTracks = [];
+        } catch (_) {
+          allTracks = [];
+        }
       }
       if (allTracks.isNotEmpty) {
         final priorityOrder = [
@@ -253,7 +260,7 @@ class DownloadManager {
               task.progress = 0.1;
               task.error = '${track.sourceLabel} deneniyor...';
               _notify();
-              final url = await _multiSource.getStreamUrl(track);
+              final url = await _multiSource.getStreamUrl(track).timeout(const Duration(seconds: 12), onTimeout: () => null);
               if (url != null && url.isNotEmpty) {
                 streamUrl = url;
                 break;
@@ -276,20 +283,28 @@ class DownloadManager {
           task.progress = 0.1;
           task.error = 'YouTube aranıyor...';
           _notify();
-          final searchResults = await _multiSource.searchAllSync(
-            query,
-            limitPerSource: 5,
-          );
+          List<OnlineTrack> searchResults = const [];
+          try {
+            searchResults = await _multiSource.searchAllSync(
+              query,
+              limitPerSource: 5,
+            ).timeout(const Duration(seconds: 15));
+          } catch (_) {
+            searchResults = [];
+          }
           var ytResults = searchResults
               .where((t) => t.source == MusicSourceType.youtube)
               .toList();
           if (ytResults.isEmpty && task.title.trim().isNotEmpty) {
             // "Artist - Title" returned nothing; retry with the title alone so
             // common tagging mismatches still resolve to a playable track.
-            final titleOnly = await _multiSource.searchAllSync(
-              task.title.trim(),
-              limitPerSource: 5,
-            );
+            List<OnlineTrack> titleOnly = const [];
+            try {
+              titleOnly = await _multiSource.searchAllSync(
+                task.title.trim(),
+                limitPerSource: 5,
+              ).timeout(const Duration(seconds: 15));
+            } catch (_) {}
             ytResults = titleOnly
                 .where((t) => t.source == MusicSourceType.youtube)
                 .toList();
@@ -306,20 +321,23 @@ class DownloadManager {
                   'true';
 
           Future<String?> _fetch(bool video) {
+            Future<String?> fut;
             if (video) {
-              return _youtubeDownloader.downloadVideoTrack(
+              fut = _youtubeDownloader.downloadVideoTrack(
                 vid,
                 task.title,
-                task.artist ?? '',
+                task.artist,
                 downloadDir,
               );
+            } else {
+              fut = _youtubeDownloader.downloadFullTrack(
+                vid,
+                task.title,
+                downloadDir,
+                quality: task.requestedQuality,
+              );
             }
-            return _youtubeDownloader.downloadFullTrack(
-              vid,
-              task.title,
-              downloadDir,
-              quality: task.requestedQuality ?? 'high',
-            );
+            return fut.timeout(const Duration(minutes: 5), onTimeout: () => null);
           }
 
           final attempts = asVideo ? [true, false] : [false];
@@ -331,7 +349,11 @@ class DownloadManager {
                 ? 'YouTube video indiriliyor...'
                 : 'YouTube indiriliyor (Backend/Piped)...';
             _notify();
-            resultPath = await _fetch(video);
+            try {
+              resultPath = await _fetch(video);
+            } catch (_) {
+              resultPath = null;
+            }
             if (resultPath != null) break;
           }
 
@@ -341,15 +363,22 @@ class DownloadManager {
             _notify();
 
             if (!task.cancelled) {
-              final importedPath =
-                  await _importDownloadedFile(resultPath, task);
+              String? importedPath;
+              try {
+                importedPath = await _importDownloadedFile(resultPath, task)
+                    .timeout(const Duration(minutes: 2), onTimeout: () => null);
+              } catch (_) {
+                importedPath = null;
+              }
               if (importedPath != null) {
                 task.filePath = importedPath;
                 task.state = DownloadState.completed;
                 task.progress = 1.0;
                 task.error = null;
-                await db.upsertDownloadedTrack(
-                    task.spotifyTrackId, importedPath);
+                try {
+                  await db.upsertDownloadedTrack(task.spotifyTrackId, importedPath)
+                      .timeout(const Duration(seconds: 5));
+                } catch (_) {}
                 onDownloadComplete?.call();
               } else {
                 final downloadedFile = File(resultPath);
@@ -358,8 +387,10 @@ class DownloadManager {
                   task.state = DownloadState.completed;
                   task.progress = 1.0;
                   task.error = null;
-                  await db.upsertDownloadedTrack(
-                      task.spotifyTrackId, resultPath);
+                  try {
+                    await db.upsertDownloadedTrack(task.spotifyTrackId, resultPath)
+                        .timeout(const Duration(seconds: 5));
+                  } catch (_) {}
                   onDownloadComplete?.call();
                 } else {
                   task.state = DownloadState.failed;
@@ -387,15 +418,22 @@ class DownloadManager {
       task.progress = 0.3;
       _notify();
 
-      var resultPath =
-          await _downloadFromUrl(streamUrl, task.title, downloadDir);
+      var resultPath = await _downloadFromUrl(streamUrl, task.title, downloadDir)
+          .timeout(const Duration(minutes: 5), onTimeout: () => null);
 
       if (resultPath == null && !task.cancelled) {
-        resultPath = await _downloadFromYouTube(
-          task: task,
-          searchResults: allTracks,
-          query: query,
-        );
+        try {
+          resultPath = await _downloadFromYouTube(
+            task: task,
+            searchResults: allTracks,
+            query: query,
+          ).timeout(const Duration(minutes: 5));
+        } on TimeoutException {
+          debugPrint('YouTube fallback timeout');
+          resultPath = null;
+        } catch (_) {
+          resultPath = null;
+        }
       }
 
       if (resultPath == null || task.cancelled) {
@@ -432,13 +470,22 @@ class DownloadManager {
       _notify();
 
       if (!task.cancelled) {
-        final importedPath = await _importDownloadedFile(resultPath, task);
+        String? importedPath;
+        try {
+          importedPath = await _importDownloadedFile(resultPath, task)
+              .timeout(const Duration(minutes: 2), onTimeout: () => null);
+        } catch (_) {
+          importedPath = null;
+        }
         if (importedPath != null) {
           task.filePath = importedPath;
           task.state = DownloadState.completed;
           task.progress = 1.0;
           task.error = null;
-          await db.upsertDownloadedTrack(task.spotifyTrackId, importedPath);
+          try {
+            await db.upsertDownloadedTrack(task.spotifyTrackId, importedPath)
+                .timeout(const Duration(seconds: 5));
+          } catch (_) {}
           onDownloadComplete?.call();
         } else {
           final downloadedFile = File(resultPath);
@@ -447,7 +494,10 @@ class DownloadManager {
             task.state = DownloadState.completed;
             task.progress = 1.0;
             task.error = null;
-            await db.upsertDownloadedTrack(task.spotifyTrackId, resultPath);
+            try {
+              await db.upsertDownloadedTrack(task.spotifyTrackId, resultPath)
+                  .timeout(const Duration(seconds: 5));
+            } catch (_) {}
             onDownloadComplete?.call();
           } else {
             task.state = DownloadState.failed;
@@ -495,11 +545,14 @@ class DownloadManager {
         task.progress = 0.15;
         task.error = 'YouTube yedek kaynağı aranıyor...';
         _notify();
-        final searchResults = await _multiSource.searchAllSync(
-          query,
-          limitPerSource: 5,
-        );
-        final ytResults = searchResults
+        List<OnlineTrack> fallbackResults = const [];
+        try {
+          fallbackResults = await _multiSource.searchAllSync(
+            query,
+            limitPerSource: 5,
+          ).timeout(const Duration(seconds: 15));
+        } catch (_) {}
+        final ytResults = fallbackResults
             .where((t) => t.source == MusicSourceType.youtube)
             .toList();
         if (ytResults.isNotEmpty) {
@@ -510,12 +563,16 @@ class DownloadManager {
       task.progress = 0.2;
       task.error = 'YouTube yedek kaynağından indiriliyor...';
       _notify();
-      return await _youtubeDownloader.downloadFullTrack(
-        videoId,
-        task.title,
-        Directory(await StorageManager.instance.getStorageLocation()),
-        quality: task.requestedQuality,
-      );
+      try {
+        return await _youtubeDownloader.downloadFullTrack(
+          videoId,
+          task.title,
+          Directory(await StorageManager.instance.getStorageLocation()),
+          quality: task.requestedQuality,
+        ).timeout(const Duration(minutes: 5), onTimeout: () => null);
+      } on TimeoutException {
+        return null;
+      }
     } catch (error) {
       debugPrint('YouTube fallback download error: $error');
       return null;
@@ -525,6 +582,11 @@ class DownloadManager {
   Future<String?> _downloadFromUrl(
       String url, String title, Directory dir) async {
     // JollyTone/Evermusic/SpotiFLAC esintili: Range resume + background-friendly
+    // Non-http(s) scheme (e.g. youtube://) cannot be fetched via HttpClient — fail fast
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      debugPrint('Download from URL skipped non-http url: $url');
+      return null;
+    }
     File? partFile;
     HttpClient? client;
     try {
@@ -552,32 +614,37 @@ class DownloadManager {
 
       client = HttpClient()
         ..userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)'
-        ..connectionTimeout = const Duration(seconds: 60);
-      final request = await client.getUrl(Uri.parse(url));
+        ..connectionTimeout = const Duration(seconds: 15);
+      final request = await client.getUrl(Uri.parse(url)).timeout(const Duration(seconds: 15));
       request.headers.set('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
       if (existing > 1024) {
         request.headers.set(HttpHeaders.rangeHeader, 'bytes=$existing-');
       }
-      final response = await request.close();
+      final response = await request.close().timeout(const Duration(seconds: 15));
       if (response.statusCode != 200 && response.statusCode != 206) {
         if (existing > 0 && response.statusCode == 416) {
           // Range not satisfiable, restart
-          await partFile.delete();
-          return await _downloadFromUrl(url, title, dir);
+          try { await partFile.delete(); } catch (_) {}
+          return await _downloadFromUrl(url, title, dir).timeout(const Duration(minutes: 5));
         }
         return null;
       }
       // 206 ise append, 200 ise overwrite
       final sink = partFile.openWrite(mode: existing > 0 && response.statusCode == 206 ? FileMode.append : FileMode.write);
-      await response.pipe(sink);
+      await response.pipe(sink).timeout(const Duration(minutes: 5), onTimeout: () {
+        throw TimeoutException('download pipe timeout');
+      });
       await sink.close();
       final len = await partFile.length();
       if (len < 1000) {
-        await partFile.delete();
+        try { await partFile.delete(); } catch (_) {}
         return null;
       }
       await partFile.rename(filePath);
       return filePath;
+    } on TimeoutException catch (e) {
+      debugPrint('Download from URL timeout: $e');
+      return null;
     } catch (e) {
       debugPrint('Download from URL error: $e');
       return null;
@@ -634,7 +701,8 @@ class DownloadManager {
       }
 
       final sourceFile = File(filePath);
-      var metadata = await MetadataService.extractMetadata(filePath);
+      var metadata = await MetadataService.extractMetadata(filePath)
+          .timeout(const Duration(seconds: 10), onTimeout: () => null);
       await sourceFile.rename(destPath);
 
       // ── Kapak resmi gömme (önceden atlanıyordu) ──
@@ -644,7 +712,10 @@ class DownloadManager {
         task.error = 'Kapak resmi ekleniyor...';
         _notify();
         if (task.imageUrl != null && task.imageUrl!.isNotEmpty) {
-          artworkBytes = await _downloadImageBytes(task.imageUrl!);
+          try {
+            artworkBytes = await _downloadImageBytes(task.imageUrl!)
+                .timeout(const Duration(seconds: 10), onTimeout: () => null);
+          } catch (_) {}
         }
         if (artworkBytes == null || artworkBytes.isEmpty) {
           try {
@@ -653,7 +724,7 @@ class DownloadManager {
               artist: task.artist,
               album: task.album ?? '',
               duration: metadata?.duration ?? Duration.zero,
-            );
+            ).timeout(const Duration(seconds: 10), onTimeout: () => null);
           } catch (_) {}
         }
         if (artworkBytes != null && artworkBytes.isNotEmpty) {
@@ -661,10 +732,12 @@ class DownloadManager {
             final ok = await ArtworkEmbeddingService.embedCoverArt(
               filePath: destPath,
               artwork: artworkBytes,
-            );
+            ).timeout(const Duration(seconds: 15), onTimeout: () => false);
             if (ok) {
               try {
-                metadata = await MetadataService.extractMetadata(destPath) ?? metadata;
+                metadata = await MetadataService.extractMetadata(destPath)
+                        .timeout(const Duration(seconds: 8), onTimeout: () => null) ??
+                    metadata;
               } catch (_) {}
             }
           } catch (e) {
@@ -687,22 +760,25 @@ class DownloadManager {
               ? task.expectedDurationMs
               : metadata?.duration.inMilliseconds,
           preferSynced: true,
-        );
+        ).timeout(const Duration(seconds: 10), onTimeout: () => null);
       } catch (error) {
         debugPrint('Downloaded lyrics lookup failed: $error');
       }
       final lyricsText = lyricsResult?.syncedLrc ?? lyricsResult?.plainText;
 
       if (!isVideo) {
-        final processed = await LyricsEmbeddingService.embedAndNormalize(
-          filePath: destPath,
-          lyrics: lyricsText,
-          expectedDurationMs: task.expectedDurationMs,
-        );
-        if (processed) {
-          metadata =
-              await MetadataService.extractMetadata(destPath) ?? metadata;
-        }
+        try {
+          final processed = await LyricsEmbeddingService.embedAndNormalize(
+            filePath: destPath,
+            lyrics: lyricsText,
+            expectedDurationMs: task.expectedDurationMs,
+          ).timeout(const Duration(seconds: 10), onTimeout: () => false);
+          if (processed) {
+            metadata = await MetadataService.extractMetadata(destPath)
+                    .timeout(const Duration(seconds: 8), onTimeout: () => null) ??
+                metadata;
+          }
+        } catch (_) {}
       }
 
       if (!isVideo &&

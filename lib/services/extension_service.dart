@@ -291,11 +291,24 @@ class ExtensionService extends ChangeNotifier {
       _syntheticManifestForBundle(entry);
 
   ExtensionManifest _syntheticManifestForBundle(RegistryEntry entry) {
-    // 8spine/SpotiFLAC JS bundle'ları Melodi'de hifi (lossless) veya backend olarak bridge'lenir.
-    // Varsayılan backend Melodi public backend'i kullanır; kullanıcı sonra baseUrl'i değiştirebilir.
-    // Bot doğrulaması gerektiren SpotiFLAC modülleri de bridge ile bypass edilir (sunucu taraflı çözüm).
+    // 8spine/SpotiFLAC JS bundle'ları öncelikle JS sandbox'ta çalışır (zarzet gerçeği).
+    // Melodi backend (butterfly) yalnızca JS sandbox bot doğrulaması gerektirdiğinde
+    // yedek köprü olarak kullanılır — ana kaynak her zaman orijinal JS'tir.
     const fallbackBackend = 'https://butterfly-crawford-parenting-spotlight.trycloudflare.com';
-    final kind = entry.kind ?? ExtensionKind.backend;
+    // Kind inference: entry.kind yoksa id/name/tags'den hifi çıkarımı yap
+    ExtensionKind inferredKind = entry.kind ?? ExtensionKind.backend;
+    if (entry.kind == null) {
+      final haystack = '${entry.id} ${entry.name} ${entry.description ?? ''}'.toLowerCase();
+      final isLossless = haystack.contains('qobuz') ||
+          haystack.contains('tidal') ||
+          haystack.contains('deezer') ||
+          haystack.contains('flac') ||
+          haystack.contains('hires') ||
+          haystack.contains('hi-res') ||
+          haystack.contains('lossless');
+      if (isLossless) inferredKind = ExtensionKind.hifi;
+    }
+    final kind = inferredKind;
     final caps = kind == ExtensionKind.hifi
         ? ['search', 'playback', 'downloads', 'lossless']
         : ['search', 'playback', 'downloads'];
@@ -303,13 +316,15 @@ class ExtensionService extends ChangeNotifier {
     final homepage = entry.url;
     final is8spine = entry.url.contains('8spine') || entry.id.contains('8spine') || entry.id.contains('morgk') || entry.id.contains('tidal') && entry.url.contains('vercel');
     final author = entry.author ?? (is8spine ? '8spine' : 'zarzet');
+    // Gerçek modül URL'si homepage'de saklanır; baseUrl köprü yedeğidir.
+    // Kullanıcı eklenti kartında her ikisini de görür.
     return ExtensionManifest(
       id: entry.id,
       name: entry.name,
       description: (entry.description ?? '') +
           (entry.url.toLowerCase().endsWith('.js') || entry.url.contains('8spine.js')
-              ? ' — 8spine bridge (Melodi backend ile çalışır, bot doğrulama bypass)'
-              : ' — SpotiFLAC/8spine bridge (Melodi backend ile çalışır, bot doğrulama bypass)'),
+              ? ' — 8spine JS (önce JS sandbox, gerekirse Melodi köprü)'
+              : ' — SpotiFLAC JS (önce JS sandbox, gerekirse Melodi köprü)'),
       version: entry.version ?? '1.0.0',
       author: author,
       kind: kind,

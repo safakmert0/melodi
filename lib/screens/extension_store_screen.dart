@@ -381,11 +381,53 @@ class _InstalledCard extends StatelessWidget {
                         color: theme.colorScheme.onSurfaceVariant)),
               ],
               const SizedBox(height: 6),
-              Text(manifest.baseUrl,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    fontSize: 11,
-                  )),
+              // Gerçek eklentinin JS URL'si (homepage) ile yedek köprü baseUrl'i ayrı göster:
+              // SpotiFLAC/8spine JS modüllerinde homepage = gerçek .sflx/.js, baseUrl = butterfly köprü.
+              // Her ikisi de görünür olmalı ki kullanıcı "gerçek eklentiyi kullanamıyorum" demesin.
+              if (manifest.homepage != null && manifest.homepage!.isNotEmpty && manifest.homepage != manifest.baseUrl) ...[
+                Row(
+                  children: [
+                    Icon(Icons.code_rounded, size: 12, color: theme.colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        'Kaynak: ${manifest.homepage}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontSize: 11,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    Icon(Icons.dns_rounded, size: 12, color: theme.colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        manifest.baseUrl.contains('butterfly')
+                            ? 'Köprü (yedek): ${manifest.baseUrl}'
+                            : 'Sunucu: ${manifest.baseUrl}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontSize: 11,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ] else
+                Text(manifest.baseUrl,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontSize: 11,
+                    )),
               if (outdated) ...[
                 const SizedBox(height: 6),
                 Row(

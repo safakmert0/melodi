@@ -302,6 +302,7 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
     final hasBackendExt = installed.any((e) => e.manifest.kind.name == 'backend');
     final result = await showModalBottomSheet<_DownloadSelection>(
           context: context,
+          isScrollControlled: true,
           backgroundColor: Theme.of(context).colorScheme.surface,
           shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
@@ -325,37 +326,44 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
               );
             }
             return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 12, 8, 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(width: 40, height: 4, decoration: BoxDecoration(color: cs.outlineVariant, borderRadius: BorderRadius.circular(2))),
-                    ),
-                    const SizedBox(height: 12),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('Kaynak seç', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                    ),
-                    const SizedBox(height: 4),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('"${track.title}" için hangi kaynaktan indirilsin?',
-                          style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
-                    ),
-                    const SizedBox(height: 12),
-                    tile(_DownloadChoice.auto, 'Otomatik (önerilen)', 'En iyi eşleşme tüm kaynaklarda aranır', Icons.auto_awesome_rounded, cs.primary),
-                    tile(_DownloadChoice.youtube, 'YouTube', hasBackendExt ? 'Eklenti ile · yt-dlp backend' : 'Açık kaynak · Piped/yt-dlp', Icons.smart_display_rounded, const Color(0xFFFF3B30)),
-                    if (hasHifiExt)
-                      for (final ext in installed.where((e) => e.manifest.kind.name == 'hifi').take(3))
-                        tile(_DownloadChoice.hifi, 'Hi-Fi · ${ext.manifest.name}', '${ext.manifest.author} · ${ext.manifest.version} · Lossless', Icons.graphic_eq_rounded, const Color(0xFF1ED760), extensionId: ext.manifest.id),
-                    if (!hasHifiExt) tile(_DownloadChoice.hifi, 'Hi-Fi', 'Lossless sunucu (eklenti gerekli)', Icons.graphic_eq_rounded, const Color(0xFF1ED760)),
-                    tile(_DownloadChoice.jiosaavn, 'JioSaavn', '320kbps · Hindistan kataloğu', Icons.waves_rounded, const Color(0xFF2BC5B4)),
-                    tile(_DownloadChoice.navidrome, 'Navidrome', 'Kendi sunucun', Icons.dns_rounded, const Color(0xFF6C8CFF)),
-                    const SizedBox(height: 8),
-                  ],
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 12, 8, 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(width: 40, height: 4, decoration: BoxDecoration(color: cs.outlineVariant, borderRadius: BorderRadius.circular(2))),
+                      ),
+                      const SizedBox(height: 12),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text('Kaynak seç', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      ),
+                      const SizedBox(height: 4),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text('"${track.title}" için hangi kaynaktan indirilsin?',
+                            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
+                      ),
+                      const SizedBox(height: 12),
+                      tile(_DownloadChoice.auto, 'Otomatik (önerilen)', 'En iyi eşleşme tüm kaynaklarda aranır', Icons.auto_awesome_rounded, cs.primary),
+                      if (hasBackendExt) ...[
+                        for (final ext in installed.where((e) => e.manifest.kind.name == 'backend').take(3))
+                          tile(_DownloadChoice.youtube, 'YouTube · ${ext.manifest.name}', '${ext.manifest.author} · v${ext.manifest.version} · eklenti', Icons.smart_display_rounded, const Color(0xFFFF3B30), extensionId: ext.manifest.id),
+                        tile(_DownloadChoice.youtube, 'YouTube (genel)', 'Tüm YouTube kaynakları denenecek', Icons.smart_display_rounded, const Color(0xFFFF3B30)),
+                      ] else
+                        tile(_DownloadChoice.youtube, 'YouTube', 'Açık kaynak · Piped/yt-dlp', Icons.smart_display_rounded, const Color(0xFFFF3B30)),
+                      if (hasHifiExt)
+                        for (final ext in installed.where((e) => e.manifest.kind.name == 'hifi').take(3))
+                          tile(_DownloadChoice.hifi, 'Hi-Fi · ${ext.manifest.name}', '${ext.manifest.author} · ${ext.manifest.version} · Lossless', Icons.graphic_eq_rounded, const Color(0xFF1ED760), extensionId: ext.manifest.id),
+                      if (!hasHifiExt) tile(_DownloadChoice.hifi, 'Hi-Fi', 'Lossless sunucu (eklenti gerekli)', Icons.graphic_eq_rounded, const Color(0xFF1ED760)),
+                      tile(_DownloadChoice.jiosaavn, 'JioSaavn', '320kbps · Hindistan kataloğu', Icons.waves_rounded, const Color(0xFF2BC5B4)),
+                      tile(_DownloadChoice.navidrome, 'Navidrome', 'Kendi sunucun', Icons.dns_rounded, const Color(0xFF6C8CFF)),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -365,7 +373,10 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
   }
 
   String _downloadSourceLabel(_DownloadChoice c, {String? extensionName}) {
-    if (c == _DownloadChoice.hifi && extensionName != null && extensionName.isNotEmpty) return 'Hi-Fi · $extensionName';
+    if (extensionName != null && extensionName.isNotEmpty) {
+      if (c == _DownloadChoice.hifi) return 'Hi-Fi · $extensionName';
+      if (c == _DownloadChoice.youtube) return 'YouTube · $extensionName';
+    }
     return switch (c) {
       _DownloadChoice.youtube => 'YouTube',
       _DownloadChoice.hifi => 'Hi-Fi',

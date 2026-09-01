@@ -134,14 +134,24 @@ class JsExtensionService {
   /// SpotiFLAC modülünde arama — JS'deki `search` fonksiyonunu çağırır
   Future<List<Map<String, dynamic>>> search(RegistryEntry entry, String query, {int limit = 20}) async {
     final runtime = await _getRuntime(entry);
+    final encodedQuery = jsonEncode(query);
     final js = '''
       (async function() {
         try {
-          var fn = (typeof search !== 'undefined' ? search : (typeof module !== 'undefined' && module.exports && module.exports.search ? module.exports.search : null));
+          var fn = (typeof search !== 'undefined' ? search
+            : (typeof globalThis !== 'undefined' && typeof globalThis.search !== 'undefined' ? globalThis.search : null)
+            : (typeof module !== 'undefined' && module.exports && module.exports.search ? module.exports.search : null)
+            : (typeof exports !== 'undefined' && exports.search ? exports.search : null));
+          if (!fn) {
+            // Bazı modüller doğrudan export eder: module.exports = async (q,l) => ...
+            if (typeof module !== 'undefined' && typeof module.exports === 'function') fn = module.exports;
+          }
           if (!fn) return JSON.stringify({error: 'search not found'});
-          var res = await fn("$query", $limit);
+          var res = await fn($encodedQuery, $limit);
+          // Bazı modüller {results:[]} sarmalı döner, bazıları doğrudan dizi
+          if (res && typeof res === 'object' && !Array.isArray(res) && res.results) res = res.results;
           return JSON.stringify({results: res});
-        } catch (e) { return JSON.stringify({error: e.toString()}); }
+        } catch (e) { return JSON.stringify({error: e.toString() + (e.stack ? " " + e.stack : "")}); }
       })()
     ''';
     final result = await runtime.evaluateAsync(js);
@@ -159,12 +169,22 @@ class JsExtensionService {
   /// SpotiFLAC modülünde stream URL al — JS'deki `getStreamUrl` veya `getUrl`
   Future<String?> getStreamUrl(RegistryEntry entry, String trackId) async {
     final runtime = await _getRuntime(entry);
+    final encodedId = jsonEncode(trackId);
     final js = '''
       (async function() {
         try {
-          var fn = (typeof getStreamUrl !== 'undefined' ? getStreamUrl : (typeof getUrl !== 'undefined' ? getUrl : (typeof module !== 'undefined' && module.exports ? (module.exports.getStreamUrl || module.exports.getUrl) : null)));
+          var fn = (typeof getStreamUrl !== 'undefined' ? getStreamUrl
+            : (typeof getUrl !== 'undefined' ? getUrl
+            : (typeof getTrackUrl !== 'undefined' ? getTrackUrl
+            : (typeof globalThis !== 'undefined' && globalThis.getStreamUrl ? globalThis.getStreamUrl : null)
+            : (typeof globalThis !== 'undefined' && globalThis.getUrl ? globalThis.getUrl : null)
+            : (typeof module !== 'undefined' && module.exports ? (module.exports.getStreamUrl || module.exports.getUrl || module.exports.getTrackUrl) : null)
+            : (typeof exports !== 'undefined' ? (exports.getStreamUrl || exports.getUrl) : null)
+            )));
           if (!fn) return JSON.stringify({error: 'getStreamUrl not found'});
-          var url = await fn("$trackId");
+          var url = await fn($encodedId);
+          // Bazı modüller obje döner: {url: "..."} veya doğrudan string
+          if (url && typeof url === 'object' && url.url) url = url.url;
           return JSON.stringify({url: url});
         } catch (e) { return JSON.stringify({error: e.toString()}); }
       })()
