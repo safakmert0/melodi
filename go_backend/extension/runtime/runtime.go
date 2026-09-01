@@ -1,17 +1,23 @@
 package runtime
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/dop251/goja"
 	"melodi/go_backend/extension/manifest"
+	"melodi/go_backend/extension/storage"
 	"melodi/go_backend/network"
 )
 
@@ -101,14 +107,14 @@ type Runtime struct {
 	manifest        *manifest.Manifest
 	permissionCheck *network.DomainPermissionChecker
 	httpClient      *network.HTTPClient
-	storage         Storage
+	storage         storage.Storage
 	mu              sync.RWMutex
 	initialized     bool
 	startTime       time.Time
 	executionCount  int64
 }
 
-func NewRuntime(m *manifest.Manifest, httpClient *network.HTTPClient, storage Storage) (*Runtime, error) {
+func NewRuntime(m *manifest.Manifest, httpClient *network.HTTPClient, storage storage.Storage) (*Runtime, error) {
 	if m == nil {
 		return nil, fmt.Errorf("manifest is required")
 	}

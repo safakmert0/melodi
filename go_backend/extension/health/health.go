@@ -205,7 +205,6 @@ func (c *CompositeChecker) Check(ctx context.Context) HealthCheckResult {
 	c.mu.RUnlock()
 
 	var allHealthy = true
-	var lastErr error
 	details := make(map[string]string)
 
 	for _, checker := range checkers {
@@ -213,7 +212,6 @@ func (c *CompositeChecker) Check(ctx context.Context) HealthCheckResult {
 		details[fmt.Sprintf("%p", checker)] = string(result.Status)
 		if result.Status != HealthHealthy {
 			allHealthy = false
-			lastErr = fmt.Errorf("%s", result.Error)
 		}
 	}
 

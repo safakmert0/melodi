@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"time"
 
-	"melodi/go_backend/download/manager"
-	"melodi/go_backend/extension/manager"
+	"melodi/go_backend/download"
+	dlmanager "melodi/go_backend/download/manager"
+	"melodi/go_backend/extension/installer"
+	extmanager "melodi/go_backend/extension/manager"
 	"melodi/go_backend/filesystem"
 	"melodi/go_backend/matching"
 	"melodi/go_backend/metadata"
@@ -25,8 +26,8 @@ var (
 )
 
 type Core struct {
-	extManager      *manager.Manager
-	downloadManager *manager.DownloadManager
+	extManager      *extmanager.Manager
+	downloadManager *dlmanager.DownloadManager
 	searchEngine    *search.Engine
 	matcher         *matching.Matcher
 	resolver        *resolver.Resolver
@@ -89,7 +90,11 @@ func (c *Core) Initialize(ctx context.Context) error {
 	}
 
 	// Initialize HTTP client
-	c.httpClient = network.NewHTTPClient(network.DefaultClientConfig())
+	httpClient, err := network.NewHTTPClient(network.DefaultClientConfig())
+	if err != nil {
+		return fmt.Errorf("failed to create http client: %w", err)
+	}
+	c.httpClient = httpClient
 
 	// Initialize filesystem
 	fs, err := filesystem.NewFilesystem(c.config.StorageRoot, 0)
@@ -99,14 +104,14 @@ func (c *Core) Initialize(ctx context.Context) error {
 	c.fs = fs
 
 	// Initialize extension manager
-	extConfig := manager.DefaultManagerConfig()
+	extConfig := extmanager.DefaultManagerConfig()
 	extConfig.StorageRoot = c.config.StorageRoot
 	extConfig.StorageQuota = c.config.ExtensionStorageQuota
 	extConfig.MaxFileSize = c.config.ExtensionMaxFileSize
 	extConfig.CurrentAppVersion = c.config.CurrentAppVersion
 	extConfig.APIVersion = c.config.APIVersion
 
-	extManager, err := manager.NewManager(c.httpClient, extConfig)
+	extManager, err := extmanager.NewManager(c.httpClient, extConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create extension manager: %w", err)
 	}
@@ -132,11 +137,11 @@ func (c *Core) Initialize(ctx context.Context) error {
 	c.resolver = resolver.NewResolver(resolverConfig, c.providerChain)
 
 	// Initialize download manager
-	dlConfig := manager.DefaultDownloadManagerConfig()
+	dlConfig := dlmanager.DefaultDownloadManagerConfig()
 	dlConfig.StorageRoot = c.config.DownloadStorageRoot
 	dlConfig.DownloaderConfig.MaxConcurrentDownloads = c.config.MaxConcurrentDownloads
 
-	dlManager, err := manager.NewDownloadManager(dlConfig, c.fs)
+	dlManager, err := dlmanager.NewDownloadManager(dlConfig, c.fs)
 	if err != nil {
 		return fmt.Errorf("failed to create download manager: %w", err)
 	}
@@ -515,7 +520,7 @@ func (c *Core) Download(ctx context.Context, req DownloadRequest) (*DownloadResp
 		quality = download.Quality(req.Quality)
 	}
 
-	dlReq := manager.DownloadRequest{
+	dlReq := dlmanager.DownloadRequest{
 		URL:               req.URL,
 		Title:             req.Title,
 		Artist:            req.Artist,

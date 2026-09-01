@@ -192,7 +192,7 @@ func validateBaseURL(baseURL string) error {
 		return ErrInvalidBaseURL
 	}
 	u, err := url.Parse(baseURL)
-	if err != nil || !u.HasScheme() || (u.Scheme != "http" && u.Scheme != "https") {
+	if err != nil || u.Scheme == "" || (u.Scheme != "http" && u.Scheme != "https") {
 		return fmt.Errorf("%w: %s", ErrInvalidBaseURL, baseURL)
 	}
 	if u.Host == "" {
@@ -262,6 +262,14 @@ func (m *Manifest) HealthURL() string {
 		path = "/" + path
 	}
 	return base + path
+}
+
+func ParseManifest(data []byte) (*Manifest, error) {
+	var m Manifest
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil, err
+	}
+	return &m, nil
 }
 
 type RegistryEntry struct {
@@ -336,7 +344,7 @@ func parseRegistryEntry(m map[string]interface{}, baseURL string) *RegistryEntry
 
 	id := strings.TrimSpace(strings.ToLower(getString(m, "id")))
 	if id == "" {
-		for _, seg := range u.PathSegments() {
+		for _, seg := range strings.Split(u.Path, "/") {
 			if strings.HasSuffix(seg, ".json") {
 				id = strings.TrimSuffix(seg, ".json")
 				break
@@ -378,7 +386,7 @@ func getString(m map[string]interface{}, keys ...string) string {
 
 func resolveURL(raw, baseURL string) string {
 	u, err := url.Parse(raw)
-	if err == nil && u.HasScheme() && (u.Scheme == "http" || u.Scheme == "https") {
+	if err == nil && u.Scheme != "" && (u.Scheme == "http" || u.Scheme == "https") {
 		return raw
 	}
 	if baseURL == "" {

@@ -243,8 +243,7 @@ func (r *Registry) Unregister(id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	provider, exists := r.providers[id]
-	if !exists {
+	if _, exists := r.providers[id]; !exists {
 		return ErrProviderNotFound
 	}
 
@@ -399,9 +398,16 @@ func (c *ProviderChain) Metadata(ctx context.Context, id string) (*TrackMetadata
 		return nil, ErrNoProviders
 	}
 
-	return c.executeSingleWithFallback(ctx, providers, func(ctx context.Context, p Provider) (*TrackMetadata, error) {
+	result, err := c.executeSingleWithFallback(ctx, providers, func(ctx context.Context, p Provider) (interface{}, error) {
 		return p.Metadata(ctx, id)
 	})
+	if err != nil {
+		return nil, err
+	}
+	if result == nil {
+		return nil, ErrProviderNotFound
+	}
+	return result.(*TrackMetadata), nil
 }
 
 func (c *ProviderChain) Stream(ctx context.Context, id string, quality string) (*StreamInfo, error) {
@@ -410,9 +416,16 @@ func (c *ProviderChain) Stream(ctx context.Context, id string, quality string) (
 		return nil, ErrNoProviders
 	}
 
-	return c.executeSingleWithFallback(ctx, providers, func(ctx context.Context, p Provider) (*StreamInfo, error) {
+	result, err := c.executeSingleWithFallback(ctx, providers, func(ctx context.Context, p Provider) (interface{}, error) {
 		return p.Stream(ctx, id, quality)
 	})
+	if err != nil {
+		return nil, err
+	}
+	if result == nil {
+		return nil, ErrProviderNotFound
+	}
+	return result.(*StreamInfo), nil
 }
 
 func (c *ProviderChain) Download(ctx context.Context, id string, quality string) (*DownloadInfo, error) {
@@ -421,9 +434,16 @@ func (c *ProviderChain) Download(ctx context.Context, id string, quality string)
 		return nil, ErrNoProviders
 	}
 
-	return c.executeSingleWithFallback(ctx, providers, func(ctx context.Context, p Provider) (*DownloadInfo, error) {
+	result, err := c.executeSingleWithFallback(ctx, providers, func(ctx context.Context, p Provider) (interface{}, error) {
 		return p.Download(ctx, id, quality)
 	})
+	if err != nil {
+		return nil, err
+	}
+	if result == nil {
+		return nil, ErrProviderNotFound
+	}
+	return result.(*DownloadInfo), nil
 }
 
 func (c *ProviderChain) Lyrics(ctx context.Context, id string) (*LyricsResult, error) {
@@ -432,9 +452,16 @@ func (c *ProviderChain) Lyrics(ctx context.Context, id string) (*LyricsResult, e
 		return nil, ErrNoProviders
 	}
 
-	return c.executeSingleWithFallback(ctx, providers, func(ctx context.Context, p Provider) (*LyricsResult, error) {
+	result, err := c.executeSingleWithFallback(ctx, providers, func(ctx context.Context, p Provider) (interface{}, error) {
 		return p.Lyrics(ctx, id)
 	})
+	if err != nil {
+		return nil, err
+	}
+	if result == nil {
+		return nil, ErrProviderNotFound
+	}
+	return result.(*LyricsResult), nil
 }
 
 func (c *ProviderChain) Health(ctx context.Context) map[string]HealthResult {
@@ -446,6 +473,23 @@ func (c *ProviderChain) Health(ctx context.Context) map[string]HealthResult {
 	}
 
 	return results
+}
+
+func (c *ProviderChain) GetByCapability(cap Capability) []Provider {
+	return c.registry.GetByCapability(cap)
+}
+
+func (c *ProviderChain) GetAvailableByCapability(cap Capability) []Provider {
+	return c.registry.GetAvailableByCapability(cap)
+}
+
+func (c *ProviderChain) GetProvider(id string) Provider {
+	p, _ := c.registry.Get(id)
+	return p
+}
+
+func (c *ProviderChain) Registry() *Registry {
+	return c.registry
 }
 
 func (c *ProviderChain) executeWithFallback(ctx context.Context, providers []Provider, fn func(context.Context, Provider) ([]SearchResult, error)) ([]SearchResult, error) {

@@ -108,7 +108,7 @@ func DefaultResolverConfig() ResolverConfig {
 
 type Resolver struct {
 	config   ResolverConfig
-	provider provider.ProviderChain
+	provider *provider.ProviderChain
 	matcher  *matching.Matcher
 	mu       sync.RWMutex
 	stats    ResolverStats
@@ -121,7 +121,7 @@ type ResolverStats struct {
 	AvgLatency        time.Duration
 }
 
-func NewResolver(config ResolverConfig, provider provider.ProviderChain) *Resolver {
+func NewResolver(config ResolverConfig, provider *provider.ProviderChain) *Resolver {
 	if config.DefaultQuality == "" {
 		config = DefaultResolverConfig()
 	}

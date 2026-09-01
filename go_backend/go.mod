@@ -1,18 +1,12 @@
 module melodi/go_backend
 
-go 1.23
+go 1.25.0
+
+require github.com/dop251/goja v0.0.0-20260901132549-43234fa61381
 
 require (
-	github.com/cespare/xxhash/v2 v2.3.0
-	github.com/dop251/goja v0.0.0-20260806115107-493f22071ef6
-	github.com/go-flac/flacpicture/v2 v2.0.2
-	github.com/go-flac/flacvorbis/v2 v2.0.2
-	github.com/go-flac/go-flac/v2 v2.0.4
-	github.com/klauspost/compress v1.17.7
-	github.com/klauspost/cpuid/v2 v2.2.8
-	github.com/pierrec/lz4/v4 v4.1.18
-	golang.org/x/crypto v0.28.0
-	golang.org/x/net v0.29.0
-	golang.org/x/sync v0.7.0
-	golang.org/x/text v0.17.0
+	github.com/dlclark/regexp2/v2 v2.5.2 // indirect
+	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
+	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
+	golang.org/x/text v0.3.8 // indirect
 )

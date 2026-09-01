@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -472,6 +470,13 @@ type FLACProcessor struct {
 }
 
 func (p *FLACProcessor) SupportsFormat(format Format) bool { return format == FormatFLAC }
+func (p *FLACProcessor) DetectFormat(path string) (Format, error) {
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext == ".flac" {
+		return FormatFLAC, nil
+	}
+	return "", ErrUnsupportedFormat
+}
 func (p *FLACProcessor) Read(ctx context.Context, path string) (*Metadata, error) { return p.reader.Read(ctx, path) }
 func (p *FLACProcessor) ReadTags(ctx context.Context, path string) (Tag, error) { return p.reader.ReadTags(ctx, path) }
 func (p *FLACProcessor) ReadTechnical(ctx context.Context, path string) (TechnicalInfo, error) { return p.reader.ReadTechnical(ctx, path) }
@@ -485,6 +490,13 @@ type MP3Processor struct {
 }
 
 func (p *MP3Processor) SupportsFormat(format Format) bool { return format == FormatMP3 }
+func (p *MP3Processor) DetectFormat(path string) (Format, error) {
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext == ".mp3" {
+		return FormatMP3, nil
+	}
+	return "", ErrUnsupportedFormat
+}
 func (p *MP3Processor) Read(ctx context.Context, path string) (*Metadata, error) { return p.reader.Read(ctx, path) }
 func (p *MP3Processor) ReadTags(ctx context.Context, path string) (Tag, error) { return p.reader.ReadTags(ctx, path) }
 func (p *MP3Processor) ReadTechnical(ctx context.Context, path string) (TechnicalInfo, error) { return p.reader.ReadTechnical(ctx, path) }
@@ -498,6 +510,13 @@ type M4AProcessor struct {
 }
 
 func (p *M4AProcessor) SupportsFormat(format Format) bool { return format == FormatM4A }
+func (p *M4AProcessor) DetectFormat(path string) (Format, error) {
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext == ".m4a" || ext == ".mp4" {
+		return FormatM4A, nil
+	}
+	return "", ErrUnsupportedFormat
+}
 func (p *M4AProcessor) Read(ctx context.Context, path string) (*Metadata, error) { return p.reader.Read(ctx, path) }
 func (p *M4AProcessor) ReadTags(ctx context.Context, path string) (Tag, error) { return p.reader.ReadTags(ctx, path) }
 func (p *M4AProcessor) ReadTechnical(ctx context.Context, path string) (TechnicalInfo, error) { return p.reader.ReadTechnical(ctx, path) }
@@ -511,6 +530,16 @@ type OGGProcessor struct {
 }
 
 func (p *OGGProcessor) SupportsFormat(format Format) bool { return format == FormatOGG || format == FormatOPUS }
+func (p *OGGProcessor) DetectFormat(path string) (Format, error) {
+	ext := strings.ToLower(filepath.Ext(path))
+	if ext == ".ogg" {
+		return FormatOGG, nil
+	}
+	if ext == ".opus" {
+		return FormatOPUS, nil
+	}
+	return "", ErrUnsupportedFormat
+}
 func (p *OGGProcessor) Read(ctx context.Context, path string) (*Metadata, error) { return p.reader.Read(ctx, path) }
 func (p *OGGProcessor) ReadTags(ctx context.Context, path string) (Tag, error) { return p.reader.ReadTags(ctx, path) }
 func (p *OGGProcessor) ReadTechnical(ctx context.Context, path string) (TechnicalInfo, error) { return p.reader.ReadTechnical(ctx, path) }

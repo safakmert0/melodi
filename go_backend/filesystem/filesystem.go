@@ -1,10 +1,7 @@
 package filesystem
 
 import (
-	"context"
 	"errors"
-	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -217,8 +214,7 @@ func (s *SandboxFilesystem) RemoveAll(path string) error {
 		return err
 	}
 
-	info, err := os.Stat(absPath)
-	if err != nil {
+	if _, err := os.Stat(absPath); err != nil {
 		if os.IsNotExist(err) {
 			return ErrNotFound
 		}
@@ -313,8 +309,7 @@ func (s *SandboxFilesystem) WalkDir(root string, fn func(path string, d fs.DirEn
 }
 
 func (s *SandboxFilesystem) DiskUsage(path string) (int64, int64, int64, error) {
-	absPath, err := s.validatePath(path)
-	if err != nil {
+	if _, err := s.validatePath(path); err != nil {
 		return 0, 0, 0, err
 	}
 

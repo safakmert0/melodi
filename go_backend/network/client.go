@@ -65,8 +65,9 @@ type HTTPClient struct {
 
 func NewHTTPClient(config ClientConfig) (*HTTPClient, error) {
 	jar, _ := cookiejar.New(nil)
+	var cookieJar http.CookieJar = jar
 	if config.CookieJar != nil {
-		jar = config.CookieJar
+		cookieJar = config.CookieJar
 	}
 
 	if config.PermissionChecker == nil {
@@ -93,7 +94,7 @@ func NewHTTPClient(config ClientConfig) (*HTTPClient, error) {
 	client := &http.Client{
 		Transport: transport,
 		Timeout:   config.Timeout,
-		Jar:       jar,
+		Jar:       cookieJar,
 	}
 
 	return &HTTPClient{

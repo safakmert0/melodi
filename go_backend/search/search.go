@@ -3,7 +3,6 @@ package search
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sort"
 	"strings"
 	"sync"
@@ -63,7 +62,7 @@ func DefaultEngineConfig() EngineConfig {
 
 type Engine struct {
 	config      EngineConfig
-	provider    provider.ProviderChain
+	provider    *provider.ProviderChain
 	matcher     *matching.Matcher
 	mu          sync.RWMutex
 	stats       EngineStats
@@ -76,7 +75,7 @@ type EngineStats struct {
 	TotalLatency    time.Duration
 }
 
-func NewEngine(config EngineConfig, provider provider.ProviderChain, matcher *matching.Matcher) *Engine {
+func NewEngine(config EngineConfig, provider *provider.ProviderChain, matcher *matching.Matcher) *Engine {
 	if config.DefaultLimit == 0 {
 		config = DefaultEngineConfig()
 	}
@@ -154,10 +153,8 @@ func (e *Engine) searchSources(ctx context.Context, query provider.SearchQuery, 
 
 	if len(include) > 0 {
 		for _, id := range include {
-			if p, ok := e.provider.(*provider.ProviderChain); ok {
-				if prov := p.GetProvider(id); prov != nil {
-					providers = append(providers, prov)
-				}
+			if prov := e.provider.GetProvider(id); prov != nil {
+				providers = append(providers, prov)
 			}
 		}
 	} else {

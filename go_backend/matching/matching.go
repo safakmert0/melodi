@@ -2,11 +2,9 @@ package matching
 
 import (
 	"errors"
-	"fmt"
 	"regexp"
 	"sort"
 	"strings"
-	"unicode"
 )
 
 var (
@@ -360,15 +358,19 @@ func (n *Normalizer) NormalizeTitle(title string) string {
 	s := n.removeAccents(title)
 	s = strings.ToLower(s)
 
-	patterns := []*regexp.Regexp{
-		regexp.MustCompile(`[\(\[].*?(feat\.|ft\.|featuring).*?[\)\]]`, regexp.IGNORECASE),
-		regexp.MustCompile(`-\s*(feat\.|ft\.|featuring).*`, regexp.IGNORECASE),
-		regexp.MustCompile(`[^\w\s]`),
-		regexp.MustCompile(`\s+`),
+	type repl struct {
+		re   *regexp.Regexp
+		repl string
+	}
+	patterns := []repl{
+		{regexp.MustCompile(`(?i)[\(\[].*?(feat\.|ft\.|featuring).*?[\)\]]`), " "},
+		{regexp.MustCompile(`(?i)-\s*(feat\.|ft\.|featuring).*`), " "},
+		{regexp.MustCompile(`[^\w\s]`), " "},
+		{regexp.MustCompile(`\s+`), " "},
 	}
 
-	for _, re := range patterns {
-		s = re.ReplaceAllString(s, " ")
+	for _, p := range patterns {
+		s = p.re.ReplaceAllString(s, p.repl)
 	}
 
 	return strings.TrimSpace(s)
@@ -378,20 +380,24 @@ func (n *Normalizer) NormalizeArtist(artist string) string {
 	s := n.removeAccents(artist)
 	s = strings.ToLower(s)
 
-	patterns := []*regexp.Regexp{
-		regexp.MustCompile(`[\(\[].*?(feat\.|ft\.|featuring).*?[\)\]]`, regexp.IGNORECASE),
-		regexp.MustCompile(`-\s*(feat\.|ft\.|featuring).*`, regexp.IGNORECASE),
-		regexp.MustCompile(`\s*&\s*`, " and "),
-		regexp.MustCompile(`\s*,\s*`, " and "),
-		regexp.MustCompile(`\s*x\s*`, " and "),
-		regexp.MustCompile(`\b(topic|vevo|official)\b`, ""),
-		regexp.MustCompile(`-?\s*topic\s*songs?`, ""),
-		regexp.MustCompile(`[^\w\s]`),
-		regexp.MustCompile(`\s+`),
+	type repl struct {
+		re   *regexp.Regexp
+		repl string
+	}
+	patterns := []repl{
+		{regexp.MustCompile(`(?i)[\(\[].*?(feat\.|ft\.|featuring).*?[\)\]]`), " "},
+		{regexp.MustCompile(`(?i)-\s*(feat\.|ft\.|featuring).*`), " "},
+		{regexp.MustCompile(`\s*&\s*`), " and "},
+		{regexp.MustCompile(`\s*,\s*`), " and "},
+		{regexp.MustCompile(`\s*x\s*`), " and "},
+		{regexp.MustCompile(`\b(topic|vevo|official)\b`), " "},
+		{regexp.MustCompile(`(?i)-?\s*topic\s*songs?`), " "},
+		{regexp.MustCompile(`[^\w\s]`), " "},
+		{regexp.MustCompile(`\s+`), " "},
 	}
 
-	for _, re := range patterns {
-		s = re.ReplaceAllString(s, " ")
+	for _, p := range patterns {
+		s = p.re.ReplaceAllString(s, p.repl)
 	}
 
 	return strings.TrimSpace(s)
