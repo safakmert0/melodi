@@ -62,6 +62,12 @@ fi
 
 # 6. Create bridging header for Swift-Objective-C interop
 BRIDGING_HEADER="$IOS_DIR/Runner/Runner-Bridging-Header.h"
+# Check if XCFramework is placeholder (dummy)
+IS_PLACEHOLDER=false
+if [ -f "$XCFRAMEWORK_DEST/ios-arm64/MelodiCore.framework/MelodiCore" ] && grep -q "placeholder" "$XCFRAMEWORK_DEST/ios-arm64/MelodiCore.framework/MelodiCore" 2>/dev/null; then
+  IS_PLACEHOLDER=true
+  echo "ℹ️  Placeholder XCFramework detected, Go integration will be stubbed"
+fi
 if [ ! -f "$BRIDGING_HEADER" ]; then
   echo "📝 Creating bridging header..."
   cat > "$BRIDGING_HEADER" << 'EOF'
@@ -70,7 +76,8 @@ if [ ! -f "$BRIDGING_HEADER" ]; then
 //  Runner
 //
 
-#import "MelodiCorePlugin.h"
+#import "GeneratedPluginRegistrant.h"
+#import "../Classes/MelodiCorePlugin.h"
 EOF
   
   # Add bridging header to build settings
@@ -78,14 +85,25 @@ EOF
     perl -i -pe 's/(FRAMEWORK_SEARCH_PATHS = \([^)]*\))/$1\n\t\tSWIFT_OBJC_BRIDGING_HEADER = "Runner\/Runner-Bridging-Header.h";/' "$PROJECT_FILE" 2>/dev/null || true
   fi
 else
-  # Ensure MelodiCorePlugin.h is imported
+  # Ensure MelodiCorePlugin.h is imported with correct relative path
   if ! grep -q "MelodiCorePlugin.h" "$BRIDGING_HEADER" 2>/dev/null; then
-    echo '#import "MelodiCorePlugin.h"' >> "$BRIDGING_HEADER"
+    # If placeholder, don't add Go import to avoid build failure
+    if [ "$IS_PLACEHOLDER" = false ]; then
+      echo '#import "../Classes/MelodiCorePlugin.h"' >> "$BRIDGING_HEADER"
+    else
+      echo "ℹ️  Skipping MelodiCore import for placeholder XCFramework"
+    fi
+  elif grep -q '#import "MelodiCorePlugin.h"' "$BRIDGING_HEADER" 2>/dev/null; then
+    # Fix old incorrect import
+    perl -i -pe 's|#import "MelodiCorePlugin.h"|#import "../Classes/MelodiCorePlugin.h"|' "$BRIDGING_HEADER" 2>/dev/null || true
+    echo "🔧 Fixed MelodiCore import path in bridging header"
   fi
 fi
 
-# 6. Register plugin in AppDelegate (optional)
-if [ -f "$APPDELEGATE" ]; then
+# 6. Register plugin in AppDelegate (optional) - skip for placeholder
+if [ "$IS_PLACEHOLDER" = true ]; then
+  echo "ℹ️  Skipping AppDelegate MelodiCore registration for placeholder XCFramework"
+elif [ -f "$APPDELEGATE" ]; then
   if ! grep -q "MelodiCorePlugin" "$APPDELEGATE" 2>/dev/null; then
     echo "📝 Registering MelodiCorePlugin in AppDelegate..."
     
