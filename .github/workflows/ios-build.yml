@@ -212,32 +212,35 @@ jobs:
 
       - name: Export IPA (Unsigned)
         run: |
-          cat > exportOptions.plist << EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>method</key>
-              <string>ad-hoc</string>
-              <key>teamID</key>
-              <string></string>
-              <key>signingStyle</key>
-              <string>manual</string>
-              <key>stripSwiftSymbols</key>
-              <true/>
-              <key>compileBitcode</key>
-              <false/>
-              <key>generateAppStoreInformation</key>
-              <false/>
-          </dict>
-          </plist>
-          EOF
-
-          xcodebuild -exportArchive \
-            -archivePath build/Runner.xcarchive \
-            -exportPath build/ipa \
-            -exportOptionsPlist exportOptions.plist \
-            -allowProvisioningUpdates
+          echo "📦 Creating unsigned IPA via Payload method (no teamID required)"
+          # Flutter built app is at build/ios/iphoneos/Runner.app, archive at build/Runner.xcarchive
+          APP_PATH="build/ios/iphoneos/Runner.app"
+          if [ ! -d "$APP_PATH" ]; then
+            # Fallback to archive product
+            APP_PATH="build/Runner.xcarchive/Products/Applications/Runner.app"
+          fi
+          if [ ! -d "$APP_PATH" ]; then
+            echo "❌ Runner.app not found"
+            find build -name "Runner.app" -type d 2>/dev/null | head -20
+            ls -la build/ios/iphoneos/ 2>/dev/null | head -20
+            ls -la build/Runner.xcarchive/Products/Applications/ 2>/dev/null | head -20
+            exit 1
+          fi
+          echo "✅ Found app at $APP_PATH"
+          du -sh "$APP_PATH"
+          ls -la "$APP_PATH/Frameworks/" 2>/dev/null | head -20 || echo "No Frameworks"
+          mkdir -p build/ipa/Payload
+          rm -rf build/ipa/Payload/Runner.app
+          cp -r "$APP_PATH" build/ipa/Payload/
+          # Ensure correct permissions
+          chmod -R 755 build/ipa/Payload/Runner.app 2>/dev/null || true
+          cd build/ipa
+          zip -r Melodi-unsigned.ipa Payload/ -q
+          echo "✅ IPA created"
+          ls -lh Melodi-unsigned.ipa
+          cd ../..
+          # Also keep compatibility for upload path pattern
+          ls -lh build/ipa/*.ipa
 
       - name: Verify IPA
         run: |
