@@ -25,5 +25,9 @@ BUILD_INSTRUCTIONS.txt
 build_ipa.sh
 assets/fonts/*.zip
 
+# Android - iPhone öncelikli, android build gerekli değil
+android/local.properties
+android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+
 # Reference extracted IPAs (third-party apps) - never commit
 reference/
