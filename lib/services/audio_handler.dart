@@ -1168,6 +1168,43 @@ try {
 }
 
 @immutable
+class PlaybackDurationPolicy {
+  const PlaybackDurationPolicy._();
+
+  static Duration effectiveDuration({
+    required Duration expected,
+    required Duration decoded,
+    required bool isRemote,
+  }) {
+    if (decoded <= Duration.zero) return expected;
+    if (!isRemote || expected <= Duration.zero) return decoded;
+
+    final toleranceMs = _toleranceMs(expected);
+    final excessMs = decoded.inMilliseconds - expected.inMilliseconds;
+    return excessMs > toleranceMs ? expected : decoded;
+  }
+
+  static bool shouldStopAt({
+    required Duration position,
+    required Duration effectiveDuration,
+    required Duration decodedDuration,
+  }) {
+    if (effectiveDuration <= Duration.zero ||
+        decodedDuration <= effectiveDuration ||
+        decodedDuration.inMilliseconds - effectiveDuration.inMilliseconds <
+            _toleranceMs(effectiveDuration)) {
+      return false;
+    }
+    return position >= effectiveDuration - const Duration(milliseconds: 250);
+  }
+
+  static int _toleranceMs(Duration duration) {
+    final proportional = (duration.inMilliseconds * 0.03).round();
+    return proportional > 7000 ? proportional : 7000;
+  }
+}
+
+@immutable
 class PlaybackFailurePlan {
   const PlaybackFailurePlan._();
 
