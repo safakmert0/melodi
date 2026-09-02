@@ -20,7 +20,7 @@ on:
 env:
   FLUTTER_VERSION: ${{ github.event.inputs.flutter_version || '3.35.4' }}
   BUILD_TYPE: ${{ github.event.inputs.build_type || 'release' }}
-  IOS_DEPLOYMENT_TARGET: '15.0'
+  IOS_DEPLOYMENT_TARGET: '16.0'
   GO_VERSION: '1.25'
 
 jobs:

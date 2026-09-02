@@ -572,7 +572,6 @@ class AppLocale {
       'import_playlist': 'Import Playlist',
       'import_playlist_hint':
           'Paste a Spotify, YouTube Music or Deezer playlist link. Songs are matched and can be streamed/downloaded online.',
-      'playlist_name': 'Playlist Name',
       'importing': 'Importing...',
       'import': 'Import',
       'playlist_imported': 'Playlist imported.',
@@ -1129,7 +1128,6 @@ class AppLocale {
       'import_playlist': 'Çalma Listesi İçe Aktar',
       'import_playlist_hint':
           'Spotify, YouTube Music veya Deezer çalma listesi bağlantısını yapıştırın. Şarkılar eşleştirilir ve çevrim içi dinlenebilir/indirilebilir.',
-      'playlist_name': 'Çalma Listesi Adı',
       'importing': 'İçe aktarılıyor...',
       'import': 'İçe Aktar',
       'playlist_imported': 'Çalma listesi içe aktarıldı.',
@@ -1681,7 +1679,6 @@ class AppLocale {
       'import_playlist': 'Playlist importieren',
       'import_playlist_hint':
           'Füge einen Spotify-, YouTube-Music- oder Deezer-Playlist-Link ein. Titel werden abgeglichen und können online gestreamt/heruntergeladen werden.',
-      'playlist_name': 'Playlist-Name',
       'importing': 'Wird importiert...',
       'import': 'Importieren',
       'playlist_imported': 'Playlist importiert.',
