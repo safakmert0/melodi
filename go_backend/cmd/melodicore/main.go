@@ -160,6 +160,29 @@ func Resolve(requestJSON *C.char) *C.char {
 	return C.CString(string(data))
 }
 
+//export ResolveStream
+func ResolveStream(requestJSON *C.char) *C.char {
+	coreMu.RLock()
+	defer coreMu.RUnlock()
+	if core == nil {
+		return C.CString(`{"error":"not initialized"}`)
+	}
+
+	ctx := context.Background()
+	var req exports.ResolveStreamRequest
+	if err := json.Unmarshal([]byte(C.GoString(requestJSON)), &req); err != nil {
+		return C.CString(fmt.Sprintf(`{"error":"%s"}`, err.Error()))
+	}
+
+	resp, err := core.ResolveStream(ctx, req)
+	if err != nil {
+		return C.CString(fmt.Sprintf(`{"error":"%s"}`, err.Error()))
+	}
+
+	data, _ := json.Marshal(resp)
+	return C.CString(string(data))
+}
+
 //export Download
 func Download(requestJSON *C.char) *C.char {
 	coreMu.RLock()
@@ -175,6 +198,29 @@ func Download(requestJSON *C.char) *C.char {
 	}
 
 	resp, err := core.Download(ctx, req)
+	if err != nil {
+		return C.CString(fmt.Sprintf(`{"error":"%s"}`, err.Error()))
+	}
+
+	data, _ := json.Marshal(resp)
+	return C.CString(string(data))
+}
+
+//export StartIOSDownload
+func StartIOSDownload(requestJSON *C.char) *C.char {
+	coreMu.RLock()
+	defer coreMu.RUnlock()
+	if core == nil {
+		return C.CString(`{"error":"not initialized"}`)
+	}
+
+	ctx := context.Background()
+	var req exports.IOSDownloadRequest
+	if err := json.Unmarshal([]byte(C.GoString(requestJSON)), &req); err != nil {
+		return C.CString(fmt.Sprintf(`{"error":"%s"}`, err.Error()))
+	}
+
+	resp, err := core.StartIOSDownload(ctx, req)
 	if err != nil {
 		return C.CString(fmt.Sprintf(`{"error":"%s"}`, err.Error()))
 	}

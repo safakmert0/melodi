@@ -380,12 +380,26 @@ type ResolveRequest struct {
 	RequireISRC bool     `json:"require_isrc,omitempty"`
 }
 
+type ResolveStreamRequest struct {
+	Title       string   `json:"title"`
+	Artist      string   `json:"artist"`
+	Album       string   `json:"album,omitempty"`
+	DurationMs  int64    `json:"duration_ms,omitempty"`
+	ISRC        string   `json:"isrc,omitempty"`
+	Quality     string   `json:"quality,omitempty"`
+	Providers   []string `json:"providers,omitempty"`
+	Exclude     []string `json:"exclude,omitempty"`
+	RequireISRC bool     `json:"require_isrc,omitempty"`
+	LocalPath   string   `json:"local_path,omitempty"`
+}
+
 type ResolveResponse struct {
 	Source       AudioSource   `json:"source"`
 	Match        *MatchResult  `json:"match,omitempty"`
 	Candidates   []SearchResult `json:"candidates,omitempty"`
 	Provider     string        `json:"provider"`
 	ResolvedAt   string        `json:"resolved_at"`
+	IsLocal      bool          `json:"is_local"`
 }
 
 type AudioSource struct {
@@ -481,7 +495,119 @@ func (c *Core) Resolve(ctx context.Context, req ResolveRequest) (*ResolveRespons
 		Candidates:   searchResults,
 		Provider:     result.SelectedProvider,
 		ResolvedAt:   result.ResolvedAt.Format(time.RFC3339),
+		IsLocal:      false,
 	}, nil
+}
+
+func (c *Core) ResolveStream(ctx context.Context, req ResolveStreamRequest) (*ResolveResponse, error) {
+	if !c.initialized {
+		return nil, ErrNotInitialized
+	}
+
+	// First check if we have a local file
+	if req.LocalPath != "" {
+		// Check if local file exists and is playable
+		if c.fs.Exists(req.LocalPath) {
+			return &ResolveResponse{
+				Source: AudioSource{
+					URL:       "file://" + req.LocalPath,
+					MimeType:  "",
+					Bitrate:   0,
+					Quality:   "local",
+					Provider:  "local",
+					TrackID:   req.LocalPath,
+					Headers:   nil,
+					ExpiresAt: 0,
+					Checksum:  "",
+					Size:      0,
+				},
+				Match: &MatchResult{
+					ID:             req.LocalPath,
+					Title:          req.Title,
+					Artist:         req.Artist,
+					Album:          req.Album,
+					DurationMs:     req.DurationMs,
+					ISRC:           req.ISRC,
+					Confidence:     1.0,
+					ScoreBreakdown: ScoreBreakdown{TotalScore: 1.0},
+					MatchReasons:   []string{"local_file"},
+				},
+				Candidates:   nil,
+				Provider:     "local",
+				ResolvedAt:   time.Now().Format(time.RFC3339),
+				IsLocal:      true,
+			}, nil
+		}
+	}
+
+	// If we have ISRC and it's in local library, try to find it
+	if req.ISRC != "" {
+		localPath, err := c.findLocalByISRC(ctx, req.ISRC)
+		if err == nil && localPath != "" {
+			return &ResolveResponse{
+				Source: AudioSource{
+					URL:       "file://" + localPath,
+					MimeType:  "",
+					Bitrate:   0,
+					Quality:   "local",
+					Provider:  "local",
+					TrackID:   localPath,
+					Headers:   nil,
+					ExpiresAt: 0,
+					Checksum:  "",
+					Size:      0,
+				},
+				Match: &MatchResult{
+					ID:             localPath,
+					Title:          req.Title,
+					Artist:         req.Artist,
+					Album:          req.Album,
+					DurationMs:     req.DurationMs,
+					ISRC:           req.ISRC,
+					Confidence:     1.0,
+					ScoreBreakdown: ScoreBreakdown{TotalScore: 1.0},
+					MatchReasons:   []string{"local_isrc"},
+				},
+				Candidates:   nil,
+				Provider:     "local",
+				ResolvedAt:   time.Now().Format(time.RFC3339),
+				IsLocal:      true,
+			}, nil
+		}
+	}
+
+	// Fall back to streaming resolution
+	resolveReq := ResolveRequest{
+		Title:       req.Title,
+		Artist:      req.Artist,
+		Album:       req.Album,
+		DurationMs:  req.DurationMs,
+		ISRC:        req.ISRC,
+		Quality:     req.Quality,
+		Providers:   req.Providers,
+		Exclude:     req.Exclude,
+		RequireISRC: req.RequireISRC,
+	}
+
+	resp, err := c.Resolve(ctx, resolveReq)
+	if err != nil {
+		return nil, err
+	}
+
+	resp.IsLocal = false
+	return resp, nil
+}
+
+func (c *Core) findLocalByISRC(ctx context.Context, isrc string) (string, error) {
+	// This would query the local database for a file with matching ISRC
+	// For now, delegate to the download manager which knows about downloaded files
+	jobs := c.downloadManager.ListJobs()
+	for _, job := range jobs {
+		if job.TrackISRC == isrc && job.OutputFilename != "" && c.fs.Exists(job.OutputFilename) {
+			return job.OutputFilename, nil
+		}
+	}
+	return "", fmt.Errorf("not found locally")
 }
 
 type DownloadRequest struct {
@@ -497,6 +623,23 @@ type DownloadRequest struct {
 
 type DownloadResponse struct {
 	JobID string `json:"job_id"`
+}
+
+type IOSDownloadRequest struct {
+	URL          string `json:"url"`
+	Title        string `json:"title"`
+	Artist       string `json:"artist"`
+	Album        string `json:"album,omitempty"`
+	CoverURL     string `json:"cover_url,omitempty"`
+	Duration     int64  `json:"duration,omitempty"`
+	TrackID      string `json:"track_id"`
+	Quality      string `json:"quality,omitempty"`
+	ISRC         string `json:"isrc,omitempty"`
+}
+
+type IOSDownloadResponse struct {
+	JobID       string `json:"job_id"`
+	Destination string `json:"destination"`
 }
 
 type JobStatus struct {
@@ -591,6 +734,43 @@ func (c *Core) ListDownloads(ctx context.Context) ([]*JobStatus, error) {
 		}
 	}
 	return statuses, nil
+}
+
+func (c *Core) StartIOSDownload(ctx context.Context, req IOSDownloadRequest) (*IOSDownloadResponse, error) {
+	if !c.initialized {
+		return nil, ErrNotInitialized
+	}
+
+	// For iOS background downloads, we create a download job that the iOS
+	// native layer will pick up via AVAssetDownloadTask
+	quality := download.QualityAuto
+	if req.Quality != "" {
+		quality = download.Quality(req.Quality)
+	}
+
+	dlReq := dlmanager.DownloadRequest{
+		URL:               req.URL,
+		Title:             req.Title,
+		Artist:            req.Artist,
+		Album:             req.Album,
+		CoverURL:          req.CoverURL,
+		Quality:           quality,
+		ExpectedSize:      0,
+		ExpectedChecksum:  "",
+	}
+
+	// Mark this as an iOS background download
+	job, err := c.downloadManager.Download(ctx, dlReq)
+	if err != nil {
+		return nil, err
+	}
+
+	// The iOS native layer will handle the actual AVAssetDownloadTask
+	// We return the job ID so Flutter can track it
+	return &IOSDownloadResponse{
+		JobID:       job.ID,
+		Destination: job.OutputFilename,
+	}, nil
 }
 
 type ExtensionInfo struct {
