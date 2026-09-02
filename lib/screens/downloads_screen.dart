@@ -1,18 +1,20 @@
 import 'dart:io';
-import 'package:flutter/cupertino.dart';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 
-import '../providers/download_provider.dart';
-import '../providers/library_provider.dart';
-import '../services/notification_service.dart';
 import '../models/song_model.dart';
-import '../widgets/downloads/download_header.dart';
-import '../widgets/downloads/download_list_item.dart';
-import '../widgets/downloads/download_empty_state.dart';
+import '../providers/download_provider.dart';
+import '../providers/player_provider.dart';
+import '../services/database_service.dart';
+import '../services/audio_quality_service.dart';
+import '../services/download_manager.dart';
+import '../services/storage_manager.dart';
+import '../widgets/downloads/download_components.dart';
+import 'audio_quality_screen.dart';
+import 'now_playing_screen.dart';
+import 'settings_screen.dart';
 
-/// Downloads screen - complete offline download management
 class DownloadsScreen extends StatefulWidget {
   const DownloadsScreen({super.key});
 
@@ -20,606 +22,397 @@ class DownloadsScreen extends StatefulWidget {
   State<DownloadsScreen> createState() => _DownloadsScreenState();
 }
 
-class _DownloadsScreenState extends State<DownloadsScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  late AnimationController _animationController;
-  bool _isGridView = true;
+class _DownloadsScreenState extends State<DownloadsScreen> {
+  DownloadViewFilter _filter = DownloadViewFilter.all;
+  final Set<String> _selectedIds = <String>{};
+  late Future<_DownloadSnapshot> _snapshot;
+
+  bool get _selectionMode => _selectedIds.isNotEmpty;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    _animationController.forward();
+    _snapshot = _loadSnapshot();
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _animationController.dispose();
-    super.dispose();
+  Future<_DownloadSnapshot> _loadSnapshot() async {
+    final storage = StorageManager.instance;
+    final size = await storage.getLibrarySize();
+    final path = await storage.getStorageLocation();
+    final quality = await AudioQualityService().getDownloadQuality();
+    return _DownloadSnapshot(size: size, path: path, quality: quality);
+  }
+
+  Future<void> _refreshSnapshot() async {
+    final next = _loadSnapshot();
+    setState(() => _snapshot = next);
+    await next;
   }
 
   @override
   Widget build(BuildContext context) {
-    final downloadProvider = context.watch<DownloadProvider>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Scaffold(
-      backgroundColor: isDark ? Colors.black : Colors.grey[100],
-      appBar: _buildAppBar(context, isDark),
-      body: Column(
-        children: [
-          // Tab selector
-          _buildTabBar(context, isDark),
-
-          // Content area
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildAllDownloadsTab(context, downloadProvider, isDark),
-                _buildCompletedTab(context, downloadProvider, isDark),
-                _buildFailedTab(context, downloadProvider, isDark),
+    return Consumer<DownloadProvider>(
+      builder: (context, provider, _) {
+        final visible = _visibleTasks(provider);
+        _selectedIds
+            .removeWhere((id) => !provider.tasks.any((task) => task.id == id));
+        return Scaffold(
+          appBar: _buildAppBar(context, provider, visible),
+          body: RefreshIndicator(
+            onRefresh: _refreshSnapshot,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: FutureBuilder<_DownloadSnapshot>(
+                    future: _snapshot,
+                    builder: (context, snapshot) {
+                      final details = snapshot.data;
+                      return DownloadSummary(
+                        activeCount: provider.activeCount,
+                        completedCount: provider.completedCount,
+                        failedCount: provider.failedCount,
+                        storageLabel: details == null
+                            ? 'Hesaplanıyor…'
+                            : _formatBytes(details.size),
+                        qualityLabel: details == null
+                            ? 'Yükleniyor…'
+                            : _qualityLabel(details.quality),
+                        pathLabel: details == null
+                            ? 'İndirme alanı'
+                            : Platform.isIOS
+                                ? 'Melodi içinde · özel çevrimdışı alan'
+                                : details.path,
+                        onQuality: () => Navigator.of(context)
+                            .push(MaterialPageRoute<void>(
+                              builder: (_) => const AudioQualityScreen(),
+                            ))
+                            .then((_) => _refreshSnapshot()),
+                      );
+                    },
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: DownloadFilterBar(
+                    value: _filter,
+                    countFor: (filter) => _countFor(provider, filter),
+                    onChanged: (value) {
+                      setState(() {
+                        _filter = value;
+                        _selectedIds.clear();
+                      });
+                    },
+                  ),
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                if (visible.isEmpty)
+                  DownloadEmptyState(filter: _filter)
+                else
+                  SliverList.builder(
+                    itemCount: visible.length,
+                    itemBuilder: (context, index) {
+                      final task = visible[index];
+                      return DownloadTaskCard(
+                        key: ValueKey(task.id),
+                        task: task,
+                        stateLabel: provider.stateText(task),
+                        selected: _selectedIds.contains(task.id),
+                        selectionMode: _selectionMode,
+                        onTap: () async {
+                          if (_selectionMode) {
+                            _toggleSelected(task.id);
+                            return;
+                          }
+                          await _playDownloaded(task);
+                        },
+                        onLongPress: () => _toggleSelected(task.id),
+                        onCancel: () => provider.cancelTask(task.id),
+                        onRetry: () => provider.retryTask(task.id),
+                        onClearHistory: () =>
+                            _showTaskMenu(context, provider, task),
+                      );
+                    },
+                  ),
+                const SliverToBoxAdapter(child: SizedBox(height: 110)),
               ],
             ),
           ),
-        ],
-      ),
-      // Floating action button for new downloads
-      floatingActionButton: _buildFAB(context, downloadProvider, isDark),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        );
+      },
     );
   }
 
-  AppBar _buildAppBar(BuildContext context, bool isDark) {
-    return AppBar(
-      backgroundColor: isDark
-          ? Colors.grey[900]
-          : Colors.white,
-      elevation: 0,
-      title: const Text(
-        'İndirmeler',
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: 20,
+  PreferredSizeWidget _buildAppBar(BuildContext context,
+      DownloadProvider provider, List<DownloadTask> visible) {
+    if (_selectionMode) {
+      final selectedTasks = provider.tasks
+          .where((task) => _selectedIds.contains(task.id))
+          .toList(growable: false);
+      final hasActive = selectedTasks.any(_isActive);
+      final hasFailed =
+          selectedTasks.any((task) => task.state == DownloadState.failed);
+      final hasTerminal = selectedTasks.any((task) =>
+          task.state == DownloadState.completed ||
+          task.state == DownloadState.failed);
+      return AppBar(
+        leading: IconButton(
+          tooltip: 'Seçimi kapat',
+          onPressed: () => setState(_selectedIds.clear),
+          icon: const Icon(Icons.close_rounded),
         ),
+        title: Text('${_selectedIds.length} seçildi'),
+        actions: [
+          IconButton(
+            tooltip: 'Görünenlerin tümünü seç',
+            onPressed: () => setState(() {
+              if (visible.every((task) => _selectedIds.contains(task.id))) {
+                _selectedIds.removeAll(visible.map((task) => task.id));
+              } else {
+                _selectedIds.addAll(visible.map((task) => task.id));
+              }
+            }),
+            icon: const Icon(Icons.select_all_rounded),
+          ),
+          if (hasActive)
+            IconButton(
+              tooltip: 'Seçili indirmeleri iptal et',
+              onPressed: () {
+                provider.cancelTasks(_selectedIds);
+                setState(_selectedIds.clear);
+              },
+              icon: const Icon(Icons.stop_circle_outlined),
+            ),
+          if (hasFailed)
+            IconButton(
+              tooltip: 'Seçili sorunluları yeniden dene',
+              onPressed: () {
+                provider.retryTasks(_selectedIds);
+                setState(_selectedIds.clear);
+              },
+              icon: const Icon(Icons.refresh_rounded),
+            ),
+          if (hasTerminal)
+            IconButton(
+              tooltip: 'Seçilenleri geçmişten kaldır',
+              onPressed: () {
+                provider.clearTasks(_selectedIds);
+                setState(_selectedIds.clear);
+              },
+              icon: const Icon(Icons.playlist_remove_rounded),
+            ),
+        ],
+      );
+    }
+
+    return AppBar(
+      leading: IconButton(
+        tooltip: 'Geri',
+        onPressed: () => Navigator.pop(context),
+        icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+      ),
+      title: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('İndirmeler',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+          Text('Çevrimdışı müzik merkezi',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w400)),
+        ],
       ),
       actions: [
+        if (provider.failedCount > 0)
+          Badge.count(
+            count: provider.failedCount,
+            child: IconButton(
+              tooltip: 'Tüm sorunluları yeniden dene',
+              onPressed: provider.retryAllFailed,
+              icon: const Icon(Icons.sync_problem_rounded),
+            ),
+          ),
         IconButton(
-          icon: const Icon(Icons.search),
-          tooltip: 'Ara',
-          onPressed: () {
-            // Search downloads
-          },
+          tooltip: 'İndirme ayarları',
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+          ),
+          icon: const Icon(Icons.settings_rounded),
         ),
       ],
     );
   }
 
-  Widget _buildTabBar(BuildContext context, bool isDark) {
-    return Container(
-      color: isDark ? Colors.grey[900] : Colors.white,
-      child: TabBar(
-        controller: _tabController,
-        indicatorColor: Colors.green,
-        labelColor: Colors.green,
-        unselectedLabelColor: isDark ? Colors.grey[400] : Colors.grey[600],
-        tabs: const [
-          Tab(text: 'Tümü'),
-          Tab(text: 'Tamamlanmış'),
-          Tab(text: 'Başarısız'),
-        ],
-      ),
-    );
+  List<DownloadTask> _visibleTasks(DownloadProvider provider) {
+    final tasks = switch (_filter) {
+      DownloadViewFilter.all => provider.tasks,
+      DownloadViewFilter.active => provider.activeDownloads,
+      DownloadViewFilter.completed => provider.completedDownloads,
+      DownloadViewFilter.failed => provider.failedDownloads,
+    };
+    return List<DownloadTask>.from(tasks)
+      ..sort((a, b) {
+        final stateOrder = _stateOrder(a.state).compareTo(_stateOrder(b.state));
+        if (stateOrder != 0) return stateOrder;
+        return b.id.compareTo(a.id);
+      });
   }
 
-  Widget _buildAllDownloadsTab(
-      BuildContext context,
-      DownloadProvider downloadProvider,
-      bool isDark,
-      ) {
-    final tasks = downloadProvider.tasks;
+  int _countFor(DownloadProvider provider, DownloadViewFilter filter) {
+    return switch (filter) {
+      DownloadViewFilter.all => provider.totalCount,
+      DownloadViewFilter.active => provider.activeCount,
+      DownloadViewFilter.completed => provider.completedCount,
+      DownloadViewFilter.failed => provider.failedCount,
+    };
+  }
 
-    if (tasks.isEmpty) {
-      return const DownloadEmptyState(
-        icon: Icons.download,
-        message: 'Henüz indirme yok',
-      );
+  int _stateOrder(DownloadState state) => switch (state) {
+        DownloadState.downloading => 0,
+        DownloadState.pending => 1,
+        DownloadState.failed => 2,
+        DownloadState.completed => 3,
+      };
+
+  bool _isActive(DownloadTask task) =>
+      task.state == DownloadState.pending ||
+      task.state == DownloadState.downloading;
+
+  void _toggleSelected(String id) {
+    setState(() {
+      if (!_selectedIds.add(id)) _selectedIds.remove(id);
+    });
+  }
+
+  Future<void> _playDownloaded(DownloadTask task) async {
+    if (task.state != DownloadState.completed) return;
+    final path = task.filePath;
+    final file = path == null ? null : File(path);
+    if (file == null || !await file.exists()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('İndirilen dosya artık bulunamıyor')),
+        );
+      }
+      return;
     }
 
-    return NotificationListener<DownloadProvider>(
-      onNotification: (notification) {
-        // Handle download updates
-        return true;
-      },
-      child: RefreshIndicator(
-        onRefresh: () async {
-          // Refresh downloads
-          // downloadProvider.refresh();
-        },
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            // Stats header
-            SliverToBoxAdapter(
-              child: _buildDownloadStats(tasks, isDark),
-            ),
-
-            // Downloads list
-            if (tasks.isNotEmpty)
-              SliverList(
-                delegate: SliverBuilder.builder(
-                  builder: (context, index) {
-                    if (index >= tasks.length) return null;
-                    final task = tasks[index];
-                    return DownloadListItem(task: task);
-                  },
-                  count: tasks.length,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCompletedTab(
-      BuildContext context,
-      DownloadProvider downloadProvider,
-      bool isDark,
-      ) {
-    final completed = downloadProvider.completedDownloads;
-
-    if (completed.isEmpty) {
-      return const DownloadEmptyState(
-        icon: Icons.check_circle,
-        message: 'Tüm indirmeler tamamlandı',
+    try {
+      final stored = await DatabaseService.instance.getSongByPath(path!);
+      final song = stored ??
+          SongModel(
+            id: 'download:${task.spotifyTrackId}',
+            title: task.title,
+            artist: task.artist,
+            album: task.album ?? '',
+            duration: Duration.zero,
+            filePath: path,
+            fileSize: await file.length(),
+          );
+      if (!mounted) return;
+      final playback = context.read<PlayerProvider>().playSong(song);
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const NowPlayingScreen()),
       );
+      playback.catchError((Object error, StackTrace stackTrace) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Oynatma hatası: $error')),
+          );
+        }
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Oynatma hatası: $error')),
+        );
+      }
     }
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        // Refresh completed downloads
-      },
-      child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverToBoxAdapter(
-            child: _buildDownloadStats(completed, isDark),
-          ),
-          SliverList(
-            delegate: SliverBuilder.builder(
-              builder: (context, index) {
-                if (index >= completed.length) return null;
-                final task = completed[index];
-                return DownloadListItem(task: task, showCheckmark: true);
-              },
-              count: completed.length,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
-  Widget _buildFailedTab(
-      BuildContext context,
-      DownloadProvider downloadProvider,
-      bool isDark,
-      ) {
-    final failed = downloadProvider.failedDownloads;
-
-    if (failed.isEmpty) {
-      return const DownloadEmptyState(
-        icon: Icons.error,
-        message: 'Başarısız indirme yok',
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        // Refresh failed downloads
-      },
-      child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverToBoxAdapter(
-            child: _buildDownloadStats(failed, isDark),
-          ),
-          SliverList(
-            delegate: SliverBuilder.builder(
-              builder: (context, index) {
-                if (index >= failed.length) return null;
-                final task = failed[index];
-                return DownloadListItem(task: task, showError: true);
-              },
-              count: failed.length,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDownloadStats(
-      List<DownloadTask> tasks, bool isDark) {
-    final active = tasks.where((t) => t.state == DownloadState.downloading || t.state == DownloadState.pending).toList();
-    final completed = tasks.where((t) => t.state == DownloadState.completed).toList();
-    final failed = tasks.where((t) => t.state == DownloadState.failed).toList();
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _StatItem(
-            label: 'Aktif',
-            count: active.length,
-            color: Colors.green,
-            isDark: isDark,
-          ),
-          _StatItem(
-            label: 'Tamam',
-            count: completed.length,
-            color: Colors.blue,
-            isDark: isDark,
-          ),
-          _StatItem(
-            label: 'Başarısız',
-            count: failed.length,
-            color: Colors.red,
-            isDark: isDark,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFAB(
-      BuildContext context,
-      DownloadProvider downloadProvider,
-      bool isDark,
-      ) {
-    final fabColor = isDark ? Colors.green : Colors.green;
-
-    return FloatingActionButton(
-      onPressed: () {
-        // Show add download dialog
-        _showAddDownloadDialog(context);
-      },
-      backgroundColor: fabColor,
-      child: const Icon(Icons.add),
-    );
-  }
-
-  void _showAddDownloadDialog(BuildContext context) {
-    final titleController = TextEditingController();
-    final artistController = TextEditingController();
-    final SpotifyTrackIdController = TextEditingController();
-
-    showDialog(
+  Future<void> _showTaskMenu(BuildContext context, DownloadProvider provider,
+      DownloadTask task) async {
+    final action = await showModalBottomSheet<_TaskMenuAction>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Şarkı Ekle'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(
-                labelText: 'Şarkı Başlığı',
-                hintText: 'Şarkı adını girin',
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: artistController,
-              decoration: const InputDecoration(
-                labelText: 'Sanatçı',
-                hintText: 'Sanatçı adını girin',
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: SpotifyTrackIdController,
-              decoration: const InputDecoration(
-                labelText: 'Spotify Track ID (İsteğe bağlı)',
-                hintText: 'Örn: 4iV5W9uYEdYVGU3cFz7Gu3',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final title = titleController.text.trim();
-              final artist = artistController.text.trim();
-              final spotifyTrackId = SpotifyTrackIdController.text.trim();
-
-              if (title.isNotEmpty && artist.isNotEmpty) {
-                downloadProvider.enqueueTrack(
-                  spotifyTrackId: spotifyTrackId.isNotEmpty ? spotifyTrackId : '',
-                  title: title,
-                  artist: artist,
-                );
-                Navigator.of(context).pop();
-              }
-            },
-            child: const Text('Ekle'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Stat item widget for download stats
-class _StatItem extends StatelessWidget {
-  final String label;
-  final int count;
-  final Color color;
-  final bool isDark;
-
-  const _StatItem({
-    required this.label,
-    required this.count,
-    required this.color,
-    required this.isDark,
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cardColor = isDark ? color.withOpacity(0.1) : color.withOpacity(0.1);
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            count.toString(),
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Download list item widget
-class DownloadListItem extends StatelessWidget {
-  final DownloadTask task;
-  final bool showCheckmark;
-  final bool showError;
-
-  const DownloadListItem({
-    required this.task,
-    this.showCheckmark = false,
-    this.showError = false,
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : Colors.black87;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.grey[850] : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blur: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            // Checkmark for completed
-            if (showCheckmark)
-              Icon(
-                Icons.check_circle,
-                color: Colors.green,
-                size: 24,
-              )
-            else if (showError)
-              Icon(
-                Icons.error,
-                color: Colors.red,
-                size: 24,
-              )
-            else
-              const SizedBox.shrink(),
-
-            // Album art
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: task.albumArt != null
-                  ? Container(
-                      width: 48,
-                      height: 48,
-                      color: Colors.grey[300],
-                      child: Icon(
-                        Icons.music_note,
-                        size: 24,
-                        color: Colors.grey[600],
-                      ),
-                    )
-                  : Container(
-                      width: 48,
-                      height: 48,
-                      color: Colors.grey[300],
-                    ),
-            ),
-            const SizedBox(width: 12),
-
-            // Song info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    task.title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      color: textColor,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    task.artist,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey[600],
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Progress and state
-            _DownloadProgressBar(task: task),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Download progress bar widget
-class _DownloadProgressBar extends StatelessWidget {
-  final DownloadTask task;
-
-  const _DownloadProgressBar({
-    required this.task,
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : Colors.black87;
-
-    return Container(
-      width: 80,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          LinearProgressIndicator(
-            value: task.progress,
-          color: task.state == DownloadState.downloading
-              ? Colors.green
-              : task.state == DownloadState.pending
-                  ? Colors.amber
-                  : Colors.grey,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _getProgressText(),
-            style: TextStyle(
-              fontSize: 10,
-              color: Colors.grey[500],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _getProgressText() {
-    switch (task.state) {
-      case DownloadState.pending:
-        return 'Bekliyor';
-      case DownloadState.downloading:
-        return '${(task.progress * 100).toInt()}%';
-      case DownloadState.completed:
-        return 'Tamam';
-      case DownloadState.failed:
-        return 'Başarısız';
-      default:
-        return '-';
-    }
-  }
-}
-
-/// Empty state widget for downloads
-class DownloadEmptyState extends StatelessWidget {
-  final IconData icon;
-  final String message;
-
-  const DownloadEmptyState({
-    required this.icon,
-    required this.message,
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? Colors.grey[900] : Colors.white;
-
-    return Center(
-      child: Container(
-        width: 200,
-        height: 200,
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(20),
-        ),
+      showDragHandle: true,
+      builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 80,
-              color: isDark ? Colors.grey[600] : Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              style: TextStyle(
-                fontSize: 16,
-                color: isDark ? Colors.grey[400] : Colors.grey[600],
+            ListTile(
+              leading: const Icon(Icons.offline_pin_rounded),
+              title: Text(task.title,
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+              subtitle: Text(
+                Platform.isIOS
+                    ? 'Melodi içinde · Dosyalar uygulamasında görünmez'
+                    : task.filePath ?? 'İndirme kaydı',
               ),
             ),
+            if (task.state == DownloadState.completed)
+              ListTile(
+                leading: const Icon(Icons.play_arrow_rounded),
+                title: const Text('Çal'),
+                onTap: () => Navigator.pop(context, _TaskMenuAction.play),
+              ),
+            if (task.state == DownloadState.failed)
+              ListTile(
+                leading: const Icon(Icons.refresh_rounded),
+                title: const Text('Yeniden dene'),
+                onTap: () => Navigator.pop(context, _TaskMenuAction.retry),
+              ),
+            ListTile(
+              leading: const Icon(Icons.playlist_remove_rounded),
+              title: const Text('Geçmişten kaldır'),
+              subtitle: const Text('İndirilen müzik dosyası silinmez'),
+              onTap: () => Navigator.pop(context, _TaskMenuAction.clear),
+            ),
+            const SizedBox(height: 8),
           ],
         ),
       ),
     );
+    if (!mounted || action == null) return;
+    switch (action) {
+      case _TaskMenuAction.play:
+        await _playDownloaded(task);
+        break;
+      case _TaskMenuAction.retry:
+        provider.retryTask(task.id);
+        break;
+      case _TaskMenuAction.clear:
+        provider.clearTasks([task.id]);
+        break;
+    }
   }
+
+  String _formatBytes(int bytes) {
+    if (bytes >= 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+    }
+    if (bytes >= 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(0)} MB';
+    }
+    return '${(bytes / 1024).toStringAsFixed(0)} KB';
+  }
+
+  String _qualityLabel(String quality) => switch (quality) {
+        'normal' => 'Normal',
+        'lossless' => 'Kayıpsız tercih',
+        _ => 'Yüksek',
+      };
 }
+
+class _DownloadSnapshot {
+  const _DownloadSnapshot({
+    required this.size,
+    required this.path,
+    required this.quality,
+  });
+
+  final int size;
+  final String path;
+  final String quality;
+}
+
+enum _TaskMenuAction { play, retry, clear }

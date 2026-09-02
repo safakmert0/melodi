@@ -1,13 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import '../models/song_model.dart';
 import '../services/download_manager.dart';
-import '../services/download_quality_service.dart';
 import '../services/notification_service.dart';
 import '../providers/library_provider.dart';
-
-typedef ScrobbleCallback = void Function(SongModel song, int timestamp);
 
 class DownloadProvider extends ChangeNotifier {
   final DownloadManager _manager = DownloadManager();
@@ -36,41 +32,6 @@ class DownloadProvider extends ChangeNotifier {
   int get activeCount => activeDownloads.length;
   int get completedCount => completedDownloads.length;
   int get failedCount => failedDownloads.length;
-
-  DownloadQualityService _qualityService = DownloadQualityService();
-
-  DownloadQuality get downloadQuality => _qualityService.quality;
-
-  set downloadQuality(DownloadQuality quality) {
-    _qualityService.setQuality(quality);
-    notifyListeners();
-  }
-
-  List<DownloadTask> get activeDownloads => _tasks.where((t) =>
-      t.state == DownloadState.downloading ||
-          t.state == DownloadState.pending)
-      .toList();
-
-  List<DownloadTask> get completedDownloads =>
-      _tasks.where((t) => t.state == DownloadState.completed).toList();
-
-  List<DownloadTask> get failedDownloads =>
-      _tasks.where((t) => t.state == DownloadState.failed).toList();
-
-  bool get isDownloading => activeDownloads.isNotEmpty;
-  int get totalCount => _tasks.length;
-  int get activeCount => activeDownloads.length;
-  int get completedCount => completedDownloads.length;
-  int get failedCount => failedDownloads.length;
-
-  DownloadQualityService _qualityService = DownloadQualityService();
-
-  DownloadQuality get downloadQuality => _qualityService.quality;
-
-  set downloadQuality(DownloadQuality quality) {
-    _qualityService.setQuality(quality);
-    notifyListeners();
-  }
 
   DownloadProvider() {
     _manager.onDownloadComplete = _onDownloadComplete;
@@ -138,17 +99,17 @@ class DownloadProvider extends ChangeNotifier {
     final normalizedTitle = title.trim().toLowerCase();
     final normalizedArtist = artist.trim().toLowerCase();
     final alreadyDownloaded = _libraryProvider?.songs.any((song) {
-      final path = song.filePath.toLowerCase();
-      final isRemote = path.startsWith('spotify://') ||
-          path.startsWith('youtube://') ||
-          path.startsWith('online://') ||
-          path.startsWith('http://') ||
-          path.startsWith('https://');
-      return !isRemote &&
-          song.title.trim().toLowerCase() == normalizedTitle &&
-          song.artist.trim().toLowerCase() == normalizedArtist &&
-          (song.fileSize > 0 || File(song.filePath).existsSync());
-    }) ??
+          final path = song.filePath.toLowerCase();
+          final isRemote = path.startsWith('spotify://') ||
+              path.startsWith('youtube://') ||
+              path.startsWith('online://') ||
+              path.startsWith('http://') ||
+              path.startsWith('https://');
+          return !isRemote &&
+              song.title.trim().toLowerCase() == normalizedTitle &&
+              song.artist.trim().toLowerCase() == normalizedArtist &&
+              (song.fileSize > 0 || File(song.filePath).existsSync());
+        }) ??
         false;
     if (alreadyDownloaded) return false;
 

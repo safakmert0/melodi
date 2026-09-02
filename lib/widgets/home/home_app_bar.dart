@@ -50,7 +50,6 @@ class MelodiAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.showBackButton = false,
     this.onBack,
     this.onSearch,
-    super.key,
   });
 
   @override
