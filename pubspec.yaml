@@ -91,9 +91,6 @@ dependencies:
   # Observability
   sentry_flutter: ^8.4.0
 
-  # Haptics
-  haptics: ^0.0.6
-
   intl: ^0.20.2
   shared_preferences: ^2.2.2
   package_info_plus: ^9.0.1

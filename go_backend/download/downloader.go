@@ -62,6 +62,8 @@ type Job struct {
 	OutputFilename  string
 	ExpectedSize    int64
 	ExpectedChecksum string
+	ISRC            string
+	TrackISRC       string
 
 	State           State
 	Progress        float64

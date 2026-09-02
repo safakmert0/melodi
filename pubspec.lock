@@ -613,14 +613,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.2"
-  haptics:
-    dependency: "direct main"
-    description:
-      name: haptics
-      sha256: faf21f45e7134502e9aaca1c699c5b7934ca98f290b56a322dfcbe7f2fbec969
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.0.6"
   hive:
     dependency: "direct main"
     description:

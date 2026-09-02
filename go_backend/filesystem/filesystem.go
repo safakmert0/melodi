@@ -32,6 +32,7 @@ type FileInfo struct {
 type Filesystem interface {
 	MkdirAll(path string, perm os.FileMode) error
 	Stat(path string) (FileInfo, error)
+	Exists(path string) bool
 	ReadFile(path string) ([]byte, error)
 	WriteFile(path string, data []byte, perm os.FileMode) error
 	Remove(path string) error
@@ -136,6 +137,11 @@ func (s *SandboxFilesystem) Stat(path string) (FileInfo, error) {
 		IsDir:   info.IsDir(),
 		Mode:    info.Mode(),
 	}, nil
+}
+
+func (s *SandboxFilesystem) Exists(path string) bool {
+	_, err := s.Stat(path)
+	return err == nil
 }
 
 func (s *SandboxFilesystem) ReadFile(path string) ([]byte, error) {
@@ -409,6 +415,11 @@ func (m *MemoryFilesystem) Stat(path string) (FileInfo, error) {
 	}
 
 	return FileInfo{}, ErrNotFound
+}
+
+func (m *MemoryFilesystem) Exists(path string) bool {
+	_, err := m.Stat(path)
+	return err == nil
 }
 
 func (m *MemoryFilesystem) ReadFile(path string) ([]byte, error) {
