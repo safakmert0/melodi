@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../core/app_config.dart';
-import '../models/extension.dart';
 import 'extension_service.dart';
 import 'music_source.dart';
 import 'sources/youtube_music_source.dart';
@@ -166,7 +165,7 @@ class MultiSourceSearch {
       try {
         final extSources = _extensionSources;
         for (final src in extSources) {
-          if (src is ExtensionMusicSource && (src as ExtensionMusicSource).id == track.extensionId) {
+          if (src is ExtensionMusicSource && (src).id == track.extensionId) {
             final cacheKeyExt = '${track.extensionId}:${track.id}';
             final cachedExt = _streamUrlCache[cacheKeyExt];
             if (cachedExt != null && !cachedExt.isExpired) return cachedExt.url;

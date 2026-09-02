@@ -497,7 +497,7 @@ class SearchSourceFilters extends StatelessWidget {
 enum _DownloadChoice { auto, youtube, hifi, jiosaavn, navidrome, cancelled }
 
 class _DownloadSelection {
-  const _DownloadSelection(this.choice, {this.extensionId, this.extensionName});
+  const _DownloadSelection(this.choice, {this.extensionId}) : extensionName = null;
   final _DownloadChoice choice;
   final String? extensionId;
   final String? extensionName;

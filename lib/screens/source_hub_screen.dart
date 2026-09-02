@@ -350,7 +350,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: color .withOpacity(0.13),
+        color: color .withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -376,7 +376,7 @@ class _CapabilityChip extends StatelessWidget {
         color: Theme.of(context)
             .colorScheme
             .surfaceContainerHighest
-             .withOpacity(0.72),
+             .withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(

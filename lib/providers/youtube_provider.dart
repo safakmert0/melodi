@@ -57,7 +57,7 @@ class YouTubeProvider extends ChangeNotifier {
     _downloadProgress = '${AppLocale.tr('loading_song')} $title';
     notifyListeners();
 
-    final path = await DownloadManager().addTask(
+    final path = DownloadManager().addTask(
       spotifyTrackId: 'youtube:$videoId',
       title: title,
       artist: '',
@@ -78,7 +78,7 @@ class YouTubeProvider extends ChangeNotifier {
     _downloadProgress = '${AppLocale.tr('downloading')} $title';
     notifyListeners();
 
-    final path = await DownloadManager().addTask(
+    final path = DownloadManager().addTask(
       spotifyTrackId: 'youtube:$videoId',
       title: title,
       artist: '',

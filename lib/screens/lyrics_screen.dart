@@ -252,7 +252,7 @@ class _LyricsScreenState extends State<LyricsScreen> {
                                           color: isActive
                                               ? MelodiTheme.onSurface
                                               : MelodiTheme.onSurface
-                                                  .withOpacity(0.22),
+                                                  .withValues(alpha: 0.22),
                                         ),
                                         child: Align(
                                           alignment: Alignment.centerLeft,

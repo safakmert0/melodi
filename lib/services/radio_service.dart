@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-import 'package:flutter/foundation.dart';
 import 'database_service.dart';
 import 'multi_source_search.dart';
 import 'music_source.dart';
@@ -107,7 +106,7 @@ class RadioService {
     for (final artist in similarArtists.take(10)) {
       try {
         final tracks = await _multiSource.searchAllSync(
-          '${artist} top tracks',
+          '$artist top tracks',
           limitPerSource: 3,
         );
         allTracks.addAll(tracks);

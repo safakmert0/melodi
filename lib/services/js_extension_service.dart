@@ -1,12 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:flutter_js/flutter_js.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
-import '../services/extension_service.dart';
 import '../models/extension.dart';
 
 /// SpotiFLAC için JS sandbox — .sflx (zip) içindeki index.js'yi quickjs'de çalıştırır.

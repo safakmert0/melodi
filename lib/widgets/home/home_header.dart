@@ -145,8 +145,7 @@ class _HeaderButton extends StatelessWidget {
     required this.tooltip,
     required this.icon,
     required this.onTap,
-    this.badge,
-  });
+  }) : badge = null;
 
   final String tooltip;
   final IconData icon;

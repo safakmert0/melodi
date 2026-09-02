@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/constants.dart';
-import '../core/localization.dart';
 import '../services/database_service.dart';
 import 'playlist_import_screen.dart';
 
@@ -25,11 +24,12 @@ class _SharedUrlsScreenState extends State<SharedUrlsScreen> {
   Future<void> _load() async {
     final db = DatabaseService.instance;
     final urls = await db.getSharedUrls();
-    if (mounted)
+    if (mounted) {
       setState(() {
         _urls = urls;
         _loading = false;
       });
+    }
   }
 
   static String _sourceLabel(String url) {
@@ -90,10 +90,11 @@ class _SharedUrlsScreenState extends State<SharedUrlsScreen> {
         );
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Could not open $url')),
         );
+      }
     }
   }
 

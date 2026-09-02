@@ -435,7 +435,9 @@ class LibraryHealthService {
     final result = LibraryHealthFixResult();
     final dedupe = <String>{};
     final details = await _resolveIssue(matches.first, dedupe);
-    for (final detail in details) result.add(detail);
+    for (final detail in details) {
+      result.add(detail);
+    }
 
     await invalidateCache();
     await scanLibrary(force: true);
@@ -451,7 +453,9 @@ class LibraryHealthService {
 
     for (final issue in snapshot) {
       final details = await _resolveIssue(issue, dedupe);
-      for (final detail in details) result.add(detail);
+      for (final detail in details) {
+        result.add(detail);
+      }
     }
 
     await invalidateCache();
@@ -780,7 +784,7 @@ class LibraryHealthService {
         category: 'Duplicates',
         description: label,
         success: true,
-        reason: 'Removed ${removed} duplicate(s), kept the original',
+        reason: 'Removed $removed duplicate(s), kept the original',
       );
     } else if (removed > 0) {
       return FixDetail(
@@ -899,7 +903,9 @@ class LibraryHealthService {
 
     final cachedAt = DateTime.tryParse(cachedAtStr);
     if (cachedAt == null ||
-        DateTime.now().difference(cachedAt) > _cacheDuration) return null;
+        DateTime.now().difference(cachedAt) > _cacheDuration) {
+      return null;
+    }
 
     final data = await _db.getSetting('library_health_cache');
     if (data == null) return null;

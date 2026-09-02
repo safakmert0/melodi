@@ -77,7 +77,9 @@ class JioSaavnSource implements MusicSource {
     try {
       final keyBytes = Uint8List.fromList(utf8.encode('38346591'));
       final key24 = Uint8List(24);
-      for (var i = 0; i < 24; i++) key24[i] = keyBytes[i % 8];
+      for (var i = 0; i < 24; i++) {
+        key24[i] = keyBytes[i % 8];
+      }
       final encrypted = base64Decode(enc);
       if (encrypted.length % 8 != 0) return null;
       final cipher = ECBBlockCipher(DESedeEngine())..init(false, KeyParameter(key24));

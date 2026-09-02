@@ -61,7 +61,7 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen> {
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: MelodiTheme.primaryGreen.withOpacity(0.15),
+                    color: MelodiTheme.primaryGreen.withValues(alpha: 0.15),
                     blurRadius: 40,
                     spreadRadius: 5,
                   ),
@@ -163,7 +163,7 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen> {
                     borderRadius: BorderRadius.circular(30),
                   ),
                   elevation: 8,
-                  shadowColor: MelodiTheme.primaryGreen.withOpacity(0.3),
+                  shadowColor: MelodiTheme.primaryGreen.withValues(alpha: 0.3),
                 ),
                 child: Text(
                   AppLocale.tr('create_playlist_button'),
@@ -215,9 +215,9 @@ class _GlassInput extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
+            color: Colors.white.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(context.tokens.radiusControl),
-            border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

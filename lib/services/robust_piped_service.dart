@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/app_config.dart';
-import '../models/extension.dart';
 import 'extension_service.dart';
 import 'music_source.dart';
 
@@ -338,7 +337,7 @@ class RobustPipedService {
 
     final chosenUrl = best?['url']?.toString();
     if (chosenUrl == null) return null;
-    return Uri.parse(chosenUrl).hasScheme ? chosenUrl : '${_currentInstance}$chosenUrl';
+    return Uri.parse(chosenUrl).hasScheme ? chosenUrl : '$_currentInstance$chosenUrl';
   }
 
   VideoInfo? _parseVideoInfo(dynamic data, String base) {

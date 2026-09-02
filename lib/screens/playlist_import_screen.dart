@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../core/localization.dart';
 import '../core/melodi_design.dart';
-import '../models/song_model.dart';
 import '../providers/playlist_provider.dart';
 import '../services/database_service.dart';
 import '../services/playlist_importer.dart';

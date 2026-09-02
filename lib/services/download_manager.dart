@@ -1,19 +1,16 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import '../models/song_model.dart';
 import 'artwork_embedding_service.dart';
 import 'artwork_service.dart';
-import 'backend_api_service.dart';
 import 'database_service.dart';
 import 'lyrics_embedding_service.dart';
 import 'lyrics_service.dart';
 import 'metadata_service.dart';
 import 'multi_source_search.dart';
 import 'music_source.dart';
-import 'piped_service.dart';
 import 'storage_manager.dart';
 import 'audio_quality_service.dart';
 import 'track_matcher.dart';
@@ -320,7 +317,7 @@ class DownloadManager {
               (await DatabaseService.instance.getSetting('download_as_video')) ==
                   'true';
 
-          Future<String?> _fetch(bool video) {
+          Future<String?> fetch(bool video) {
             Future<String?> fut;
             if (video) {
               fut = _youtubeDownloader.downloadVideoTrack(
@@ -350,7 +347,7 @@ class DownloadManager {
                 : 'YouTube indiriliyor (Backend/Piped)...';
             _notify();
             try {
-              resultPath = await _fetch(video);
+              resultPath = await fetch(video);
             } catch (_) {
               resultPath = null;
             }

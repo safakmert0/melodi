@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 
 import '../core/localization.dart';
 import '../providers/theme_provider.dart';
-import '../theme/app_tokens.dart';
 import '../services/database_service.dart';
 import '../widgets/main_shell.dart';
 import '../widgets/splash_screen.dart';

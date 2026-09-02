@@ -2,10 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import '../core/app_config.dart';
-import '../models/extension.dart';
 import 'database_service.dart';
 import 'extension_service.dart';
 import 'storage_manager.dart';
@@ -74,7 +72,7 @@ class HLSDownloaderService {
       
       final sanitizedTitle = _sanitizeFilename(title);
       final sanitizedArtist = _sanitizeFilename(artist);
-      final fileName = '${sanitizedArtist} - $sanitizedTitle';
+      final fileName = '$sanitizedArtist - $sanitizedTitle';
       final destinationPath = p.join(downloadDir.path, '${fileName}_$videoId.mp4');
 
       // Check if already exists

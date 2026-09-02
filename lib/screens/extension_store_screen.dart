@@ -285,7 +285,7 @@ class _ExtensionStoreScreenState extends State<ExtensionStoreScreen> {
                 color: Theme.of(context)
                     .colorScheme
                     .primary
-                     .withOpacity(0.14),
+                     .withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(badge,

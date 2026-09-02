@@ -91,7 +91,7 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
           child: ListView.separated(
             itemCount: result.details.length,
             separatorBuilder: (_, __) => Divider(
-              color: MelodiTheme.onSurfaceVariant.withOpacity(0.15),
+              color: MelodiTheme.onSurfaceVariant.withValues(alpha: 0.15),
               height: 1,
             ),
             itemBuilder: (context, index) {
@@ -346,7 +346,7 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: MelodiTheme.primaryGreen.withOpacity(0.15),
+                color: MelodiTheme.primaryGreen.withValues(alpha: 0.15),
                 borderRadius: context.tokens.borderRadiusThumb,
               ),
               child: Text(

@@ -104,7 +104,7 @@ class _NavidromeSettingsScreenState extends State<NavidromeSettingsScreen> {
                             height: 48,
                             decoration: BoxDecoration(
                               color: const Color(0xFF6C8CFF)
-                                   .withOpacity(0.16),
+                                   .withValues(alpha: 0.16),
                               borderRadius: context.tokens.borderRadiusCover,
                             ),
                             child: const Icon(

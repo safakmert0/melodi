@@ -40,10 +40,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadWatchedFolder() async {
     final folder = await WatchedFolderService.instance.getWatchedFolder();
     final auto = await WatchedFolderService.instance.isAutoScanEnabled();
-    if (mounted) setState(() {
+    if (mounted) {
+      setState(() {
       _watchedFolder = folder;
       _watchedAutoScan = auto;
     });
+    }
   }
 
   Future<void> _pickWatchedFolder() async {
@@ -92,8 +94,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024)
+    if (bytes < 1024 * 1024 * 1024) {
       return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 
@@ -540,7 +543,7 @@ class _AppearanceSettingsPage extends StatelessWidget {
               _SectionTitle(AppLocale.tr('accent_color')),
               const SizedBox(height: 8),
               ..._accentColors.map((c) {
-                final sel = tp.accentColor.value == c.value;
+                final sel = tp.accentColor.toARGB32() == c.toARGB32();
                 return ListTile(
                   leading: Container(
                     width: 32,
@@ -581,9 +584,9 @@ class _AppearanceSettingsPage extends StatelessWidget {
       0xFFAF52DE: 'color_purple',
       0xFFFF9500: 'color_orange',
     };
-    final k = m[c.value];
+    final k = m[c.toARGB32()];
     if (k != null) return AppLocale.tr(k);
-    return '#${c.value.toRadixString(16).substring(2).toUpperCase()}';
+    return '#${c.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
   }
 
   void _showThemePicker(BuildContext context, ThemeProvider tp) {

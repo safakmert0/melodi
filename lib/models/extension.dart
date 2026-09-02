@@ -341,8 +341,9 @@ class RegistryEntry {
     var kind = ExtensionKindX.tryParse(json['kind']);
     if (kind == null) {
       final cat = json['category']?.toString().trim().toLowerCase();
-      if (cat == 'download') kind = ExtensionKind.hifi;
-      else if (cat == 'integration') kind = ExtensionKind.backend;
+      if (cat == 'download') {
+        kind = ExtensionKind.hifi;
+      } else if (cat == 'integration') kind = ExtensionKind.backend;
       else if (categoryHint != null) {
         final hint = categoryHint.toLowerCase();
         if (hint.contains('hifi') || hint.contains('lossless') || hint.contains('debrid')) {
@@ -362,8 +363,9 @@ class RegistryEntry {
         final hasLossless = tags.any((t) => t.contains('lossless') || t.contains('hi-res') || t.contains('flac') || t.contains('hires')) ||
             desc.contains('lossless') || desc.contains('hi-res') || desc.contains('flac') ||
             type == 'module' && (tags.contains('qobuz') || tags.contains('tidal') || tags.contains('deezer'));
-        if (hasLossless) kind = ExtensionKind.hifi;
-        else if (folder == 'modules' || type == 'module') kind = ExtensionKind.backend;
+        if (hasLossless) {
+          kind = ExtensionKind.hifi;
+        } else if (folder == 'modules' || type == 'module') kind = ExtensionKind.backend;
         else if (type == 'artwork') kind = ExtensionKind.backend;
       }
     }

@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../models/extension.dart';
-import '../extension_service.dart';
 import '../js_extension_service.dart';
 import '../music_source.dart';
 import 'jiosaavn_source.dart';
@@ -101,7 +100,7 @@ class ExtensionMusicSource implements MusicSource {
       final data = jsonDecode(resp.body) as Map<String, dynamic>;
       final tracks = (data['tracks'] as List? ?? data['results'] as List? ?? const [])
           .whereType<Map>()
-          .map((m) => _mapGenericToTrack(Map<String, dynamic>.from(m as Map)))
+          .map((m) => _mapGenericToTrack(Map<String, dynamic>.from(m)))
           .whereType<OnlineTrack>()
           .toList();
       return tracks.take(limit).toList();

@@ -8,7 +8,6 @@ import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
 import 'backend_api_service.dart';
 import 'database_service.dart';
-import 'piped_service.dart';
 import 'robust_piped_service.dart';
 import 'track_matcher.dart';
 import 'multi_source_search.dart';
@@ -246,7 +245,9 @@ class AudioPlayerHandler extends BaseAudioHandler
               for (int i = 0; i < 10; i++) {
                 await Future.delayed(const Duration(milliseconds: 50));
                 if (_player.duration != null &&
-                    _player.duration!.inMilliseconds > 0) break;
+                    _player.duration!.inMilliseconds > 0) {
+                  break;
+                }
               }
               // Apply speed/volume overrides
               if (_playbackSpeedOverride != null) {
@@ -632,8 +633,9 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (url != null) {
         settle(url);
       } else {
-        if (pipedResult != null) settle(pipedResult);
-        else if (ytDlpResult != null) settle(ytDlpResult);
+        if (pipedResult != null) {
+          settle(pipedResult);
+        } else if (ytDlpResult != null) settle(ytDlpResult);
       }
     });
 
@@ -642,8 +644,9 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (url != null && !settled) {
         settle(url);
       } else {
-        if (backendResult != null) settle(backendResult);
-        else if (ytDlpResult != null && !settled) settle(ytDlpResult);
+        if (backendResult != null) {
+          settle(backendResult);
+        } else if (ytDlpResult != null && !settled) settle(ytDlpResult);
       }
     });
 
@@ -656,8 +659,9 @@ class AudioPlayerHandler extends BaseAudioHandler
 
     Future.wait([backendFut, pipedFut, ytDlpFut]).then((_) {
       if (!settled) {
-        if (backendResult != null) completer.complete(backendResult);
-        else if (pipedResult != null) completer.complete(pipedResult);
+        if (backendResult != null) {
+          completer.complete(backendResult);
+        } else if (pipedResult != null) completer.complete(pipedResult);
         else if (ytDlpResult != null) completer.complete(ytDlpResult);
         else completer.complete(null);
       }
@@ -712,8 +716,9 @@ class AudioPlayerHandler extends BaseAudioHandler
       // Wait for duration to be available with retry (stream proxy may take longer than 500ms)
       for (int i = 0; i < 20; i++) {
         await Future.delayed(const Duration(milliseconds: 100));
-        if (_player.duration != null && _player.duration!.inMilliseconds > 0)
+        if (_player.duration != null && _player.duration!.inMilliseconds > 0) {
           break;
+        }
       }
       final rawDuration = _player.duration;
       final actualDuration = (rawDuration != null &&

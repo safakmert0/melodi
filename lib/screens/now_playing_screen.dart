@@ -1,11 +1,9 @@
 import 'dart:async';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/share_service.dart';
-import '../core/constants.dart';
 import '../core/localization.dart';
 import '../core/extensions/duration_ext.dart';
 import '../providers/player_provider.dart';
@@ -1478,7 +1476,7 @@ class _SpeedButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white .withOpacity(0.1),
+          color: Colors.white .withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Colors.white24),
         ),
@@ -1525,8 +1523,8 @@ class _VolumeBoostButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: showSlider
-              ? accentColor .withOpacity(0.2)
-              : Colors.white .withOpacity(0.1),
+              ? accentColor .withValues(alpha: 0.2)
+              : Colors.white .withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: showSlider ? accentColor : Colors.white24,

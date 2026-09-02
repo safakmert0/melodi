@@ -1,12 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'database_service.dart';
 import 'download_manager.dart';
 import 'navidrome_service.dart';
 import 'sources/apple_music_source.dart';
-import 'music_source.dart';
 
 class RemotePlaylist {
   final String id;
@@ -326,7 +322,7 @@ class RemotePlaylistService {
 
     for (final track in tracks) {
       downloadManager.addTask(
-        spotifyTrackId: '${sourceType}:${track.id}',
+        spotifyTrackId: '$sourceType:${track.id}',
         title: track.title,
         artist: track.artist,
         album: track.album,

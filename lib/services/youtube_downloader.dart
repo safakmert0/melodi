@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../core/app_config.dart';
-import '../models/extension.dart';
 import 'backend_api_service.dart';
 import 'extension_service.dart';
 import 'robust_piped_service.dart';

@@ -30,8 +30,8 @@ class CollaborativeFilteringService {
     final events = <PlayEvent>[];
 
     for (final song in songs) {
-      if (song.playCount != null && song.playCount! > 0) {
-        for (var i = 0; i < song.playCount!; i++) {
+      if (song.playCount > 0) {
+        for (var i = 0; i < song.playCount; i++) {
           events.add(PlayEvent(
             userId: 'local_user',
             trackId: song.id,

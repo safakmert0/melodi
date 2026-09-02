@@ -5,7 +5,6 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import '../core/app_config.dart';
-import '../models/extension.dart';
 import 'extension_service.dart';
 
 class YtDlpVideo {
@@ -90,8 +89,9 @@ class DownloadProgress {
   String get sizeLabel {
     if (totalBytes == null) return '';
     if (totalBytes! < 1024) return '$totalBytes B';
-    if (totalBytes! < 1024 * 1024)
+    if (totalBytes! < 1024 * 1024) {
       return '${(totalBytes! / 1024).toStringAsFixed(1)} KB';
+    }
     return '${(totalBytes! / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 }
@@ -351,10 +351,12 @@ class YtDlpService {
   }
 
   String _formatSpeed(double bytesPerSecond) {
-    if (bytesPerSecond < 1024)
+    if (bytesPerSecond < 1024) {
       return '${bytesPerSecond.toStringAsFixed(0)} B/s';
-    if (bytesPerSecond < 1024 * 1024)
+    }
+    if (bytesPerSecond < 1024 * 1024) {
       return '${(bytesPerSecond / 1024).toStringAsFixed(1)} KB/s';
+    }
     return '${(bytesPerSecond / (1024 * 1024)).toStringAsFixed(1)} MB/s';
   }
 

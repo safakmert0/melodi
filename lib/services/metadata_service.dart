@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:flutter/foundation.dart';
 import '../models/song_model.dart';
@@ -180,7 +178,7 @@ class MetadataService {
       String sourceLabel = 'unknown';
       try {
         // YouTube Music (no-auth search source).
-        if (url == null && ytmusicSource != null) {
+        if (ytmusicSource != null) {
           final results =
               await ytmusicSource.search('$artist $title', limit: 5);
           final best = _bestOnlineCover(results, title, artist);

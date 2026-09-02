@@ -225,8 +225,9 @@ class PodcastService {
   PodcastFeed _parseRss(String xml, String rssUrl) {
     final channelMatch =
         RegExp(r'<channel>(.*?)</channel>', dotAll: true).firstMatch(xml);
-    if (channelMatch == null)
+    if (channelMatch == null) {
       throw FormatException('Invalid RSS: no channel element');
+    }
 
     final channel = channelMatch.group(1)!;
     final title = _extractTag(channel, 'title');
@@ -430,10 +431,12 @@ class PodcastService {
   Duration _parseDuration(String? durationStr) {
     if (durationStr == null) return Duration.zero;
     final parts = durationStr.split(':').map(int.parse).toList();
-    if (parts.length == 3)
+    if (parts.length == 3) {
       return Duration(hours: parts[0], minutes: parts[1], seconds: parts[2]);
-    if (parts.length == 2)
+    }
+    if (parts.length == 2) {
       return Duration(minutes: parts[0], seconds: parts[1]);
+    }
     return Duration(seconds: int.tryParse(durationStr) ?? 0);
   }
 

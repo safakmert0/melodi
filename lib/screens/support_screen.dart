@@ -4,9 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../core/localization.dart';
 import '../theme/app_tokens.dart';
-import '../core/melodi_design.dart';
 import '../core/constants.dart';
 
 /// Donation / "purchase" screen. The app is free and ad-free; supporters can

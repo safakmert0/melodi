@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../core/constants.dart';
-import '../theme/app_tokens.dart';
 import '../services/diagnostics_service.dart';
 
 class DiagnosticsScreen extends StatefulWidget {
@@ -488,8 +486,9 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024)
+    if (bytes < 1024 * 1024 * 1024) {
       return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 
@@ -538,8 +537,7 @@ class _InfoRow extends StatelessWidget {
   const _InfoRow({
     required this.label,
     required this.value,
-    this.valueColor,
-  });
+  }) : valueColor = null;
 
   @override
   Widget build(BuildContext context) {
