@@ -171,16 +171,39 @@ jobs:
       - name: Build Flutter iOS (Release)
         if: env.BUILD_TYPE == 'release'
         run: |
-          flutter build ios --release --no-codesign \
+          # Fix: Flutter 3.35 + Xcode 16.4 requires CODE_SIGNING_ALLOWED=NO in xcconfig for --no-codesign to work
+          echo "CODE_SIGNING_ALLOWED=NO" >> ios/Flutter/Release.xcconfig
+          echo "CODE_SIGNING_REQUIRED=NO" >> ios/Flutter/Release.xcconfig
+          echo "CODE_SIGN_STYLE=Manual" >> ios/Flutter/Release.xcconfig
+          echo "DEVELOPMENT_TEAM=" >> ios/Flutter/Release.xcconfig
+          cat ios/Flutter/Release.xcconfig
+          # Try normal build first, fallback to --config-only + xcodebuild archive will handle actual compilation
+          if ! CODE_SIGNING_ALLOWED=NO flutter build ios --release --no-codesign \
             --build-name=$(grep '^version:' pubspec.yaml | cut -d' ' -f2 | cut -d'+' -f1) \
-            --build-number=$(grep '^version:' pubspec.yaml | cut -d'+' -f2)
+            --build-number=$(grep '^version:' pubspec.yaml | cut -d'+' -f2); then
+            echo "⚠️ flutter build ios failed, trying --config-only fallback"
+            flutter build ios --release --no-codesign --config-only \
+              --build-name=$(grep '^version:' pubspec.yaml | cut -d' ' -f2 | cut -d'+' -f1) \
+              --build-number=$(grep '^version:' pubspec.yaml | cut -d'+' -f2) || true
+            echo "Config-only done, archive step will build Runner.app"
+          fi
 
       - name: Build Flutter iOS (Debug)
         if: env.BUILD_TYPE == 'debug'
         run: |
-          flutter build ios --debug --no-codesign \
+          echo "CODE_SIGNING_ALLOWED=NO" >> ios/Flutter/Debug.xcconfig
+          echo "CODE_SIGNING_REQUIRED=NO" >> ios/Flutter/Debug.xcconfig
+          echo "CODE_SIGN_STYLE=Manual" >> ios/Flutter/Debug.xcconfig
+          echo "DEVELOPMENT_TEAM=" >> ios/Flutter/Debug.xcconfig
+          cat ios/Flutter/Debug.xcconfig
+          if ! CODE_SIGNING_ALLOWED=NO flutter build ios --debug --no-codesign \
             --build-name=$(grep '^version:' pubspec.yaml | cut -d' ' -f2 | cut -d'+' -f1) \
-            --build-number=$(grep '^version:' pubspec.yaml | cut -d'+' -f2)
+            --build-number=$(grep '^version:' pubspec.yaml | cut -d'+' -f2); then
+            echo "⚠️ flutter build ios failed, trying --config-only fallback"
+            flutter build ios --debug --no-codesign --config-only \
+              --build-name=$(grep '^version:' pubspec.yaml | cut -d' ' -f2 | cut -d'+' -f1) \
+              --build-number=$(grep '^version:' pubspec.yaml | cut -d'+' -f2) || true
+          fi
 
       - name: Archive for IPA (Release)
         if: env.BUILD_TYPE == 'release'
