@@ -5,7 +5,7 @@ export 'localization.dart' show AppLocale;
 
 class AppConstants {
   static const String appName = 'Melodi';
-  static const String appVersion = '4.7.0';
+  static const String appVersion = '5.0.1';
   static const String buildNumber = '7';
 
   static const List<String> supportedAudioExtensions = [
@@ -217,7 +217,7 @@ class MelodiTheme {
   static BoxDecoration glassDecoration(
       {double radius = 8, double opacity = 0.6}) {
     return BoxDecoration(
-      color: background .withValues(alpha: opacity),
+      color: background.withValues(alpha: opacity),
       borderRadius: BorderRadius.circular(radius),
       border: Border.all(color: glassBorder, width: 0.5),
     );
@@ -238,7 +238,7 @@ class MelodiTheme {
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            color: background .withValues(alpha: opacity),
+            color: background.withValues(alpha: opacity),
             border: Border.all(color: glassBorder, width: 0.5),
           ),
           child: child,
@@ -308,7 +308,7 @@ class MelodiTheme {
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return primaryGreen .withValues(alpha: 0.3);
+            return primaryGreen.withValues(alpha: 0.3);
           }
           return surfaceBright;
         }),

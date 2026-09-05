@@ -4,6 +4,13 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.0.1] - 2026-09-05
+
+### Uygulama İçi Cloudflare Doğrulaması
+- Hi-Fi API isteği Cloudflare challenge döndürdüğünde kullanıcıya uygulama içi doğrulama penceresi açılır.
+- Doğrulama tamamlanınca WebView çerezleri API oturumuna aktarılır, pencere otomatik kapanır ve bekleyen istek yeniden denenir.
+- Eşzamanlı doğrulama pencereleri tekilleştirildi; WebView ve API istemcisi aynı User-Agent ile çalışır.
+
 ## [4.12.2] - 2026-08-31
 
 ### Fix Build — Büyük Ayarlar Birleştirmesi Geri Alındı
