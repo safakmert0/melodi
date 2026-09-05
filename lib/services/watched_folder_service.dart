@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'database_service.dart';
 import 'music_scanner_service.dart';
 
@@ -42,6 +44,8 @@ class WatchedFolderService {
           }
         }
       }
+      final folders = await _enabledFolders();
+      if (folders.isNotEmpty) return folders.first;
     } catch (_) {}
     return null;
   }
@@ -122,11 +126,10 @@ class WatchedFolderService {
   /// çoklu dosya seçimi ile klasörü çıkar.
   Future<String?> pickAndSaveWatchedFolder() async {
     try {
-      String? dir = await FilePicker.platform.getDirectoryPath(
-        dialogTitle: 'İzlenecek klasörü seç',
-      );
-      // iOS fallback: getDirectoryPath bazen null döner, dosyadan klasör çıkar
-      if (dir == null && Platform.isIOS) {
+      if (Platform.isIOS) {
+        // iOS does not grant a normal app a permanent arbitrary-directory
+        // path. Import selected files into our Documents container instead;
+        // this directory remains visible in Files and can really be polled.
         final result = await FilePicker.platform.pickFiles(
           allowMultiple: true,
           type: FileType.custom,
@@ -145,13 +148,31 @@ class WatchedFolderService {
             'wv',
           ],
         );
-        if (result != null && result.files.isNotEmpty) {
-          final firstPath = result.files.first.path;
-          if (firstPath != null) {
-            dir = File(firstPath).parent.path;
+        if (result == null || result.files.isEmpty) return null;
+        final documents = await getApplicationDocumentsDirectory();
+        final imports = Directory(p.join(documents.path, 'Melodi', 'Imports'));
+        await imports.create(recursive: true);
+        for (final picked in result.files) {
+          final sourcePath = picked.path;
+          if (sourcePath == null || !await File(sourcePath).exists()) continue;
+          var destination = p.join(imports.path, p.basename(sourcePath));
+          var suffix = 1;
+          while (await File(destination).exists()) {
+            destination = p.join(
+              imports.path,
+              '${p.basenameWithoutExtension(sourcePath)} ($suffix)${p.extension(sourcePath)}',
+            );
+            suffix++;
           }
+          await File(sourcePath).copy(destination);
         }
+        await setWatchedFolder(imports.path);
+        await scanWatchedFolder();
+        return imports.path;
       }
+      String? dir = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: 'İzlenecek klasörü seç',
+      );
       if (dir != null && dir.trim().isNotEmpty) {
         await setWatchedFolder(dir);
         return dir;
@@ -191,6 +212,14 @@ class WatchedFolderService {
 
   Future<List<String>> _enabledFolders() async {
     final result = <String>{};
+    if (Platform.isIOS) {
+      // Files > On My iPhone > Melodi is the app Documents container. Always
+      // watch its user-facing Melodi directory, including Imports/Offline.
+      final documents = await getApplicationDocumentsDirectory();
+      final localMelodi = Directory(p.join(documents.path, 'Melodi'));
+      await localMelodi.create(recursive: true);
+      result.add(localMelodi.path);
+    }
     final single = await _db.getSetting(_watchedFolderKey);
     if (single != null && single.trim().isNotEmpty) result.add(single.trim());
     final raw = await _db.getSetting('watched_folders');
@@ -225,8 +254,8 @@ class WatchedFolderService {
   /// Uygulama açılışında çağrılır: auto-scan açıksa ve klasör varsa arka planda tara.
   Future<void> scanOnLaunchIfEnabled() async {
     try {
-      final folder = await getWatchedFolder();
-      if (folder == null || folder.isEmpty) return;
+      final folders = await _enabledFolders();
+      if (folders.isEmpty) return;
       final enabled = await isAutoScanEnabled();
       if (!enabled) return;
       await startMonitoring();

@@ -308,7 +308,10 @@ class MusicScannerService {
     return allSongs;
   }
 
-  Future<List<app.SongModel>> scanDirectoryAndSync(String directoryPath) async {
+  Future<List<app.SongModel>> scanDirectoryAndSync(
+    String directoryPath, {
+    bool enrichArtwork = false,
+  }) async {
     final scanned = await MetadataService.scanDirectory(directoryPath);
     final existing = await _db.getAllSongs();
     final existingPaths = existing.map((s) => s.filePath).toSet();
@@ -316,7 +319,12 @@ class MusicScannerService {
 
     var newSongs =
         scanned.where((s) => !existingPaths.contains(s.filePath)).toList();
-    newSongs = await _enrichMissingArtwork(newSongs);
+    // Folder watching must be fast and deterministic. Network artwork lookup
+    // can take tens of seconds and used to make a five-second scan appear
+    // broken. Artwork can be enriched later from the library UI.
+    if (enrichArtwork) {
+      newSongs = await _enrichMissingArtwork(newSongs);
+    }
     if (newSongs.isNotEmpty) {
       await _db.insertSongs(newSongs);
     }
@@ -324,9 +332,15 @@ class MusicScannerService {
     // Only remove songs if the scan actually found files
     // (avoids deleting library when directory is temporarily inaccessible)
     if (scannedPaths.isNotEmpty) {
-      final missingPaths = existingPaths.difference(scannedPaths);
-      final toRemove =
-          existing.where((s) => missingPaths.contains(s.filePath)).toList();
+      final root = Directory(directoryPath).absolute.path;
+      final separator = Platform.pathSeparator;
+      final rootPrefix = root.endsWith(separator) ? root : '$root$separator';
+      final toRemove = existing.where((song) {
+        final absolutePath = File(song.filePath).absolute.path;
+        final belongsToThisFolder =
+            absolutePath == root || absolutePath.startsWith(rootPrefix);
+        return belongsToThisFolder && !scannedPaths.contains(song.filePath);
+      }).toList();
       for (final s in toRemove) {
         await _db.deleteSong(s.id);
       }

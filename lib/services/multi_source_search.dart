@@ -149,6 +149,7 @@ class MultiSourceSearch {
 
   Future<List<OnlineTrack>> searchAllSync(String query,
       {int limitPerSource = 10}) async {
+    await ExtensionService.instance.ensureLoaded();
     final futures = _allSourcesForSearch.map((source) async {
       try {
         return await source.search(query, limit: limitPerSource);
@@ -166,6 +167,7 @@ class MultiSourceSearch {
     final controller = _controller;
     if (controller == null || controller.isClosed) return;
     try {
+      await ExtensionService.instance.ensureLoaded();
       final allTracks = <OnlineTrack>[];
       final futures = _allSourcesForSearch.map((source) async {
         try {
@@ -190,6 +192,7 @@ class MultiSourceSearch {
   }
 
   Future<String?> getStreamUrl(OnlineTrack track) async {
+    await ExtensionService.instance.ensureLoaded();
     if (!track.source.supportsFullTrack) return null;
     if (AppConfig.isAppStoreBuild) {
       try {
@@ -251,6 +254,7 @@ class MultiSourceSearch {
     Set<String> excludedUrls = const {},
     bool preferStableYouTubeReference = false,
   }) async {
+    await ExtensionService.instance.ensureLoaded();
     Future<String?> resolve(MusicSource source, OnlineTrack candidate) async {
       final url = preferStableYouTubeReference &&
               source.type == MusicSourceType.youtube &&

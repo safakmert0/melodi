@@ -60,6 +60,9 @@ import WebKit
     ffmpegRingtoneHandler = FFmpegRingtoneHandler(messenger: messenger)
 
     GeneratedPluginRegistrant.register(with: self)
+    if let registrar = self.registrar(forPlugin: "HLSDownloader") {
+      HLSDownloader.register(with: registrar)
+    }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }

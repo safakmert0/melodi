@@ -21,16 +21,19 @@ class HLSDownloaderService {
 
   final DatabaseService _db = DatabaseService.instance;
   final StorageManager _storage = StorageManager.instance;
-  
-  static const MethodChannel _channel = MethodChannel('com.melodi/hls_downloader');
+
+  static const MethodChannel _channel =
+      MethodChannel('com.melodi/hls_downloader');
 
   // Active downloads tracking
   final Map<String, _HLSDownloadTask> _activeDownloads = {};
   final StreamController<Map<String, _HLSDownloadTask>> _progressController =
       StreamController<Map<String, _HLSDownloadTask>>.broadcast();
 
-  Stream<Map<String, _HLSDownloadTask>> get progressStream => _progressController.stream;
-  Map<String, _HLSDownloadTask> get activeDownloads => Map.unmodifiable(_activeDownloads);
+  Stream<Map<String, _HLSDownloadTask>> get progressStream =>
+      _progressController.stream;
+  Map<String, _HLSDownloadTask> get activeDownloads =>
+      Map.unmodifiable(_activeDownloads);
 
   /// Download HLS stream to local file
   /// Returns local file path on success, null on failure
@@ -47,8 +50,8 @@ class HLSDownloaderService {
   }) async {
     if (AppConfig.disableYtDlpDirect) {
       try {
-        final hasBackend = ExtensionService.instance.installed
-            .any((e) => e.enabled);
+        final hasBackend =
+            ExtensionService.instance.installed.any((e) => e.enabled);
         if (!hasBackend) {
           debugPrint('HLS download blocked: App Store mode without extension');
           return null;
@@ -59,7 +62,7 @@ class HLSDownloaderService {
     }
     try {
       final downloadId = videoId;
-      
+
       // Check if already downloading
       if (_activeDownloads.containsKey(downloadId)) {
         debugPrint('HLS download already in progress for $videoId');
@@ -69,11 +72,12 @@ class HLSDownloaderService {
       // Prepare destination
       final downloadDir = Directory(await _storage.getStorageLocation());
       await downloadDir.create(recursive: true);
-      
+
       final sanitizedTitle = _sanitizeFilename(title);
       final sanitizedArtist = _sanitizeFilename(artist);
       final fileName = '$sanitizedArtist - $sanitizedTitle';
-      final destinationPath = p.join(downloadDir.path, '${fileName}_$videoId.mp4');
+      final destinationPath =
+          p.join(downloadDir.path, '${fileName}_$videoId.mp4');
 
       // Check if already exists
       if (await File(destinationPath).exists()) {
@@ -99,8 +103,9 @@ class HLSDownloaderService {
       _notifyProgress();
 
       // Start native download via platform channel
+      String? resultPath;
       try {
-        await _channel.invokeMethod('startHLSDownload', {
+        resultPath = await _channel.invokeMethod<String>('startHLSDownload', {
           'videoId': task.videoId,
           'hlsManifestUrl': task.hlsManifestUrl,
           'destinationPath': task.destinationPath,
@@ -114,19 +119,16 @@ class HLSDownloaderService {
         return null;
       }
 
-      // Wait for completion
-      final resultPath = await task.completion.future;
-      
       if (resultPath != null && await File(resultPath).exists()) {
         // Import to library
         final importedPath = await _importDownloadedFile(resultPath, task);
-        
+
         // Save to database
         await _db.upsertDownloadedTrack(videoId, importedPath ?? resultPath);
-        
+
         _activeDownloads.remove(downloadId);
         _notifyProgress();
-        
+
         return importedPath ?? resultPath;
       }
 
@@ -153,13 +155,15 @@ class HLSDownloaderService {
 
     // 2. Try Piped instances (HLS)
     try {
-      final pipedUrl = await RobustPipedService.instance.getHLSManifestUrl(videoId);
+      final pipedUrl =
+          await RobustPipedService.instance.getHLSManifestUrl(videoId);
       if (pipedUrl != null) return pipedUrl;
     } catch (_) {}
 
     // 3. Try Invidious instances
     try {
-      final invidiousUrl = await RobustPipedService.instance.getInvidiousHLSUrl(videoId);
+      final invidiousUrl =
+          await RobustPipedService.instance.getInvidiousHLSUrl(videoId);
       if (invidiousUrl != null) return invidiousUrl;
     } catch (_) {}
 
@@ -203,7 +207,8 @@ class HLSDownloaderService {
     return _activeDownloads.containsKey(videoId);
   }
 
-  Future<String?> _importDownloadedFile(String filePath, _HLSDownloadTask task) async {
+  Future<String?> _importDownloadedFile(
+      String filePath, _HLSDownloadTask task) async {
     try {
       final musicDir = Directory(await _storage.getStorageLocation());
       await musicDir.create(recursive: true);

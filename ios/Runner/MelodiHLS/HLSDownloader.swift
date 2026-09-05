@@ -90,13 +90,21 @@ public class HLSDownloader: NSObject, FlutterPlugin, AVAssetDownloadDelegate {
         let asset = AVURLAsset(url: url)
         
         // Download options
-        let options: [AVAssetDownloadTask: Any] = [
+        let options: [String: Any] = [
             AVAssetDownloadTaskMinimumRequiredMediaBitrateKey: 64000,
-            AVAssetDownloadTaskMaximumAllowedMediaBitrateKey: 256000,
         ]
         
         // Start download
-        let downloadTask = downloadSession.makeAssetDownloadTask(asset: asset, destinationURL: URL(fileURLWithPath: destinationPath), options: options)
+        guard let downloadTask = downloadSession.makeAssetDownloadTask(
+            asset: asset,
+            assetTitle: title,
+            assetArtworkData: nil,
+            options: options
+        ) else {
+            completionHandlers.removeValue(forKey: videoId)
+            result(FlutterError(code: "DOWNLOAD_CREATE_FAILED", message: "HLS download task could not be created", details: nil))
+            return
+        }
         
         // Store task info
         let taskInfo = DownloadTask(

@@ -33,7 +33,6 @@ import 'services/storage_manager.dart';
 import 'screens/onboarding_screen.dart';
 import 'widgets/main_shell.dart';
 import 'services/robust_piped_service.dart';
-import 'services/hls_downloader_service.dart';
 import 'services/watched_folder_service.dart';
 import 'services/cloudflare_session_service.dart';
 
@@ -72,21 +71,11 @@ Future<void> main() async {
       AppLogger.e('Database init failed: $e');
     }
     try {
+      await ExtensionService.instance.ensureLoaded();
       await RobustPipedService.instance.initialize();
       AppLogger.i('RobustPipedService initialized');
     } catch (e) {
       AppLogger.e('RobustPipedService init failed: $e');
-    }
-    try {
-      await HLSDownloaderService.instance.downloadHLS(
-        hlsManifestUrl: '', // dummy to initialize
-        videoId: 'init',
-        title: '',
-        artist: '',
-      );
-      AppLogger.i('HLSDownloaderService initialized');
-    } catch (e) {
-      AppLogger.e('HLSDownloaderService init failed: $e');
     }
     try {
       final migration = await StorageManager.instance.migrateLegacyDownloads();

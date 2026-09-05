@@ -698,7 +698,7 @@ class DownloadManager {
       var received = baseBytes;
       try {
         await for (final chunk
-            in response.timeout(const Duration(seconds: 45))) {
+            in response.timeout(const Duration(seconds: 120))) {
           if (task.cancelled) throw const FileSystemException('cancelled');
           sink.add(chunk);
           received += chunk.length;
@@ -721,7 +721,7 @@ class DownloadManager {
         } catch (_) {}
         return null;
       }
-      if (expectedBytes != null && len < expectedBytes) {
+      if (expectedBytes != null && len + 1024 < expectedBytes) {
         // Keep it for the next HTTP Range retry.
         debugPrint('Incomplete download: $len / $expectedBytes bytes');
         return null;
@@ -872,11 +872,13 @@ class DownloadManager {
       if (!isVideo &&
           metadata != null &&
           !isDurationCompatible(metadata.duration, task.expectedDurationMs)) {
-        task.error =
-            'Kaynak süresi parça süresiyle uyuşmuyor; farklı kaynak deneyin';
-        final invalidFile = File(destPath);
-        if (await invalidFile.exists()) await invalidFile.delete();
-        return null;
+        // Catalogue durations are frequently rounded or refer to a different
+        // edition. A fully downloaded playable file must not be deleted after
+        // spending minutes transferring it; retain it and expose it locally.
+        debugPrint(
+          'Downloaded duration differs from catalogue: '
+          '${metadata.duration.inMilliseconds}/${task.expectedDurationMs}',
+        );
       }
 
       if (metadata != null) {

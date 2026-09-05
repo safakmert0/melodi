@@ -360,8 +360,8 @@ class TrackMatcher {
 
     if (queryDurationMs > 0 && targetDurationMs > 0) {
       final ratio = queryDurationMs / targetDurationMs;
-      if (ratio < 0.5 || ratio > 2.0) return base * 0.3;
-      if (ratio < 0.7 || ratio > 1.4) return base * 0.7;
+      if (ratio <= 0.5 || ratio >= 2.0) return base * 0.1;
+      if (ratio < 0.7 || ratio > 1.4) return base * 0.35;
     }
 
     return base;
