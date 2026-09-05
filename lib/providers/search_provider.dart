@@ -18,6 +18,7 @@ class SearchProvider extends ChangeNotifier {
   String? _error;
   Timer? _debounce;
   StreamSubscription<List<OnlineTrack>>? _onlineSub;
+  int _searchGeneration = 0;
 
   List<SongModel> get results => _results;
   List<OnlineTrack> get onlineResults => _onlineResults;
@@ -28,6 +29,7 @@ class SearchProvider extends ChangeNotifier {
   String? get error => _error;
 
   void search(String query) {
+    final generation = ++_searchGeneration;
     _query = query;
     _debounce?.cancel();
 
@@ -46,10 +48,13 @@ class SearchProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
-    _debounce = Timer(const Duration(milliseconds: 300), () async {
+    _debounce = Timer(const Duration(milliseconds: 160), () async {
       try {
-        _results = await _db.searchSongs(query);
+        final localResults = await _db.searchSongs(query);
+        if (generation != _searchGeneration) return;
+        _results = localResults;
       } catch (e) {
+        if (generation != _searchGeneration) return;
         _results = [];
         _error = 'Yerel arama kullanılamıyor: $e';
       }
@@ -61,15 +66,19 @@ class SearchProvider extends ChangeNotifier {
       _onlineResults = [];
       _onlineSub = _multiSource.searchAll(query).listen(
         (tracks) {
+          if (generation != _searchGeneration) return;
           _onlineResults = tracks;
           _isSearchingOnline = false;
           notifyListeners();
+          unawaited(_multiSource.prefetchStreamUrls(tracks));
         },
         onDone: () {
+          if (generation != _searchGeneration) return;
           _isSearchingOnline = false;
           notifyListeners();
         },
         onError: (_) {
+          if (generation != _searchGeneration) return;
           _onlineResults = [];
           _isSearchingOnline = false;
           _error ??= 'Çevrim içi arama kullanılamıyor';
@@ -88,12 +97,14 @@ class SearchProvider extends ChangeNotifier {
     Set<String> excludedUrls = const {},
     bool forPlayback = false,
   }) async {
-    return await _multiSource.getStreamUrlWithFallback(
-      track,
-      query: _query,
-      excludedUrls: excludedUrls,
-      preferStableYouTubeReference: forPlayback,
-    );
+    return await _multiSource
+        .getStreamUrlWithFallback(
+          track,
+          query: _query,
+          excludedUrls: excludedUrls,
+          preferStableYouTubeReference: forPlayback,
+        )
+        .timeout(const Duration(milliseconds: 4800));
   }
 
   void addRecentSearch(String query) {

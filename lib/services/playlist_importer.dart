@@ -5,8 +5,19 @@ import 'package:http/http.dart' as http;
 import '../models/song_model.dart';
 import 'backend_api_service.dart';
 import 'multi_source_search.dart';
+import 'platform_link_resolver.dart';
 
-enum PlaylistImportSource { spotify, youtubeMusic, deezer, appleMusic, tidal, soundCloud, m3u, cue, unknown }
+enum PlaylistImportSource {
+  spotify,
+  youtubeMusic,
+  deezer,
+  appleMusic,
+  tidal,
+  soundCloud,
+  m3u,
+  cue,
+  unknown
+}
 
 class PlaylistImportResult {
   PlaylistImportResult({
@@ -32,7 +43,8 @@ class PlaylistImporter {
 
   static PlaylistImportSource detectSource(String url) {
     final u = url.toLowerCase().trim();
-    if (u.endsWith('.m3u') || u.endsWith('.m3u8') || u.contains('.m3u?')) return PlaylistImportSource.m3u;
+    if (u.endsWith('.m3u') || u.endsWith('.m3u8') || u.contains('.m3u?'))
+      return PlaylistImportSource.m3u;
     if (u.endsWith('.cue')) return PlaylistImportSource.cue;
     if (u.endsWith('.pls')) return PlaylistImportSource.m3u;
     if (u.contains('spotify.com')) return PlaylistImportSource.spotify;
@@ -41,9 +53,12 @@ class PlaylistImporter {
         u.contains('youtu.be')) {
       return PlaylistImportSource.youtubeMusic;
     }
-    if (u.contains('deezer.com') || u.contains('dzr.cx')) return PlaylistImportSource.deezer;
-    if (u.contains('music.apple.com') || u.contains('itunes.apple.com')) return PlaylistImportSource.appleMusic;
-    if (u.contains('tidal.com') || u.contains('listen.tidal.com')) return PlaylistImportSource.tidal;
+    if (u.contains('deezer.com') || u.contains('dzr.cx'))
+      return PlaylistImportSource.deezer;
+    if (u.contains('music.apple.com') || u.contains('itunes.apple.com'))
+      return PlaylistImportSource.appleMusic;
+    if (u.contains('tidal.com') || u.contains('listen.tidal.com'))
+      return PlaylistImportSource.tidal;
     if (u.contains('soundcloud.com')) return PlaylistImportSource.soundCloud;
     return PlaylistImportSource.unknown;
   }
@@ -79,12 +94,16 @@ class PlaylistImporter {
   static Future<PlaylistImportResult> import(String url) async {
     final source = detectSource(url);
     // Yerel dosya (Evermusic/Flacbox/Musix tarzı M3U/CUE/PLS)
-    if (source == PlaylistImportSource.m3u || source == PlaylistImportSource.cue) {
-      if (url.startsWith('file://') || await File(url).exists() || url.contains('/')) {
+    if (source == PlaylistImportSource.m3u ||
+        source == PlaylistImportSource.cue) {
+      if (url.startsWith('file://') ||
+          await File(url).exists() ||
+          url.contains('/')) {
         final path = url.replaceFirst('file://', '');
         final file = File(path);
         if (await file.exists()) {
-          if (source == PlaylistImportSource.cue) return await _importCueFile(file);
+          if (source == PlaylistImportSource.cue)
+            return await _importCueFile(file);
           return await _importM3uFile(file);
         }
       }
@@ -111,7 +130,8 @@ class PlaylistImporter {
           return await _importViaSearch(url);
         case PlaylistImportSource.m3u:
         case PlaylistImportSource.cue:
-          return PlaylistImportResult.error('Yerel çalma listesi dosyası bulunamadı.');
+          return PlaylistImportResult.error(
+              'Yerel çalma listesi dosyası bulunamadı.');
         case PlaylistImportSource.unknown:
           return PlaylistImportResult.error(
               'Desteklenmeyen kaynak. Spotify, YouTube Music, Deezer, Apple Music, Tidal veya SoundCloud '
@@ -175,11 +195,24 @@ class PlaylistImporter {
   // 8Spine/SpotiFLAC esintili: bilinmeyen URL'yi akıllı aramaya çevir
   static Future<PlaylistImportResult> _importViaSearch(String query) async {
     try {
-      final tracks = await MultiSourceSearch().searchAllSync(query, limitPerSource: 5);
-      if (tracks.isEmpty) return PlaylistImportResult.error('Arama sonucu bulunamadı.');
+      var searchQuery = query;
+      if (query.startsWith('http://') || query.startsWith('https://')) {
+        final resolved = await PlatformLinkResolver.resolve(query);
+        final label = [resolved.artist, resolved.title]
+            .whereType<String>()
+            .where((value) => value.trim().isNotEmpty)
+            .join(' - ');
+        if (label.isNotEmpty) searchQuery = label;
+      }
+      final tracks = await MultiSourceSearch()
+          .searchAllSync(searchQuery, limitPerSource: 5);
+      if (tracks.isEmpty)
+        return PlaylistImportResult.error('Arama sonucu bulunamadı.');
       final songs = tracks.take(20).map((t) {
         return _song('search_${query.hashCode}', t.id, t.title, t.artist,
-            filePath: t.streamUrl ?? 'online://', album: t.album ?? '', duration: t.duration);
+            filePath: t.streamUrl ?? 'online://',
+            album: t.album ?? '',
+            duration: t.duration);
       }).toList();
       return PlaylistImportResult(
         source: PlaylistImportSource.unknown,
@@ -202,17 +235,24 @@ class PlaylistImporter {
         final isUrl = line.startsWith('http');
         if (isUrl) {
           // Uzak M3U satırı — online track olarak ekle
-          songs.add(_song('m3u_${file.path.hashCode}', line.hashCode.toString(), line.split('/').last, 'Bilinmeyen', filePath: line));
+          songs.add(_song('m3u_${file.path.hashCode}', line.hashCode.toString(),
+              line.split('/').last, 'Bilinmeyen',
+              filePath: line));
         } else {
           // Yerel dosya yolu
           final f = File(line);
           if (!await f.exists()) continue;
           final name = line.split('/').last.split('.').first;
-          songs.add(_song('m3u_${file.path.hashCode}', line.hashCode.toString(), name, 'Yerel', filePath: line));
+          songs.add(_song('m3u_${file.path.hashCode}', line.hashCode.toString(),
+              name, 'Yerel',
+              filePath: line));
         }
       }
       if (songs.isEmpty) return PlaylistImportResult.error('M3U dosyası boş.');
-      return PlaylistImportResult(source: PlaylistImportSource.m3u, songs: songs, playlistName: file.uri.pathSegments.last);
+      return PlaylistImportResult(
+          source: PlaylistImportSource.m3u,
+          songs: songs,
+          playlistName: file.uri.pathSegments.last);
     } catch (e) {
       return PlaylistImportResult.error('M3U okunamadı: $e');
     }
@@ -225,19 +265,30 @@ class PlaylistImporter {
       final fileRegex = RegExp(r'FILE\s+"([^"]+)"', caseSensitive: false);
       final trackRegex = RegExp(r'TRACK\s+(\d+)\s+AUDIO', caseSensitive: false);
       final titleRegex = RegExp(r'TITLE\s+"([^"]+)"', caseSensitive: false);
-      final performerRegex = RegExp(r'PERFORMER\s+"([^"]+)"', caseSensitive: false);
+      final performerRegex =
+          RegExp(r'PERFORMER\s+"([^"]+)"', caseSensitive: false);
       final audioFile = fileRegex.firstMatch(content)?.group(1) ?? file.path;
       final tracks = trackRegex.allMatches(content).toList();
-      final titles = titleRegex.allMatches(content).map((m) => m.group(1) ?? '').toList();
-      final performers = performerRegex.allMatches(content).map((m) => m.group(1) ?? '').toList();
+      final titles =
+          titleRegex.allMatches(content).map((m) => m.group(1) ?? '').toList();
+      final performers = performerRegex
+          .allMatches(content)
+          .map((m) => m.group(1) ?? '')
+          .toList();
       final songs = <SongModel>[];
       for (var i = 0; i < tracks.length; i++) {
         final title = i < titles.length ? titles[i] : 'Parça ${i + 1}';
         final artist = i < performers.length ? performers[i] : 'Bilinmeyen';
-        songs.add(_song('cue_${file.path.hashCode}', '${file.path.hashCode}_$i', title, artist, filePath: audioFile));
+        songs.add(_song('cue_${file.path.hashCode}', '${file.path.hashCode}_$i',
+            title, artist,
+            filePath: audioFile));
       }
-      if (songs.isEmpty) return PlaylistImportResult.error('CUE dosyasında parça bulunamadı.');
-      return PlaylistImportResult(source: PlaylistImportSource.cue, songs: songs, playlistName: file.uri.pathSegments.last);
+      if (songs.isEmpty)
+        return PlaylistImportResult.error('CUE dosyasında parça bulunamadı.');
+      return PlaylistImportResult(
+          source: PlaylistImportSource.cue,
+          songs: songs,
+          playlistName: file.uri.pathSegments.last);
     } catch (e) {
       return PlaylistImportResult.error('CUE okunamadı: $e');
     }

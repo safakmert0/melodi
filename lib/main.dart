@@ -158,6 +158,11 @@ Future<void> main() async {
 
     FlutterError.onError = (details) {
       FlutterError.presentError(details);
+      unawaited(DiagnosticsService.instance.logError(
+        'FlutterError',
+        details.exceptionAsString(),
+        details.stack,
+      ));
       debugPrint(
           '=== FLUTTER ERROR ===\n${details.exceptionAsString()}\n${details.stack}');
     };
@@ -206,6 +211,8 @@ Future<void> main() async {
     runZonedGuarded(() {
       runApp(MelodiApp(audioHandler: audioHandler));
     }, (error, stack) {
+      unawaited(DiagnosticsService.instance
+          .logError('UncaughtZone', error.toString(), stack));
       debugPrint('=== UNCAUGHT ERROR ===\n$error\n$stack');
     });
   } catch (e) {

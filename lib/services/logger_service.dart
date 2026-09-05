@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:logger/logger.dart';
+
+import 'diagnostics_service.dart';
 
 class AppLogger {
   static final Logger _logger = Logger(
@@ -29,5 +33,10 @@ class AppLogger {
 
   static void e(dynamic message, [Object? error, StackTrace? stackTrace]) {
     _logger.e(message, error: error, stackTrace: stackTrace);
+    unawaited(DiagnosticsService.instance.logError(
+      'AppLogger',
+      error == null ? message.toString() : '$message: $error',
+      stackTrace,
+    ));
   }
 }

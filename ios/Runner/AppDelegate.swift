@@ -18,7 +18,7 @@ import WebKit
   ) -> Bool {
     // Configure audio session for background playback
     let audioSession = AVAudioSession.sharedInstance()
-    try? audioSession.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+    try? audioSession.setCategory(.playback, mode: .default, options: [])
     try? audioSession.setActive(true)
 
     // Register platform channel handlers

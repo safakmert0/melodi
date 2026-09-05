@@ -30,8 +30,8 @@ class MultiSourceSearch {
   List<MusicSource> get _filteredSources {
     if (!AppConfig.isAppStoreBuild) return _sources;
     try {
-      final hasBackend = ExtensionService.instance.installed
-          .any((e) => e.enabled);
+      final hasBackend =
+          ExtensionService.instance.installed.any((e) => e.enabled);
       if (hasBackend) return _sources;
     } catch (_) {}
     // App Store without premium extension: hide YouTube/JioSaavn full-track
@@ -44,7 +44,14 @@ class MultiSourceSearch {
 
   List<MusicSource> get _extensionSources {
     try {
-      final installed = ExtensionService.instance.installed.where((e) => e.enabled).toList();
+      final installed = ExtensionService.instance.installed
+          .where((e) =>
+              e.enabled &&
+              (e.manifest.capabilities.contains('search') ||
+                  e.manifest.capabilities.contains('playback') ||
+                  e.manifest.capabilities.contains('download') ||
+                  e.manifest.capabilities.contains('downloads')))
+          .toList();
       return installed.map((e) => ExtensionMusicSource(e)).toList();
     } catch (_) {
       return const [];
@@ -60,7 +67,8 @@ class MultiSourceSearch {
   }
 
   List<MusicSource> get sources => List.unmodifiable(_filteredSources);
-  List<MusicSource> get allSourcesForUi => List.unmodifiable(_allSourcesForSearch);
+  List<MusicSource> get allSourcesForUi =>
+      List.unmodifiable(_allSourcesForSearch);
 
   /// Display ranking for search results. Full-track sources (those that can
   /// actually play/download the whole song) are shown first; preview-only
@@ -81,11 +89,47 @@ class MultiSourceSearch {
     return 100;
   }
 
-  int _displayCompare(OnlineTrack a, OnlineTrack b) {
+  int _displayCompare(OnlineTrack a, OnlineTrack b, [String query = '']) {
+    final relevanceA = _queryRelevance(a, query);
+    final relevanceB = _queryRelevance(b, query);
+    if (relevanceA != relevanceB) return relevanceB.compareTo(relevanceA);
     final ra = _displayRank(a);
     final rb = _displayRank(b);
     if (ra != rb) return ra.compareTo(rb);
     return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+  }
+
+  int _queryRelevance(OnlineTrack track, String query) {
+    final wanted = _normalize(query);
+    if (wanted.isEmpty) return 0;
+    final title = _normalize(track.title);
+    final artist = _normalize(track.artist);
+    var score = 0;
+    if (title == wanted) score += 100;
+    if (title.startsWith(wanted)) score += 45;
+    if (title.contains(wanted)) score += 30;
+    final tokens = wanted.split(' ').where((token) => token.length > 1);
+    for (final token in tokens) {
+      if (title.split(' ').contains(token)) score += 12;
+      if (artist.split(' ').contains(token)) score += 8;
+    }
+    return score;
+  }
+
+  List<OnlineTrack> _rankedUnique(List<OnlineTrack> tracks, String query) {
+    final best = <String, OnlineTrack>{};
+    for (final track in tracks) {
+      final durationBucket = track.duration.inSeconds ~/ 3;
+      final key =
+          '${_normalize(track.title)}|${_normalize(track.artist)}|$durationBucket';
+      final current = best[key];
+      if (current == null || _displayRank(track) < _displayRank(current)) {
+        best[key] = track;
+      }
+    }
+    final result = best.values.toList();
+    result.sort((a, b) => _displayCompare(a, b, query));
+    return result;
   }
 
   StreamController<List<OnlineTrack>>? _controller;
@@ -114,9 +158,7 @@ class MultiSourceSearch {
       }
     });
     final results = await Future.wait(futures);
-    final allTracks = results.expand((list) => list).toList();
-    allTracks.sort(_displayCompare);
-    return allTracks;
+    return _rankedUnique(results.expand((list) => list).toList(), query);
   }
 
   Future<void> _performSearch(String query, int limitPerSource) async {
@@ -129,18 +171,18 @@ class MultiSourceSearch {
         try {
           final tracks = await source.search(query, limit: limitPerSource);
           allTracks.addAll(tracks);
-          allTracks.sort(_displayCompare);
+          final ranked = _rankedUnique(allTracks, query);
           if (!controller.isClosed) {
-            controller.add(List.from(allTracks));
+            controller.add(ranked);
           }
         } catch (e) {
           debugPrint('Search error on ${source.name}: $e');
         }
       });
       await Future.wait(futures);
-      allTracks.sort(_displayCompare);
+      final ranked = _rankedUnique(allTracks, query);
       if (!controller.isClosed) {
-        controller.add(allTracks);
+        controller.add(ranked);
       }
     } catch (e) {
       debugPrint('Multi-source search error: $e');
@@ -151,8 +193,8 @@ class MultiSourceSearch {
     if (!track.source.supportsFullTrack) return null;
     if (AppConfig.isAppStoreBuild) {
       try {
-        final hasBackend = ExtensionService.instance.installed
-            .any((e) => e.enabled);
+        final hasBackend =
+            ExtensionService.instance.installed.any((e) => e.enabled);
         if (!hasBackend &&
             (track.source == MusicSourceType.youtube ||
                 track.source == MusicSourceType.jiosaavn)) {
@@ -170,7 +212,8 @@ class MultiSourceSearch {
             final cachedExt = _streamUrlCache[cacheKeyExt];
             if (cachedExt != null && !cachedExt.isExpired) return cachedExt.url;
             final url = await src.getStreamUrl(track);
-            if (url != null) _streamUrlCache[cacheKeyExt] = _CachedStreamUrl(url);
+            if (url != null)
+              _streamUrlCache[cacheKeyExt] = _CachedStreamUrl(url);
             return url;
           }
         }
@@ -189,6 +232,15 @@ class MultiSourceSearch {
     return url;
   }
 
+  Future<void> prefetchStreamUrls(Iterable<OnlineTrack> tracks) async {
+    await Future.wait(tracks.take(4).map((track) async {
+      if (!track.source.supportsFullTrack) return;
+      try {
+        await getStreamUrl(track).timeout(const Duration(seconds: 4));
+      } catch (_) {}
+    }));
+  }
+
   /// Try to get stream URL with fallback across all sources.
   /// Preview-only catalogue results are resolved against a full-track source.
   /// Priority: the track's own full source first, then the user's personal
@@ -204,7 +256,7 @@ class MultiSourceSearch {
               source.type == MusicSourceType.youtube &&
               candidate.id.trim().isNotEmpty
           ? 'youtube://${candidate.id.trim()}'
-          : await source.getStreamUrl(candidate);
+          : await getStreamUrl(candidate);
       final normalized = url?.trim();
       if (normalized == null ||
           normalized.isEmpty ||
@@ -217,9 +269,8 @@ class MultiSourceSearch {
     // 1. Try the track's own source only if it can provide a full track.
     final primarySource = _filteredSources.firstWhere(
       (s) => s.type == track.source,
-      orElse: () => _filteredSources.isNotEmpty
-          ? _filteredSources.first
-          : _sources.first,
+      orElse: () =>
+          _filteredSources.isNotEmpty ? _filteredSources.first : _sources.first,
     );
     if (primarySource.type.supportsFullTrack) {
       try {
@@ -309,12 +360,13 @@ class MultiSourceSearch {
     }
     _controller?.close();
   }
+
+  void clearStreamCache() => _streamUrlCache.clear();
 }
 
 class _CachedStreamUrl {
   _CachedStreamUrl(this.url)
-      : expiresAt =
-            DateTime.now().add(MultiSourceSearch._streamUrlCacheTtl);
+      : expiresAt = DateTime.now().add(MultiSourceSearch._streamUrlCacheTtl);
 
   final String url;
   final DateTime expiresAt;

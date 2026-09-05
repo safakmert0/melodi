@@ -1,7 +1,7 @@
 name: melodi
 description: A source-aware music library, streaming companion, downloader, and local player for iOS.
 publish_to: 'none'
-version: 5.0.1+2
+version: 5.0.2+3
 
 environment:
   sdk: ^3.4.0
@@ -36,6 +36,7 @@ dependencies:
   # Audio Playback
   just_audio: ^0.9.39
   audio_service: ^0.18.13
+  audio_session: ^0.1.21
 
   # Music Scanning & Metadata
   on_audio_query: ^2.9.0
@@ -84,6 +85,7 @@ dependencies:
   collection: ^1.18.0
   connectivity_plus: ^6.0.5
   http: ^1.2.1
+  html: ^0.15.6
   path_provider: ^2.1.4
   path: ^1.9.1
 

@@ -65,6 +65,9 @@ class ExtensionManifest {
     this.minAppVersion,
     this.capabilities = const [],
     this.permissions = const [],
+    this.requiredRuntimeFeatures = const [],
+    this.signedSession,
+    this.settings = const [],
     this.healthPath = '/',
     this.healthMethod = 'GET',
   });
@@ -80,10 +83,16 @@ class ExtensionManifest {
   final String? homepage;
   final String? minAppVersion;
   final List<String> capabilities;
+
   /// SpotiFLAC/DebridMusic tarzı ağ izinleri — boş ise tüm https izinli
   final List<String> permissions;
+  final List<String> requiredRuntimeFeatures;
+  final Map<String, dynamic>? signedSession;
+  final List<Map<String, dynamic>> settings;
+
   /// Sağlık kontrol yolu, örn. "/" veya "/health"
   final String healthPath;
+
   /// HEAD veya GET
   final String healthMethod;
 
@@ -114,9 +123,12 @@ class ExtensionManifest {
         .map((c) => c.toString().trim().toLowerCase())
         .where((c) => c.isNotEmpty)
         .toList(growable: false);
-    final permissions = (json['permissions'] as List? ??
-            json['network_permissions'] as List? ??
-            const [])
+    final rawPermissions = json['permissions'];
+    final permissions = (rawPermissions is Map
+            ? rawPermissions['network'] as List? ?? const []
+            : rawPermissions as List? ??
+                json['network_permissions'] as List? ??
+                const [])
         .map((c) => c.toString().trim())
         .where((c) => c.isNotEmpty)
         .toList(growable: false);
@@ -127,6 +139,17 @@ class ExtensionManifest {
             json['healthMethod']?.toString().trim() ??
             'GET')
         .toUpperCase();
+    final requiredRuntimeFeatures =
+        (json['requiredRuntimeFeatures'] as List? ?? const [])
+            .map((value) => value.toString())
+            .toList(growable: false);
+    final signedSession = json['signedSession'] is Map
+        ? Map<String, dynamic>.from(json['signedSession'] as Map)
+        : null;
+    final settings = (json['settings'] as List? ?? const [])
+        .whereType<Map>()
+        .map((value) => Map<String, dynamic>.from(value))
+        .toList(growable: false);
 
     final protocol = ExtensionProtocol.tryParse(json['protocol']);
     if (json['protocol'] != null && protocol == null) {
@@ -147,6 +170,9 @@ class ExtensionManifest {
       minAppVersion: json['minAppVersion']?.toString().trim(),
       capabilities: capabilities,
       permissions: permissions,
+      requiredRuntimeFeatures: requiredRuntimeFeatures,
+      signedSession: signedSession,
+      settings: settings,
       healthPath: healthPath.isEmpty ? '/' : healthPath,
       healthMethod: (healthMethod == 'HEAD' ? 'HEAD' : 'GET'),
     );
@@ -165,6 +191,10 @@ class ExtensionManifest {
         if (minAppVersion != null) 'minAppVersion': minAppVersion,
         'capabilities': capabilities,
         if (permissions.isNotEmpty) 'permissions': permissions,
+        if (requiredRuntimeFeatures.isNotEmpty)
+          'requiredRuntimeFeatures': requiredRuntimeFeatures,
+        if (signedSession != null) 'signedSession': signedSession,
+        if (settings.isNotEmpty) 'settings': settings,
         'health_path': healthPath,
         'health_method': healthMethod,
       };
@@ -204,7 +234,9 @@ class ExtensionManifest {
     final host = uri.host.toLowerCase();
     for (final p in permissions) {
       final allowed = p.toLowerCase();
-      if (host == allowed || host.endsWith('.$allowed') || url.toLowerCase().startsWith(allowed)) return true;
+      if (host == allowed ||
+          host.endsWith('.$allowed') ||
+          url.toLowerCase().startsWith(allowed)) return true;
     }
     return false;
   }
@@ -285,6 +317,9 @@ class RegistryEntry {
     this.description,
     this.kind,
     this.author,
+    this.category,
+    this.capabilities = const [],
+    this.permissions = const [],
   });
 
   final String id;
@@ -294,6 +329,9 @@ class RegistryEntry {
   final String? description;
   final ExtensionKind? kind;
   final String? author;
+  final String? category;
+  final List<String> capabilities;
+  final List<String> permissions;
 
   static RegistryEntry? fromJson(
     Map<dynamic, dynamic> json, {
@@ -302,12 +340,12 @@ class RegistryEntry {
   }) {
     // Melodi native: url/manifest_url/file; SpotiFLAC-compat: download_url; 8spine: download/file/pkg (download öncelikli - klasör bilgisi için)
     final rawUrl = (json['url'] ??
-            json['manifest_url'] ??
-            json['download'] ??
-            json['download_url'] ??
-            json['file'])
-        ?.toString()
-        .trim() ??
+                json['manifest_url'] ??
+                json['download'] ??
+                json['download_url'] ??
+                json['file'])
+            ?.toString()
+            .trim() ??
         '';
     final url = _resolveUrl(rawUrl, baseUrl);
     if (url == null) return null;
@@ -336,36 +374,55 @@ class RegistryEntry {
     if (id.isEmpty) return null;
     // name: display_name (SpotiFLAC) öncelikli, yoksa name
     final displayName = json['display_name']?.toString().trim() ?? '';
-    final rawName = (displayName.isNotEmpty ? displayName : json['name']?.toString().trim() ?? '');
+    final rawName = (displayName.isNotEmpty
+        ? displayName
+        : json['name']?.toString().trim() ?? '');
     // kind: Melodi kind yoksa SpotiFLAC category veya 8spine tags/categoryHint'den türet
     var kind = ExtensionKindX.tryParse(json['kind']);
     if (kind == null) {
       final cat = json['category']?.toString().trim().toLowerCase();
       if (cat == 'download') {
         kind = ExtensionKind.hifi;
-      } else if (cat == 'integration') kind = ExtensionKind.backend;
+      } else if (cat == 'integration')
+        kind = ExtensionKind.backend;
       else if (categoryHint != null) {
         final hint = categoryHint.toLowerCase();
-        if (hint.contains('hifi') || hint.contains('lossless') || hint.contains('debrid')) {
+        if (hint.contains('hifi') ||
+            hint.contains('lossless') ||
+            hint.contains('debrid')) {
           kind = ExtensionKind.hifi;
         } else if (hint.contains('artwork')) {
           kind = ExtensionKind.backend;
-        } else if (hint.contains('geolier') || hint.contains('livie') || hint.contains('ricky')) {
+        } else if (hint.contains('geolier') ||
+            hint.contains('livie') ||
+            hint.contains('ricky')) {
           kind = ExtensionKind.hifi;
         }
       }
       // Fallback via tags/type/folder heuristics (8spine)
       if (kind == null) {
-        final tags = (json['tags'] as List? ?? const []).map((e) => e.toString().toLowerCase()).toList();
+        final tags = (json['tags'] as List? ?? const [])
+            .map((e) => e.toString().toLowerCase())
+            .toList();
         final type = json['type']?.toString().toLowerCase() ?? '';
         final folder = json['folder']?.toString().toLowerCase() ?? '';
         final desc = json['description']?.toString().toLowerCase() ?? '';
-        final hasLossless = tags.any((t) => t.contains('lossless') || t.contains('hi-res') || t.contains('flac') || t.contains('hires')) ||
-            desc.contains('lossless') || desc.contains('hi-res') || desc.contains('flac') ||
-            type == 'module' && (tags.contains('qobuz') || tags.contains('tidal') || tags.contains('deezer'));
+        final hasLossless = tags.any((t) =>
+                t.contains('lossless') ||
+                t.contains('hi-res') ||
+                t.contains('flac') ||
+                t.contains('hires')) ||
+            desc.contains('lossless') ||
+            desc.contains('hi-res') ||
+            desc.contains('flac') ||
+            type == 'module' &&
+                (tags.contains('qobuz') ||
+                    tags.contains('tidal') ||
+                    tags.contains('deezer'));
         if (hasLossless) {
           kind = ExtensionKind.hifi;
-        } else if (folder == 'modules' || type == 'module') kind = ExtensionKind.backend;
+        } else if (folder == 'modules' || type == 'module')
+          kind = ExtensionKind.backend;
         else if (type == 'artwork') kind = ExtensionKind.backend;
       }
     }
@@ -377,6 +434,18 @@ class RegistryEntry {
       description: json['description']?.toString().trim(),
       kind: kind,
       author: json['author']?.toString().trim(),
+      category:
+          (json['category'] ?? json['type'])?.toString().trim().toLowerCase(),
+      capabilities: (json['capabilities'] as List? ?? const [])
+          .map((value) => value.toString().trim().toLowerCase())
+          .where((value) => value.isNotEmpty)
+          .toList(growable: false),
+      permissions: (json['permissions'] is Map
+              ? ((json['permissions'] as Map)['network'] as List? ?? const [])
+              : json['permissions'] as List? ?? const [])
+          .map((value) => value.toString().trim().toLowerCase())
+          .where((value) => value.isNotEmpty)
+          .toList(growable: false),
     );
   }
 
@@ -451,15 +520,26 @@ class ExtensionRegistry {
         final val = kv.value;
         if (val is! List) continue;
         // Skip known non-module lists
-        if (key == 'external_sources' || key == 'generated_at' || key == 'updated_at' || key == 'updatedAt' || key == 'version' || key == 'name') continue;
+        if (key == 'external_sources' ||
+            key == 'generated_at' ||
+            key == 'updated_at' ||
+            key == 'updatedAt' ||
+            key == 'version' ||
+            key == 'name') continue;
         // Heuristic: category:* or any list containing maps with id/pkg/download
         final isCategory = key.startsWith('category:');
         final sampleHasModuleShape = val.isNotEmpty &&
             val.first is Map &&
-            ((val.first as Map).containsKey('id') || (val.first as Map).containsKey('pkg'));
+            ((val.first as Map).containsKey('id') ||
+                (val.first as Map).containsKey('pkg'));
         if (!isCategory && !sampleHasModuleShape) {
           // For generic future registries, also try if list contains module-like maps
-          final anyModuleLike = val.any((e) => e is Map && (e.containsKey('download') || e.containsKey('file') || e.containsKey('pkg') || e.containsKey('url')));
+          final anyModuleLike = val.any((e) =>
+              e is Map &&
+              (e.containsKey('download') ||
+                  e.containsKey('file') ||
+                  e.containsKey('pkg') ||
+                  e.containsKey('url')));
           if (!anyModuleLike) continue;
         }
         for (final item in val) {
@@ -488,7 +568,9 @@ class ExtensionRegistry {
     final rawName = decoded['name']?.toString().trim() ??
         (decoded['version'] != null ? 'SpotiFLAC Registry' : null) ??
         (decoded['generated_at'] != null ? '8spine Registry' : null);
-    final name = (rawName != null && rawName.isNotEmpty) ? rawName : Uri.tryParse(repoUrl)?.host ?? repoUrl;
+    final name = (rawName != null && rawName.isNotEmpty)
+        ? rawName
+        : Uri.tryParse(repoUrl)?.host ?? repoUrl;
     // updatedAt: camel, snake, generated_at
     final updatedAtRaw = decoded['updatedAt']?.toString() ??
         decoded['updated_at']?.toString() ??

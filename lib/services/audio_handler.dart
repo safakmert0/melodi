@@ -4,6 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
 import 'backend_api_service.dart';
@@ -16,8 +17,7 @@ import 'youtube_downloader.dart';
 import 'yt_dlp_service.dart';
 import 'navidrome_service.dart';
 
-class AudioPlayerHandler extends BaseAudioHandler
-    with SeekHandler {
+class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   final AudioPlayer _player = AudioPlayer();
   final DatabaseService _db = DatabaseService.instance;
   late final TrackMatcher _trackMatcher = TrackMatcher(
@@ -47,8 +47,15 @@ class AudioPlayerHandler extends BaseAudioHandler
   bool _handlingCompletion = false;
 
   AudioPlayerHandler() {
+    unawaited(_configureAudioSession());
     _initPlayer();
     _startAutoSave();
+  }
+
+  Future<void> _configureAudioSession() async {
+    final session = await AudioSession.instance;
+    await session.configure(const AudioSessionConfiguration.music());
+    await session.setActive(true);
   }
 
   int? get sleepTimerMinutes {
@@ -96,12 +103,14 @@ class AudioPlayerHandler extends BaseAudioHandler
             ? _queue[_currentIndex].duration.inMilliseconds
             : 0;
         // If expected duration is known and significantly shorter than reported, use expected for completion
-        final effectiveDur = (expectedMs > 0 && !_isDurationCompatible(dur, expectedMs))
-            ? Duration(milliseconds: expectedMs)
-            : dur;
+        final effectiveDur =
+            (expectedMs > 0 && !_isDurationCompatible(dur, expectedMs))
+                ? Duration(milliseconds: expectedMs)
+                : dur;
         if (pos.inMilliseconds >= effectiveDur.inMilliseconds - 800) {
           // Ensure we don't fire too early: wait until buffered
-          if (_player.bufferedPosition.inMilliseconds >= effectiveDur.inMilliseconds - 500) {
+          if (_player.bufferedPosition.inMilliseconds >=
+              effectiveDur.inMilliseconds - 500) {
             // Let just_audio handle normal completion; this is fallback only if stuck
           }
         }
@@ -338,9 +347,10 @@ class AudioPlayerHandler extends BaseAudioHandler
       final expectedMs = _currentIndex >= 0 && _currentIndex < _queue.length
           ? _queue[_currentIndex].duration.inMilliseconds
           : 0;
-      final effectiveMs = (expectedMs > 0 && !_isDurationCompatible(dur, expectedMs))
-          ? expectedMs
-          : dur.inMilliseconds;
+      final effectiveMs =
+          (expectedMs > 0 && !_isDurationCompatible(dur, expectedMs))
+              ? expectedMs
+              : dur.inMilliseconds;
       if (pos.inMilliseconds > effectiveMs) {
         return Duration(milliseconds: effectiveMs);
       }
@@ -360,6 +370,7 @@ class AudioPlayerHandler extends BaseAudioHandler
     }
     return raw;
   }
+
   Stream<Duration> get positionStream => _player.positionStream;
   Stream<Duration?> get durationStream => _player.durationStream;
   Stream<PlayerState> get playerStateStream => _player.playerStateStream;
@@ -611,8 +622,9 @@ class AudioPlayerHandler extends BaseAudioHandler
   Future<String?> _resolveYoutubeStream(String videoId) async {
     final backendFut =
         BackendApiService.instance.streamUrl(videoId).catchError((_) => null);
-    final pipedFut =
-        RobustPipedService.instance.getStreamUrl(videoId).catchError((_) => null);
+    final pipedFut = RobustPipedService.instance
+        .getStreamUrl(videoId)
+        .catchError((_) => null);
     final ytDlpFut =
         YtDlpService.instance.getStreamUrl(videoId).catchError((_) => null);
 
@@ -661,9 +673,12 @@ class AudioPlayerHandler extends BaseAudioHandler
       if (!settled) {
         if (backendResult != null) {
           completer.complete(backendResult);
-        } else if (pipedResult != null) completer.complete(pipedResult);
-        else if (ytDlpResult != null) completer.complete(ytDlpResult);
-        else completer.complete(null);
+        } else if (pipedResult != null)
+          completer.complete(pipedResult);
+        else if (ytDlpResult != null)
+          completer.complete(ytDlpResult);
+        else
+          completer.complete(null);
       }
     });
 
@@ -745,9 +760,10 @@ class AudioPlayerHandler extends BaseAudioHandler
           final rawDur = _player.duration;
           if (rawDur == null || !_player.playing) return;
           final expectedMs = song.duration.inMilliseconds;
-          final effectiveDur = (expectedMs > 0 && !_isDurationCompatible(rawDur, expectedMs))
-              ? Duration(milliseconds: expectedMs)
-              : rawDur;
+          final effectiveDur =
+              (expectedMs > 0 && !_isDurationCompatible(rawDur, expectedMs))
+                  ? Duration(milliseconds: expectedMs)
+                  : rawDur;
           final remaining = effectiveDur - position;
           if (remaining <= _crossfadeDuration && remaining > Duration.zero) {
             _crossfadeSubscription?.cancel();
@@ -848,59 +864,59 @@ class AudioPlayerHandler extends BaseAudioHandler
     // Spotify supplies library metadata, not downloadable audio. When the
     // user owns the same track on a connected personal server, prefer that
     // exact title/artist/duration match before trying a public resolver.
-try {
-        if (await _navidrome.isConfigured()) {
-          final candidates = await _navidrome.search(
-            '${song.artist} - ${song.title}',
-            limit: 8,
+    try {
+      if (await _navidrome.isConfigured()) {
+        final candidates = await _navidrome.search(
+          '${song.artist} - ${song.title}',
+          limit: 8,
+        );
+        candidates.sort((a, b) {
+          final aScore = TrackMatcher.scoreWithDuration(
+            song.title,
+            song.artist,
+            song.duration.inMilliseconds,
+            a.title,
+            a.artist,
+            a.duration.inMilliseconds,
           );
-          candidates.sort((a, b) {
-            final aScore = TrackMatcher.scoreWithDuration(
-              song.title,
-              song.artist,
-              song.duration.inMilliseconds,
-              a.title,
-              a.artist,
-              a.duration.inMilliseconds,
+          final bScore = TrackMatcher.scoreWithDuration(
+            song.title,
+            song.artist,
+            song.duration.inMilliseconds,
+            b.title,
+            b.artist,
+            b.duration.inMilliseconds,
+          );
+          return bScore.compareTo(aScore);
+        });
+        if (candidates.isNotEmpty) {
+          final best = candidates.first;
+          final score = TrackMatcher.scoreWithDuration(
+            song.title,
+            song.artist,
+            song.duration.inMilliseconds,
+            best.title,
+            best.artist,
+            best.duration.inMilliseconds,
+          );
+          if (score >= 0.72 && best.streamUrl != null) {
+            final artwork = song.albumArt ??
+                await _navidrome.fetchArtwork(best.thumbnailUrl);
+            final resolved = song.copyWith(
+              filePath: best.streamUrl,
+              album: best.album ?? song.album,
+              duration:
+                  best.duration > Duration.zero ? best.duration : song.duration,
+              albumArt: artwork,
             );
-            final bScore = TrackMatcher.scoreWithDuration(
-              song.title,
-              song.artist,
-              song.duration.inMilliseconds,
-              b.title,
-              b.artist,
-              b.duration.inMilliseconds,
-            );
-            return bScore.compareTo(aScore);
-          });
-          if (candidates.isNotEmpty) {
-            final best = candidates.first;
-            final score = TrackMatcher.scoreWithDuration(
-              song.title,
-              song.artist,
-              song.duration.inMilliseconds,
-              best.title,
-              best.artist,
-              best.duration.inMilliseconds,
-            );
-            if (score >= 0.72 && best.streamUrl != null) {
-              final artwork = song.albumArt ??
-                  await _navidrome.fetchArtwork(best.thumbnailUrl);
-              final resolved = song.copyWith(
-                filePath: best.streamUrl,
-                album: best.album ?? song.album,
-                duration:
-                    best.duration > Duration.zero ? best.duration : song.duration,
-                albumArt: artwork,
-              );
-              _replaceSongInQueues(resolved);
-              return resolved;
-            }
+            _replaceSongInQueues(resolved);
+            return resolved;
           }
         }
-      } catch (e) {
-        debugPrint('Navidrome Spotify match failed: $e');
       }
+    } catch (e) {
+      debugPrint('Navidrome Spotify match failed: $e');
+    }
 
     final cached = await _db.getCachedMatch(spotifyId);
     var videoId = cached?['ytVideoId']?.toString();
@@ -1016,7 +1032,8 @@ try {
   }
 
   void _playWithoutBlocking() {
-    unawaited(_player.play().catchError((Object error, StackTrace stackTrace) {
+    unawaited(
+        _activateAndPlay().catchError((Object error, StackTrace stackTrace) {
       debugPrint('Playback start failed: $error\n$stackTrace');
       unawaited(_db.insertErrorLog(
         'playback_start',
@@ -1024,6 +1041,14 @@ try {
         stackTrace.toString(),
       ));
     }));
+  }
+
+  Future<void> _activateAndPlay() async {
+    // iOS can leave an interrupted session inactive while the player clock
+    // still advances. Reactivate it for every manual or automatic transition.
+    final session = await AudioSession.instance;
+    await session.setActive(true);
+    await _player.play();
   }
 
   @override
@@ -1275,7 +1300,8 @@ class PlaybackCompletionDecision {
 }
 
 class _CachedStream {
-  _CachedStream(this.url) : expiresAt = DateTime.now().add(AudioPlayerHandler._ytStreamCacheTtl);
+  _CachedStream(this.url)
+      : expiresAt = DateTime.now().add(AudioPlayerHandler._ytStreamCacheTtl);
 
   final String url;
   final DateTime expiresAt;

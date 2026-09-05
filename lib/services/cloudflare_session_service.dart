@@ -94,6 +94,25 @@ class CloudflareSessionService {
     });
   }
 
+  /// Opens a provider-owned authorization page and returns its custom-scheme
+  /// callback. The page remains fully visible and user-controlled.
+  Future<Uri?> authorize(
+    Uri target, {
+    Set<String> callbackSchemes = const {'spotiflac'},
+  }) async {
+    final navigator = await _waitForNavigator();
+    if (navigator == null) return null;
+    return navigator.push<Uri>(
+      MaterialPageRoute<Uri>(
+        fullscreenDialog: true,
+        builder: (_) => _ProviderAuthorizationScreen(
+          target: target,
+          callbackSchemes: callbackSchemes,
+        ),
+      ),
+    );
+  }
+
   Future<NavigatorState?> _waitForNavigator() async {
     for (var attempt = 0; attempt < 20; attempt++) {
       final navigator = navigatorKey.currentState;
@@ -112,6 +131,43 @@ class CloudflareSessionService {
         .where((cookie) => cookie.name.isNotEmpty)
         .map((cookie) => '${cookie.name}=${cookie.value}')
         .join('; ');
+  }
+}
+
+class _ProviderAuthorizationScreen extends StatelessWidget {
+  const _ProviderAuthorizationScreen({
+    required this.target,
+    required this.callbackSchemes,
+  });
+
+  final Uri target;
+  final Set<String> callbackSchemes;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Sağlayıcı doğrulaması')),
+      body: SafeArea(
+        child: InAppWebView(
+          initialUrlRequest: URLRequest(url: WebUri(target.toString())),
+          initialSettings: InAppWebViewSettings(
+            javaScriptEnabled: true,
+            thirdPartyCookiesEnabled: true,
+            useShouldOverrideUrlLoading: true,
+            userAgent: CloudflareSessionService.userAgent,
+          ),
+          shouldOverrideUrlLoading: (controller, action) async {
+            final raw = action.request.url?.toString();
+            final uri = raw == null ? null : Uri.tryParse(raw);
+            if (uri != null && callbackSchemes.contains(uri.scheme)) {
+              if (context.mounted) Navigator.of(context).pop(uri);
+              return NavigationActionPolicy.CANCEL;
+            }
+            return NavigationActionPolicy.ALLOW;
+          },
+        ),
+      ),
+    );
   }
 }
 

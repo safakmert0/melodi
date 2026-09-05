@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import '../core/constants.dart';
 import '../services/diagnostics_service.dart';
+import '../services/multi_source_search.dart';
 
 class DiagnosticsScreen extends StatefulWidget {
   const DiagnosticsScreen({super.key});
@@ -147,6 +148,16 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
     }
   }
 
+  void _resetStreamCache() {
+    MultiSourceSearch().clearStreamCache();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content:
+            Text('Akış önbelleği temizlendi; bağlantılar yeniden çözülecek'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -265,7 +276,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                               decoration: BoxDecoration(
                                 color: colors.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: colors.outlineVariant),
+                                border:
+                                    Border.all(color: colors.outlineVariant),
                               ),
                               child: Text(
                                 statusText,
@@ -316,8 +328,8 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                                     decoration: BoxDecoration(
                                       color: colors.surfaceContainerHighest,
                                       borderRadius: BorderRadius.circular(4),
-                                      border:
-                                          Border.all(color: colors.outlineVariant),
+                                      border: Border.all(
+                                          color: colors.outlineVariant),
                                     ),
                                     child: Text(
                                       '#${_errors.length - i}',
@@ -403,6 +415,18 @@ class _DiagnosticsScreenState extends State<DiagnosticsScreen> {
                           ),
                         ),
                       ),
+                    const SizedBox(height: 10),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _resetStreamCache,
+                          icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                          label: const Text('Akış önbelleğini sıfırla'),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 10),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),

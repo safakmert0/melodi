@@ -20,13 +20,19 @@ class ExtensionMusicSource implements MusicSource {
   // Heuristic: JS bundle mı?
   bool get isJsBundle {
     final url = bundleUrl.toLowerCase();
-    return url.endsWith('.sflx') || url.endsWith('.spotiflac-ext') || url.endsWith('.8spine') || url.endsWith('.js') || extension.manifest.id.contains('spotify') || extension.manifest.id.contains('tidal');
+    return url.endsWith('.sflx') ||
+        url.endsWith('.spotiflac-ext') ||
+        url.endsWith('.8spine') ||
+        url.endsWith('.js') ||
+        extension.manifest.id.contains('spotify') ||
+        extension.manifest.id.contains('tidal');
   }
 
   @override
   MusicSourceType get type {
     // Eklentinin kind'ine göre map et, ama arama filtrelerinde ayrı görünsün diye extensionName kullanacağız
-    if (extension.manifest.kind == ExtensionKind.hifi) return MusicSourceType.hifi;
+    if (extension.manifest.kind == ExtensionKind.hifi)
+      return MusicSourceType.hifi;
     return MusicSourceType.youtube;
   }
 
@@ -50,7 +56,9 @@ class ExtensionMusicSource implements MusicSource {
         final src = _getNativeSource(MusicSourceType.jiosaavn);
         if (src != null) {
           final res = await src.search(trimmed, limit: limit);
-          return res.map((t) => t.copyWith(extensionId: id, extensionName: name)).toList();
+          return res
+              .map((t) => t.copyWith(extensionId: id, extensionName: name))
+              .toList();
         }
       } catch (_) {}
     }
@@ -59,7 +67,9 @@ class ExtensionMusicSource implements MusicSource {
         final src = _getNativeSource(MusicSourceType.soundcloud);
         if (src != null) {
           final res = await src.search(trimmed, limit: limit);
-          return res.map((t) => t.copyWith(extensionId: id, extensionName: name)).toList();
+          return res
+              .map((t) => t.copyWith(extensionId: id, extensionName: name))
+              .toList();
         }
       } catch (_) {}
     }
@@ -75,10 +85,15 @@ class ExtensionMusicSource implements MusicSource {
           description: extension.manifest.description,
           kind: extension.manifest.kind,
           author: extension.manifest.author,
+          permissions: extension.manifest.permissions,
         );
-        final jsResults = await JsExtensionService.instance.search(entry, trimmed, limit: limit);
+        final jsResults = await JsExtensionService.instance
+            .search(entry, trimmed, limit: limit);
         if (jsResults.isNotEmpty) {
-          return jsResults.map((m) => _mapToTrack(m, limit)).whereType<OnlineTrack>().toList();
+          return jsResults
+              .map((m) => _mapToTrack(m, limit))
+              .whereType<OnlineTrack>()
+              .toList();
         }
       } catch (e) {
         debugPrint('Extension JS search failed (${extension.manifest.id}): $e');
@@ -91,21 +106,28 @@ class ExtensionMusicSource implements MusicSource {
           ? '$baseUrl/api/hifi/search'
           : '$baseUrl/api/search';
       final body = jsonEncode({'query': trimmed, 'limit': limit});
-      final resp = await http.post(
-        Uri.parse(url),
-        headers: {'Content-Type': 'application/json', 'User-Agent': 'Melodi/1.0'},
-        body: body,
-      ).timeout(const Duration(seconds: 8));
+      final resp = await http
+          .post(
+            Uri.parse(url),
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'Melodi/1.0'
+            },
+            body: body,
+          )
+          .timeout(const Duration(seconds: 8));
       if (resp.statusCode != 200) return [];
       final data = jsonDecode(resp.body) as Map<String, dynamic>;
-      final tracks = (data['tracks'] as List? ?? data['results'] as List? ?? const [])
-          .whereType<Map>()
-          .map((m) => _mapGenericToTrack(Map<String, dynamic>.from(m)))
-          .whereType<OnlineTrack>()
-          .toList();
+      final tracks =
+          (data['tracks'] as List? ?? data['results'] as List? ?? const [])
+              .whereType<Map>()
+              .map((m) => _mapGenericToTrack(Map<String, dynamic>.from(m)))
+              .whereType<OnlineTrack>()
+              .toList();
       return tracks.take(limit).toList();
     } catch (e) {
-      debugPrint('Extension native search failed (${extension.manifest.id}): $e');
+      debugPrint(
+          'Extension native search failed (${extension.manifest.id}): $e');
       return [];
     }
   }
@@ -115,10 +137,13 @@ class ExtensionMusicSource implements MusicSource {
       return OnlineTrack(
         id: (m['id'] ?? m['videoId'] ?? m['trackId'] ?? '').toString(),
         title: (m['title'] ?? m['name'] ?? 'Unknown').toString(),
-        artist: (m['artist'] ?? m['author'] ?? m['uploader'] ?? 'Unknown').toString(),
-        album: m['album']?.toString(),
-        duration: Duration(seconds: int.tryParse(m['duration']?.toString() ?? '0') ?? 0),
-        thumbnailUrl: m['thumbnail']?.toString() ?? m['artwork']?.toString(),
+        artist: _artistText(
+            m['artist'] ?? m['artists'] ?? m['author'] ?? m['uploader']),
+        album: (m['album'] ?? m['album_name'])?.toString(),
+        duration: Duration(milliseconds: _durationMs(m)),
+        thumbnailUrl: m['thumbnail']?.toString() ??
+            m['artwork']?.toString() ??
+            m['cover_url']?.toString(),
         source: type,
         extensionId: extension.manifest.id,
         extensionName: extension.manifest.name,
@@ -126,6 +151,26 @@ class ExtensionMusicSource implements MusicSource {
     } catch (_) {
       return null;
     }
+  }
+
+  String _artistText(dynamic value) {
+    if (value is List) {
+      return value
+          .map((item) => item is Map ? item['name'] : item)
+          .where((item) => item != null)
+          .join(', ');
+    }
+    return value?.toString() ?? 'Unknown';
+  }
+
+  int _durationMs(Map<String, dynamic> value) {
+    final millis = value['duration_ms'] ?? value['durationMs'];
+    if (millis != null)
+      return (millis as num?)?.round() ?? int.tryParse('$millis') ?? 0;
+    final seconds = value['duration'];
+    return ((seconds as num?)?.toDouble() ?? double.tryParse('$seconds') ?? 0) *
+        1000 ~/
+        1;
   }
 
   OnlineTrack? _mapGenericToTrack(Map<String, dynamic> m) {
@@ -137,8 +182,10 @@ class ExtensionMusicSource implements MusicSource {
         title: (m['title'] ?? m['name'] ?? 'Unknown').toString(),
         artist: (m['artist'] ?? m['author'] ?? 'Unknown').toString(),
         album: m['album']?.toString(),
-        duration: Duration(seconds: int.tryParse(m['duration']?.toString() ?? '0') ?? 0),
-        thumbnailUrl: m['thumbnail']?.toString() ?? m['thumbnailUrl']?.toString(),
+        duration: Duration(
+            seconds: int.tryParse(m['duration']?.toString() ?? '0') ?? 0),
+        thumbnailUrl:
+            m['thumbnail']?.toString() ?? m['thumbnailUrl']?.toString(),
         source: type,
         extensionId: extension.manifest.id,
         extensionName: extension.manifest.name,
@@ -151,7 +198,8 @@ class ExtensionMusicSource implements MusicSource {
   @override
   Future<String?> getStreamUrl(OnlineTrack track) async {
     // Eğer track bu eklentiden geldiyse, o eklentinin yöntemiyle stream al
-    if (track.extensionId != null && track.extensionId != extension.manifest.id) return null;
+    if (track.extensionId != null && track.extensionId != extension.manifest.id)
+      return null;
 
     // 1) JS
     if (isJsBundle) {
@@ -164,9 +212,22 @@ class ExtensionMusicSource implements MusicSource {
           description: extension.manifest.description,
           kind: extension.manifest.kind,
           author: extension.manifest.author,
+          permissions: extension.manifest.permissions,
         );
-        final url = await JsExtensionService.instance.getStreamUrl(entry, track.id);
+        final url =
+            await JsExtensionService.instance.getStreamUrl(entry, track.id);
         if (url != null && url.isNotEmpty) return url;
+        final providerUrl = await JsExtensionService.instance.getProviderUrl(
+          entry,
+          {
+            'id': track.id,
+            'title': track.title,
+            'artist': track.artist,
+            'album': track.album,
+            'durationMs': track.duration.inMilliseconds,
+          },
+        );
+        if (providerUrl != null && providerUrl.isNotEmpty) return providerUrl;
       } catch (e) {
         debugPrint('Extension JS getStreamUrl failed: $e');
       }
@@ -179,7 +240,9 @@ class ExtensionMusicSource implements MusicSource {
           : '$baseUrl/api/stream/${track.id}';
       // For hifi, try GET stream, else return baseUrl stream
       if (extension.manifest.kind == ExtensionKind.hifi) {
-        final resp = await http.get(Uri.parse(apiUrl), headers: {'User-Agent': 'Melodi/1.0'}).timeout(const Duration(seconds: 8));
+        final resp = await http.get(Uri.parse(apiUrl), headers: {
+          'User-Agent': 'Melodi/1.0'
+        }).timeout(const Duration(seconds: 8));
         if (resp.statusCode == 200) {
           final data = jsonDecode(resp.body) as Map<String, dynamic>;
           final url = data['url']?.toString() ?? data['streamUrl']?.toString();

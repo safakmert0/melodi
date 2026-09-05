@@ -59,6 +59,7 @@ class DownloadManager {
   factory DownloadManager() => _instance;
   DownloadManager._() {
     _loadConfig();
+    unawaited(_cleanupOrphanedParts());
   }
 
   final List<DownloadTask> _tasks = [];
@@ -72,10 +73,32 @@ class DownloadManager {
   final YouTubeDownloader _youtubeDownloader = YouTubeDownloader();
   final MultiSourceSearch _multiSource = MultiSourceSearch();
 
+  Future<void> _cleanupOrphanedParts() async {
+    try {
+      final dir = Directory(await StorageManager.instance.getStorageLocation());
+      if (!await dir.exists()) return;
+      await for (final entity in dir.list(followLinks: false)) {
+        if (entity is! File || !entity.path.toLowerCase().endsWith('.part')) {
+          continue;
+        }
+        final modified = await entity.lastModified();
+        if (DateTime.now().difference(modified) > const Duration(hours: 1)) {
+          // Tasks are process-local; an old partial surviving an app restart
+          // has no owner and cannot be completed safely.
+          await entity.delete();
+        }
+      }
+    } catch (error) {
+      debugPrint('Partial download cleanup failed: $error');
+    }
+  }
+
   Future<void> _loadConfig() async {
     try {
-      final parallel = await DatabaseService.instance.getSetting('download_parallel');
-      final wifi = await DatabaseService.instance.getSetting('download_wifi_only');
+      final parallel =
+          await DatabaseService.instance.getSetting('download_parallel');
+      final wifi =
+          await DatabaseService.instance.getSetting('download_wifi_only');
       _maxParallel = int.tryParse(parallel ?? '')?.clamp(1, 3) ?? 2;
       _wifiOnly = wifi == 'true';
     } catch (_) {}
@@ -83,12 +106,14 @@ class DownloadManager {
 
   Future<void> setWifiOnly(bool v) async {
     _wifiOnly = v;
-    await DatabaseService.instance.setSetting('download_wifi_only', v.toString());
+    await DatabaseService.instance
+        .setSetting('download_wifi_only', v.toString());
   }
 
   Future<void> setMaxParallel(int v) async {
     _maxParallel = v.clamp(1, 3);
-    await DatabaseService.instance.setSetting('download_parallel', _maxParallel.toString());
+    await DatabaseService.instance
+        .setSetting('download_parallel', _maxParallel.toString());
     _processQueue();
   }
 
@@ -191,8 +216,11 @@ class DownloadManager {
     // Wi-Fi only kontrolü — Evermusic/SpotiFLAC esintili
     if (_wifiOnly) {
       try {
-        final conn = await Connectivity().checkConnectivity().timeout(const Duration(seconds: 5), onTimeout: () => [ConnectivityResult.wifi]);
-        final isWifi = conn.contains(ConnectivityResult.wifi) || conn.contains(ConnectivityResult.ethernet);
+        final conn = await Connectivity().checkConnectivity().timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => [ConnectivityResult.wifi]);
+        final isWifi = conn.contains(ConnectivityResult.wifi) ||
+            conn.contains(ConnectivityResult.ethernet);
         final isMobile = conn.contains(ConnectivityResult.mobile);
         if (isMobile && !isWifi) {
           // Mobilde beklet, Wi-Fi gelince otomatik devam edecek (queue paused)
@@ -232,7 +260,9 @@ class DownloadManager {
 
       if (streamUrl == null || streamUrl.isEmpty) {
         try {
-          allTracks = await _multiSource.searchAllSync(query, limitPerSource: 3).timeout(const Duration(seconds: 15));
+          allTracks = await _multiSource
+              .searchAllSync(query, limitPerSource: 3)
+              .timeout(const Duration(seconds: 15));
         } on TimeoutException {
           debugPrint('Download search timeout for "$query"');
           allTracks = [];
@@ -257,7 +287,9 @@ class DownloadManager {
               task.progress = 0.1;
               task.error = '${track.sourceLabel} deneniyor...';
               _notify();
-              final url = await _multiSource.getStreamUrl(track).timeout(const Duration(seconds: 12), onTimeout: () => null);
+              final url = await _multiSource
+                  .getStreamUrl(track)
+                  .timeout(const Duration(seconds: 12), onTimeout: () => null);
               if (url != null && url.isNotEmpty) {
                 streamUrl = url;
                 break;
@@ -282,10 +314,12 @@ class DownloadManager {
           _notify();
           List<OnlineTrack> searchResults = const [];
           try {
-            searchResults = await _multiSource.searchAllSync(
-              query,
-              limitPerSource: 5,
-            ).timeout(const Duration(seconds: 15));
+            searchResults = await _multiSource
+                .searchAllSync(
+                  query,
+                  limitPerSource: 5,
+                )
+                .timeout(const Duration(seconds: 15));
           } catch (_) {
             searchResults = [];
           }
@@ -297,10 +331,12 @@ class DownloadManager {
             // common tagging mismatches still resolve to a playable track.
             List<OnlineTrack> titleOnly = const [];
             try {
-              titleOnly = await _multiSource.searchAllSync(
-                task.title.trim(),
-                limitPerSource: 5,
-              ).timeout(const Duration(seconds: 15));
+              titleOnly = await _multiSource
+                  .searchAllSync(
+                    task.title.trim(),
+                    limitPerSource: 5,
+                  )
+                  .timeout(const Duration(seconds: 15));
             } catch (_) {}
             ytResults = titleOnly
                 .where((t) => t.source == MusicSourceType.youtube)
@@ -313,9 +349,9 @@ class DownloadManager {
 
         if (videoId != null) {
           final String vid = videoId;
-          final asVideo =
-              (await DatabaseService.instance.getSetting('download_as_video')) ==
-                  'true';
+          final asVideo = (await DatabaseService.instance
+                  .getSetting('download_as_video')) ==
+              'true';
 
           Future<String?> fetch(bool video) {
             Future<String?> fut;
@@ -334,7 +370,8 @@ class DownloadManager {
                 quality: task.requestedQuality,
               );
             }
-            return fut.timeout(const Duration(minutes: 5), onTimeout: () => null);
+            return fut.timeout(const Duration(minutes: 5),
+                onTimeout: () => null);
           }
 
           final attempts = asVideo ? [true, false] : [false];
@@ -373,7 +410,8 @@ class DownloadManager {
                 task.progress = 1.0;
                 task.error = null;
                 try {
-                  await db.upsertDownloadedTrack(task.spotifyTrackId, importedPath)
+                  await db
+                      .upsertDownloadedTrack(task.spotifyTrackId, importedPath)
                       .timeout(const Duration(seconds: 5));
                 } catch (_) {}
                 onDownloadComplete?.call();
@@ -385,7 +423,8 @@ class DownloadManager {
                   task.progress = 1.0;
                   task.error = null;
                   try {
-                    await db.upsertDownloadedTrack(task.spotifyTrackId, resultPath)
+                    await db
+                        .upsertDownloadedTrack(task.spotifyTrackId, resultPath)
                         .timeout(const Duration(seconds: 5));
                   } catch (_) {}
                   onDownloadComplete?.call();
@@ -415,7 +454,7 @@ class DownloadManager {
       task.progress = 0.3;
       _notify();
 
-      var resultPath = await _downloadFromUrl(streamUrl, task.title, downloadDir)
+      var resultPath = await _downloadFromUrl(streamUrl, task, downloadDir)
           .timeout(const Duration(minutes: 5), onTimeout: () => null);
 
       if (resultPath == null && !task.cancelled) {
@@ -451,7 +490,8 @@ class DownloadManager {
           task.progress = 0;
           _notify();
           _activeDownloads--;
-          Future.delayed(Duration(seconds: (1 << retries) * 2), () => _processQueue());
+          Future.delayed(
+              Duration(seconds: (1 << retries) * 2), () => _processQueue());
           return;
         }
         task.state = DownloadState.failed;
@@ -480,7 +520,8 @@ class DownloadManager {
           task.progress = 1.0;
           task.error = null;
           try {
-            await db.upsertDownloadedTrack(task.spotifyTrackId, importedPath)
+            await db
+                .upsertDownloadedTrack(task.spotifyTrackId, importedPath)
                 .timeout(const Duration(seconds: 5));
           } catch (_) {}
           onDownloadComplete?.call();
@@ -492,7 +533,8 @@ class DownloadManager {
             task.progress = 1.0;
             task.error = null;
             try {
-              await db.upsertDownloadedTrack(task.spotifyTrackId, resultPath)
+              await db
+                  .upsertDownloadedTrack(task.spotifyTrackId, resultPath)
                   .timeout(const Duration(seconds: 5));
             } catch (_) {}
             onDownloadComplete?.call();
@@ -514,7 +556,8 @@ class DownloadManager {
         task.progress = 0;
         _notify();
         _activeDownloads--;
-        Future.delayed(Duration(seconds: (1 << retries) * 2), () => _processQueue());
+        Future.delayed(
+            Duration(seconds: (1 << retries) * 2), () => _processQueue());
         return;
       }
       task.state = DownloadState.failed;
@@ -544,10 +587,12 @@ class DownloadManager {
         _notify();
         List<OnlineTrack> fallbackResults = const [];
         try {
-          fallbackResults = await _multiSource.searchAllSync(
-            query,
-            limitPerSource: 5,
-          ).timeout(const Duration(seconds: 15));
+          fallbackResults = await _multiSource
+              .searchAllSync(
+                query,
+                limitPerSource: 5,
+              )
+              .timeout(const Duration(seconds: 15));
         } catch (_) {}
         final ytResults = fallbackResults
             .where((t) => t.source == MusicSourceType.youtube)
@@ -561,12 +606,14 @@ class DownloadManager {
       task.error = 'YouTube yedek kaynağından indiriliyor...';
       _notify();
       try {
-        return await _youtubeDownloader.downloadFullTrack(
-          videoId,
-          task.title,
-          Directory(await StorageManager.instance.getStorageLocation()),
-          quality: task.requestedQuality,
-        ).timeout(const Duration(minutes: 5), onTimeout: () => null);
+        return await _youtubeDownloader
+            .downloadFullTrack(
+              videoId,
+              task.title,
+              Directory(await StorageManager.instance.getStorageLocation()),
+              quality: task.requestedQuality,
+            )
+            .timeout(const Duration(minutes: 5), onTimeout: () => null);
       } on TimeoutException {
         return null;
       }
@@ -577,7 +624,7 @@ class DownloadManager {
   }
 
   Future<String?> _downloadFromUrl(
-      String url, String title, Directory dir) async {
+      String url, DownloadTask task, Directory dir) async {
     // JollyTone/Evermusic/SpotiFLAC esintili: Range resume + background-friendly
     // Non-http(s) scheme (e.g. youtube://) cannot be fetched via HttpClient — fail fast
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
@@ -587,23 +634,29 @@ class DownloadManager {
     File? partFile;
     HttpClient? client;
     try {
-      final sanitized = title.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
+      final sanitized = task.title.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
       String safeTitle = sanitized.isEmpty ? 'download' : sanitized;
 
       // Önce HEAD ile uzantıyı tahmin et (contentType için), sonra resume
       String ext = 'm4a';
       try {
-        final headClient = HttpClient()..connectionTimeout = const Duration(seconds: 6);
+        final headClient = HttpClient()
+          ..connectionTimeout = const Duration(seconds: 6);
         final headReq = await headClient.headUrl(Uri.parse(url));
-        headReq.headers.set('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
-        final headResp = await headReq.close().timeout(const Duration(seconds: 6));
-        if (headResp.headers.contentType != null) ext = _downloadExtension(url, headResp.headers.contentType);
+        headReq.headers.set('User-Agent',
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
+        final headResp =
+            await headReq.close().timeout(const Duration(seconds: 6));
+        if (headResp.headers.contentType != null)
+          ext = _downloadExtension(url, headResp.headers.contentType);
         headClient.close();
       } catch (_) {
         ext = _downloadExtension(url, null);
       }
 
-      final filePath = '${dir.path}/${safeTitle}_${DateTime.now().millisecondsSinceEpoch}.$ext';
+      // Keep the name stable so a retry resumes the same partial download.
+      final stableId = task.id.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+      final filePath = '${dir.path}/${safeTitle}_$stableId.$ext';
       final partPath = '$filePath.part';
       partFile = File(partPath);
       int existing = 0;
@@ -612,29 +665,65 @@ class DownloadManager {
       client = HttpClient()
         ..userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)'
         ..connectionTimeout = const Duration(seconds: 15);
-      final request = await client.getUrl(Uri.parse(url)).timeout(const Duration(seconds: 15));
-      request.headers.set('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
+      final request = await client
+          .getUrl(Uri.parse(url))
+          .timeout(const Duration(seconds: 15));
+      request.headers.set('User-Agent',
+          'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
       if (existing > 1024) {
         request.headers.set(HttpHeaders.rangeHeader, 'bytes=$existing-');
       }
-      final response = await request.close().timeout(const Duration(seconds: 15));
+      final response =
+          await request.close().timeout(const Duration(seconds: 15));
       if (response.statusCode != 200 && response.statusCode != 206) {
         if (existing > 0 && response.statusCode == 416) {
           // Range not satisfiable, restart
-          try { await partFile.delete(); } catch (_) {}
-          return await _downloadFromUrl(url, title, dir).timeout(const Duration(minutes: 5));
+          try {
+            await partFile.delete();
+          } catch (_) {}
+          return await _downloadFromUrl(url, task, dir)
+              .timeout(const Duration(minutes: 5));
         }
         return null;
       }
       // 206 ise append, 200 ise overwrite
-      final sink = partFile.openWrite(mode: existing > 0 && response.statusCode == 206 ? FileMode.append : FileMode.write);
-      await response.pipe(sink).timeout(const Duration(minutes: 5), onTimeout: () {
-        throw TimeoutException('download pipe timeout');
-      });
-      await sink.close();
+      final isResume = existing > 0 && response.statusCode == 206;
+      final baseBytes = isResume ? existing : 0;
+      final expectedBytes = response.contentLength > 0
+          ? baseBytes + response.contentLength
+          : null;
+      final sink = partFile.openWrite(
+        mode: isResume ? FileMode.append : FileMode.write,
+      );
+      var received = baseBytes;
+      try {
+        await for (final chunk
+            in response.timeout(const Duration(seconds: 45))) {
+          if (task.cancelled) throw const FileSystemException('cancelled');
+          sink.add(chunk);
+          received += chunk.length;
+          if (expectedBytes != null && expectedBytes > 0) {
+            task.progress =
+                (0.3 + (received / expectedBytes) * 0.48).clamp(0.3, 0.78);
+            task.error =
+                isResume ? 'İndirmeye devam ediliyor...' : 'İndiriliyor...';
+            _notify();
+          }
+        }
+        await sink.flush();
+      } finally {
+        await sink.close();
+      }
       final len = await partFile.length();
       if (len < 1000) {
-        try { await partFile.delete(); } catch (_) {}
+        try {
+          await partFile.delete();
+        } catch (_) {}
+        return null;
+      }
+      if (expectedBytes != null && len < expectedBytes) {
+        // Keep it for the next HTTP Range retry.
+        debugPrint('Incomplete download: $len / $expectedBytes bytes');
         return null;
       }
       await partFile.rename(filePath);
@@ -733,7 +822,8 @@ class DownloadManager {
             if (ok) {
               try {
                 metadata = await MetadataService.extractMetadata(destPath)
-                        .timeout(const Duration(seconds: 8), onTimeout: () => null) ??
+                        .timeout(const Duration(seconds: 8),
+                            onTimeout: () => null) ??
                     metadata;
               } catch (_) {}
             }
@@ -771,8 +861,9 @@ class DownloadManager {
             expectedDurationMs: task.expectedDurationMs,
           ).timeout(const Duration(seconds: 10), onTimeout: () => false);
           if (processed) {
-            metadata = await MetadataService.extractMetadata(destPath)
-                    .timeout(const Duration(seconds: 8), onTimeout: () => null) ??
+            metadata = await MetadataService.extractMetadata(destPath).timeout(
+                    const Duration(seconds: 8),
+                    onTimeout: () => null) ??
                 metadata;
           }
         } catch (_) {}

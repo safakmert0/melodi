@@ -7,19 +7,25 @@ import '../models/artist_model.dart';
 import '../models/genre_model.dart';
 import '../services/database_service.dart';
 import '../services/music_scanner_service.dart';
+import '../services/watched_folder_service.dart';
 
 class WatchedFolder {
   final String path;
   final bool enabled;
   const WatchedFolder({required this.path, this.enabled = true});
   Map<String, dynamic> toJson() => {'path': path, 'enabled': enabled};
-  factory WatchedFolder.fromJson(Map<String, dynamic> json) =>
-      WatchedFolder(path: json['path'] as String, enabled: json['enabled'] as bool? ?? true);
+  factory WatchedFolder.fromJson(Map<String, dynamic> json) => WatchedFolder(
+      path: json['path'] as String, enabled: json['enabled'] as bool? ?? true);
 }
 
 enum SongSortField { title, artist, album, duration, dateAdded }
 
 class LibraryProvider extends ChangeNotifier {
+  LibraryProvider() {
+    WatchedFolderService.instance.libraryRevision
+        .addListener(_onWatchedFolderChanged);
+  }
+
   final DatabaseService _db = DatabaseService.instance;
   final MusicScannerService _scanner = MusicScannerService();
 
@@ -39,6 +45,7 @@ class LibraryProvider extends ChangeNotifier {
   SongSortField _sortField = SongSortField.title;
   bool _sortAscending = true;
   Timer? _watchTimer;
+  bool _watchRefreshRunning = false;
 
   SongSortField get sortField => _sortField;
   bool get sortAscending => _sortAscending;
@@ -228,6 +235,7 @@ class LibraryProvider extends ChangeNotifier {
     if (folders.isEmpty) {
       _watchTimer?.cancel();
       _watchTimer = null;
+      WatchedFolderService.instance.stopMonitoring();
     } else {
       _startWatchTimer();
     }
@@ -246,25 +254,22 @@ class LibraryProvider extends ChangeNotifier {
 
   void _startWatchTimer() {
     _watchTimer?.cancel();
-    _watchTimer = Timer.periodic(const Duration(seconds: 60), (_) async {
-      final folders = await getWatchedFolders();
-      bool changed = false;
-      for (final wf in folders.where((f) => f.enabled)) {
-        try {
-          final newSongs = await _scanner.scanDirectoryAndSync(wf.path);
-          if (newSongs.isNotEmpty) changed = true;
-        } catch (_) {}
-      }
-      if (changed) {
-        try {
-          _songs = _applySort(await _db.getAllSongs());
-          _buildAlbums();
-          _buildArtists();
-          _buildGenres();
-          notifyListeners();
-        } catch (_) {}
-      }
-    });
+    _watchTimer = null;
+    WatchedFolderService.instance.startMonitoring();
+  }
+
+  Future<void> _onWatchedFolderChanged() async {
+    if (_watchRefreshRunning) return;
+    _watchRefreshRunning = true;
+    try {
+      _songs = _applySort(await _db.getAllSongs());
+      _buildAlbums();
+      _buildArtists();
+      _buildGenres();
+      notifyListeners();
+    } finally {
+      _watchRefreshRunning = false;
+    }
   }
 
   // Geriye dönük tek klasör API — çokluya ekler
@@ -276,6 +281,7 @@ class LibraryProvider extends ChangeNotifier {
       await setWatchedFolders([]);
       _watchTimer?.cancel();
       _watchTimer = null;
+      WatchedFolderService.instance.stopMonitoring();
       notifyListeners();
     }
   }
@@ -283,6 +289,7 @@ class LibraryProvider extends ChangeNotifier {
   Future<void> clearWatchedFolder() async {
     _watchTimer?.cancel();
     _watchTimer = null;
+    WatchedFolderService.instance.stopMonitoring();
     await _db.setSetting('watched_folder', '');
     await _db.setSetting('watched_folders', '[]');
     notifyListeners();
@@ -291,6 +298,8 @@ class LibraryProvider extends ChangeNotifier {
   @override
   void dispose() {
     _watchTimer?.cancel();
+    WatchedFolderService.instance.libraryRevision
+        .removeListener(_onWatchedFolderChanged);
     super.dispose();
   }
 

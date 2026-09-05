@@ -13,6 +13,8 @@ import 'support_screen.dart';
 import 'downloads_screen.dart';
 import 'storage_screen.dart';
 import 'extension_store_screen.dart';
+import 'diagnostics_screen.dart';
+import 'source_hub_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -24,6 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late String _selectedLanguage;
   String _appVersion = AppConstants.appVersion;
   String? _watchedFolder;
+  List<String> _watchedFolders = const [];
   bool _watchedAutoScan = true;
   bool _watchedLoading = false;
 
@@ -39,12 +42,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadWatchedFolder() async {
     final folder = await WatchedFolderService.instance.getWatchedFolder();
+    final folders = await WatchedFolderService.instance.getWatchedFolders();
     final auto = await WatchedFolderService.instance.isAutoScanEnabled();
     if (mounted) {
       setState(() {
-      _watchedFolder = folder;
-      _watchedAutoScan = auto;
-    });
+        _watchedFolder = folder;
+        _watchedFolders = folders;
+        _watchedAutoScan = auto;
+      });
     }
   }
 
@@ -76,6 +81,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('İzlenecek klasör temizlendi')),
+      );
+    }
+  }
+
+  Future<void> _removeWatchedFolder(String path) async {
+    await WatchedFolderService.instance.removeWatchedFolder(path);
+    await _loadWatchedFolder();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Klasör izleme listesinden kaldırıldı')),
       );
     }
   }
@@ -225,12 +240,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _SettingsTile(
                   icon: Icons.folder_special_rounded,
                   iconColor: Colors.deepPurple,
-                  title: 'İzlenecek Klasör',
-                  subtitle: _watchedFolder == null
-                      ? 'Seçilmedi — her açılışta taranacak klasör'
-                      : _watchedFolder!.length > 48
-                          ? '...${_watchedFolder!.substring(_watchedFolder!.length - 48)}'
-                          : _watchedFolder!,
+                  title: 'İzlenen Klasörler',
+                  subtitle: _watchedFolders.isEmpty
+                      ? 'Klasör ekle — her 5 saniyede otomatik taranır'
+                      : '${_watchedFolders.length} klasör izleniyor · yeni klasör ekle',
                   trailing: _watchedLoading
                       ? const SizedBox(
                           width: 20,
@@ -241,11 +254,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onTap: _pickWatchedFolder,
                 ),
                 if (_watchedFolder != null) ...[
+                  for (final folder in _watchedFolders) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).cardTheme.color ??
+                            Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.folder_rounded,
+                            color: Colors.deepPurple),
+                        title: Text(
+                          folder,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: IconButton(
+                          tooltip: 'İzlemeyi bırak',
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => _removeWatchedFolder(folder),
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
-                        color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
+                        color: Theme.of(context).cardTheme.color ??
+                            Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(12)),
                     child: SwitchListTile(
                       secondary: Container(
@@ -253,15 +293,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         decoration: BoxDecoration(
                             color: Colors.deepPurple.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8)),
-                        child: const Icon(Icons.autorenew_rounded, color: Colors.deepPurple, size: 20),
+                        child: const Icon(Icons.autorenew_rounded,
+                            color: Colors.deepPurple, size: 20),
                       ),
                       title: Text('Otomatik tara',
-                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15)),
-                      subtitle: Text('Her açılışta yeni dosyaları ekle',
-                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface,
+                              fontSize: 15)),
+                      subtitle: Text('Her 5 saniyede yeni dosyaları ekle',
+                          style: TextStyle(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                              fontSize: 12)),
                       value: _watchedAutoScan,
                       onChanged: (v) async {
-                        await WatchedFolderService.instance.setAutoScanEnabled(v);
+                        await WatchedFolderService.instance
+                            .setAutoScanEnabled(v);
                         if (mounted) setState(() => _watchedAutoScan = v);
                       },
                     ),
@@ -274,11 +322,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: () async {
-                              final c = await WatchedFolderService.instance.scanWatchedFolder();
+                              final c = await WatchedFolderService.instance
+                                  .scanWatchedFolder();
                               if (mounted) {
                                 context.read<LibraryProvider>().refresh();
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(c == 0 ? 'Yeni dosya yok' : '$c yeni parça eklendi')),
+                                  SnackBar(
+                                      content: Text(c == 0
+                                          ? 'Yeni dosya yok'
+                                          : '$c yeni parça eklendi')),
                                 );
                               }
                             },
@@ -302,6 +354,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Divider(color: MelodiTheme.outlineVariant, height: 1),
                 _SectionTitle('Eklentiler'),
                 _SettingsTile(
+                  icon: Icons.hub_rounded,
+                  iconColor: Colors.indigo,
+                  title: 'Kaynak ve bağlantı durumu',
+                  subtitle:
+                      'Müzik kaynaklarını, yeteneklerini ve bağlantıları yönet',
+                  trailing:
+                      Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SourceHubScreen()),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _SettingsTile(
                   icon: Icons.extension_rounded,
                   iconColor: MelodiTheme.primaryGreen,
                   title: 'Eklenti Mağazası',
@@ -317,6 +382,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Divider(color: MelodiTheme.outlineVariant, height: 1),
                 _SectionTitle(AppLocale.tr('about')),
                 _SettingsTile(
+                  icon: Icons.monitor_heart_outlined,
+                  iconColor: Colors.blue,
+                  title: 'Tanılama',
+                  subtitle:
+                      'Hataları, servis durumunu ve uygulama bilgilerini gör',
+                  trailing:
+                      Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const DiagnosticsScreen()),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _SettingsTile(
+                  icon: Icons.person_add_alt_1_rounded,
+                  iconColor: Colors.purple,
+                  title: 'Geliştiriciyi takip et',
+                  subtitle: 'Instagram @safakmert0 · Telegram @mertiletisimbot',
+                  trailing:
+                      Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
+                  onTap: () => _showDeveloperLinks(context),
+                ),
+                const SizedBox(height: 8),
+                _SettingsTile(
                   icon: Icons.volunteer_activism_rounded,
                   iconColor: MelodiTheme.primaryGreen,
                   title: 'Destek Ol',
@@ -331,6 +420,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   iconColor: MelodiTheme.onSurfaceVariant,
                   title: 'Melodi',
                   subtitle: '${AppLocale.tr('version')} $_appVersion',
+                ),
+                const SizedBox(height: 8),
+                _SettingsTile(
+                  icon: Icons.code_rounded,
+                  iconColor: Colors.blueGrey,
+                  title: 'Açık kaynak bileşenleri',
+                  subtitle: 'Melodi’de kullanılan projeleri ve katkıları gör',
+                  trailing:
+                      Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
+                  onTap: () => _showAcknowledgments(context),
                 ),
                 const SizedBox(height: 32),
               ],
@@ -475,6 +574,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Text('Kapat',
                   style: TextStyle(color: MelodiTheme.primaryGreen))),
         ],
+      ),
+    );
+  }
+
+  void _showDeveloperLinks(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Instagram'),
+              subtitle: const Text('@safakmert0'),
+              trailing: const Icon(Icons.open_in_new_rounded),
+              onTap: () {
+                Navigator.pop(context);
+                _openUrl('https://instagram.com/safakmert0');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.send_rounded),
+              title: const Text('Telegram'),
+              subtitle: const Text('@mertiletisimbot'),
+              trailing: const Icon(Icons.open_in_new_rounded),
+              onTap: () {
+                Navigator.pop(context);
+                _openUrl('https://t.me/mertiletisimbot');
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }

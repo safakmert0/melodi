@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
@@ -18,14 +20,33 @@ class WatchedFolderService {
 
   final DatabaseService _db = DatabaseService.instance;
   final MusicScannerService _scanner = MusicScannerService();
+  final ValueNotifier<int> libraryRevision = ValueNotifier<int>(0);
+  Timer? _watchTimer;
+  bool _scanRunning = false;
+
+  static const Duration scanInterval = Duration(seconds: 5);
 
   Future<String?> getWatchedFolder() async {
     try {
       final v = await _db.getSetting(_watchedFolderKey);
       if (v != null && v.trim().isNotEmpty) return v.trim();
+      final multiple = await _db.getSetting('watched_folders');
+      if (multiple != null && multiple.isNotEmpty) {
+        final decoded = jsonDecode(multiple);
+        if (decoded is List) {
+          for (final item in decoded.whereType<Map>()) {
+            if (item['enabled'] != false &&
+                (item['path']?.toString().trim() ?? '').isNotEmpty) {
+              return item['path'].toString().trim();
+            }
+          }
+        }
+      }
     } catch (_) {}
     return null;
   }
+
+  Future<List<String>> getWatchedFolders() => _enabledFolders();
 
   Future<bool> isAutoScanEnabled() async {
     try {
@@ -42,22 +63,59 @@ class WatchedFolderService {
     try {
       await _db.setSetting(_watchedFolderAutoScanKey, enabled.toString());
     } catch (_) {}
+    if (enabled) {
+      await startMonitoring();
+    } else {
+      stopMonitoring();
+    }
   }
 
   Future<void> setWatchedFolder(String path) async {
     try {
-      await _db.setSetting(_watchedFolderKey, path.trim());
+      final normalized = path.trim();
+      final folders = await _enabledFolders();
+      if (!folders.contains(normalized)) folders.add(normalized);
+      await _db.setSetting(
+        _watchedFolderKey,
+        folders.isEmpty ? '' : folders.first,
+      );
       await _db.setSetting(_watchedFolderLastScanKey, '');
+      await _db.setSetting(
+        'watched_folders',
+        jsonEncode([
+          for (final folder in folders) {'path': folder, 'enabled': true},
+        ]),
+      );
     } catch (e) {
       debugPrint('WatchedFolder set failed: $e');
     }
+    await startMonitoring();
+  }
+
+  Future<void> removeWatchedFolder(String path) async {
+    final normalized = path.trim();
+    final folders = await _enabledFolders()
+      ..removeWhere((folder) => folder == normalized);
+    await _db.setSetting(
+      _watchedFolderKey,
+      folders.isEmpty ? '' : folders.first,
+    );
+    await _db.setSetting(
+      'watched_folders',
+      jsonEncode([
+        for (final folder in folders) {'path': folder, 'enabled': true},
+      ]),
+    );
+    await startMonitoring();
   }
 
   Future<void> clearWatchedFolder() async {
     try {
       await _db.setSetting(_watchedFolderKey, '');
       await _db.setSetting(_watchedFolderLastScanKey, '');
+      await _db.setSetting('watched_folders', '[]');
     } catch (_) {}
+    stopMonitoring();
   }
 
   /// Dosya seçiciyle klasör seçtir ve kaydet. iOS’ta getDirectoryPath desteklenmiyorsa
@@ -73,7 +131,18 @@ class WatchedFolderService {
           allowMultiple: true,
           type: FileType.custom,
           allowedExtensions: const [
-            'mp3','m4a','flac','wav','aac','ogg','wma','alac','aiff','opus','ape','wv',
+            'mp3',
+            'm4a',
+            'flac',
+            'wav',
+            'aac',
+            'ogg',
+            'wma',
+            'alac',
+            'aiff',
+            'opus',
+            'ape',
+            'wv',
           ],
         );
         if (result != null && result.files.isNotEmpty) {
@@ -95,22 +164,62 @@ class WatchedFolderService {
 
   /// Seçili klasörü tarar ve yeni şarkıları kitaplığa ekler.
   Future<int> scanWatchedFolder() async {
-    final folder = await getWatchedFolder();
-    if (folder == null || folder.isEmpty) return 0;
+    if (_scanRunning) return 0;
+    _scanRunning = true;
     try {
-      final newSongs = await _scanner.scanDirectoryAndSync(folder);
-      await _db.setSetting(_watchedFolderLastScanKey, DateTime.now().toIso8601String());
-      debugPrint('WatchedFolder scan: +${newSongs.length} in $folder');
-      return newSongs.length;
+      final folders = await _enabledFolders();
+      var added = 0;
+      for (final folder in folders) {
+        try {
+          final newSongs = await _scanner.scanDirectoryAndSync(folder);
+          added += newSongs.length;
+        } catch (e) {
+          debugPrint('WatchedFolder scan failed for $folder: $e');
+        }
+      }
+      await _db.setSetting(
+          _watchedFolderLastScanKey, DateTime.now().toIso8601String());
+      if (added > 0) libraryRevision.value++;
+      return added;
     } catch (e) {
       debugPrint('WatchedFolder scan failed: $e');
-      try {
-        final dir = Directory(folder);
-        final exists = await dir.exists().timeout(const Duration(seconds: 2), onTimeout: () => false);
-        debugPrint('WatchedFolder exists check after fail: $exists for $folder');
-      } catch (_) {}
       return 0;
+    } finally {
+      _scanRunning = false;
     }
+  }
+
+  Future<List<String>> _enabledFolders() async {
+    final result = <String>{};
+    final single = await _db.getSetting(_watchedFolderKey);
+    if (single != null && single.trim().isNotEmpty) result.add(single.trim());
+    final raw = await _db.getSetting('watched_folders');
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          for (final item in decoded.whereType<Map>()) {
+            final path = item['path']?.toString().trim() ?? '';
+            if (item['enabled'] != false && path.isNotEmpty) result.add(path);
+          }
+        }
+      } catch (_) {}
+    }
+    return result.toList();
+  }
+
+  Future<void> startMonitoring() async {
+    stopMonitoring();
+    if (!await isAutoScanEnabled() || (await _enabledFolders()).isEmpty) return;
+    unawaited(scanWatchedFolder());
+    _watchTimer = Timer.periodic(scanInterval, (_) {
+      unawaited(scanWatchedFolder());
+    });
+  }
+
+  void stopMonitoring() {
+    _watchTimer?.cancel();
+    _watchTimer = null;
   }
 
   /// Uygulama açılışında çağrılır: auto-scan açıksa ve klasör varsa arka planda tara.
@@ -120,15 +229,7 @@ class WatchedFolderService {
       if (folder == null || folder.isEmpty) return;
       final enabled = await isAutoScanEnabled();
       if (!enabled) return;
-      final lastStr = await _db.getSetting(_watchedFolderLastScanKey);
-      if (lastStr != null && lastStr.isNotEmpty) {
-        final last = DateTime.tryParse(lastStr);
-        if (last != null && DateTime.now().difference(last).inSeconds < 60) {
-          debugPrint('WatchedFolder: recent scan skipped');
-          return;
-        }
-      }
-      unawaited(scanWatchedFolder());
+      await startMonitoring();
     } catch (e) {
       debugPrint('WatchedFolder launch scan error: $e');
     }
@@ -144,5 +245,3 @@ class WatchedFolderService {
     }
   }
 }
-
-void unawaited(Future<void> f) {}

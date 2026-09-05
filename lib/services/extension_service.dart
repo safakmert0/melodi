@@ -3,11 +3,13 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'js_extension_service.dart';
 
 import '../core/app_config.dart';
 import '../models/extension.dart';
 import 'database_service.dart';
 import 'music_source.dart';
+import 'secure_storage_service.dart';
 
 /// SpotiFLAC tarzı merkeziyetsiz eklenti deposu sistemi.
 ///
@@ -24,6 +26,8 @@ class ExtensionService extends ChangeNotifier {
   /// Resmî Melodi eklenti deposu.
   static const String officialRepoUrl =
       'https://raw.githubusercontent.com/safakmert0/melodi-extensions/main/registry.json';
+  static const String officialSpotiFlacRepoUrl =
+      'https://raw.githubusercontent.com/zarzet/SpotiFLAC-Extension/main/registry.json';
 
   static const String _reposKey = 'extension_repos';
   static const String _installedKey = 'installed_extensions';
@@ -74,16 +78,25 @@ class ExtensionService extends ChangeNotifier {
         if (AppConfig.isAppStoreBuild) {
           _repos = [];
         } else {
-          _repos = [officialRepoUrl];
+          _repos = [officialRepoUrl, officialSpotiFlacRepoUrl];
         }
         await _persistRepos();
       }
+      // Existing sideload installations should receive the official provider
+      // catalogue without having to paste the registry URL again.
+      if (!AppConfig.isAppStoreBuild &&
+          !_repos.contains(officialSpotiFlacRepoUrl)) {
+        _repos = [..._repos, officialSpotiFlacRepoUrl];
+        await _persistRepos();
+      }
     } catch (_) {
-      _repos = AppConfig.isAppStoreBuild ? [] : [officialRepoUrl];
+      _repos = AppConfig.isAppStoreBuild
+          ? []
+          : [officialRepoUrl, officialSpotiFlacRepoUrl];
     }
     try {
-      _installed = InstalledExtension.listFromJson(
-          await _db.getSetting(_installedKey));
+      _installed =
+          InstalledExtension.listFromJson(await _db.getSetting(_installedKey));
     } catch (_) {
       _installed = [];
     }
@@ -95,7 +108,8 @@ class ExtensionService extends ChangeNotifier {
   /// adresine düşer (manuel giriş "gelişmiş" seçenek olarak yaşar).
   ///
   /// [protocol] verilirse yalnızca o protokoldeki eklentiler dikkate alınır.
-  Future<String?> resolveEndpoint(ExtensionKind kind, {String? protocol}) async {
+  Future<String?> resolveEndpoint(ExtensionKind kind,
+      {String? protocol}) async {
     await ensureLoaded();
     for (final ext in _installed) {
       if (ext.enabled && ext.manifest.kind == kind) {
@@ -123,8 +137,9 @@ class ExtensionService extends ChangeNotifier {
   }
 
   /// Etkin yt-dlp backend eklentisinin uç noktası; yoksa null.
-  Future<String?> resolveActiveBackendEndpoint() => resolveEndpoint(
-      ExtensionKind.backend, protocol: ExtensionProtocol.ytdlpBackend.wireName);
+  Future<String?> resolveActiveBackendEndpoint() =>
+      resolveEndpoint(ExtensionKind.backend,
+          protocol: ExtensionProtocol.ytdlpBackend.wireName);
 
   // -------------------------------------------------------------------------
   // Sağlık kontrolü (SpotiFLAC / Evermusic tarzı, HEAD/GET + cache)
@@ -149,7 +164,8 @@ class ExtensionService extends ChangeNotifier {
       final method = ext.manifest.healthMethod == 'HEAD' ? 'HEAD' : 'GET';
       final req = http.Request(method, uri);
       req.headers['User-Agent'] = 'Melodi/1.0';
-      final streamed = await http.Client().send(req).timeout(const Duration(seconds: 8));
+      final streamed =
+          await http.Client().send(req).timeout(const Duration(seconds: 8));
       final ok = streamed.statusCode >= 200 && streamed.statusCode < 400;
       _healthCache[ext.manifest.id] = _HealthEntry(ok, now);
       return ok;
@@ -211,19 +227,20 @@ class ExtensionService extends ChangeNotifier {
         Uri.parse(url),
         headers: {
           'Accept': 'application/json',
-          'User-Agent': 'Melodi/1.0 (iOS; +https://github.com/safakmert0/melodi)',
+          'User-Agent':
+              'Melodi/1.0 (iOS; +https://github.com/safakmert0/melodi)',
         },
       ).timeout(_timeout);
       if (response.statusCode != 200) {
-        return RepoSnapshot(
-            url: url, error: 'HTTP ${response.statusCode}');
+        return RepoSnapshot(url: url, error: 'HTTP ${response.statusCode}');
       }
       return RepoSnapshot(
         url: url,
         registry: ExtensionRegistry.parse(response.body, url),
       );
     } on TimeoutException {
-      return RepoSnapshot(url: url, error: 'Zaman aşımı (8spine Vercel yavaş olabilir)');
+      return RepoSnapshot(
+          url: url, error: 'Zaman aşımı (8spine Vercel yavaş olabilir)');
     } catch (e) {
       debugPrint('Extension repo error ($url): $e');
       return RepoSnapshot(url: url, error: 'Depoya erişilemedi: $e');
@@ -246,7 +263,7 @@ class ExtensionService extends ChangeNotifier {
     await ensureLoaded();
     _repos = _repos.where((r) => r != url).toList();
     if (_repos.isEmpty && !AppConfig.isAppStoreBuild) {
-      _repos = [officialRepoUrl];
+      _repos = [officialRepoUrl, officialSpotiFlacRepoUrl];
     }
     await _persistRepos();
     notifyListeners();
@@ -267,9 +284,9 @@ class ExtensionService extends ChangeNotifier {
 
   /// Depo kaydındaki manifest'i indirip kurar. Aynı kimlik kuruluysa
   /// sürümü günceller.
-  /// Generic: .sflx/.spotiflac-ext/.8spine/.js uzantıları için sentetik manifest
-  /// (JS bundle'lar Melodi'de native çalıştırılamaz; bridge olarak Melodi backend'i kullanılır,
-  /// böylece SpotiFLAC bot doğrulaması bypass edilir).
+  /// Generic: .sflx/.spotiflac-ext/.8spine/.js paketleri için manifest.
+  /// Paket içindeki rol ve izinler korunur; doğrulama gerekiyorsa uygulamanın
+  /// kullanıcı kontrollü web doğrulama akışı kullanılır.
   Future<void> installFromEntry(RegistryEntry entry) async {
     final lowerUrl = entry.url.toLowerCase();
     final isBundle = lowerUrl.endsWith('.sflx') ||
@@ -279,7 +296,10 @@ class ExtensionService extends ChangeNotifier {
         lowerUrl.contains('.8spine') ||
         lowerUrl.contains('8spine.js');
     if (isBundle) {
-      final synthetic = _syntheticManifestForBundle(entry);
+      final packageManifest =
+          await JsExtensionService.instance.fetchPackageManifest(entry);
+      final synthetic =
+          _syntheticManifestForBundle(entry, packageManifest: packageManifest);
       await installManifest(synthetic);
       return;
     }
@@ -287,18 +307,20 @@ class ExtensionService extends ChangeNotifier {
     await installManifest(manifest);
   }
 
-  ExtensionManifest _syntheticManifestForSflx(RegistryEntry entry) =>
-      _syntheticManifestForBundle(entry);
-
-  ExtensionManifest _syntheticManifestForBundle(RegistryEntry entry) {
-    // 8spine/SpotiFLAC JS bundle'ları öncelikle JS sandbox'ta çalışır (zarzet gerçeği).
-    // Melodi backend (butterfly) yalnızca JS sandbox bot doğrulaması gerektirdiğinde
-    // yedek köprü olarak kullanılır — ana kaynak her zaman orijinal JS'tir.
-    const fallbackBackend = 'https://butterfly-crawford-parenting-spotlight.trycloudflare.com';
+  ExtensionManifest _syntheticManifestForBundle(
+    RegistryEntry entry, {
+    Map<String, dynamic>? packageManifest,
+  }) {
+    // 8spine/SpotiFLAC JS bundle'ları öncelikle yerel JS çalışma
+    // zamanında çalışır. Backend adresi yalnızca uyumlu paketlerin açıkça
+    // desteklediği ağ sözleşmesi için yedektir.
+    const fallbackBackend =
+        'https://butterfly-crawford-parenting-spotlight.trycloudflare.com';
     // Kind inference: entry.kind yoksa id/name/tags'den hifi çıkarımı yap
     ExtensionKind inferredKind = entry.kind ?? ExtensionKind.backend;
     if (entry.kind == null) {
-      final haystack = '${entry.id} ${entry.name} ${entry.description ?? ''}'.toLowerCase();
+      final haystack =
+          '${entry.id} ${entry.name} ${entry.description ?? ''}'.toLowerCase();
       final isLossless = haystack.contains('qobuz') ||
           haystack.contains('tidal') ||
           haystack.contains('deezer') ||
@@ -309,23 +331,53 @@ class ExtensionService extends ChangeNotifier {
       if (isLossless) inferredKind = ExtensionKind.hifi;
     }
     final kind = inferredKind;
-    final caps = kind == ExtensionKind.hifi
-        ? ['search', 'playback', 'downloads', 'lossless']
-        : ['search', 'playback', 'downloads'];
+    final rawTypes = packageManifest?['type'];
+    final types = rawTypes is List
+        ? rawTypes.map((value) => value.toString().toLowerCase()).toList()
+        : [rawTypes?.toString().toLowerCase() ?? entry.category ?? ''];
+    final role = types.join(' ');
+    final inferredCaps = entry.capabilities.isNotEmpty
+        ? entry.capabilities
+        : role.contains('lyrics')
+            ? ['lyrics']
+            : role.contains('metadata')
+                ? ['metadata']
+                : kind == ExtensionKind.hifi
+                    ? ['search', 'playback', 'downloads', 'lossless']
+                    : ['search', 'playback', 'downloads'];
+    final caps = <String>[...inferredCaps];
+    if (role.contains('download_provider')) {
+      caps.addAll(['playback', 'downloads', 'lossless']);
+    }
+    if (role.contains('metadata_provider')) caps.add('metadata');
+    if (role.contains('lyrics_provider')) caps.add('lyrics');
+    final packagePermissions = packageManifest?['permissions'];
+    final networkPermissions = packagePermissions is Map
+        ? (packagePermissions['network'] as List? ?? const [])
+            .map((value) => value.toString())
+            .toList(growable: false)
+        : const <String>[];
     // Homepage: orijinal JS bundle URL'si (JS sandbox için), generic değil spesifik
     final homepage = entry.url;
-    final is8spine = entry.url.contains('8spine') || entry.id.contains('8spine') || entry.id.contains('morgk') || entry.id.contains('tidal') && entry.url.contains('vercel');
+    final is8spine = entry.url.contains('8spine') ||
+        entry.id.contains('8spine') ||
+        entry.id.contains('morgk') ||
+        entry.id.contains('tidal') && entry.url.contains('vercel');
     final author = entry.author ?? (is8spine ? '8spine' : 'zarzet');
     // Gerçek modül URL'si homepage'de saklanır; baseUrl köprü yedeğidir.
     // Kullanıcı eklenti kartında her ikisini de görür.
     return ExtensionManifest(
       id: entry.id,
-      name: entry.name,
-      description: (entry.description ?? '') +
-          (entry.url.toLowerCase().endsWith('.js') || entry.url.contains('8spine.js')
+      name: packageManifest?['displayName']?.toString() ?? entry.name,
+      description: (packageManifest?['description']?.toString() ??
+              entry.description ??
+              '') +
+          (entry.url.toLowerCase().endsWith('.js') ||
+                  entry.url.contains('8spine.js')
               ? ' — 8spine JS (önce JS sandbox, gerekirse Melodi köprü)'
               : ' — SpotiFLAC JS (önce JS sandbox, gerekirse Melodi köprü)'),
-      version: entry.version ?? '1.0.0',
+      version:
+          packageManifest?['version']?.toString() ?? entry.version ?? '1.0.0',
       author: author,
       kind: kind,
       baseUrl: fallbackBackend,
@@ -333,7 +385,18 @@ class ExtensionService extends ChangeNotifier {
       homepage: homepage,
       minAppVersion: '4.10.0',
       capabilities: caps,
-      permissions: [],
+      permissions: networkPermissions,
+      requiredRuntimeFeatures:
+          (packageManifest?['requiredRuntimeFeatures'] as List? ?? const [])
+              .map((value) => value.toString())
+              .toList(growable: false),
+      signedSession: packageManifest?['signedSession'] is Map
+          ? Map<String, dynamic>.from(packageManifest!['signedSession'] as Map)
+          : null,
+      settings: (packageManifest?['settings'] as List? ?? const [])
+          .whereType<Map>()
+          .map((value) => Map<String, dynamic>.from(value))
+          .toList(growable: false),
       healthPath: '/',
       healthMethod: 'GET',
     );
@@ -341,9 +404,8 @@ class ExtensionService extends ChangeNotifier {
 
   Future<ExtensionManifest> fetchManifest(String url) async {
     try {
-      final response = await http
-          .get(Uri.parse(url), headers: {'Accept': 'application/json'})
-          .timeout(_timeout);
+      final response = await http.get(Uri.parse(url),
+          headers: {'Accept': 'application/json'}).timeout(_timeout);
       if (response.statusCode != 200) {
         throw Exception('Manifest indirilemedi: HTTP ${response.statusCode}');
       }
@@ -364,8 +426,9 @@ class ExtensionService extends ChangeNotifier {
     final record = InstalledExtension(
       manifest: manifest,
       enabled: existingIndex >= 0 ? _installed[existingIndex].enabled : true,
-      installedAt:
-          existingIndex >= 0 ? _installed[existingIndex].installedAt : DateTime.now(),
+      installedAt: existingIndex >= 0
+          ? _installed[existingIndex].installedAt
+          : DateTime.now(),
     );
     if (existingIndex >= 0) {
       _installed[existingIndex] = record;
@@ -393,6 +456,38 @@ class ExtensionService extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<Map<String, dynamic>> loadSettings(ExtensionManifest manifest) async {
+    final values = <String, dynamic>{};
+    for (final setting in manifest.settings) {
+      final key = setting['key']?.toString();
+      if (key == null || key.isEmpty) continue;
+      final saved = await SecureStorageService.instance
+          .read('extension_setting_${manifest.id}_$key');
+      if (saved != null) {
+        try {
+          values[key] = jsonDecode(saved);
+        } catch (_) {
+          values[key] = saved;
+        }
+      } else {
+        values[key] = setting['default'];
+      }
+    }
+    return values;
+  }
+
+  Future<void> saveSettings(
+      ExtensionManifest manifest, Map<String, dynamic> values) async {
+    for (final entry in values.entries) {
+      await SecureStorageService.instance.write(
+        'extension_setting_${manifest.id}_${entry.key}',
+        jsonEncode(entry.value),
+      );
+    }
+    JsExtensionService.instance.dispose(manifest.id);
+    notifyListeners();
+  }
+
   /// Önceliği aynı türdeki eklentiler arasında yukarı/aşağı taşır.
   Future<void> move(ExtensionKind kind, String id, {required bool up}) async {
     await ensureLoaded();
@@ -400,7 +495,8 @@ class ExtensionService extends ChangeNotifier {
       for (var i = 0; i < _installed.length; i++)
         if (_installed[i].manifest.kind == kind) i,
     ];
-    final pos = indices.indexOf(_installed.indexWhere((e) => e.manifest.id == id));
+    final pos =
+        indices.indexOf(_installed.indexWhere((e) => e.manifest.id == id));
     if (pos < 0) return;
     final swapWith = up ? pos - 1 : pos + 1;
     if (swapWith < 0 || swapWith >= indices.length) return;
@@ -428,10 +524,11 @@ class ExtensionService extends ChangeNotifier {
         final current = installedById(entry.id);
         if (current == null) continue;
         try {
-          final manifest = await fetchManifest(entry.url);
+          await installFromEntry(entry);
+          final manifest = installedById(entry.id)?.manifest;
+          if (manifest == null) continue;
           if (manifest.version != current.manifest.version ||
               manifest.baseUrl != current.manifest.baseUrl) {
-            await installManifest(manifest);
             updated.add(installedById(entry.id)!);
             changedAny = true;
           }

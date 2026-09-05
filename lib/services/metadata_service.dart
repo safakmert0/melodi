@@ -8,6 +8,7 @@ import 'lyrics_service.dart';
 import 'multi_source_search.dart';
 import 'sources/youtube_music_source.dart';
 import 'music_source.dart';
+import 'musicbrainz_service.dart';
 
 /// Result of a backfill run, including per-track failures so the UI can
 /// surface exactly which tracks could not be completed and why.
@@ -198,15 +199,14 @@ class MetadataService {
         }
 
         if (url == null || url.isEmpty) {
-          failures
-              .add('$artist - $title: no matching cover in any source');
+          failures.add('$artist - $title: no matching cover in any source');
           continue;
         }
 
         final bytes = await _downloadBytes(url);
         if (bytes == null || bytes.isEmpty) {
-          failures.add(
-              '$artist - $title: cover url unreachable ($sourceLabel)');
+          failures
+              .add('$artist - $title: cover url unreachable ($sourceLabel)');
           continue;
         }
 
@@ -389,9 +389,47 @@ class MetadataService {
   }
 
   static Future<BackfillReport> backfillTrackMetadata() async {
-    // Track metadata enrichment was powered by Spotify; that integration has
-    // been removed, so this is now a no-op that leaves existing data intact.
-    return const BackfillReport();
+    final db = await _db.database;
+    final tracks = await db.query('songs',
+        columns: ['id', 'title', 'artist', 'album', 'genre', 'year']);
+    var updated = 0;
+    final failures = <String>[];
+    for (final row in tracks) {
+      final title = (row['title'] as String? ?? '').trim();
+      final artist = (row['artist'] as String? ?? '').trim();
+      if (title.isEmpty || artist.isEmpty) continue;
+      if ((row['genre'] as String? ?? '').isNotEmpty && row['year'] != null) {
+        continue;
+      }
+      try {
+        final match = await MusicBrainzService.findRecording(
+          title: title,
+          artist: artist,
+          album: row['album'] as String?,
+        );
+        if (match == null) {
+          failures.add('$artist - $title: MusicBrainz eşleşmesi yok');
+          continue;
+        }
+        final changes = <String, dynamic>{};
+        if ((row['genre'] as String? ?? '').isEmpty && match.genre != null) {
+          changes['genre'] = match.genre;
+        }
+        if (row['year'] == null && match.year != null)
+          changes['year'] = match.year;
+        if ((row['album'] as String? ?? '').isEmpty && match.album != null) {
+          changes['album'] = match.album;
+        }
+        if (changes.isNotEmpty) {
+          await _db.updateTrackMetadata(row['id'] as String, changes);
+          updated++;
+        }
+      } catch (error) {
+        failures.add('$artist - $title: $error');
+      }
+    }
+    return BackfillReport(
+        updated: updated, total: tracks.length, failures: failures);
   }
 
   static Future<String?> getHighResAlbumArt(String spotifyTrackId) async {
@@ -418,7 +456,8 @@ class MetadataService {
     return null;
   }
 
-  static Future<Map<String, dynamic>> addMetadataToSong(Map<String, dynamic> song,
+  static Future<Map<String, dynamic>> addMetadataToSong(
+      Map<String, dynamic> song,
       {bool highResArt = false}) async {
     final enriched = Map<String, dynamic>.from(song);
     if (highResArt && song['spotifyTrackId'] != null) {

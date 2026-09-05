@@ -120,12 +120,71 @@ class _ExtensionStoreScreenState extends State<ExtensionStoreScreen> {
     await _service.uninstall(installed.manifest.id);
   }
 
+  Future<void> _editSettings(InstalledExtension installed) async {
+    final manifest = installed.manifest;
+    final values = await _service.loadSettings(manifest);
+    if (!mounted) return;
+    final controllers = {
+      for (final setting in manifest.settings)
+        if ((setting['key']?.toString() ?? '').isNotEmpty)
+          setting['key'].toString(): TextEditingController(
+            text: values[setting['key'].toString()]?.toString() ?? '',
+          ),
+    };
+    final save = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${manifest.name} ayarları'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final setting in manifest.settings)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: TextField(
+                    controller: controllers[setting['key']?.toString()],
+                    obscureText: setting['secret'] == true,
+                    decoration: InputDecoration(
+                      labelText: setting['label']?.toString() ??
+                          setting['key']?.toString(),
+                      helperText: setting['description']?.toString(),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Kaydet'),
+          ),
+        ],
+      ),
+    );
+    if (save == true) {
+      await _service.saveSettings(
+        manifest,
+        controllers.map((key, value) => MapEntry(key, value.text.trim())),
+      );
+      if (mounted) _toast('Sağlayıcı ayarları kaydedildi');
+    }
+    for (final controller in controllers.values) {
+      controller.dispose();
+    }
+  }
+
   void _toast(String message, {bool error = false}) {
     final scheme = Theme.of(context).colorScheme;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(message,
-          style: TextStyle(
-              color: error ? Colors.white : scheme.onInverseSurface)),
+          style:
+              TextStyle(color: error ? Colors.white : scheme.onInverseSurface)),
       backgroundColor: error ? MelodiTheme.errorRed : scheme.inverseSurface,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -166,8 +225,7 @@ class _ExtensionStoreScreenState extends State<ExtensionStoreScreen> {
             if (_service.installed.isEmpty)
               const _EmptyHint(
                 icon: Icons.extension_rounded,
-                message:
-                    'Henüz eklenti kurulu değil. Aşağıdaki depolardan bir '
+                message: 'Henüz eklenti kurulu değil. Aşağıdaki depolardan bir '
                     'sağlayıcı kur; sunucu adreslerini eklentiler taşır.',
               )
             else
@@ -176,15 +234,18 @@ class _ExtensionStoreScreenState extends State<ExtensionStoreScreen> {
                   installed: installed,
                   canMoveUp: _canMove(installed, up: true),
                   canMoveDown: _canMove(installed, up: false),
-                  onToggle: (value) => _service.setEnabled(
-                      installed.manifest.id, value),
-                  onUp: () => _service.move(installed.manifest.kind,
-                      installed.manifest.id,
+                  onToggle: (value) =>
+                      _service.setEnabled(installed.manifest.id, value),
+                  onUp: () => _service.move(
+                      installed.manifest.kind, installed.manifest.id,
                       up: true),
-                  onDown: () => _service.move(installed.manifest.kind,
-                      installed.manifest.id,
+                  onDown: () => _service.move(
+                      installed.manifest.kind, installed.manifest.id,
                       up: false),
                   onDelete: () => _uninstallConfirm(installed),
+                  onSettings: installed.manifest.settings.isEmpty
+                      ? null
+                      : () => _editSettings(installed),
                 ),
             const SizedBox(height: 24),
             _sectionHeader('Depolar', null),
@@ -263,6 +324,9 @@ class _ExtensionStoreScreenState extends State<ExtensionStoreScreen> {
     if (url == ExtensionService.officialRepoUrl) {
       return 'Resmî Melodi deposu';
     }
+    if (url == ExtensionService.officialSpotiFlacRepoUrl) {
+      return 'Resmî SpotiFLAC sağlayıcıları';
+    }
     final uri = Uri.tryParse(url);
     return uri?.host ?? url;
   }
@@ -285,7 +349,7 @@ class _ExtensionStoreScreenState extends State<ExtensionStoreScreen> {
                 color: Theme.of(context)
                     .colorScheme
                     .primary
-                     .withValues(alpha: 0.14),
+                    .withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Text(badge,
@@ -325,6 +389,7 @@ class _InstalledCard extends StatelessWidget {
     required this.onUp,
     required this.onDown,
     required this.onDelete,
+    required this.onSettings,
   });
 
   final InstalledExtension installed;
@@ -334,6 +399,7 @@ class _InstalledCard extends StatelessWidget {
   final VoidCallback onUp;
   final VoidCallback onDown;
   final VoidCallback onDelete;
+  final VoidCallback? onSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -377,17 +443,20 @@ class _InstalledCard extends StatelessWidget {
               if (manifest.description.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(manifest.description,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant)),
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
               ],
               const SizedBox(height: 6),
               // Gerçek eklentinin JS URL'si (homepage) ile yedek köprü baseUrl'i ayrı göster:
               // SpotiFLAC/8spine JS modüllerinde homepage = gerçek .sflx/.js, baseUrl = butterfly köprü.
               // Her ikisi de görünür olmalı ki kullanıcı "gerçek eklentiyi kullanamıyorum" demesin.
-              if (manifest.homepage != null && manifest.homepage!.isNotEmpty && manifest.homepage != manifest.baseUrl) ...[
+              if (manifest.homepage != null &&
+                  manifest.homepage!.isNotEmpty &&
+                  manifest.homepage != manifest.baseUrl) ...[
                 Row(
                   children: [
-                    Icon(Icons.code_rounded, size: 12, color: theme.colorScheme.onSurfaceVariant),
+                    Icon(Icons.code_rounded,
+                        size: 12, color: theme.colorScheme.onSurfaceVariant),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -405,7 +474,8 @@ class _InstalledCard extends StatelessWidget {
                 const SizedBox(height: 3),
                 Row(
                   children: [
-                    Icon(Icons.dns_rounded, size: 12, color: theme.colorScheme.onSurfaceVariant),
+                    Icon(Icons.dns_rounded,
+                        size: 12, color: theme.colorScheme.onSurfaceVariant),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -435,8 +505,7 @@ class _InstalledCard extends StatelessWidget {
                     Icon(Icons.warning_amber_rounded,
                         size: 14, color: theme.colorScheme.error),
                     const SizedBox(width: 4),
-                    Text(
-                        'Melodi ≥ ${manifest.minAppVersion} gerektirir',
+                    Text('Melodi ≥ ${manifest.minAppVersion} gerektirir',
                         style: theme.textTheme.labelSmall
                             ?.copyWith(color: theme.colorScheme.error)),
                   ],
@@ -446,6 +515,12 @@ class _InstalledCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  if (onSettings != null)
+                    IconButton(
+                      tooltip: 'Sağlayıcı ayarları',
+                      onPressed: onSettings,
+                      icon: const Icon(Icons.tune_rounded, size: 20),
+                    ),
                   IconButton(
                     tooltip: 'Önceliği yükselt',
                     onPressed: canMoveUp ? onUp : null,
@@ -531,8 +606,8 @@ class _RegistryEntryCard extends StatelessWidget {
                           if (entry.version != null) 'v${entry.version}',
                           if (entry.author != null) entry.author!,
                         ].join(' · '),
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant),
                       ),
                     ],
                   ),
