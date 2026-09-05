@@ -35,6 +35,7 @@ import 'widgets/main_shell.dart';
 import 'services/robust_piped_service.dart';
 import 'services/hls_downloader_service.dart';
 import 'services/watched_folder_service.dart';
+import 'services/cloudflare_session_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -345,6 +346,7 @@ class MelodiApp extends StatelessWidget {
       child: Consumer2<ThemeProvider, LocaleNotifier>(
         builder: (context, themeProvider, localeNotifier, _) {
           return MaterialApp(
+            navigatorKey: CloudflareSessionService.navigatorKey,
             title: 'Melodi',
             debugShowCheckedModeBanner: false,
             theme: themeProvider.lightTheme,

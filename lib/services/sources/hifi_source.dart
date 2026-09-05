@@ -1,10 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-
 import '../../models/extension.dart';
 import '../database_service.dart';
+import '../cloudflare_session_service.dart';
 import '../extension_service.dart';
 import '../music_source.dart';
 
@@ -51,7 +50,7 @@ class HiFiSource implements MusicSource {
     if (trimmed.isEmpty) return const [];
     try {
       final base = await baseUrl();
-      final response = await http
+      final response = await CloudflareSessionService.instance
           .post(
             Uri.parse('$base/api/hifi/search'),
             headers: {'Content-Type': 'application/json'},
@@ -98,7 +97,7 @@ class HiFiSource implements MusicSource {
 
     // 2) Kütüphanede yoksa sunucuda FLAC indirilir (30-120 sn sürebilir).
     try {
-      final response = await http
+      final response = await CloudflareSessionService.instance
           .post(
             Uri.parse('$base/api/hifi/download'),
             headers: {'Content-Type': 'application/json'},
@@ -126,7 +125,7 @@ class HiFiSource implements MusicSource {
     try {
       final needle = track.title.trim().toLowerCase();
       if (needle.isEmpty) return null;
-      final response = await http
+      final response = await CloudflareSessionService.instance
           .get(
             Uri.parse('$base/api/library/search')
                 .replace(queryParameters: {'query': track.title.trim()}),
