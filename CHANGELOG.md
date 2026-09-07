@@ -4,6 +4,13 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.0.6] - 2026-09-07
+
+### iOS Build Düzeltmesi (Swift)
+- `ios/Runner/MelodiHLS/HLSDownloader.swift:136` — tanımsız `loadedTimeRangesLoaded` → `loadedTimeRanges` (derleyici hatası).
+- `ios/Runner/MelodiHLS/HLSDownloader.swift:196` — `AVAssetDownloadURLSession`'da olmayan `.session` kaldırıldı, doğrudan `getTasksWithCompletionHandler` çağrısı.
+- `ios/Runner.xcodeproj/project.pbxproj` — `HLSDownloader.swift` Runner hedefine eklendi (`AppDelegate.swift:63` "in scope" hatası giderildi).
+
 ## [5.0.5] - 2026-09-07
 
 ### SpotiFLAC Eklentileri Kalıcı Çözüm
