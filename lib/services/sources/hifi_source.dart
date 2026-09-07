@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import '../../models/extension.dart';
 import '../database_service.dart';
 import '../cloudflare_session_service.dart';
@@ -42,6 +44,35 @@ class HiFiSource implements MusicSource {
   Future<void> setBaseUrl(String url) async {
     final normalized = url.trim().replaceAll(RegExp(r'/+$'), '');
     await DatabaseService.instance.setSetting(_baseUrlKey, normalized);
+    _reachableCache.clear();
+  }
+
+  String? _reachableBase;
+  DateTime? _reachableCheckedAt;
+  static const Duration _reachableTtl = Duration(minutes: 2);
+  final Map<String, bool> _reachableCache = {};
+
+  /// Ölü baza (çözülmeyen tünel vb.) 30 sn/5 dk gömülmeden hızlı elen.
+  Future<bool> _isBaseReachable(String base) async {
+    final now = DateTime.now();
+    if (_reachableBase == base &&
+        _reachableCheckedAt != null &&
+        now.difference(_reachableCheckedAt!) < _reachableTtl) {
+      return _reachableCache[base] ?? false;
+    }
+    var reachable = false;
+    try {
+      final response = await http
+          .get(Uri.parse(base), headers: {'User-Agent': 'Melodi/1.0'})
+          .timeout(const Duration(seconds: 5));
+      reachable = response.statusCode < 500;
+    } catch (_) {
+      reachable = false;
+    }
+    _reachableBase = base;
+    _reachableCheckedAt = now;
+    _reachableCache[base] = reachable;
+    return reachable;
   }
 
   @override
@@ -50,6 +81,7 @@ class HiFiSource implements MusicSource {
     if (trimmed.isEmpty) return const [];
     try {
       final base = await baseUrl();
+      if (!await _isBaseReachable(base)) return const [];
       final response = await CloudflareSessionService.instance
           .post(
             Uri.parse('$base/api/hifi/search'),
@@ -90,6 +122,7 @@ class HiFiSource implements MusicSource {
   @override
   Future<String?> getStreamUrl(OnlineTrack track) async {
     final base = await baseUrl();
+    if (!await _isBaseReachable(base)) return null;
 
     // 1) Parça zaten kütüphanedeyse indirmeden direkt akıt.
     final existing = await _findInLibrary(base, track);

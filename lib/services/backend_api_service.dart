@@ -125,14 +125,34 @@ class BackendApiService {
         _baseUrl = ep;
         return;
       }
-      // Fallback: ilk endpoint (sağlık kontrolsüz)
+      // Fallback: ilk endpoint — ama DNS'i bile çözülmeyen ölü adresi
+      // (örn. silinmiş tünel) ele; yoksa oynatıcı -1003 ile kilitlenir.
       final endpoint = await ExtensionService.instance.resolveEndpoint(
         ExtensionKind.backend,
         protocol: ExtensionProtocol.ytdlpBackend.wireName,
       );
-      _baseUrl = endpoint ?? '';
+      if (endpoint != null &&
+          endpoint.isNotEmpty &&
+          await _isReachable(endpoint)) {
+        _baseUrl = endpoint;
+      } else {
+        _baseUrl = '';
+      }
     } catch (_) {
       _baseUrl = '';
+    }
+  }
+
+  /// Baz adrese herhangi bir HTTP yanıtı alınabiliyorsa true.
+  /// 404 de "yaşıyor" sayılır; sadece transport hatası/zaman aşımı elenir.
+  Future<bool> _isReachable(String baseUrl) async {
+    try {
+      final response = await http
+          .get(Uri.parse(baseUrl), headers: {'User-Agent': 'Melodi/1.0'})
+          .timeout(const Duration(seconds: 5));
+      return response.statusCode < 500;
+    } catch (_) {
+      return false;
     }
   }
 

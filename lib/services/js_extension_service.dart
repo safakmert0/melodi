@@ -314,21 +314,32 @@ class JsExtensionService {
         error:function(){ sendMessage('log', JSON.stringify(Array.from(arguments))); }
       };
       var console = log;
+      // SpotiFLAC paketleri fetch'i EŞZAMANLI kullanır (var res = fetch(...); res.ok).
+      // Yanıt önbellekte yoksa replay işaretçisi fırlatılır; Dart isteği yapıp
+      // önbelleğe yazar ve betik baştan oynatılır. .json()/.text() düz değer
+      // döner: eşzamanlı kullanımda da `await` ile de çalışır.
+      function __fetchResponse(cached) {
+        return {
+          ok: !!cached.ok,
+          status: cached.status,
+          headers: cached.headers || {},
+          url: cached.url,
+          text: function() { return cached.body; },
+          json: function() { return JSON.parse(cached.body); },
+          arrayBuffer: function() { return cached.bodyBase64; }
+        };
+      }
       function fetch(url, options) {
-        return new Promise(function(resolve, reject) {
-          sendMessage('fetch', JSON.stringify([url, JSON.stringify(options || {})])).then(function(resStr) {
-            var res = JSON.parse(resStr);
-            if (res.error) reject(res.error);
-            else resolve({
-              status: res.status,
-              ok: res.status >= 200 && res.status < 300,
-              text: function() { return Promise.resolve(res.body); },
-              json: function() { return Promise.resolve(JSON.parse(res.body)); },
-              arrayBuffer: function() { return Promise.resolve(res.bodyBase64); },
-              headers: res.headers
-            });
-          });
-        });
+        options = options || {};
+        var req = {
+          method: String(options.method || 'GET').toUpperCase(),
+          url: String(url),
+          body: (options.body == null ? null : (typeof options.body === 'string' ? options.body : JSON.stringify(options.body))),
+          headers: options.headers || {}
+        };
+        var key = JSON.stringify(req);
+        if (__nativeHttpCache[key] !== undefined) return __fetchResponse(__nativeHttpCache[key]);
+        throw new Error('__MELODI_HTTP__' + btoa(unescape(encodeURIComponent(key))));
       }
     ''';
 
@@ -478,6 +489,7 @@ class JsExtensionService {
         'ok': statusCode >= 200 && statusCode < 300,
         'url': uri.toString(),
         'body': utf8.decode(bytes, allowMalformed: true),
+        'bodyBase64': base64Encode(bytes),
         'headers': responseHeaders,
       };
       runtime.evaluate(

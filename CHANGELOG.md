@@ -4,6 +4,14 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.0.7] - 2026-09-07
+
+### -1003 Düzeltmesi (ölü sunucu adları)
+- Sorun: oynatma "erişilebilen kaynaklar denendi -1003" ile düşüyordu; DNS'te olmayan ölü tünel adresine istek atılıyordu (doğrulandı: NXDOMAIN).
+- `lib/services/js_extension_service.dart` — paketin `fetch` çağrıları eşzamanlı köprüye alındı (Cobalt/yt1d senkron akışı çalışır; `.then` zinciri pakette yok, tek `await` uyumlu).
+- `lib/services/backend_api_service.dart` — yedek uç nokta artık DNS'i çözülmeyen adresi eleyor.
+- `lib/services/sources/hifi_source.dart` — ölü baza 30 sn/5 dk gömülmeden hızlı eleniyor (2 dk önbellekli erişilebilirlik).
+
 ## [5.0.6] - 2026-09-07
 
 ### iOS Build Düzeltmesi (Swift)
