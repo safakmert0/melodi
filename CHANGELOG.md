@@ -4,6 +4,14 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.0.5] - 2026-09-07
+
+### SpotiFLAC Eklentileri Kalıcı Çözüm
+- `lib/services/js_extension_service.dart` — `registerExtension` shim eklendi (paketler artık yükleniyor + `initialize` çağrılıyor); `file.download/exists/delete` gerçekten dosya indirir (başlık + Range resume destekli, izin listesine uygun); yeni `downloadExtensionFile()` eklentinin kendi indirme hattını (InnerTube/Cobalt/yt1d) çalıştırır.
+- `lib/services/multi_source_search.dart` — eklenti parçası önce kendi eklentisine sorulur, `youtube://` kısayolu eklentiyi baypas etmez; önbellek taraması eklenti parçalarını atlar.
+- `lib/services/download_manager.dart` — eklentinin indirdiği yerel dosya doğrudan kütüphaneye alınır.
+- `test/extension_js_contract_test.dart` — paket sözleşmesi testleri (4 test).
+
 ## [5.0.4] - 2026-09-07
 
 ### Çevrimiçi Çalma + İndirme Düzeltmeleri

@@ -1,16 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_js/flutter_js.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import '../models/extension.dart';
 import 'cloudflare_session_service.dart';
 import 'signed_session_service.dart';
 import 'secure_storage_service.dart';
 
-/// SpotiFLAC için JS sandbox — .sflx (zip) içindeki index.js'yi quickjs'de çalıştırır.
-/// 8spine için native Dart portu ayrıdır (B), bu servis sadece SpotiFLAC (A) içindir.
+/// SpotiFLAC/8spine için JS sandbox — .sflx/.8spine (zip) içindeki index.js'yi
+/// quickjs'de çalıştırır. Paketler `registerExtension({...})` sözleşmesiyle
+/// kaydolur; `customSearch`/`checkAvailability`/`download` buradan çağrılır.
+/// `file.download` gerçekten dosya indirir, bu yüzden eklenti hattı hem
+/// çevrimiçi çalma (dosya oynatma) hem indirme için kalıcı çözümdür.
 class JsExtensionService {
   JsExtensionService._();
   static final JsExtensionService _instance = JsExtensionService._();
@@ -193,6 +198,15 @@ class JsExtensionService {
       var module = { exports: {} };
       var exports = module.exports;
       var global = globalThis;
+      // SpotiFLAC sözleşmesi: paketler registerExtension({...}) ile kaydolur.
+      // Kaydı yakala, global `extension` olarak yayınla ve initialize çağır.
+      var __registeredExtension = null;
+      function registerExtension(obj) {
+        __registeredExtension = obj || {};
+        try { globalThis.extension = __registeredExtension; } catch (e) {}
+        try { if (__registeredExtension.initialize) __registeredExtension.initialize(__settingDefaults); } catch (e) {}
+        return true;
+      }
       var __extensionStorage = {};
       var __nativeHttpCache = {};
       var __settingDefaults = ${jsonEncode(settingDefaults)};
@@ -243,11 +257,17 @@ class JsExtensionService {
         request:function(url, options){ options=options || {}; return __syncHttp(options.method || 'GET', url, options.body, options.headers); },
         clearCookies:function(){ return true; }
       };
+      function __syncFile(op, a, b, c) {
+        var request = {op:op, a:(a===undefined?null:a), b:(b===undefined?null:b), c:(c===undefined?null:c)};
+        var key = 'file:' + JSON.stringify(request);
+        if (__nativeHttpCache[key] !== undefined) return __nativeHttpCache[key];
+        throw new Error('__MELODI_FILE__' + btoa(unescape(encodeURIComponent(JSON.stringify(request)))));
+      }
       var file = {
-        exists:function(){ return false; },
-        delete:function(){ return true; },
-        download:function(url){ return {success:true, path:String(url), url:String(url)}; },
-        downloadChunked:function(url){ return {success:true, path:String(url), url:String(url)}; },
+        exists:function(p){ return __syncFile('exists', String(p)); },
+        delete:function(p){ return __syncFile('delete', String(p)); },
+        download:function(url, outputPath, options){ return __syncFile('download', String(url), String(outputPath||''), options||{}); },
+        downloadChunked:function(url, outputPath, options){ return __syncFile('download', String(url), String(outputPath||''), options||{}); },
         downloadSegments:function(segments){
           var first = Array.isArray(segments) && segments.length ? (segments[0].url || segments[0]) : null;
           return first ? {success:true, path:String(first), url:String(first)} : {success:false, error:'no segments'};
@@ -315,6 +335,9 @@ class JsExtensionService {
     try {
       runtime.evaluate(polyfill);
       runtime.evaluate(jsCode);
+      // registerExtension polyfill içinde yakalandı; global referansı garantile.
+      runtime.evaluate(
+          'try { if (typeof __registeredExtension !== \'undefined\' && __registeredExtension) { globalThis.extension = __registeredExtension; } } catch (e) {}');
     } catch (e) {
       throw Exception('JS yükleme hatası (${entry.id}): $e');
     }
@@ -337,8 +360,25 @@ class JsExtensionService {
           RegExp(r'__MELODI_SESSION__([A-Za-z0-9+/=]+)').firstMatch(raw);
       final cryptoMarker =
           RegExp(r'__MELODI_CRYPTO__([A-Za-z0-9+/=]+)').firstMatch(raw);
-      if (marker == null && sessionMarker == null && cryptoMarker == null) {
+      final fileMarker =
+          RegExp(r'__MELODI_FILE__([A-Za-z0-9+/=]+)').firstMatch(raw);
+      if (marker == null &&
+          sessionMarker == null &&
+          cryptoMarker == null &&
+          fileMarker == null) {
         return result;
+      }
+
+      if (fileMarker != null) {
+        final fileRequestJson =
+            utf8.decode(base64Decode(fileMarker.group(1)!));
+        final fileRequest = jsonDecode(fileRequestJson) as Map<String, dynamic>;
+        final fileResponse = await _nativeFileOp(entry, fileRequest);
+        runtime.evaluate(
+          '__nativeHttpCache[${jsonEncode('file:$fileRequestJson')}] = '
+          '${jsonEncode(fileResponse)};',
+        );
+        continue;
       }
 
       if (cryptoMarker != null) {
@@ -541,6 +581,216 @@ class JsExtensionService {
     }
   }
 
+  /// JS `file.*` köprüsünün native karşılığı (senkron replay döngüsünden çağrılır).
+  Future<Object?> _nativeFileOp(
+      RegistryEntry entry, Map<String, dynamic> req) async {
+    final op = req['op']?.toString();
+    try {
+      if (op == 'exists') {
+        return File(req['a']?.toString() ?? '').existsSync();
+      }
+      if (op == 'delete') {
+        try {
+          await File(req['a']?.toString() ?? '').delete();
+        } catch (_) {}
+        return true;
+      }
+      if (op == 'download') {
+        final options = req['c'];
+        return await _nativeFileDownload(
+          entry,
+          req['a']?.toString() ?? '',
+          req['b']?.toString() ?? '',
+          options is Map ? Map<String, dynamic>.from(options) : const {},
+        );
+      }
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+    return {'success': false, 'error': 'unknown file op: $op'};
+  }
+
+  /// Eklentinin istediği dosyayı gerçekten indirir (başlık + Range resume destekli).
+  /// outputPath boşsa geçici dizine yazar.
+  Future<Map<String, dynamic>> _nativeFileDownload(
+    RegistryEntry entry,
+    String url,
+    String outputPath,
+    Map<String, dynamic> options,
+  ) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null || (uri.scheme != 'https' && uri.scheme != 'http')) {
+      return {'success': false, 'error': 'bad url'};
+    }
+    if (!_isAllowed(entry.permissions, uri)) {
+      return {'success': false, 'error': 'domain not allowed: ${uri.host}'};
+    }
+    var path = outputPath.trim();
+    if (path.isEmpty) {
+      path = await _tempBinPath(entry.id);
+    }
+    final headers = <String, String>{};
+    final optionHeaders = options['headers'];
+    if (optionHeaders is Map) {
+      optionHeaders.forEach((key, value) {
+        if (value != null) headers[key.toString()] = value.toString();
+      });
+    }
+    headers.putIfAbsent(
+        'User-Agent',
+        () =>
+            options['userAgent']?.toString() ??
+            CloudflareSessionService.userAgent);
+    final referer = options['referer']?.toString();
+    if (referer != null && referer.isNotEmpty) headers['Referer'] = referer;
+    final origin = options['origin']?.toString();
+    if (origin != null && origin.isNotEmpty) headers['Origin'] = origin;
+
+    final file = File(path);
+    try {
+      await file.parent.create(recursive: true);
+    } catch (e) {
+      return {'success': false, 'error': 'cannot create dir: $e'};
+    }
+    var offset = 0;
+    try {
+      if (await file.exists()) offset = await file.length();
+    } catch (_) {
+      offset = 0;
+    }
+    final chunkSize = (options['chunkSize'] as num?)?.toInt() ?? 0;
+    const maxChunks = 600;
+    const maxTotalBytes = 1024 * 1024 * 1024;
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 20);
+    try {
+      var chunks = 0;
+      while (true) {
+        if (++chunks > maxChunks || offset >= maxTotalBytes) {
+          return {'success': false, 'error': 'download too large'};
+        }
+        final request =
+            await client.getUrl(uri).timeout(const Duration(seconds: 25));
+        request.headers.set('User-Agent', headers['User-Agent']!);
+        headers.forEach((key, value) {
+          if (key.toLowerCase() == 'user-agent') return;
+          try {
+            request.headers.set(key, value);
+          } catch (_) {}
+        });
+        final end =
+            chunkSize > 0 ? offset + chunkSize - 1 : null;
+        if (offset > 0 || end != null) {
+          request.headers.set(HttpHeaders.rangeHeader,
+              end != null ? 'bytes=$offset-$end' : 'bytes=$offset-');
+        }
+        final response =
+            await request.close().timeout(const Duration(seconds: 25));
+        if (response.statusCode != 200 && response.statusCode != 206) {
+          return {
+            'success': false,
+            'error': 'HTTP ${response.statusCode}'
+          };
+        }
+        final sink = file.openWrite(
+            mode: offset > 0 && response.statusCode == 206
+                ? FileMode.append
+                : FileMode.write);
+        if (offset > 0 && response.statusCode == 200) offset = 0;
+        try {
+          await for (final data
+              in response.timeout(const Duration(seconds: 60))) {
+            sink.add(data);
+            offset += data.length;
+            if (offset >= maxTotalBytes) break;
+          }
+          await sink.flush();
+        } finally {
+          await sink.close();
+        }
+        final contentLength = response.contentLength;
+        // Parça istendiyse ve sunucu aralığı tam verdiyse bitti say.
+        if (end == null) break;
+        if (contentLength >= 0 && contentLength < chunkSize) break;
+        if (contentLength < 0) break;
+      }
+      final length = await file.length();
+      if (length < 1000) {
+        try {
+          await file.delete();
+        } catch (_) {}
+        return {'success': false, 'error': 'empty file'};
+      }
+      return {'success': true, 'path': path};
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  Future<String> _tempBinPath(String extId) async {
+    final tmp = await getTemporaryDirectory();
+    final safeId = extId.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
+    return '${tmp.path}/melodi_ext_${safeId}_${DateTime.now().millisecondsSinceEpoch}.bin';
+  }
+
+  /// Eklentinin kendi `download()` hattını çalıştırıp gerçek dosyayı indirir.
+  /// Önce `checkAvailability` ile videoID eşleşmesi yapılır.
+  /// Dönüş: {success, file_path, actual_extension, cover_url, error}
+  Future<Map<String, dynamic>?> downloadExtensionFile(
+    RegistryEntry entry, {
+    required String trackId,
+    String title = '',
+    String artist = '',
+    String quality = 'best',
+    required String outputPath,
+  }) async {
+    final runtime = await _getRuntime(entry);
+    final js = '''
+      (async function() {
+        try {
+          var e = (typeof globalThis !== 'undefined' && globalThis.__registeredExtension) ||
+            (typeof extension !== 'undefined' ? extension : null) ||
+            (typeof module !== 'undefined' ? module.exports : null);
+          if (!e || typeof e.download !== 'function') return JSON.stringify({error:'download not found'});
+          var id = ${jsonEncode(trackId)};
+          if (typeof e.checkAvailability === 'function') {
+            try {
+              var availability = await e.checkAvailability('', ${jsonEncode(title)}, ${jsonEncode(artist)}, {});
+              if (availability === false || (availability && availability.available === false)) {
+                return JSON.stringify({error:'unavailable'});
+              }
+              if (availability && typeof availability === 'object' && availability.track_id) id = availability.track_id;
+            } catch (_) {}
+          }
+          var result = await e.download(id, ${jsonEncode(quality)}, ${jsonEncode(outputPath)}, function(){});
+          result = result || {};
+          return JSON.stringify({
+            success: !!result.success,
+            file_path: result.file_path || result.path || '',
+            actual_extension: result.actual_extension || result.output_extension || '',
+            cover_url: result.cover_url || '',
+            error: result.error_message || result.error || ''
+          });
+        } catch (e) { return JSON.stringify({error:String(e)}); }
+      })()
+    ''';
+    final result = await _evaluateWithHttpReplay(runtime, entry, js);
+    try {
+      final decoded = jsonDecode(result.stringResult);
+      if (decoded is! Map) return null;
+      final map = Map<String, dynamic>.from(decoded);
+      if (map['error'] != null &&
+          map['error'].toString().isNotEmpty &&
+          map['success'] != true) {
+        return {'success': false, 'error': map['error'].toString()};
+      }
+      return map;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// SpotiFLAC download-provider contract. Providers expose
   /// checkAvailability(isrc, title, artist, options) and download(...).
   /// Direct-URL providers can therefore participate in Melodi playback too.
@@ -548,47 +798,40 @@ class JsExtensionService {
     RegistryEntry entry,
     Map<String, dynamic> track,
   ) async {
-    final runtime = await _getRuntime(entry);
-    final input = jsonEncode(track);
-    final js = '''
-      (async function() {
-        try {
-          var e = typeof extension !== 'undefined' ? extension : (module.exports || exports || globalThis);
-          var check = e.checkAvailability || globalThis.checkAvailability;
-          var download = e.download || globalThis.download;
-          if (typeof download !== 'function') return JSON.stringify({error:'download not found'});
-          var t = $input;
-          var prepared = null;
-          if (typeof check === 'function') {
-            var availability = await check(t.isrc || '', t.title || '', t.artist || '', {});
-            if (availability === false || (availability && availability.available === false)) {
-              return JSON.stringify({error:'unavailable'});
-            }
-            if (availability && typeof availability === 'object') {
-              prepared = availability.preparedContext || availability.context || availability;
-            }
-          }
-          var result = await download(
-            t.id || t.trackId || '',
-            t.quality || 'LOSSLESS',
-            '',
-            function() {},
-            { preparedContext: prepared, track: t }
-          );
-          if (typeof result === 'string') return JSON.stringify({url:result});
-          result = result || {};
-          return JSON.stringify({url:result.url || result.streamUrl || result.downloadUrl || result.fileUrl || result.file_path || result.filePath || result.path});
-        } catch (e) { return JSON.stringify({error:String(e)}); }
-      })()
-    ''';
-
-    final result = await _evaluateWithHttpReplay(runtime, entry, js);
+    // Eklenti hattı dosyayı gerçekten indirir; dönen yerel yol oynatma ve
+    // kütüphaneye alma için aynen kullanılır (oynatıcı dosyayı çalar).
+    final tmp = await _tempBinPath(entry.id);
+    final result = await downloadExtensionFile(
+      entry,
+      trackId: (track['id'] ?? track['trackId'] ?? '').toString(),
+      title: (track['title'] ?? '').toString(),
+      artist: (track['artist'] ?? '').toString(),
+      quality: (track['quality'] ?? 'best').toString(),
+      outputPath: tmp,
+    );
+    if (result == null || result['success'] != true) return null;
+    var path = (result['file_path'] ?? '').toString();
+    if (path.isEmpty) return null;
+    final actualExt = (result['actual_extension'] ?? '').toString();
+    if (actualExt.isNotEmpty &&
+        !path.toLowerCase().endsWith(actualExt.toLowerCase())) {
+      try {
+        final normalizedExt =
+            actualExt.startsWith('.') ? actualExt : '.$actualExt';
+        final renamed = path.replaceFirst(
+            RegExp(r'\.[A-Za-z0-9]{1,5}$'), normalizedExt);
+        if (renamed != path) {
+          await File(path).rename(renamed);
+          path = renamed;
+        }
+      } catch (_) {}
+    }
     try {
-      final decoded = jsonDecode(result.stringResult) as Map<String, dynamic>;
-      return decoded['url']?.toString();
+      if (!await File(path).exists()) return null;
     } catch (_) {
       return null;
     }
+    return path;
   }
 
   Future<Map<String, dynamic>?> fetchLyrics(

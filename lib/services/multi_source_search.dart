@@ -238,6 +238,9 @@ class MultiSourceSearch {
   Future<void> prefetchStreamUrls(Iterable<OnlineTrack> tracks) async {
     await Future.wait(tracks.take(4).map((track) async {
       if (!track.source.supportsFullTrack) return;
+      // Eklenti parçaları URL için tam dosya indirebilir; önbelleğe almayı
+      // kullanıcı dokununca yap (veri/kota sürprizi olmasın).
+      if (track.extensionId != null && track.extensionId!.isNotEmpty) return;
       try {
         await getStreamUrl(track).timeout(const Duration(seconds: 4));
       } catch (_) {}
@@ -255,8 +258,22 @@ class MultiSourceSearch {
     bool preferStableYouTubeReference = false,
   }) async {
     await ExtensionService.instance.ensureLoaded();
+    // Eklenti parçasıysa önce kendi eklentisine sor; youtube:// kısayolu
+    // extensionId'yi düşürüp eklentiyi baypas ederdi.
+    if (track.extensionId != null && track.extensionId!.isNotEmpty) {
+      try {
+        final extUrl = await getStreamUrl(track);
+        final normalizedExt = extUrl?.trim();
+        if (normalizedExt != null &&
+            normalizedExt.isNotEmpty &&
+            !excludedUrls.contains(normalizedExt)) {
+          return normalizedExt;
+        }
+      } catch (_) {}
+    }
     Future<String?> resolve(MusicSource source, OnlineTrack candidate) async {
       final url = preferStableYouTubeReference &&
+              candidate.extensionId == null &&
               source.type == MusicSourceType.youtube &&
               candidate.id.trim().isNotEmpty
           ? 'youtube://${candidate.id.trim()}'

@@ -455,8 +455,18 @@ class DownloadManager {
       task.progress = 0.3;
       _notify();
 
-      var resultPath = await _downloadFromUrl(streamUrl, task, downloadDir)
-          .timeout(const Duration(minutes: 5), onTimeout: () => null);
+      // Eklenti köprüsü (SpotiFLAC JS) dosyayı zaten indirmiş olabilir —
+      // yerel yol geldiyse ağı hiç kullanmadan doğrudan içeri aktar.
+      String? resultPath;
+      if (streamUrl != null &&
+          !_isHttpUrl(streamUrl) &&
+          await File(streamUrl).exists()) {
+        debugPrint('Download using extension-provided file: $streamUrl');
+        resultPath = streamUrl;
+      } else {
+        resultPath = await _downloadFromUrl(streamUrl!, task, downloadDir)
+            .timeout(const Duration(minutes: 5), onTimeout: () => null);
+      }
 
       if (resultPath == null) {
         // Bayat direkt URL'yi (süresi dolmuş googlevideo vb.) temizle ki
@@ -747,6 +757,9 @@ class DownloadManager {
       client?.close(force: true);
     }
   }
+
+  static bool _isHttpUrl(String url) =>
+      url.startsWith('http://') || url.startsWith('https://');
 
   String _downloadExtension(String url, ContentType? contentType) {
     final mime = contentType?.mimeType.toLowerCase();
