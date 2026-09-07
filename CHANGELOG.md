@@ -4,6 +4,13 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.0.8] - 2026-09-08
+
+### Tanılama Günlüğünden Gelen Düzeltmeler
+- `lib/services/audio_handler.dart:130` — süre akışı ilk medya öğesinden önce geldiğinde `!` çökmesi giderildi (günlükte 3 kez tekrarlıyordu).
+- `lib/providers/search_provider.dart:95` — eklenti parçalarında 4.8 sn zaman aşımı 3 dk'ya çıkarıldı; SpotiFLAC hattı dosyayı indirerek çözdüğü için kısa zaman aşımı sonucu hep boş dönüyordu.
+- Not: `na.mesk.skill.music.a2z.com` hataları kurulu üçüncü parti bir eklentinin ölü adresine ait, uygulama kodunda karşılığı yok.
+
 ## [5.0.7] - 2026-09-07
 
 ### -1003 Düzeltmesi (ölü sunucu adları)

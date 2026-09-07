@@ -97,6 +97,13 @@ class SearchProvider extends ChangeNotifier {
     Set<String> excludedUrls = const {},
     bool forPlayback = false,
   }) async {
+    // Eklenti çözümü (SpotiFLAC hattı) dosyanın tamamını indirebilir;
+    // 4.8 sn'lik varsayılan zaman aşımı eklentiyi her seferinde öldürürdü.
+    final isExtensionTrack =
+        track.extensionId != null && track.extensionId!.isNotEmpty;
+    final timeout = isExtensionTrack
+        ? const Duration(minutes: 3)
+        : const Duration(milliseconds: 4800);
     return await _multiSource
         .getStreamUrlWithFallback(
           track,
@@ -104,7 +111,7 @@ class SearchProvider extends ChangeNotifier {
           excludedUrls: excludedUrls,
           preferStableYouTubeReference: forPlayback,
         )
-        .timeout(const Duration(milliseconds: 4800));
+        .timeout(timeout);
   }
 
   void addRecentSearch(String query) {

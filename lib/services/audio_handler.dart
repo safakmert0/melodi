@@ -127,8 +127,11 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
         final effective = _isDurationCompatible(duration, expectedMs)
             ? duration
             : (expectedMs > 0 ? Duration(milliseconds: expectedMs) : duration);
-        mediaItem.add(mediaItem.value?.copyWith(duration: effective));
-        super.mediaItem.add(mediaItem.value!.copyWith(duration: effective));
+        final current = mediaItem.value;
+        if (current != null) {
+          mediaItem.add(current.copyWith(duration: effective));
+          super.mediaItem.add(current.copyWith(duration: effective));
+        }
       }
     });
 
