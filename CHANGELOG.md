@@ -4,6 +4,14 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.0.4] - 2026-09-07
+
+### Çevrimiçi Çalma + İndirme Düzeltmeleri
+- `lib/services/robust_piped_service.dart:81` — health kontrolü `/health` 404'ünü ölü saymıyordu düzeltildi: 5xx altı her yanıt "ulaşılabilir" sayılır; `robust_piped_service.dart:238` liste boş kalırsa tüm instance'lar denenir (kalıcı körlük giderildi).
+- `lib/services/sources/extension_source.dart:198` — ölü backend baz adresi (`trycloudflare` tüneli gibi) artık önceden elenir, global fallback'e düşülür; 404 veren sağlam backend'ler korunur.
+- `lib/services/download_manager.dart:25,458,691` — bayat direkt URL (süresi dolmuş googlevideo) başarısızlıkta temizlenir, retry taze arama yapar; HTTP durum kodu loglanır.
+- Not: `youtube_explode_dart` 3.1.0 manifest çıkaramıyor (upstream, pub.dev'de yeni sürüm yok); YouTube akışı Piped/backend eklentisine bağlı. JioSaavn yolu canlı doğrulandı.
+
 ## [5.0.1] - 2026-09-05
 
 ### Uygulama İçi Cloudflare Doğrulaması

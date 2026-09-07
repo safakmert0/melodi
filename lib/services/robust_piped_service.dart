@@ -81,17 +81,18 @@ class RobustPipedService {
   Future<void> _checkInstance(String baseUrl) async {
     final stopwatch = Stopwatch()..start();
     try {
-      // Piped health endpoint
-      final healthUrl = baseUrl.contains('invidious') 
+      // Piped health endpoint. Not: Piped API'de /health yoktur (404 döner);
+      // 5xx altı her yanıt sunucunun ayakta olduğunu kanıtlar.
+      final healthUrl = baseUrl.contains('invidious')
           ? '$baseUrl/api/v1/comments/test'
           : '$baseUrl/health';
       final response = await http.get(
         Uri.parse(healthUrl),
         headers: {'Accept': 'application/json'},
       ).timeout(const Duration(seconds: 5));
-      
+
       final latency = stopwatch.elapsedMilliseconds;
-      final healthy = response.statusCode == 200;
+      final healthy = response.statusCode < 500;
       
       _health[baseUrl] = InstanceHealth(
         lastCheck: DateTime.now(),
@@ -237,7 +238,11 @@ class RobustPipedService {
 
   List<String> _getHealthyInstances() {
     final all = [..._pipedInstances, ..._invidiousInstances];
-    return all.where((i) => (_health[i]?.consecutiveFailures ?? 0) < 3).toList()
+    final filtered =
+        all.where((i) => (_health[i]?.consecutiveFailures ?? 0) < 3).toList();
+    // Tümü elenirse boş dönme: son çare olarak hepsini dene (kalıcı körlük olmasın).
+    final candidates = filtered.isEmpty ? all : filtered;
+    return candidates
       ..sort((a, b) {
         final aPiped = _pipedInstances.contains(a) ? 0 : 1;
         final bPiped = _pipedInstances.contains(b) ? 0 : 1;

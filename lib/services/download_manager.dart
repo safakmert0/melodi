@@ -22,7 +22,8 @@ class DownloadTask {
   final String id;
   final String spotifyTrackId;
   final String? sourceVideoId;
-  final String? directUrl;
+  // Bayat URL retry'de tazelenebilsin diye final değil.
+  String? directUrl;
   final String title;
   final String artist;
   final String? album;
@@ -457,6 +458,12 @@ class DownloadManager {
       var resultPath = await _downloadFromUrl(streamUrl, task, downloadDir)
           .timeout(const Duration(minutes: 5), onTimeout: () => null);
 
+      if (resultPath == null) {
+        // Bayat direkt URL'yi (süresi dolmuş googlevideo vb.) temizle ki
+        // retry/yedek yol taze arama yapsın, aynı ölü URL'yi vurmasın.
+        task.directUrl = null;
+      }
+
       if (resultPath == null && !task.cancelled) {
         try {
           resultPath = await _downloadFromYouTube(
@@ -684,6 +691,8 @@ class DownloadManager {
           return await _downloadFromUrl(url, task, dir)
               .timeout(const Duration(minutes: 5));
         }
+        debugPrint(
+            'Download HTTP ${response.statusCode} for $url (403/429 genelde bayat googlevideo URL demektir)');
         return null;
       }
       // 206 ise append, 200 ise overwrite

@@ -195,6 +195,22 @@ class ExtensionMusicSource implements MusicSource {
     }
   }
 
+  /// baseUrl'e erişilemiyorsa (ölü tünel/host) false döner.
+  /// HTTP 404 de "ulaşılabilir" sayılır; sadece transport hatası/zaman
+  /// aşımı ölü kabul edilir. Böylece çalışan ama `/` yolunda 404 veren
+  /// backend'ler elenmez, ölü tüneller global fallback'e bırakılır.
+  Future<bool> _isBaseReachable() async {
+    try {
+      final resp = await http.get(
+        Uri.parse(baseUrl),
+        headers: {'User-Agent': 'Melodi/1.0'},
+      ).timeout(const Duration(seconds: 5));
+      return resp.statusCode < 500;
+    } catch (_) {
+      return false;
+    }
+  }
+
   @override
   Future<String?> getStreamUrl(OnlineTrack track) async {
     // Eğer track bu eklentiden geldiyse, o eklentinin yöntemiyle stream al
@@ -233,7 +249,12 @@ class ExtensionMusicSource implements MusicSource {
       }
     }
 
-    // 2) Native backend
+    // 2) Native backend — önce baz adresin yaşadığını doğrula; ölü
+    // tünel/programa körü körüne URL üretip oynatıcıyı kilitleme.
+    if (!await _isBaseReachable()) {
+      debugPrint('Extension base unreachable (${extension.manifest.id})');
+      return null;
+    }
     try {
       final apiUrl = extension.manifest.kind == ExtensionKind.hifi
           ? '$baseUrl/api/hifi/stream/${track.id}'
