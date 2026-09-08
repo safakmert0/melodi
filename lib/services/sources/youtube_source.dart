@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../music_source.dart';
-import '../ytmusic_bundle.dart';
+import '../ytmusic_service.dart';
 
 /// YouTube kaynağı: uygulamaya gömülü ytmusic paketi üzerinden.
 /// Ne sunucu ister ne hesap; arama + indirme paketin kendi hattıyla yapılır.
@@ -17,7 +17,7 @@ class YouTubeSource implements MusicSource {
     if (trimmed.isEmpty) return const [];
     try {
       final items =
-          await YtMusicBundle.instance.search(trimmed, limit: limit);
+          await YtMusicService.instance.search(trimmed, limit: limit);
       final tracks = <OnlineTrack>[];
       for (final m in items) {
         final track = _mapItem(m);
@@ -85,7 +85,7 @@ class YouTubeSource implements MusicSource {
   @override
   Future<String?> getStreamUrl(OnlineTrack track) async {
     try {
-      return await YtMusicBundle.instance.getPlayablePath(
+      return await YtMusicService.instance.getPlayablePath(
         trackId: track.id,
         title: track.title,
         artist: track.artist,

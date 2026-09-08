@@ -11,7 +11,7 @@ import 'lyrics_service.dart';
 import 'metadata_service.dart';
 import 'storage_manager.dart';
 import 'audio_quality_service.dart';
-import 'ytmusic_bundle.dart';
+import 'ytmusic_service.dart';
 
 enum DownloadState { pending, downloading, completed, failed }
 
@@ -492,7 +492,7 @@ class DownloadManager {
       task.progress = 0.2;
       task.error = 'YouTube indiriliyor...';
       _notify();
-      final result = await YtMusicBundle.instance.downloadToFile(
+      final result = await YtMusicService.instance.downloadToFile(
         trackId: videoId,
         title: task.title,
         artist: task.artist,

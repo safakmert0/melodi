@@ -4,6 +4,15 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.4.0] - 2026-09-08
+
+### Native YouTube (B): JollyTone Eşdeğeri Dart Portu
+- **JS bundle/quickjs kaldırıldı**: `lib/services/ytmusic_bundle.dart` + `assets/extensions/ytmusic-spotiflac.sflx` + `flutter_js ^0.8.2` + `archive ^3.6.1` silindi, yerine `lib/services/ytmusic_service.dart:1` native Dart InnerTube servisi eklendi — JollyTone `App.framework/App`’taki `YTMusicServices`/`yt_audio_stream` hattıyla aynı endpoint’ler: `music.youtube.com/youtubei/v1/search` (WEB_REMIX `1.20240801.01.00`) ve `www.youtube.com/youtubei/v1/player` (4 istemci: `ANDROID_VR`/`MWEB`/`ANDROID`/`IOS`, key’ler `AIzaSyA8ei...`/`AIzaSyB-63v...`).
+- Arama `performSearchSync` → `parseSearchResponseExtended` → `parseItemExtended` zinciri Dart’a portlandı (`collectItemsFromNode` derinlik 20/cap 5000, `musicResponsiveListItemRenderer`/`musicTwoRowItemRenderer` ayrıştırma, `flexColumns`/`lengthText`/`thumbnailOverlays`/`fixedColumns` süre & kapak çıkarımı, `stripUrlLikeFields`/`sanitizeTrack` eşdeğeri).
+- İndirme `requestInnerTubeAudioDownload` → `_tryInnerTubeClient` (4 istemci sırayla, `visitorData`/`playerUrl` `watch?v` sayfasından, `X-YouTube-Client-Name/Version`/`X-Goog-Visitor-Id` header’ları, `signatureCipher` decode, `chooseYouTubeFormat` itag tercihi `140/141/139/251/250/249/171`) → `_downloadAudioUrl` doğrudan `googlevideo`’ya Range/stream yazma; `yt1d`/`cobalt` fallback’i gerekmediği için çıkarıldı.
+- Arayüz sabit: `lib/services/sources/youtube_source.dart:1` + `lib/services/download_manager.dart:483` + `lib/services/audio_handler.dart:523` artık `YtMusicService` kullanır, `MultiSourceSearch` tek kaynak YouTube olarak korunur, yerel `Documents/Melodi/Offline` + Files + `WatchedFolderService` aynen durur.
+- `flutter analyze 0 error` (71 info/warn), `flutter test 23 pass` (önceki `quickjs_c_bridge.dll 126` hatası kalktı), IPA ~1.5 MB küçüldü.
+
 ## [5.3.0] - 2026-09-08
 
 ### Sunucusuz Tek Yapı: YouTube (Gömülü) + Yerel

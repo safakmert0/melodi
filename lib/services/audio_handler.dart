@@ -12,7 +12,7 @@ import 'review_service.dart';
 import 'track_matcher.dart';
 import 'multi_source_search.dart';
 import 'music_source.dart';
-import 'ytmusic_bundle.dart';
+import 'ytmusic_service.dart';
 
 class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   final AudioPlayer _player = AudioPlayer();
@@ -538,7 +538,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     }
     if (url.startsWith('youtube://')) {
       final videoId = url.replaceFirst('youtube://', '');
-      final path = await YtMusicBundle.instance.getPlayablePath(
+      final path = await YtMusicService.instance.getPlayablePath(
         trackId: videoId,
         title: song.title,
         artist: song.artist,
@@ -563,7 +563,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       AudioSource audioSource;
       if (song.filePath.startsWith('youtube://')) {
         final videoId = song.filePath.replaceFirst('youtube://', '');
-        final path = await YtMusicBundle.instance.getPlayablePath(
+        final path = await YtMusicService.instance.getPlayablePath(
           trackId: videoId,
           title: song.title,
           artist: song.artist,
@@ -717,10 +717,10 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     if (downloaded != null) return downloaded;
     if (!song.filePath.startsWith('spotify://')) return song;
 
-    // Çevrimiçi tek yapı: gömülü YouTube paketi üzerinden çalma.
+    // Çevrimiçi tek yapı: native YouTube servisi üzerinden çalma.
     // Spotify kaydı için YouTube'ta arama yap ve en iyi eşleşmeyi çal.
     try {
-      final results = await YtMusicBundle.instance.search(
+      final results = await YtMusicService.instance.search(
         '${song.artist} - ${song.title}',
       );
       if (results.isNotEmpty) {
