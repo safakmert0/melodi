@@ -4,6 +4,12 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.7.1] - 2026-09-08
+
+### Arama Hotfix — Hiç Sonuç Gelmeme Düzeltmesi
+- **Özür**: 5.3.0–5.7.0’da `lib/services/ytmusic_service.dart:171` `_performSearch` sadece `EgWKAQIIAQ==` filtreyle atıyor ve boş dönünce fallback yoktu, ayrıca `videoId` 11-char kontrolü + dar `fixedColumns` süresi parse’i bazı `musicResponsiveListItemRenderer`’ları eliyordu — bu yüzden `Search Tracks` boş kalıyordu. **Düzeltme**: filtre boşsa `null` params ile retry (`searchAllSync` fallback), `videoId` için recursive `_findVideoIdRecursive` (ilk `watchEndpoint.videoId` 11-char), süre için tüm `flexColumns` taraması, extensive `debugPrint('YtMusic search "q" -> n results')`. Canlı Python test `adele hello` 20 renderer hala geçer.
+- Önceki LA_Player batch/CarPlay korunuyor.
+
 ## [5.7.0] - 2026-09-08
 
 ### LA_Player Batch + CarPlay Birebir

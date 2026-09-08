@@ -172,14 +172,14 @@ class YtMusicService {
       String query, String? params) async {
     final url =
         Uri.parse('https://music.youtube.com/youtubei/v1/search?alt=json');
-    final body = <String, dynamic>{
-      'context': {
-        'client': {'clientName': 'WEB_REMIX', 'clientVersion': _clientVersion}
-      },
-      'query': query,
-    };
-    if (params != null) body['params'] = params;
-    try {
+    Future<List<Map<String, dynamic>>> doPost(String? p) async {
+      final body = <String, dynamic>{
+        'context': {
+          'client': {'clientName': 'WEB_REMIX', 'clientVersion': _clientVersion}
+        },
+        'query': query,
+      };
+      if (p != null) body['params'] = p;
       final resp = await http
           .post(url,
               headers: {
@@ -193,6 +193,17 @@ class YtMusicService {
       if (resp.statusCode < 200 || resp.statusCode >= 300) return [];
       final data = jsonDecode(resp.body);
       return _parseSearchResponse(data);
+    }
+
+    try {
+      var res = await doPost(params);
+      if (res.isEmpty && params != null) {
+        // fallback without filter — LA_Player gibi
+        debugPrint('YtMusic search empty with filter, retry without params');
+        res = await doPost(null);
+      }
+      debugPrint('YtMusic search "${query}" -> ${res.length} results');
+      return res;
     } catch (e) {
       debugPrint('YtMusic search error: $e');
       return [];
@@ -385,7 +396,7 @@ class YtMusicService {
         }
       }
 
-      // videoId
+      // videoId — çoklu yol + recursive fallback (LA_Player gibi)
       String? videoId;
       videoId ??= (c['playlistItemData'] as Map?)?['videoId']?.toString();
       videoId ??= c['videoId']?.toString();
@@ -407,7 +418,11 @@ class YtMusicService {
         final ep = mtr?['navigationEndpoint'] as Map?;
         videoId = _extractVideoIdFromEndpoint(ep);
       }
-      if (videoId == null || videoId.isEmpty) return null;
+      // recursive fallback: tüm map içinde ilk videoId
+      if (videoId == null || videoId.isEmpty) {
+        videoId = _findVideoIdRecursive(c);
+      }
+      if (videoId == null || videoId.isEmpty || videoId.length != 11) return null;
 
       // duration
       String durationText = '';
@@ -446,6 +461,22 @@ class YtMusicService {
               break;
             }
           }
+        }
+      }
+      // son çare: tüm flexColumns içinde ara (LA_Player gibi)
+      if (durationText.isEmpty && flexColumns != null) {
+        for (final fc in flexColumns) {
+          final fcr = (fc as Map?)?['musicResponsiveListItemFlexColumnRenderer'] as Map?;
+          final runs = (fcr?['text'] as Map?)?['runs'] as List?;
+          if (runs == null) continue;
+          for (final r in runs) {
+            final txt = (r as Map)['text']?.toString().trim() ?? '';
+            if (RegExp(r'^\d{1,2}:\d{2}(:\d{2})?$').hasMatch(txt)) {
+              durationText = txt;
+              break;
+            }
+          }
+          if (durationText.isNotEmpty) break;
         }
       }
       final duration = _parseDurationText(durationText);
@@ -492,9 +523,27 @@ class YtMusicService {
     if (watch != null && watch['videoId'] != null) {
       return watch['videoId'].toString();
     }
-    final cmd = ep['watchEndpoint'] as Map?;
-    if (cmd != null) return cmd['videoId']?.toString();
-    // browseEndpoint not video
+    // bazen doğrudan videoId field’ı
+    if (ep['videoId'] != null) return ep['videoId'].toString();
+    return null;
+  }
+
+  String? _findVideoIdRecursive(dynamic node) {
+    if (node is Map) {
+      if (node['videoId'] is String && (node['videoId'] as String).length == 11) {
+        final v = node['videoId'] as String;
+        if (RegExp(r'^[A-Za-z0-9_-]{11}$').hasMatch(v)) return v;
+      }
+      for (final v in node.values) {
+        final r = _findVideoIdRecursive(v);
+        if (r != null) return r;
+      }
+    } else if (node is List) {
+      for (final e in node) {
+        final r = _findVideoIdRecursive(e);
+        if (r != null) return r;
+      }
+    }
     return null;
   }
 
