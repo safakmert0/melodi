@@ -9,12 +9,9 @@ import 'database_service.dart';
 import 'lyrics_embedding_service.dart';
 import 'lyrics_service.dart';
 import 'metadata_service.dart';
-import 'multi_source_search.dart';
-import 'music_source.dart';
+import 'navidrome_service.dart';
 import 'storage_manager.dart';
 import 'audio_quality_service.dart';
-import 'track_matcher.dart';
-import 'youtube_downloader.dart';
 
 enum DownloadState { pending, downloading, completed, failed }
 
@@ -71,8 +68,6 @@ class DownloadManager {
   static const int _maxRetries = 3;
   final StreamController<List<DownloadTask>> _controller =
       StreamController<List<DownloadTask>>.broadcast();
-  final YouTubeDownloader _youtubeDownloader = YouTubeDownloader();
-  final MultiSourceSearch _multiSource = MultiSourceSearch();
 
   Future<void> _cleanupOrphanedParts() async {
     try {
@@ -185,34 +180,6 @@ class DownloadManager {
     return (candidate.inMilliseconds - expectedMs).abs() <= toleranceMs;
   }
 
-  List<OnlineTrack> _rankOnlineTracks(
-      Iterable<OnlineTrack> tracks, DownloadTask task) {
-    final candidates = tracks
-        .where((track) =>
-            isDurationCompatible(track.duration, task.expectedDurationMs))
-        .toList();
-    candidates.sort((a, b) {
-      final aScore = TrackMatcher.scoreWithDuration(
-        task.title,
-        task.artist,
-        task.expectedDurationMs,
-        a.title,
-        a.artist,
-        a.duration.inMilliseconds,
-      );
-      final bScore = TrackMatcher.scoreWithDuration(
-        task.title,
-        task.artist,
-        task.expectedDurationMs,
-        b.title,
-        b.artist,
-        b.duration.inMilliseconds,
-      );
-      return bScore.compareTo(aScore);
-    });
-    return candidates;
-  }
-
   Future<void> _processQueue() async {
     // Wi-Fi only kontrolü — Evermusic/SpotiFLAC esintili
     if (_wifiOnly) {
@@ -255,193 +222,26 @@ class DownloadManager {
       task.error = 'Kaynaklar aranıyor...';
       _notify();
 
-      final query = '${task.artist} - ${task.title}';
-      String? streamUrl = task.directUrl;
-      List<OnlineTrack> allTracks = const [];
-
-      if (streamUrl == null || streamUrl.isEmpty) {
-        try {
-          allTracks = await _multiSource
-              .searchAllSync(query, limitPerSource: 3)
-              .timeout(const Duration(seconds: 15));
-        } on TimeoutException {
-          debugPrint('Download search timeout for "$query"');
-          allTracks = [];
-        } catch (_) {
-          allTracks = [];
-        }
-      }
-      if (allTracks.isNotEmpty) {
-        final priorityOrder = [
-          MusicSourceType.navidrome,
-          MusicSourceType.jiosaavn,
-        ];
-        for (final sourceType in priorityOrder) {
-          final sourceTracks = _rankOnlineTracks(
-            allTracks.where((track) => track.source == sourceType),
-            task,
-          );
-          if (sourceTracks.isEmpty) continue;
-          for (final track in sourceTracks.take(2)) {
-            if (task.cancelled) break;
-            try {
-              task.progress = 0.1;
-              task.error = '${track.sourceLabel} deneniyor...';
-              _notify();
-              final url = await _multiSource
-                  .getStreamUrl(track)
-                  .timeout(const Duration(seconds: 12), onTimeout: () => null);
-              if (url != null && url.isNotEmpty) {
-                streamUrl = url;
-                break;
-              }
-            } catch (_) {}
-          }
-          if (streamUrl != null) break;
-        }
+      // Tek yapı: yalnızca bağlı Navidrome/Subsonic sunucusundan indirme.
+      if (!await NavidromeService.instance.isConfigured()) {
+        task.state = DownloadState.failed;
+        task.error = 'Önce Navidrome sunucunu bağla';
+        _notify();
+        _activeDownloads--;
+        _processQueue();
+        return;
       }
 
-      if (streamUrl == null && !task.cancelled) {
-        final ytTracks = _rankOnlineTracks(
-          allTracks.where((track) => track.source == MusicSourceType.youtube),
-          task,
-        );
-        String? videoId = task.sourceVideoId;
-        if (videoId == null && ytTracks.isNotEmpty) {
-          videoId = ytTracks.first.id;
-        } else if (videoId == null) {
-          task.progress = 0.1;
-          task.error = 'YouTube aranıyor...';
-          _notify();
-          List<OnlineTrack> searchResults = const [];
-          try {
-            searchResults = await _multiSource
-                .searchAllSync(
-                  query,
-                  limitPerSource: 5,
-                )
-                .timeout(const Duration(seconds: 15));
-          } catch (_) {
-            searchResults = [];
-          }
-          var ytResults = searchResults
-              .where((t) => t.source == MusicSourceType.youtube)
-              .toList();
-          if (ytResults.isEmpty && task.title.trim().isNotEmpty) {
-            // "Artist - Title" returned nothing; retry with the title alone so
-            // common tagging mismatches still resolve to a playable track.
-            List<OnlineTrack> titleOnly = const [];
-            try {
-              titleOnly = await _multiSource
-                  .searchAllSync(
-                    task.title.trim(),
-                    limitPerSource: 5,
-                  )
-                  .timeout(const Duration(seconds: 15));
-            } catch (_) {}
-            ytResults = titleOnly
-                .where((t) => t.source == MusicSourceType.youtube)
-                .toList();
-          }
-          if (ytResults.isNotEmpty) {
-            videoId = ytResults.first.id;
-          }
-        }
-
-        if (videoId != null) {
-          final String vid = videoId;
-          final asVideo = (await DatabaseService.instance
-                  .getSetting('download_as_video')) ==
-              'true';
-
-          Future<String?> fetch(bool video) {
-            Future<String?> fut;
-            if (video) {
-              fut = _youtubeDownloader.downloadVideoTrack(
-                vid,
-                task.title,
-                task.artist,
-                downloadDir,
-              );
-            } else {
-              fut = _youtubeDownloader.downloadFullTrack(
-                vid,
-                task.title,
-                downloadDir,
-                quality: task.requestedQuality,
-              );
-            }
-            return fut.timeout(const Duration(minutes: 5),
-                onTimeout: () => null);
-          }
-
-          final attempts = asVideo ? [true, false] : [false];
-          String? resultPath;
-          for (final video in attempts) {
-            if (task.cancelled) break;
-            task.progress = 0.15;
-            task.error = video
-                ? 'YouTube video indiriliyor...'
-                : 'YouTube indiriliyor (Backend/Piped)...';
-            _notify();
-            try {
-              resultPath = await fetch(video);
-            } catch (_) {
-              resultPath = null;
-            }
-            if (resultPath != null) break;
-          }
-
-          if (resultPath != null) {
-            task.filePath = resultPath;
-            task.progress = 0.8;
-            _notify();
-
-            if (!task.cancelled) {
-              String? importedPath;
-              try {
-                importedPath = await _importDownloadedFile(resultPath, task)
-                    .timeout(const Duration(minutes: 2), onTimeout: () => null);
-              } catch (_) {
-                importedPath = null;
-              }
-              if (importedPath != null) {
-                task.filePath = importedPath;
-                task.state = DownloadState.completed;
-                task.progress = 1.0;
-                task.error = null;
-                try {
-                  await db
-                      .upsertDownloadedTrack(task.spotifyTrackId, importedPath)
-                      .timeout(const Duration(seconds: 5));
-                } catch (_) {}
-                onDownloadComplete?.call();
-              } else {
-                final downloadedFile = File(resultPath);
-                if (await downloadedFile.exists()) {
-                  task.filePath = resultPath;
-                  task.state = DownloadState.completed;
-                  task.progress = 1.0;
-                  task.error = null;
-                  try {
-                    await db
-                        .upsertDownloadedTrack(task.spotifyTrackId, resultPath)
-                        .timeout(const Duration(seconds: 5));
-                  } catch (_) {}
-                  onDownloadComplete?.call();
-                } else {
-                  task.state = DownloadState.failed;
-                  task.error ??= 'İndirilen dosya bulunamadı';
-                }
-              }
-            }
-            _notify();
-            _activeDownloads--;
-            _processQueue();
-            return;
-          }
-        }
-      }
+      // İndirme adresi her denemede taze üretilir (Subsonic tuzu tek kullanımlık).
+      final songId = (task.sourceVideoId != null &&
+              task.sourceVideoId!.isNotEmpty)
+          ? task.sourceVideoId!
+          : null;
+      String? streamUrl = songId != null
+          ? NavidromeService.instance.downloadUrl(songId)
+          : (task.directUrl != null && task.directUrl!.isNotEmpty
+              ? task.directUrl
+              : null);
 
       if (streamUrl == null || task.cancelled) {
         task.state = DownloadState.failed;
@@ -468,26 +268,7 @@ class DownloadManager {
             .timeout(const Duration(minutes: 5), onTimeout: () => null);
       }
 
-      if (resultPath == null) {
-        // Bayat direkt URL'yi (süresi dolmuş googlevideo vb.) temizle ki
-        // retry/yedek yol taze arama yapsın, aynı ölü URL'yi vurmasın.
-        task.directUrl = null;
-      }
 
-      if (resultPath == null && !task.cancelled) {
-        try {
-          resultPath = await _downloadFromYouTube(
-            task: task,
-            searchResults: allTracks,
-            query: query,
-          ).timeout(const Duration(minutes: 5));
-        } on TimeoutException {
-          debugPrint('YouTube fallback timeout');
-          resultPath = null;
-        } catch (_) {
-          resultPath = null;
-        }
-      }
 
       if (resultPath == null || task.cancelled) {
         if (task.cancelled) {
@@ -586,59 +367,6 @@ class DownloadManager {
     _processQueue();
   }
 
-  Future<String?> _downloadFromYouTube({
-    required DownloadTask task,
-    required List<OnlineTrack> searchResults,
-    required String query,
-  }) async {
-    try {
-      final ytTracks = _rankOnlineTracks(
-        searchResults.where((track) => track.source == MusicSourceType.youtube),
-        task,
-      );
-      String? videoId = task.sourceVideoId;
-      videoId ??= ytTracks.isEmpty ? null : ytTracks.first.id;
-      if (videoId == null) {
-        task.progress = 0.15;
-        task.error = 'YouTube yedek kaynağı aranıyor...';
-        _notify();
-        List<OnlineTrack> fallbackResults = const [];
-        try {
-          fallbackResults = await _multiSource
-              .searchAllSync(
-                query,
-                limitPerSource: 5,
-              )
-              .timeout(const Duration(seconds: 15));
-        } catch (_) {}
-        final ytResults = fallbackResults
-            .where((t) => t.source == MusicSourceType.youtube)
-            .toList();
-        if (ytResults.isNotEmpty) {
-          videoId = ytResults.first.id;
-        }
-      }
-      if (videoId == null || task.cancelled) return null;
-      task.progress = 0.2;
-      task.error = 'YouTube yedek kaynağından indiriliyor...';
-      _notify();
-      try {
-        return await _youtubeDownloader
-            .downloadFullTrack(
-              videoId,
-              task.title,
-              Directory(await StorageManager.instance.getStorageLocation()),
-              quality: task.requestedQuality,
-            )
-            .timeout(const Duration(minutes: 5), onTimeout: () => null);
-      } on TimeoutException {
-        return null;
-      }
-    } catch (error) {
-      debugPrint('YouTube fallback download error: $error');
-      return null;
-    }
-  }
 
   Future<String?> _downloadFromUrl(
       String url, DownloadTask task, Directory dir) async {
@@ -1079,6 +807,5 @@ class DownloadManager {
 
   void dispose() {
     _controller.close();
-    _multiSource.dispose();
   }
 }

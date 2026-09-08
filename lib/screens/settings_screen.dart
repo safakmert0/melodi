@@ -12,9 +12,8 @@ import '../services/watched_folder_service.dart';
 import 'support_screen.dart';
 import 'downloads_screen.dart';
 import 'storage_screen.dart';
-import 'extension_store_screen.dart';
 import 'diagnostics_screen.dart';
-import 'source_hub_screen.dart';
+import 'navidrome_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -352,30 +351,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
                 const SizedBox(height: 16),
                 Divider(color: MelodiTheme.outlineVariant, height: 1),
-                _SectionTitle('Eklentiler'),
+                _SectionTitle('Sunucu'),
                 _SettingsTile(
-                  icon: Icons.hub_rounded,
+                  icon: Icons.dns_rounded,
                   iconColor: Colors.indigo,
-                  title: 'Kaynak ve bağlantı durumu',
-                  subtitle:
-                      'Müzik kaynaklarını, yeteneklerini ve bağlantıları yönet',
-                  trailing:
-                      Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SourceHubScreen()),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                _SettingsTile(
-                  icon: Icons.extension_rounded,
-                  iconColor: MelodiTheme.primaryGreen,
-                  title: 'Eklenti Mağazası',
-                  subtitle: 'yt-dlp ve diğer sağlayıcıları kur',
+                  title: 'Navidrome / Subsonic',
+                  subtitle: 'Kişisel müzik sunucunu bağla',
                   trailing:
                       Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                        builder: (_) => const ExtensionStoreScreen()),
+                        builder: (_) => const NavidromeSettingsScreen()),
                   ),
                 ),
                 const SizedBox(height: 16),

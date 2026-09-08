@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/melodi_design.dart';
 import '../../providers/library_provider.dart';
-import '../../screens/source_hub_screen.dart';
+import '../../screens/navidrome_settings_screen.dart';
 
 class HomeLibraryError extends StatelessWidget {
   const HomeLibraryError({
@@ -98,7 +98,7 @@ class HomeEmptyLibrary extends StatelessWidget {
           const SizedBox(height: 8),
           TextButton.icon(
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const SourceHubScreen()),
+              MaterialPageRoute<void>(builder: (_) => const NavidromeSettingsScreen()),
             ),
             icon: const Icon(Icons.hub_rounded, size: 18),
             label: const Text('Hesap bağla'),

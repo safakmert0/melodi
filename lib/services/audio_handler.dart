@@ -7,30 +7,16 @@ import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
-import 'backend_api_service.dart';
 import 'database_service.dart';
-import 'robust_piped_service.dart';
 import 'track_matcher.dart';
 import 'multi_source_search.dart';
 import 'music_source.dart';
-import 'youtube_downloader.dart';
-import 'yt_dlp_service.dart';
 import 'navidrome_service.dart';
 
 class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   final AudioPlayer _player = AudioPlayer();
   final DatabaseService _db = DatabaseService.instance;
-  late final TrackMatcher _trackMatcher = TrackMatcher(
-    (query) => MultiSourceSearch().searchAllSync(query, limitPerSource: 10),
-  );
   final NavidromeService _navidrome = NavidromeService.instance;
-  final YouTubeDownloader _youtubeDownloader = YouTubeDownloader();
-
-  // Resolved YouTube stream URLs are cached briefly so repeated plays
-  // (replay, skip back, queue transitions) start instantly instead of
-  // re-resolving through the backend/piped on every tap.
-  final Map<String, _CachedStream> _ytStreamCache = {};
-  static const Duration _ytStreamCacheTtl = Duration(minutes: 3);
 
   List<SongModel> _queue = [];
   List<SongModel> _originalQueue = [];
@@ -157,32 +143,6 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
 
   Future<void> setEqualizerBand(int index, double gain) async {}
 
-  bool _isYouTubeUrl(String url) {
-    return url.contains('youtube.com') ||
-        url.contains('youtu.be') ||
-        url.contains('googlevideo.com') ||
-        url.contains('youtube-nocookie.com');
-  }
-
-  String? _extractYouTubeVideoId(String url) {
-    // Handle youtu.be short URLs
-    if (url.contains('youtu.be/')) {
-      final id = url.split('youtu.be/').last.split('?').first;
-      return id.isNotEmpty ? id : null;
-    }
-    // Handle youtube.com/watch?v= URLs
-    if (url.contains('v=')) {
-      final id = url.split('v=').last.split('&').first;
-      return id.isNotEmpty ? id : null;
-    }
-    // Handle youtube.com/embed/ URLs
-    if (url.contains('/embed/')) {
-      final id = url.split('/embed/').last.split('?').first;
-      return id.isNotEmpty ? id : null;
-    }
-    return null;
-  }
-
   void _startAutoSave() {
     _saveStateTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       savePlayerState();
@@ -240,10 +200,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
             final song = await _resolvePlayableSong(_queue[_currentIndex]);
             try {
               AudioSource audioSource;
-              if (song.filePath.startsWith('youtube://')) {
-                final videoId = song.filePath.replaceFirst('youtube://', '');
-                audioSource = await _youtubeAudioSource(videoId);
-              } else if (song.filePath.startsWith('http')) {
+              if (song.filePath.startsWith('http')) {
                 audioSource = AudioSource.uri(Uri.parse(song.filePath));
               } else {
                 audioSource = AudioSource.file(song.filePath);
@@ -563,38 +520,9 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     }
   }
 
-  /// YouTube parçası için ses kaynağını seçer. Sıra: yt-dlp backend
-  /// eklentisi → Piped örnekleri → indirme. Böylece cihazın IP'si
-  /// YouTube'a erişemese bile sunucu/örnek proxy'siyle çalma sürer.
-  Future<AudioSource> _youtubeAudioSource(String videoId) async {
-    final cached = _ytStreamCache[videoId];
-    if (cached != null && !cached.isExpired) {
-      return AudioSource.uri(Uri.parse(cached.url));
-    }
-
-    final streamUrl = await _resolveYoutubeStream(videoId);
-    if (streamUrl != null) {
-      _ytStreamCache[videoId] = _CachedStream(streamUrl);
-      return AudioSource.uri(Uri.parse(streamUrl));
-    }
-    // Fallback: trigger download and play local
-    final tempDir = await getTemporaryDirectory();
-    final path = await _youtubeDownloader.downloadFullTrack(
-      videoId,
-      'temp',
-      tempDir,
-      quality: 'high',
-    );
-    if (path != null) {
-      return AudioSource.file(path);
-    }
-    throw StateError('YouTube stream/download failed');
-  }
-
   /// Resolves a streamable audio source for an imported "online" track by
-  /// matching it against the full-track sources (YouTube, JioSaavn, Apple
-  /// Music, SoundCloud). Uses the track's own metadata so no pre-stored id is
-  /// required.
+  /// matching it against the personal Navidrome library. Uses the track's
+  /// own metadata so no pre-stored id is required.
   Future<AudioSource> _resolveOnlineAudioSource(SongModel song) async {
     final onlineTrack = OnlineTrack(
       id: song.id,
@@ -602,90 +530,15 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       artist: song.artist,
       album: song.album.isEmpty ? null : song.album,
       duration: song.duration,
-      source: MusicSourceType.deezer,
+      source: MusicSourceType.navidrome,
     );
     final url = await MultiSourceSearch().getStreamUrlWithFallback(
       onlineTrack,
-      preferStableYouTubeReference: true,
     );
     if (url == null) {
       throw StateError('Eşleşen şarkı bulunamadı');
     }
-    if (url.startsWith('youtube://')) {
-      final videoId = url.replaceFirst('youtube://', '');
-      return await _youtubeAudioSource(videoId);
-    }
     return AudioSource.uri(Uri.parse(url));
-  }
-
-  /// Resolves a playable YouTube stream URL as fast as possible.
-  ///
-  /// Priority: backend proxy → Piped → doğrudan YouTube (youtube_explode).
-  /// Backend/Piped paralel sorgulanır; ikisi de başarısızsa yt_dlp dener.
-  Future<String?> _resolveYoutubeStream(String videoId) async {
-    final backendFut =
-        BackendApiService.instance.streamUrl(videoId).catchError((_) => null);
-    final pipedFut = RobustPipedService.instance
-        .getStreamUrl(videoId)
-        .catchError((_) => null);
-    final ytDlpFut =
-        YtDlpService.instance.getStreamUrl(videoId).catchError((_) => null);
-
-    final completer = Completer<String?>();
-    String? backendResult;
-    String? pipedResult;
-    String? ytDlpResult;
-    var settled = false;
-
-    void settle(String? url) {
-      if (settled || url == null) return;
-      settled = true;
-      completer.complete(url);
-    }
-
-    backendFut.then((url) {
-      backendResult = url;
-      if (url != null) {
-        settle(url);
-      } else {
-        if (pipedResult != null) {
-          settle(pipedResult);
-        } else if (ytDlpResult != null) settle(ytDlpResult);
-      }
-    });
-
-    pipedFut.then((url) {
-      pipedResult = url;
-      if (url != null && !settled) {
-        settle(url);
-      } else {
-        if (backendResult != null) {
-          settle(backendResult);
-        } else if (ytDlpResult != null && !settled) settle(ytDlpResult);
-      }
-    });
-
-    ytDlpFut.then((url) {
-      ytDlpResult = url;
-      if (url != null && !settled) {
-        settle(url);
-      }
-    });
-
-    Future.wait([backendFut, pipedFut, ytDlpFut]).then((_) {
-      if (!settled) {
-        if (backendResult != null) {
-          completer.complete(backendResult);
-        } else if (pipedResult != null)
-          completer.complete(pipedResult);
-        else if (ytDlpResult != null)
-          completer.complete(ytDlpResult);
-        else
-          completer.complete(null);
-      }
-    });
-
-    return completer.future;
   }
 
   Future<void> _playCurrent({
@@ -700,27 +553,18 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
 
     try {
       song = await _resolvePlayableSong(song);
-      // Determine audio source based on file path type
+      // Determine audio source based on file path type. Tek yapı:
+      // yerel dosya, Navidrome/subsonic akışı (http) ya da online://
+      // (Navidrome eşleşmesi). Eski youtube:// kayıtları çözümlenemez.
       AudioSource audioSource;
       if (song.filePath.startsWith('youtube://')) {
-        final videoId = song.filePath.replaceFirst('youtube://', '');
-        audioSource = await _youtubeAudioSource(videoId);
-      } else if (song.filePath.startsWith('http') ||
-          song.filePath.startsWith('https')) {
-        // Check if this is a YouTube URL - use custom streaming source
-        if (_isYouTubeUrl(song.filePath)) {
-          final videoId = _extractYouTubeVideoId(song.filePath);
-          if (videoId != null) {
-            audioSource = await _youtubeAudioSource(videoId);
-          } else {
-            audioSource = AudioSource.uri(Uri.parse(song.filePath));
-          }
-        } else {
-          audioSource = AudioSource.uri(Uri.parse(song.filePath));
-        }
+        throw StateError(
+            'Bu parça eski çevrimiçi kaynaktan kaldı ve artık desteklenmiyor');
+      } else if (song.filePath.startsWith('http')) {
+        audioSource = AudioSource.uri(Uri.parse(song.filePath));
       } else if (song.filePath.startsWith('online://')) {
         // Imported playlist tracks without a direct stream id: match them to
-        // a full-track source (YouTube/JioSaavn/etc.) and play from there.
+        // the personal Navidrome library and play from there.
         audioSource = await _resolveOnlineAudioSource(song);
       } else {
         audioSource = AudioSource.file(song.filePath);
@@ -862,8 +706,6 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     if (downloaded != null) return downloaded;
     if (!song.filePath.startsWith('spotify://')) return song;
 
-    final spotifyId = song.filePath.replaceFirst('spotify://', '');
-
     // Spotify supplies library metadata, not downloadable audio. When the
     // user owns the same track on a connected personal server, prefer that
     // exact title/artist/duration match before trying a public resolver.
@@ -921,34 +763,10 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       debugPrint('Navidrome Spotify match failed: $e');
     }
 
-    final cached = await _db.getCachedMatch(spotifyId);
-    var videoId = cached?['ytVideoId']?.toString();
-    if (videoId == null || videoId.isEmpty) {
-      final match = await _trackMatcher.matchSpotifyTrackToYT(
-        song.title,
-        song.artist,
-        album: song.album,
-        durationMs: song.duration.inMilliseconds,
-      );
-      if (match == null) {
-        throw StateError(
-            'Spotify parçası için oynatılabilir kaynak bulunamadı');
-      }
-      // Düşük güvenli eşleşmelerde sert hata vermek yerine en iyi çabayı
-      // kabul et; böylece çalma listesi içindeki parçalar "kaynak bulunamadı"
-      // hatasıyla çalmamazlık yapmaz.
-      if (match.confidence < 0.35) {
-        debugPrint(
-            'Düşük güvenli YouTube eşleşmesi kabul edildi (${match.confidence.toStringAsFixed(2)}): '
-            '${song.title} - ${song.artist} -> ${match.ytVideoId}');
-      }
-      videoId = match.ytVideoId;
-      await _db.cacheMatch(spotifyId, videoId, match.confidence);
-    }
-
-    final resolved = song.copyWith(filePath: 'youtube://$videoId');
-    _replaceSongInQueues(resolved);
-    return resolved;
+    // Tek yapı: public YouTube çözümleme kaldırıldı. Eski spotify://
+    // kayıtları yalnızca kişisel Navidrome kütüphanesiyle eşleşirse çalar.
+    throw StateError(
+        'Bu parça sunucuda bulunamadı; Navidrome kütüphaneni kontrol et');
   }
 
   Future<SongModel?> _resolveDownloadedSong(SongModel song) async {
@@ -1300,14 +1118,4 @@ class PlaybackCompletionDecision {
       PlaybackCompletionAction.rewindAndPause,
     );
   }
-}
-
-class _CachedStream {
-  _CachedStream(this.url)
-      : expiresAt = DateTime.now().add(AudioPlayerHandler._ytStreamCacheTtl);
-
-  final String url;
-  final DateTime expiresAt;
-
-  bool get isExpired => DateTime.now().isAfter(expiresAt);
 }

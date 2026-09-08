@@ -4,6 +4,14 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.1.0] - 2026-09-08
+
+### Tek Yapı: Navidrome + Yerel Kütüphane
+- App Store uyumu için tek çevrimiçi yapıya inildi: kişisel Navidrome/Subsonic sunucusu + yerel dosyalar. YouTube, Piped, yt-dlp, JioSaavn, Deezer, SoundCloud, Apple Music, Hi-Fi köprüsü ve eklenti sistemi (JS sandbox dahil) kaldırıldı.
+- Arama, çalma, indirme ve çalma listesi içe aktarma (M3U/CUE + metin) artık yalnızca Navidrome üzerinden çalışır; indirme adresleri her denemede taze Subsonic imzasıyla üretilir.
+- Eski `youtube://` kayıtları açılmaya çalışıldığında anlaşılır hata verir, veri silinmez.
+- Kullanılmayan 14 bağımlılık ve ~12.300 satır kod temizlendi (`flutter analyze` 0 error, 23 test yeşil).
+
 ## [5.0.8] - 2026-09-08
 
 ### Tanılama Günlüğünden Gelen Düzeltmeler

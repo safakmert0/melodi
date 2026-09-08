@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'download_manager.dart';
 import 'navidrome_service.dart';
-import 'sources/apple_music_source.dart';
 
 class RemotePlaylist {
   final String id;
@@ -106,17 +105,6 @@ class RemotePlaylistService {
       debugPrint('Navidrome playlists error: $e');
     }
 
-    try {
-      final appleMusic = AppleMusicSource();
-      if (await appleMusic.isAvailable()) {
-        final applePlaylists = await appleMusic.getUserPlaylists();
-        playlists.addAll(applePlaylists
-            .map((p) => RemotePlaylist.fromJson(p, 'appleMusic'))
-            .toList());
-      }
-    } catch (e) {
-      debugPrint('Apple Music playlists error: $e');
-    }
 
     return playlists;
   }
@@ -125,8 +113,6 @@ class RemotePlaylistService {
     switch (sourceType) {
       case 'navidrome':
         return _getNavidromePlaylistTracks(playlistId);
-      case 'appleMusic':
-        return _getAppleMusicPlaylistTracks(playlistId);
       default:
         return [];
     }
@@ -153,27 +139,6 @@ class RemotePlaylistService {
     }
   }
 
-  Future<List<RemotePlaylistTrack>> _getAppleMusicPlaylistTracks(String playlistId) async {
-    try {
-      final appleMusic = AppleMusicSource();
-      final tracks = await appleMusic.getPlaylistTracks(playlistId);
-      return tracks
-          .map((t) => RemotePlaylistTrack(
-                id: t.id,
-                title: t.title,
-                artist: t.artist,
-                album: t.album,
-                durationMs: t.duration.inMilliseconds,
-                artworkUrl: t.thumbnailUrl,
-                sourceType: 'appleMusic',
-                sourceId: t.id,
-              ))
-          .toList();
-    } catch (e) {
-      debugPrint('Apple Music playlist tracks error: $e');
-      return [];
-    }
-  }
 
   Future<bool> createPlaylist({
     required String name,
@@ -184,8 +149,6 @@ class RemotePlaylistService {
     switch (sourceType) {
       case 'navidrome':
         return _createNavidromePlaylist(name, description, trackIds);
-      case 'appleMusic':
-        return _createAppleMusicPlaylist(name, description, trackIds);
       default:
         return false;
     }
@@ -204,19 +167,6 @@ class RemotePlaylistService {
     }
   }
 
-  Future<bool> _createAppleMusicPlaylist(
-    String name,
-    String? description,
-    List<String>? trackIds,
-  ) async {
-    try {
-      final appleMusic = AppleMusicSource();
-      return await appleMusic.createPlaylist(name, description, trackIds ?? []);
-    } catch (e) {
-      debugPrint('Create Apple Music playlist error: $e');
-      return false;
-    }
-  }
 
   Future<bool> updatePlaylist({
     required String playlistId,
@@ -229,8 +179,6 @@ class RemotePlaylistService {
     switch (sourceType) {
       case 'navidrome':
         return _updateNavidromePlaylist(playlistId, name, description, addTrackIds, removeTrackIds);
-      case 'appleMusic':
-        return _updateAppleMusicPlaylist(playlistId, name, description, addTrackIds, removeTrackIds);
       default:
         return false;
     }
@@ -257,34 +205,11 @@ class RemotePlaylistService {
     }
   }
 
-  Future<bool> _updateAppleMusicPlaylist(
-    String playlistId,
-    String? name,
-    String? description,
-    List<String>? addTrackIds,
-    List<String>? removeTrackIds,
-  ) async {
-    try {
-      final appleMusic = AppleMusicSource();
-      if (addTrackIds != null && addTrackIds.isNotEmpty) {
-        await appleMusic.addTracksToPlaylist(playlistId, addTrackIds);
-      }
-      if (removeTrackIds != null && removeTrackIds.isNotEmpty) {
-        await appleMusic.removeTracksFromPlaylist(playlistId, removeTrackIds);
-      }
-      return true;
-    } catch (e) {
-      debugPrint('Update Apple Music playlist error: $e');
-      return false;
-    }
-  }
 
   Future<bool> deletePlaylist(String playlistId, String sourceType) async {
     switch (sourceType) {
       case 'navidrome':
         return _deleteNavidromePlaylist(playlistId);
-      case 'appleMusic':
-        return _deleteAppleMusicPlaylist(playlistId);
       default:
         return false;
     }
@@ -299,15 +224,6 @@ class RemotePlaylistService {
     }
   }
 
-  Future<bool> _deleteAppleMusicPlaylist(String playlistId) async {
-    try {
-      final appleMusic = AppleMusicSource();
-      return await appleMusic.deletePlaylist(playlistId);
-    } catch (e) {
-      debugPrint('Delete Apple Music playlist error: $e');
-      return false;
-    }
-  }
 
   Future<bool> downloadPlaylistToLocal(
     String playlistId,
@@ -327,6 +243,7 @@ class RemotePlaylistService {
         artist: track.artist,
         album: track.album,
         imageUrl: track.artworkUrl,
+        sourceVideoId: track.sourceId,
         expectedDurationMs: track.durationMs ?? 0,
       );
 
@@ -342,8 +259,6 @@ class RemotePlaylistService {
     switch (sourceType) {
       case 'navidrome':
         return _shareNavidromePlaylist(playlistId);
-      case 'appleMusic':
-        return _shareAppleMusicPlaylist(playlistId);
       default:
         return null;
     }
@@ -359,9 +274,6 @@ class RemotePlaylistService {
     }
   }
 
-  Future<String?> _shareAppleMusicPlaylist(String playlistId) async {
-    return 'https://music.apple.com/playlist/$playlistId';
-  }
 
   Future<void> dispose() async {}
 }

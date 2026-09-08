@@ -4,11 +4,10 @@ import 'package:provider/provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/player_provider.dart';
 import '../providers/search_provider.dart';
-import '../services/music_source.dart';
 import '../services/podcast_service.dart';
 import '../widgets/search/search_result_tiles.dart';
+import 'navidrome_settings_screen.dart';
 import 'podcast_detail_screen.dart';
-import 'source_hub_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -20,8 +19,6 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
-  MusicSourceType? _selectedSource;
-  String? _selectedExtensionId;
 
   bool get _hasQuery => _controller.text.trim().isNotEmpty;
 
@@ -85,13 +82,13 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
               actions: [
                 IconButton(
-                  tooltip: 'Müzik kaynakları',
+                  tooltip: 'Sunucu ayarları',
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => const SourceHubScreen(),
+                      builder: (_) => const NavidromeSettingsScreen(),
                     ),
                   ),
-                  icon: const Icon(Icons.hub_rounded),
+                  icon: const Icon(Icons.dns_rounded),
                 ),
                 const SizedBox(width: 8),
               ],
@@ -107,7 +104,6 @@ class _SearchScreenState extends State<SearchScreen> {
                     offset: query.length,
                   );
                   context.read<SearchProvider>().search(query);
-                  setState(() => _selectedSource = null);
                 },
               ),
             const SliverPadding(padding: EdgeInsets.only(bottom: 176)),
@@ -133,9 +129,6 @@ class _SearchScreenState extends State<SearchScreen> {
               onPressed: () {
                 _controller.clear();
                 context.read<SearchProvider>().clearResults();
-                setState(() {
-                  _selectedSource = null;
-                });
               },
               icon: const Icon(Icons.close_rounded),
             ),
@@ -153,7 +146,6 @@ class _SearchScreenState extends State<SearchScreen> {
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
         onChanged: (query) {
-          setState(() => _selectedSource = null);
           context.read<SearchProvider>().search(query.trim());
         },
         onSubmitted: (query) {
@@ -172,10 +164,7 @@ class _SearchScreenState extends State<SearchScreen> {
     SearchProvider provider,
     Widget? child,
   ) {
-    final online = provider.onlineResults
-        .where((track) =>
-            _selectedSource == null || track.source == _selectedSource)
-        .toList();
+    final online = provider.onlineResults.toList();
     final children = <Widget>[];
 
     if (provider.results.isNotEmpty) {
@@ -194,16 +183,9 @@ class _SearchScreenState extends State<SearchScreen> {
     if (provider.onlineResults.isNotEmpty) {
       children.add(
         _ResultHeader(
-          title: 'Diğer kaynaklarda',
+          title: 'Sunucuda',
           count: provider.onlineResults.length,
-          icon: Icons.public_rounded,
-        ),
-      );
-      children.add(
-        SearchSourceFilters(
-          tracks: provider.onlineResults,
-          selected: _selectedSource,
-          onChanged: (value) => setState(() => _selectedSource = value),
+          icon: Icons.dns_rounded,
         ),
       );
       children.add(const SizedBox(height: 5));

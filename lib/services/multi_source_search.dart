@@ -1,17 +1,13 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import '../core/app_config.dart';
-import 'extension_service.dart';
 import 'music_source.dart';
-import 'sources/youtube_music_source.dart';
-import 'sources/jiosaavn_source.dart';
-import 'sources/deezer_source.dart';
 import 'sources/navidrome_source.dart';
-import 'sources/hifi_source.dart';
-import 'sources/apple_music_source.dart';
-import 'sources/soundcloud_source.dart';
-import 'sources/extension_source.dart';
 
+/// Tek çevrimiçi yapı: kişisel Navidrome/Subsonic sunucusu.
+///
+/// App Store uyumu için YouTube/Piped/yt-dlp/eklenti yolları kaldırıldı.
+/// Bu sınıf, genel arama + akış + yedek çözümleme için tek giriş noktası
+/// olarak kaldı; böylece arayüz ve indirme yöneticisi değişmeden çalışır.
 class MultiSourceSearch {
   static final MultiSourceSearch _instance = MultiSourceSearch._();
   factory MultiSourceSearch() => _instance;
@@ -19,67 +15,14 @@ class MultiSourceSearch {
 
   final List<MusicSource> _sources = [
     NavidromeSource(),
-    HiFiSource(),
-    YouTubeMusicSource(),
-    JioSaavnSource(),
-    DeezerSource(),
-    AppleMusicSource(),
-    SoundCloudSource(),
   ];
 
-  List<MusicSource> get _filteredSources {
-    if (!AppConfig.isAppStoreBuild) return _sources;
-    try {
-      final hasBackend =
-          ExtensionService.instance.installed.any((e) => e.enabled);
-      if (hasBackend) return _sources;
-    } catch (_) {}
-    // App Store without premium extension: hide YouTube/JioSaavn full-track
-    return _sources
-        .where((s) =>
-            s.type != MusicSourceType.youtube &&
-            s.type != MusicSourceType.jiosaavn)
-        .toList();
-  }
+  List<MusicSource> get sources => List.unmodifiable(_sources);
 
-  List<MusicSource> get _extensionSources {
-    try {
-      final installed = ExtensionService.instance.installed
-          .where((e) =>
-              e.enabled &&
-              (e.manifest.capabilities.contains('search') ||
-                  e.manifest.capabilities.contains('playback') ||
-                  e.manifest.capabilities.contains('download') ||
-                  e.manifest.capabilities.contains('downloads')))
-          .toList();
-      return installed.map((e) => ExtensionMusicSource(e)).toList();
-    } catch (_) {
-      return const [];
-    }
-  }
-
-  List<MusicSource> get _allSourcesForSearch {
-    final base = _filteredSources;
-    final ext = _extensionSources;
-    if (ext.isEmpty) return base;
-    // Extension sources are shown as separate entries in filters, but search both base and extensions
-    return [...base, ...ext];
-  }
-
-  List<MusicSource> get sources => List.unmodifiable(_filteredSources);
-  List<MusicSource> get allSourcesForUi =>
-      List.unmodifiable(_allSourcesForSearch);
-
-  /// Display ranking for search results. Full-track sources (those that can
-  /// actually play/download the whole song) are shown first; preview-only
-  /// catalogues such as Deezer (30s preview) are pushed to the bottom.
+  /// Display ranking for search results. Navidrome (full-track, personal
+  /// server) is the only online source; preview-only catalogues are gone.
   static const Map<MusicSourceType, int> _fullTrackRank = {
     MusicSourceType.navidrome: 0,
-    MusicSourceType.youtube: 1,
-    MusicSourceType.jiosaavn: 2,
-    MusicSourceType.appleMusic: 3,
-    MusicSourceType.soundcloud: 4,
-    MusicSourceType.hifi: 5,
   };
 
   int _displayRank(OnlineTrack track) {
@@ -149,8 +92,7 @@ class MultiSourceSearch {
 
   Future<List<OnlineTrack>> searchAllSync(String query,
       {int limitPerSource = 10}) async {
-    await ExtensionService.instance.ensureLoaded();
-    final futures = _allSourcesForSearch.map((source) async {
+    final futures = _sources.map((source) async {
       try {
         return await source.search(query, limit: limitPerSource);
       } catch (e) {
@@ -167,9 +109,8 @@ class MultiSourceSearch {
     final controller = _controller;
     if (controller == null || controller.isClosed) return;
     try {
-      await ExtensionService.instance.ensureLoaded();
       final allTracks = <OnlineTrack>[];
-      final futures = _allSourcesForSearch.map((source) async {
+      final futures = _sources.map((source) async {
         try {
           final tracks = await source.search(query, limit: limitPerSource);
           allTracks.addAll(tracks);
@@ -192,43 +133,13 @@ class MultiSourceSearch {
   }
 
   Future<String?> getStreamUrl(OnlineTrack track) async {
-    await ExtensionService.instance.ensureLoaded();
     if (!track.source.supportsFullTrack) return null;
-    if (AppConfig.isAppStoreBuild) {
-      try {
-        final hasBackend =
-            ExtensionService.instance.installed.any((e) => e.enabled);
-        if (!hasBackend &&
-            (track.source == MusicSourceType.youtube ||
-                track.source == MusicSourceType.jiosaavn)) {
-          return null;
-        }
-      } catch (_) {}
-    }
-    // Extension-specific track: delegate to that extension's source (separate stream handling)
-    if (track.extensionId != null && track.extensionId!.isNotEmpty) {
-      try {
-        final extSources = _extensionSources;
-        for (final src in extSources) {
-          if (src is ExtensionMusicSource && (src).id == track.extensionId) {
-            final cacheKeyExt = '${track.extensionId}:${track.id}';
-            final cachedExt = _streamUrlCache[cacheKeyExt];
-            if (cachedExt != null && !cachedExt.isExpired) return cachedExt.url;
-            final url = await src.getStreamUrl(track);
-            if (url != null)
-              _streamUrlCache[cacheKeyExt] = _CachedStreamUrl(url);
-            return url;
-          }
-        }
-      } catch (_) {}
-    }
     final cacheKey = '${track.source}:${track.id}';
     final cached = _streamUrlCache[cacheKey];
     if (cached != null && !cached.isExpired) return cached.url;
-    final source = _filteredSources.firstWhere(
+    final source = _sources.firstWhere(
       (s) => s.type == track.source,
-      orElse: () => _sources.firstWhere((s) => s.type == track.source,
-          orElse: () => _sources.first),
+      orElse: () => _sources.first,
     );
     final url = await source.getStreamUrl(track);
     if (url != null) _streamUrlCache[cacheKey] = _CachedStreamUrl(url);
@@ -238,9 +149,6 @@ class MultiSourceSearch {
   Future<void> prefetchStreamUrls(Iterable<OnlineTrack> tracks) async {
     await Future.wait(tracks.take(4).map((track) async {
       if (!track.source.supportsFullTrack) return;
-      // Eklenti parçaları URL için tam dosya indirebilir; önbelleğe almayı
-      // kullanıcı dokununca yap (veri/kota sürprizi olmasın).
-      if (track.extensionId != null && track.extensionId!.isNotEmpty) return;
       try {
         await getStreamUrl(track).timeout(const Duration(seconds: 4));
       } catch (_) {}
@@ -248,97 +156,51 @@ class MultiSourceSearch {
   }
 
   /// Try to get stream URL with fallback across all sources.
-  /// Preview-only catalogue results are resolved against a full-track source.
-  /// Priority: the track's own full source first, then the user's personal
-  /// Navidrome library, YouTube and JioSaavn.
+  /// Tek yapıda yedek: parçanın kendi kaynağı tutmazsa ad/sanatçı ile
+  /// Navidrome'da yeniden arama yapılır.
   Future<String?> getStreamUrlWithFallback(
     OnlineTrack track, {
     String? query,
     Set<String> excludedUrls = const {},
     bool preferStableYouTubeReference = false,
   }) async {
-    await ExtensionService.instance.ensureLoaded();
-    // Eklenti parçasıysa önce kendi eklentisine sor; youtube:// kısayolu
-    // extensionId'yi düşürüp eklentiyi baypas ederdi.
-    if (track.extensionId != null && track.extensionId!.isNotEmpty) {
+    // 1. Parçanın kendi kaynağını dene.
+    if (track.source.supportsFullTrack) {
       try {
-        final extUrl = await getStreamUrl(track);
-        final normalizedExt = extUrl?.trim();
-        if (normalizedExt != null &&
-            normalizedExt.isNotEmpty &&
-            !excludedUrls.contains(normalizedExt)) {
-          return normalizedExt;
+        final url = await getStreamUrl(track);
+        final normalized = url?.trim();
+        if (normalized != null &&
+            normalized.isNotEmpty &&
+            !excludedUrls.contains(normalized)) {
+          return normalized;
         }
       } catch (_) {}
     }
-    Future<String?> resolve(MusicSource source, OnlineTrack candidate) async {
-      final url = preferStableYouTubeReference &&
-              candidate.extensionId == null &&
-              source.type == MusicSourceType.youtube &&
-              candidate.id.trim().isNotEmpty
-          ? 'youtube://${candidate.id.trim()}'
-          : await getStreamUrl(candidate);
-      final normalized = url?.trim();
-      if (normalized == null ||
-          normalized.isEmpty ||
-          excludedUrls.contains(normalized)) {
-        return null;
+
+    // 2. Yedek: ad/sanatçı ile Navidrome'da yeniden ara.
+    final searchQuery = (query != null && query.trim().isNotEmpty)
+        ? query.trim()
+        : '${track.artist} - ${track.title}'.trim();
+    if (searchQuery.isEmpty) return null;
+    try {
+      final results =
+          await NavidromeSource().search(searchQuery, limit: 5);
+      results.sort(
+          (a, b) => _matchScore(b, track).compareTo(_matchScore(a, track)));
+      for (final result in results) {
+        if (_matchScore(result, track) < 2) continue;
+        try {
+          final url = await getStreamUrl(result);
+          final normalized = url?.trim();
+          if (normalized == null ||
+              normalized.isEmpty ||
+              excludedUrls.contains(normalized)) {
+            continue;
+          }
+          return normalized;
+        } catch (_) {}
       }
-      return normalized;
-    }
-
-    // 1. Try the track's own source only if it can provide a full track.
-    final primarySource = _filteredSources.firstWhere(
-      (s) => s.type == track.source,
-      orElse: () =>
-          _filteredSources.isNotEmpty ? _filteredSources.first : _sources.first,
-    );
-    if (primarySource.type.supportsFullTrack) {
-      try {
-        final url = await resolve(primarySource, track);
-        if (url != null) return url;
-      } catch (_) {}
-    }
-
-    // 2. Fallback: search by query across other sources
-    // Use the selected result's exact metadata; a broad UI query can resolve
-    // to an unrelated first result.
-    final searchQuery = '${track.artist} - ${track.title}'.trim();
-    final baseFallback = _filteredSources
-        .where((s) => s.type != track.source && s.type.supportsFullTrack)
-        .toList();
-    final extFallback = _extensionSources.where((s) {
-      // For extension tracks, include even if same type but different extension
-      if (track.extensionId != null && s is ExtensionMusicSource) {
-        return s.id != track.extensionId;
-      }
-      return s.type != track.source && s.type.supportsFullTrack;
-    }).toList();
-    final fallbackOrder = [...baseFallback, ...extFallback];
-    // Prefer the user's own server, then broad public full-track sources.
-    fallbackOrder.sort((a, b) {
-      const priority = {
-        MusicSourceType.navidrome: 0,
-        MusicSourceType.youtube: 1,
-        MusicSourceType.jiosaavn: 2,
-        MusicSourceType.appleMusic: 3,
-        MusicSourceType.soundcloud: 4,
-      };
-      return (priority[a.type] ?? 99).compareTo(priority[b.type] ?? 99);
-    });
-
-    for (final source in fallbackOrder) {
-      try {
-        final results = await source.search(searchQuery, limit: 5);
-        results.sort(
-            (a, b) => _matchScore(b, track).compareTo(_matchScore(a, track)));
-        for (final result in results) {
-          if (_matchScore(result, track) < 2) continue;
-          final url = await resolve(source, result);
-          if (url != null) return url;
-        }
-      } catch (_) {}
-    }
+    } catch (_) {}
     return null;
   }
 
@@ -387,7 +249,8 @@ class MultiSourceSearch {
 
 class _CachedStreamUrl {
   _CachedStreamUrl(this.url)
-      : expiresAt = DateTime.now().add(MultiSourceSearch._streamUrlCacheTtl);
+      : expiresAt =
+            DateTime.now().add(MultiSourceSearch._streamUrlCacheTtl);
 
   final String url;
   final DateTime expiresAt;

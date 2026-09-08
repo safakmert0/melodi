@@ -17,7 +17,7 @@ import '../widgets/song_tile.dart';
 import 'create_playlist_screen.dart';
 import 'playlist_detail_screen.dart';
 import 'profile_screen.dart';
-import 'source_hub_screen.dart';
+import 'navidrome_settings_screen.dart';
 import 'video_tools_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
@@ -87,7 +87,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     child: LibraryHeader(
                       onProfile: () => _open(const ProfileScreen()),
                       onSearch: () => _showSearch(context, library),
-                      onSources: () => _open(const SourceHubScreen()),
+                      onSources: () => _open(const NavidromeSettingsScreen()),
                       onAdd: () => _showAddMenu(context, library),
                     ),
                   ),
@@ -691,7 +691,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       return;
     }
     if (action == _LibraryAddAction.sources) {
-      _open(const SourceHubScreen());
+      _open(const NavidromeSettingsScreen());
       return;
     }
     if (action == _LibraryAddAction.videoTools) {

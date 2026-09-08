@@ -8,7 +8,6 @@ import 'core/constants.dart';
 import 'core/localization.dart';
 import 'services/audio_handler.dart';
 import 'services/database_service.dart';
-import 'services/extension_service.dart';
 import 'services/diagnostics_service.dart';
 import 'services/crash_reporter.dart';
 import 'services/logger_service.dart';
@@ -17,7 +16,6 @@ import 'providers/library_provider.dart';
 import 'providers/playlist_provider.dart';
 import 'providers/search_provider.dart';
 import 'providers/theme_provider.dart';
-import 'providers/youtube_provider.dart';
 import 'providers/mix_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/metadata_provider.dart';
@@ -32,9 +30,7 @@ import 'services/voice_control_service.dart';
 import 'services/storage_manager.dart';
 import 'screens/onboarding_screen.dart';
 import 'widgets/main_shell.dart';
-import 'services/robust_piped_service.dart';
 import 'services/watched_folder_service.dart';
-import 'services/cloudflare_session_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -69,13 +65,6 @@ Future<void> main() async {
       await db.database;
     } catch (e) {
       AppLogger.e('Database init failed: $e');
-    }
-    try {
-      await ExtensionService.instance.ensureLoaded();
-      await RobustPipedService.instance.initialize();
-      AppLogger.i('RobustPipedService initialized');
-    } catch (e) {
-      AppLogger.e('RobustPipedService init failed: $e');
     }
     try {
       final migration = await StorageManager.instance.migrateLegacyDownloads();
@@ -238,7 +227,6 @@ class _AppEntryState extends State<_AppEntry> {
   void initState() {
     super.initState();
     _checkOnboarding();
-    _refreshExtensions();
     _scanWatchedFolder();
   }
 
@@ -249,14 +237,6 @@ class _AppEntryState extends State<_AppEntry> {
         // LibraryProvider henüz hazır değilse main'deki scan yeterli; burada sadece log
         AppLogger.i('WatchedFolder: $count yeni parça eklendi (on launch)');
       }
-    } catch (_) {}
-  }
-
-  /// Kurulu eklentileri depo sürümleriyle arka planda günceller; sunucu
-  /// adresi değişirse (ör. tunnel yenilendiğinde) manifestler tazelenir.
-  Future<void> _refreshExtensions() async {
-    try {
-      await ExtensionService.instance.updateAll();
     } catch (_) {}
   }
 
@@ -306,7 +286,6 @@ class MelodiApp extends StatelessWidget {
         ChangeNotifierProvider(
             create: (_) => PlaylistProvider()..loadPlaylists()),
         ChangeNotifierProvider(create: (_) => SearchProvider()),
-        ChangeNotifierProvider(create: (_) => YouTubeProvider()),
         ChangeNotifierProvider(create: (_) => LocaleNotifier()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()..loadSettings()),
         ChangeNotifierProvider(create: (_) => MixProvider()..init()),
@@ -342,7 +321,6 @@ class MelodiApp extends StatelessWidget {
       child: Consumer2<ThemeProvider, LocaleNotifier>(
         builder: (context, themeProvider, localeNotifier, _) {
           return MaterialApp(
-            navigatorKey: CloudflareSessionService.navigatorKey,
             title: 'Melodi',
             debugShowCheckedModeBanner: false,
             theme: themeProvider.lightTheme,

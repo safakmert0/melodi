@@ -1,11 +1,7 @@
-import 'dart:convert';
 import 'dart:io';
-import 'package:http/http.dart' as http;
 
 import '../models/song_model.dart';
-import 'backend_api_service.dart';
 import 'multi_source_search.dart';
-import 'platform_link_resolver.dart';
 
 enum PlaylistImportSource {
   spotify,
@@ -108,102 +104,29 @@ class PlaylistImporter {
         }
       }
     }
-    final id = extractId(url, source);
-    if (id == null) {
-      // Bilinmeyen kaynakta akıllı fallback: MultiSourceSearch ile ara ve playlist yap
-      if (source == PlaylistImportSource.unknown && url.trim().isNotEmpty) {
-        return await _importViaSearch(url);
-      }
+    if (url.trim().isEmpty) {
       return PlaylistImportResult.error('Geçersiz çalma listesi bağlantısı.');
     }
 
     try {
       switch (source) {
-        case PlaylistImportSource.youtubeMusic:
-        case PlaylistImportSource.spotify:
-          return await _importViaBackend(source, id, url);
-        case PlaylistImportSource.deezer:
-          return await _importDeezer(id);
-        case PlaylistImportSource.appleMusic:
-        case PlaylistImportSource.tidal:
-        case PlaylistImportSource.soundCloud:
-          return await _importViaSearch(url);
         case PlaylistImportSource.m3u:
         case PlaylistImportSource.cue:
           return PlaylistImportResult.error(
               'Yerel çalma listesi dosyası bulunamadı.');
-        case PlaylistImportSource.unknown:
-          return PlaylistImportResult.error(
-              'Desteklenmeyen kaynak. Spotify, YouTube Music, Deezer, Apple Music, Tidal veya SoundCloud '
-              'çalma listesi bağlantısı yapıştırın.');
+        default:
+          // Tek yapı: bağlantı metni kişisel Navidrome kütüphanesinde aranır.
+          return await _importViaSearch(url);
       }
     } catch (e) {
       return PlaylistImportResult.error('Çalma listesi alınamadı: $e');
     }
   }
 
-  static Future<PlaylistImportResult> _importViaBackend(
-    PlaylistImportSource source,
-    String id,
-    String url,
-  ) async {
-    final videos = await BackendApiService.instance.getPlaylist(id);
-    if (videos.isEmpty) {
-      return PlaylistImportResult.error(
-          'Bu çalma listesi boş veya sunucuya ulaşılamadı. YT-DLP backend '
-          'ayarlarını kontrol edin.');
-    }
-    final songs = videos.map((v) {
-      return _song('${source.name}_$id', v.id, v.title, v.author,
-          filePath: 'youtube:${v.id}');
-    }).toList();
-    return PlaylistImportResult(
-      source: source,
-      songs: songs,
-      playlistName: _defaultName(source, id),
-    );
-  }
-
-  static Future<PlaylistImportResult> _importDeezer(String id) async {
-    final response = await http
-        .get(Uri.parse('https://api.deezer.com/playlist/$id'))
-        .timeout(const Duration(seconds: 30));
-    if (response.statusCode != 200) {
-      return PlaylistImportResult.error('Deezer çalma listesine ulaşılamadı.');
-    }
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final name = data['title'] as String?;
-    final tracks = (data['tracks']?['data'] as List?) ?? [];
-    if (tracks.isEmpty) {
-      return PlaylistImportResult.error('Bu Deezer çalma listesi boş.');
-    }
-    final songs = tracks.map((t) {
-      final title = (t['title'] as String?) ?? '';
-      final artist = (t['artist']?['name'] as String?) ?? '';
-      final album = (t['album']?['title'] as String?) ?? '';
-      final duration = Duration(seconds: (t['duration'] as int?) ?? 0);
-      return _song('deezer_$id', '$id-${t['id']}', title, artist,
-          filePath: 'online://', album: album, duration: duration);
-    }).toList();
-    return PlaylistImportResult(
-      source: PlaylistImportSource.deezer,
-      songs: songs,
-      playlistName: name ?? _defaultName(PlaylistImportSource.deezer, id),
-    );
-  }
-
   // 8Spine/SpotiFLAC esintili: bilinmeyen URL'yi akıllı aramaya çevir
   static Future<PlaylistImportResult> _importViaSearch(String query) async {
     try {
-      var searchQuery = query;
-      if (query.startsWith('http://') || query.startsWith('https://')) {
-        final resolved = await PlatformLinkResolver.resolve(query);
-        final label = [resolved.artist, resolved.title]
-            .whereType<String>()
-            .where((value) => value.trim().isNotEmpty)
-            .join(' - ');
-        if (label.isNotEmpty) searchQuery = label;
-      }
+      final searchQuery = query.trim();
       final tracks = await MultiSourceSearch()
           .searchAllSync(searchQuery, limitPerSource: 5);
       if (tracks.isEmpty)

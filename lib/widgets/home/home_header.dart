@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/localization.dart';
 import '../../screens/profile_screen.dart';
 import '../../screens/settings_screen.dart';
-import '../../screens/source_hub_screen.dart';
+import '../../screens/navidrome_settings_screen.dart';
 import '../../screens/search_screen.dart';
 
 class HomeHeader extends StatelessWidget {
@@ -31,7 +31,7 @@ class HomeHeader extends StatelessWidget {
                       icon: Icons.hub_outlined,
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
-                          builder: (_) => const SourceHubScreen(),
+                          builder: (_) => const NavidromeSettingsScreen(),
                         ),
                       ),
                     ),
