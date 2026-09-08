@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
+import '../providers/library_provider.dart';
 import '../providers/player_provider.dart';
 import '../services/lyrics_service.dart';
 import '../core/extensions/duration_ext.dart';
@@ -115,6 +116,54 @@ class _LyricsScreenState extends State<LyricsScreen> {
     return isActive ? 27 : 23;
   }
 
+  Future<void> _editLyrics(SongModel song) async {
+    final controller = TextEditingController(text: song.lyrics ?? '');
+    final saved = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sözleri düzenle'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: TextField(
+            controller: controller,
+            maxLines: 12,
+            decoration: const InputDecoration(
+              hintText: '[00:12.00] Satır... biçiminde LRC ya da düz metin',
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(context).pop(controller.text.trim()),
+            child: const Text('Kaydet'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (saved == null || !mounted) return;
+    await DatabaseService.instance
+        .updateTrackMetadata(song.id, {'lyrics': saved});
+    try {
+      await context.read<LibraryProvider>().refresh();
+    } catch (_) {}
+    if (!mounted) return;
+    final parsed = LrcParser.parse(saved);
+    setState(() {
+      _activeSongId = song.id;
+      _lyricsLines = parsed.isNotEmpty
+          ? parsed
+          : (saved.isEmpty ? <LrcLine>[] : <LrcLine>[LrcLine(0, saved)]);
+      _currentLineIndex = -1;
+    });
+  }
+
   void _seekToLine(LrcLine line) {
     final player = context.read<PlayerProvider>();
     final position = LyricsTiming.playbackPositionMs(
@@ -188,6 +237,12 @@ class _LyricsScreenState extends State<LyricsScreen> {
                                   ),
                                 ],
                               ),
+                            ),
+                            IconButton(
+                              tooltip: 'Sözleri düzenle',
+                              icon: const Icon(Icons.edit_rounded, size: 20),
+                              color: Theme.of(context).colorScheme.onSurface,
+                              onPressed: () => _editLyrics(song),
                             ),
                             if (song.albumArt != null)
                               ClipRRect(

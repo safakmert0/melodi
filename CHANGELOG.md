@@ -4,6 +4,17 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.2.0] - 2026-09-08
+
+### Gömülü YouTube + Navidrome
+- Arama artık iki kaynak üzerinden harmanlanır: gömülü `assets/extensions/ytmusic-spotiflac.sflx` (SpotiFLAC paketi, sunucu/hesap gerekmez) + bağlı Navidrome sunucusu.
+- `lib/services/sources/youtube_source.dart` yeni: paketin `customSearch` sözleşmesiyle YouTube’ta arama, süre eşleştirme ve görsel ile `MusicSourceType.youtube` olarak sunar.
+- `lib/services/ytmusic_bundle.dart` YouTube paketini asset’ten quickjs’de çalıştırır: `registerExtension` shim, `file.download` gerçekten dosya indirir, eşzamanlı `fetch` köprüsü, `customSearch` saniye↔milisaniye dönüşümü düzeltildi.
+- `lib/services/multi_source_search.dart` + `lib/providers/search_provider.dart` YouTube çözümlemesi artık dosyayı indirerek çözer (3 dk timeout), ara sonuçlardaki yanlış süreler düzeltilir.
+- `lib/services/download_manager.dart` YouTube indirmeleri `YtMusicBundle.downloadToFile` hattıyla doğrudan indirme dizinine gider, yerel dosya geldiyse ağ indirmesi atlanır.
+- Arayüz: Arama filtreleri `Tümü / YouTube / Sunucum` olarak sadeleşti.
+- CarPlay/entitlement/metadata önizleme küçük iyileştirmeleri.
+
 ## [5.1.0] - 2026-09-08
 
 ### Tek Yapı: Navidrome + Yerel Kütüphane

@@ -2,10 +2,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'music_source.dart';
 import 'sources/navidrome_source.dart';
+import 'sources/youtube_source.dart';
 
-/// Tek çevrimiçi yapı: kişisel Navidrome/Subsonic sunucusu.
-///
-/// App Store uyumu için YouTube/Piped/yt-dlp/eklenti yolları kaldırıldı.
+/// Çevrimiçi yapılar: gömülü YouTube paketi (hesapsız) + kişisel
+/// Navidrome/Subsonic sunucusu (isteğe bağlı).
 /// Bu sınıf, genel arama + akış + yedek çözümleme için tek giriş noktası
 /// olarak kaldı; böylece arayüz ve indirme yöneticisi değişmeden çalışır.
 class MultiSourceSearch {
@@ -14,6 +14,7 @@ class MultiSourceSearch {
   MultiSourceSearch._();
 
   final List<MusicSource> _sources = [
+    YouTubeSource(),
     NavidromeSource(),
   ];
 
@@ -22,7 +23,8 @@ class MultiSourceSearch {
   /// Display ranking for search results. Navidrome (full-track, personal
   /// server) is the only online source; preview-only catalogues are gone.
   static const Map<MusicSourceType, int> _fullTrackRank = {
-    MusicSourceType.navidrome: 0,
+    MusicSourceType.youtube: 0,
+    MusicSourceType.navidrome: 1,
   };
 
   int _displayRank(OnlineTrack track) {
@@ -149,6 +151,8 @@ class MultiSourceSearch {
   Future<void> prefetchStreamUrls(Iterable<OnlineTrack> tracks) async {
     await Future.wait(tracks.take(4).map((track) async {
       if (!track.source.supportsFullTrack) return;
+      // YouTube çözümleme dosyanın tamamını indirebilir; aramada önden indirme.
+      if (track.source == MusicSourceType.youtube) return;
       try {
         await getStreamUrl(track).timeout(const Duration(seconds: 4));
       } catch (_) {}
@@ -177,30 +181,34 @@ class MultiSourceSearch {
       } catch (_) {}
     }
 
-    // 2. Yedek: ad/sanatçı ile Navidrome'da yeniden ara.
+    // 2. Yedek: diğer kaynakta ad/sanatçı ile yeniden ara.
     final searchQuery = (query != null && query.trim().isNotEmpty)
         ? query.trim()
         : '${track.artist} - ${track.title}'.trim();
     if (searchQuery.isEmpty) return null;
-    try {
-      final results =
-          await NavidromeSource().search(searchQuery, limit: 5);
-      results.sort(
-          (a, b) => _matchScore(b, track).compareTo(_matchScore(a, track)));
-      for (final result in results) {
-        if (_matchScore(result, track) < 2) continue;
-        try {
-          final url = await getStreamUrl(result);
-          final normalized = url?.trim();
-          if (normalized == null ||
-              normalized.isEmpty ||
-              excludedUrls.contains(normalized)) {
-            continue;
-          }
-          return normalized;
-        } catch (_) {}
-      }
-    } catch (_) {}
+    final others = _sources
+        .where((s) => s.type != track.source && s.type.supportsFullTrack)
+        .toList();
+    for (final source in others) {
+      try {
+        final results = await source.search(searchQuery, limit: 5);
+        results.sort(
+            (a, b) => _matchScore(b, track).compareTo(_matchScore(a, track)));
+        for (final result in results) {
+          if (_matchScore(result, track) < 2) continue;
+          try {
+            final url = await getStreamUrl(result);
+            final normalized = url?.trim();
+            if (normalized == null ||
+                normalized.isEmpty ||
+                excludedUrls.contains(normalized)) {
+              continue;
+            }
+            return normalized;
+          } catch (_) {}
+        }
+      } catch (_) {}
+    }
     return null;
   }
 

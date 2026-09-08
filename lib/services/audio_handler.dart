@@ -8,6 +8,7 @@ import 'package:audio_session/audio_session.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
 import 'database_service.dart';
+import 'review_service.dart';
 import 'track_matcher.dart';
 import 'multi_source_search.dart';
 import 'music_source.dart';
@@ -492,6 +493,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
 
   Future<void> _onTrackComplete() async {
     if (_handlingCompletion || _queue.isEmpty) return;
+    unawaited(ReviewService.instance.bump());
     _handlingCompletion = true;
     try {
       final decision = PlaybackCompletionDecision.decide(

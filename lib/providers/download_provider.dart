@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../services/download_manager.dart';
 import '../services/notification_service.dart';
+import '../services/review_service.dart';
 import '../providers/library_provider.dart';
 
 class DownloadProvider extends ChangeNotifier {
@@ -60,6 +61,7 @@ class DownloadProvider extends ChangeNotifier {
 
   void _onDownloadComplete() {
     _libraryProvider?.refresh();
+    unawaited(ReviewService.instance.bump());
   }
 
   DownloadState? getStatusForSong(String title, String artist) {

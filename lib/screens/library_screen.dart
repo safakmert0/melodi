@@ -40,6 +40,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
   late LibrarySourceFilter _source;
   late LibraryContentFilter _content;
   bool _isGridView = false;
+  bool _selectionMode = false;
+  final Set<String> _selectedIds = {};
 
   @override
   void initState() {
@@ -230,21 +232,192 @@ class _LibraryScreenState extends State<LibraryScreen> {
     }
 
     return [
+      if (_selectionMode)
+        SliverToBoxAdapter(child: _SelectionBar(songs: songs)),
       SliverList.builder(
         itemCount: songs.length,
         itemBuilder: (context, index) {
           final song = songs[index];
           final player = context.watch<PlayerProvider>();
-          return SongTile(
-            key: ValueKey(song.id),
-            song: song,
-            isPlaying: player.currentSong?.id == song.id,
-            onTap: () => player.playSong(song),
-            showFileSize: true,
+          final selected = _selectedIds.contains(song.id);
+          if (!_selectionMode) {
+            return GestureDetector(
+              onLongPress: () => _enterSelection(song.id),
+              child: SongTile(
+                key: ValueKey(song.id),
+                song: song,
+                isPlaying: player.currentSong?.id == song.id,
+                onTap: () => player.playSong(song),
+                showFileSize: true,
+              ),
+            );
+          }
+          final scheme = Theme.of(context).colorScheme;
+          return GestureDetector(
+            onLongPress: () => _toggleSelect(song.id),
+            child: SongTile(
+              key: ValueKey(song.id),
+              song: song,
+              isPlaying: player.currentSong?.id == song.id,
+              onTap: () => _toggleSelect(song.id),
+              showFileSize: true,
+              trailing: Checkbox(
+                value: selected,
+                activeColor: scheme.primary,
+                onChanged: (_) => _toggleSelect(song.id),
+              ),
+            ),
           );
         },
       ),
     ];
+  }
+
+  void _toggleSelect(String id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+        if (_selectedIds.isEmpty) _selectionMode = false;
+      } else {
+        _selectedIds.add(id);
+      }
+    });
+  }
+
+  void _enterSelection(String id) {
+    setState(() {
+      _selectionMode = true;
+      _selectedIds.add(id);
+    });
+  }
+
+  void _exitSelection() {
+    setState(() {
+      _selectionMode = false;
+      _selectedIds.clear();
+    });
+  }
+
+  Widget _SelectionBar({required List<SongModel> songs}) {
+    final scheme = Theme.of(context).colorScheme;
+    final allSelected =
+        songs.isNotEmpty && _selectedIds.length >= songs.length;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: 'Kapat',
+            icon: const Icon(Icons.close_rounded, size: 20),
+            onPressed: _exitSelection,
+          ),
+          Text(
+            '${_selectedIds.length} seçildi',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const Spacer(),
+          TextButton(
+            onPressed: () => setState(() {
+              if (allSelected) {
+                _selectedIds.clear();
+              } else {
+                _selectedIds.addAll(songs.map((s) => s.id));
+              }
+            }),
+            child: Text(allSelected ? 'Bırak' : 'Tümünü seç'),
+          ),
+          IconButton(
+            tooltip: 'Listeye ekle',
+            icon: const Icon(Icons.playlist_add_rounded, size: 20),
+            onPressed: _selectedIds.isEmpty
+                ? null
+                : () => _addSelectionToPlaylist(),
+          ),
+          IconButton(
+            tooltip: 'Sil',
+            icon: Icon(Icons.delete_outline_rounded,
+                size: 20, color: scheme.error),
+            onPressed:
+                _selectedIds.isEmpty ? null : () => _deleteSelection(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _addSelectionToPlaylist() async {
+    final playlists = context.read<PlaylistProvider>().playlists;
+    if (playlists.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Önce bir çalma listesi oluşturun')),
+        );
+      }
+      return;
+    }
+    final picked = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Listeye ekle'),
+        children: [
+          for (final playlist in playlists)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(context).pop(playlist.id),
+              child: Text(
+                  '${playlist.name} (${playlist.songIds.length})'),
+            ),
+        ],
+      ),
+    );
+    if (picked == null || !mounted) return;
+    final ids = _selectedIds.toList();
+    await context
+        .read<PlaylistProvider>()
+        .addSongsToPlaylist(picked, ids);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${ids.length} parça listeye eklendi')),
+    );
+    _exitSelection();
+  }
+
+  Future<void> _deleteSelection() async {
+    final count = _selectedIds.length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Seçilenler silinsin mi?'),
+        content: Text(
+            '$count parça kitaplıktan kaldırılacak. Uygulama dosyaları da silinir.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Sil'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final removed = await context
+        .read<LibraryProvider>()
+        .deleteSongs(_selectedIds.toList());
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$removed parça silindi')),
+    );
+    _exitSelection();
   }
 
   List<Widget> _collectionSlivers(
@@ -668,9 +841,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
               action: _LibraryAddAction.scan,
             ),
             const _AddActionTile(
-              icon: Icons.hub_rounded,
-              title: 'Müzik kaynağı bağla',
-              subtitle: 'Spotify, YouTube Music ve diğerleri',
+              icon: Icons.dns_rounded,
+              title: 'Sunucunu bağla',
+              subtitle: 'Navidrome / Subsonic kütüphaneni ekle',
               action: _LibraryAddAction.sources,
             ),
             const _AddActionTile(
@@ -699,6 +872,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       return;
     }
 
+    final before = library.songCount;
     try {
       switch (action) {
         case _LibraryAddAction.files:
@@ -716,8 +890,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
           break;
       }
       if (mounted) {
+        final added = library.songCount - before;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Kitaplık güncellendi')),
+          SnackBar(
+              content: Text(added > 0
+                  ? '$added parça eklendi (toplam ${library.songCount})'
+                  : 'Yeni parça bulunamadı (toplam ${library.songCount})')),
         );
       }
     } catch (error) {

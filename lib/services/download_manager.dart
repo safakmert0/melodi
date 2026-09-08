@@ -12,6 +12,7 @@ import 'metadata_service.dart';
 import 'navidrome_service.dart';
 import 'storage_manager.dart';
 import 'audio_quality_service.dart';
+import 'ytmusic_bundle.dart';
 
 enum DownloadState { pending, downloading, completed, failed }
 
@@ -222,26 +223,29 @@ class DownloadManager {
       task.error = 'Kaynaklar aranıyor...';
       _notify();
 
-      // Tek yapı: yalnızca bağlı Navidrome/Subsonic sunucusundan indirme.
-      if (!await NavidromeService.instance.isConfigured()) {
-        task.state = DownloadState.failed;
-        task.error = 'Önce Navidrome sunucunu bağla';
-        _notify();
-        _activeDownloads--;
-        _processQueue();
-        return;
-      }
-
-      // İndirme adresi her denemede taze üretilir (Subsonic tuzu tek kullanımlık).
+      // Navidrome kaydıysa sunucudan, değilse gömülü YouTube paketinden indir.
+      // Ne sunucu ne hesap gerekmez.
       final songId = (task.sourceVideoId != null &&
               task.sourceVideoId!.isNotEmpty)
           ? task.sourceVideoId!
           : null;
-      String? streamUrl = songId != null
-          ? NavidromeService.instance.downloadUrl(songId)
-          : (task.directUrl != null && task.directUrl!.isNotEmpty
-              ? task.directUrl
-              : null);
+      final isNavidrome =
+          songId != null && songId.startsWith('navidrome:');
+      String? streamUrl;
+      if (isNavidrome) {
+        if (!await NavidromeService.instance.isConfigured()) {
+          task.state = DownloadState.failed;
+          task.error = 'Önce Navidrome sunucunu bağla';
+          _notify();
+          _activeDownloads--;
+          _processQueue();
+          return;
+        }
+        // İndirme adresi her denemede taze üretilir (Subsonic tuzu tek kullanımlık).
+        streamUrl = NavidromeService.instance.downloadUrl(songId!);
+      } else if (task.directUrl != null && task.directUrl!.isNotEmpty) {
+        streamUrl = task.directUrl;
+      }
 
       if (streamUrl == null || task.cancelled) {
         task.state = DownloadState.failed;
@@ -255,16 +259,20 @@ class DownloadManager {
       task.progress = 0.3;
       _notify();
 
-      // Eklenti köprüsü (SpotiFLAC JS) dosyayı zaten indirmiş olabilir —
-      // yerel yol geldiyse ağı hiç kullanmadan doğrudan içeri aktar.
+      // Yerel yol geldiyse ağı hiç kullanmadan doğrudan içeri aktar.
       String? resultPath;
-      if (streamUrl != null &&
-          !_isHttpUrl(streamUrl) &&
-          await File(streamUrl).exists()) {
-        debugPrint('Download using extension-provided file: $streamUrl');
+      if (!_isHttpUrl(streamUrl) && await File(streamUrl).exists()) {
+        debugPrint('Download using local file: $streamUrl');
         resultPath = streamUrl;
+      } else if (!isNavidrome) {
+        // YouTube: paketin kendi hattıyla doğrudan indirme dizinine indir.
+        task.progress = 0.15;
+        task.error = 'YouTube indiriliyor...';
+        _notify();
+        resultPath = await _downloadViaBundle(task, downloadDir)
+            .timeout(const Duration(minutes: 8), onTimeout: () => null);
       } else {
-        resultPath = await _downloadFromUrl(streamUrl!, task, downloadDir)
+        resultPath = await _downloadFromUrl(streamUrl, task, downloadDir)
             .timeout(const Duration(minutes: 5), onTimeout: () => null);
       }
 
@@ -488,6 +496,56 @@ class DownloadManager {
 
   static bool _isHttpUrl(String url) =>
       url.startsWith('http://') || url.startsWith('https://');
+
+  /// YouTube parçasını gömülü paketin hattıyla doğrudan indirme dizinine
+  /// indirir. Video kimliği `sourceVideoId` alanından alınır.
+  Future<String?> _downloadViaBundle(
+      DownloadTask task, Directory downloadDir) async {
+    final videoId = (task.sourceVideoId ?? '').trim();
+    if (videoId.isEmpty) return null;
+    try {
+      final safeTitle =
+          '${task.artist} - ${task.title}'.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
+      final baseName =
+          safeTitle.isEmpty ? videoId : '${safeTitle}_$videoId';
+      final tmpPath = '${downloadDir.path}/.tmp_$baseName.bin';
+      task.progress = 0.2;
+      task.error = 'YouTube indiriliyor...';
+      _notify();
+      final result = await YtMusicBundle.instance.downloadToFile(
+        trackId: videoId,
+        title: task.title,
+        artist: task.artist,
+        outputPath: tmpPath,
+      );
+      if (result == null || result['success'] != true) {
+        debugPrint('Bundle download failed: ${result?['error']}');
+        return null;
+      }
+      var path = (result['file_path'] ?? '').toString();
+      if (path.isEmpty || !await File(path).exists()) return null;
+      final actualExt = (result['actual_extension'] ?? '').toString();
+      if (actualExt.isNotEmpty &&
+          !path.toLowerCase().endsWith(actualExt.toLowerCase())) {
+        try {
+          final normalizedExt =
+              actualExt.startsWith('.') ? actualExt : '.$actualExt';
+          final renamed = path.replaceFirst(
+              RegExp(r'\.[A-Za-z0-9]{1,5}$'), normalizedExt);
+          if (renamed != path) {
+            await File(path).rename(renamed);
+            path = renamed;
+          }
+        } catch (_) {}
+      }
+      task.progress = 0.75;
+      _notify();
+      return path;
+    } catch (e) {
+      debugPrint('Bundle download error: $e');
+      return null;
+    }
+  }
 
   String _downloadExtension(String url, ContentType? contentType) {
     final mime = contentType?.mimeType.toLowerCase();
