@@ -4,6 +4,12 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.6.0] - 2026-09-08
+
+### LA_Player FilesTab Birebir Aktarım
+- **Files tab eklendi (`lib/screens/files_screen.dart:1` + `lib/widgets/main_shell.dart:12`)**: LA_Player `FilesTab` gibi `Documents/Imported Files` klasörü garanti oluşturma, `UIFileSharingEnabled`/`LSSupportsOpeningDocumentsInPlace` ile Files entegrasyonu, **pull-to-refresh** → `LibraryProvider.scanMusic()` + `WatchedFolderService` yenile, **Import Files** (`file_picker` `importFromFiles`) / **Import Folder** (`getDirectoryPath` `importFromDirectory`) butonları AppBar’da, liste `Directory.listSync` ile klasör→dosya sıralı, `LA_Player.Files.txt` hinti (“Please do not delete the Imported Files folder…”) alt bantta, dosya tap → `PlayerProvider.playSong` (geçici `SongModel` `fileSize` ile), long-press → çal/listeye ekle/sil sheet, `lib/widgets/main_shell.dart:21` 4→5 tab (`home/files/library/search/settings`).
+- Önceki temeller korunuyor: `watched_folder_service` 5 sn poll, `sleep_timer`, `lyrics`/`artwork`, `sort`, `queue/shuffle/repeat`, `playbackSpeed` hepsi zaten vardı (doğrulandı `flutter test 22 pass`).
+
 ## [5.5.0] - 2026-09-08
 
 ### Navidrome Tam Temizlik + Arama Düzeltmesi

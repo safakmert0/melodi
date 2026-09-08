@@ -2,24 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/localization.dart';
+import '../screens/files_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/library_screen.dart';
 import '../screens/search_screen.dart';
 import '../screens/settings_screen.dart';
 import '../widgets/mini_player.dart';
 
-/// Sade kabuk — LA Player gibi düz, blur ve ağır animasyon yok.
+/// LA_Player eşdeğeri kabuk — Files (Imported Files + pull-to-refresh) + Library + Search + Settings
 const List<Widget> _pages = [
   HomeScreen(key: PageStorageKey('home')),
-  SearchScreen(key: PageStorageKey('search')),
+  FilesScreen(key: PageStorageKey('files')),
   LibraryScreen(key: PageStorageKey('library')),
+  SearchScreen(key: PageStorageKey('search')),
   SettingsScreen(key: PageStorageKey('settings')),
 ];
 
 const List<_ShellDestination> _destinations = [
   _ShellDestination(icon: Icons.home_outlined, selectedIcon: Icons.home, labelKey: 'home'),
-  _ShellDestination(icon: Icons.search_outlined, selectedIcon: Icons.search, labelKey: 'search'),
+  _ShellDestination(icon: Icons.folder_outlined, selectedIcon: Icons.folder, labelKey: 'files'),
   _ShellDestination(icon: Icons.library_music_outlined, selectedIcon: Icons.library_music, labelKey: 'library'),
+  _ShellDestination(icon: Icons.search_outlined, selectedIcon: Icons.search, labelKey: 'search'),
   _ShellDestination(icon: Icons.settings_outlined, selectedIcon: Icons.settings, labelKey: 'settings'),
 ];
 
@@ -44,6 +47,15 @@ class _MainShellState extends State<MainShell> {
     final theme = Theme.of(context);
     final useRail = MediaQuery.sizeOf(context).width >= 600;
 
+    String labelFor(String key) {
+      if (key == 'files') {
+        if (AppLocale.currentLocale == 'tr') return 'Dosyalar';
+        if (AppLocale.currentLocale == 'de') return 'Dateien';
+        return 'Files';
+      }
+      return AppLocale.tr(key);
+    }
+
     final destinations = List<NavigationDestination>.generate(
       _destinations.length,
       (i) {
@@ -51,7 +63,7 @@ class _MainShellState extends State<MainShell> {
         return NavigationDestination(
           icon: Icon(d.icon),
           selectedIcon: Icon(d.selectedIcon),
-          label: AppLocale.tr(d.labelKey),
+          label: labelFor(d.labelKey),
         );
       },
     );
@@ -89,7 +101,7 @@ class _MainShellState extends State<MainShell> {
                       NavigationRailDestination(
                         icon: Icon(d.icon),
                         selectedIcon: Icon(d.selectedIcon),
-                        label: Text(AppLocale.tr(d.labelKey)),
+                        label: Text(labelFor(d.labelKey)),
                       ),
                   ],
                 ),
