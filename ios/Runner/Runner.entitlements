@@ -10,7 +10,5 @@
 	<array>
 		<string>group.com.melodi.app</string>
 	</array>
-	<key>com.apple.developer.carplay-audio</key>
-	<true/>
 </dict>
 </plist>

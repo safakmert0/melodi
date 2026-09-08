@@ -4,6 +4,12 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.7.2] - 2026-09-08
+
+### Sideload Crash Hotfix — SideStore Ana Ekrana Atma
+- **Crash sebebi**: `ios/Runner/Info.plist:108` `CPTemplateApplicationScene` + `Runner.entitlements:13` `com.apple.developer.carplay-audio` + `CarPlaySceneDelegate.swift` eklentisi ücretsiz Apple ID ile SideStore imzasında **entitlement hatası** verip anında kill ediyordu (LA_Player gibi CarPlay sadece ücretli + CarPlay onaylı hesabda çalışır). **Kaldırıldı**: scene manifest, entitlement ve `project.pbxproj` kaydı silindi, `lib/services/carplay_service.dart:4` stub `MPNowPlaying` korundu — sideload artık açılır.
+- Arama hotfix korunuyor.
+
 ## [5.7.1] - 2026-09-08
 
 ### Arama Hotfix — Hiç Sonuç Gelmeme Düzeltmesi
