@@ -115,7 +115,7 @@ class PlaylistImporter {
           return PlaylistImportResult.error(
               'Yerel çalma listesi dosyası bulunamadı.');
         default:
-          // Tek yapı: bağlantı metni kişisel Navidrome kütüphanesinde aranır.
+          // Tek yapı: bağlantı metni YouTube'ta aranır.
           return await _importViaSearch(url);
       }
     } catch (e) {

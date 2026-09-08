@@ -17,7 +17,6 @@ import '../widgets/song_tile.dart';
 import 'create_playlist_screen.dart';
 import 'playlist_detail_screen.dart';
 import 'profile_screen.dart';
-import 'navidrome_settings_screen.dart';
 import 'video_tools_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
@@ -89,7 +88,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     child: LibraryHeader(
                       onProfile: () => _open(const ProfileScreen()),
                       onSearch: () => _showSearch(context, library),
-                      onSources: () => _open(const NavidromeSettingsScreen()),
+                      onSources: () => _showSearch(context, library),
                       onAdd: () => _showAddMenu(context, library),
                     ),
                   ),
@@ -198,7 +197,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
         LibraryEmptyState(
           title: 'Bu kaynakta parça yok',
           message:
-              'Dosya veya klasör ekleyebilir, hesaplarını bağlayabilir ya da aygıtını yeniden tarayabilirsin.',
+              'Dosya veya klasör ekleyebilir ya da aygıtını yeniden tarayabilirsin.',
+
           onAdd: () => _showAddMenu(context, context.read<LibraryProvider>()),
         ),
       ];
@@ -841,12 +841,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
               action: _LibraryAddAction.scan,
             ),
             const _AddActionTile(
-              icon: Icons.dns_rounded,
-              title: 'Sunucunu bağla',
-              subtitle: 'Navidrome / Subsonic kütüphaneni ekle',
-              action: _LibraryAddAction.sources,
-            ),
-            const _AddActionTile(
               icon: Icons.video_file_rounded,
               title: 'Videodan Zil Sesi Oluştur',
               subtitle: 'Video dosyasından ses çıkarıp zil sesi yap',
@@ -861,10 +855,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
     if (!mounted || action == null) return;
     if (action == _LibraryAddAction.playlist) {
       _open(const CreatePlaylistScreen());
-      return;
-    }
-    if (action == _LibraryAddAction.sources) {
-      _open(const NavidromeSettingsScreen());
       return;
     }
     if (action == _LibraryAddAction.videoTools) {
@@ -885,7 +875,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
           await library.scanMusic();
           break;
         case _LibraryAddAction.playlist:
-        case _LibraryAddAction.sources:
         case _LibraryAddAction.videoTools:
           break;
       }
@@ -1006,4 +995,4 @@ class _CollectionEntry {
   final VoidCallback onTap;
 }
 
-enum _LibraryAddAction { playlist, files, folder, scan, sources, videoTools }
+enum _LibraryAddAction { playlist, files, folder, scan, videoTools }

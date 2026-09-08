@@ -1,12 +1,6 @@
 enum SourceKind {
   local,
-  spotify,
-  youtubeMusic,
   youtube,
-  deezer,
-  jioSaavn,
-  navidrome,
-  extension,
 }
 
 enum SourceCapability {

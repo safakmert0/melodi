@@ -3,14 +3,9 @@ import 'package:melodi/services/music_source.dart';
 
 void main() {
   group('Music source playback capabilities', () {
-    test('preview catalogues cannot be treated as full tracks', () {
-      expect(MusicSourceType.deezer.isPreviewCatalogue, isTrue);
-      expect(MusicSourceType.deezer.supportsFullTrack, isFalse);
-    });
-
-    test('full-track resolvers remain playable', () {
+    test('youtube is full track and not preview', () {
       expect(MusicSourceType.youtube.supportsFullTrack, isTrue);
-      expect(MusicSourceType.jiosaavn.supportsFullTrack, isTrue);
+      expect(MusicSourceType.youtube.isPreviewCatalogue, isFalse);
     });
   });
 }

@@ -269,7 +269,6 @@ class _SourceFilterChips extends StatelessWidget {
 
     String name(MusicSourceType source) => switch (source) {
           MusicSourceType.youtube => 'YouTube',
-          MusicSourceType.navidrome => 'Sunucum',
           _ => source.name,
         };
     return SizedBox(

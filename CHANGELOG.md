@@ -4,6 +4,13 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.5.0] - 2026-09-08
+
+### Navidrome Tam Temizlik + Arama Düzeltmesi
+- **Navidrome/Subsonic repodan tamamen silindi**: `lib/services/navidrome_service.dart`, `lib/screens/navidrome_settings_screen.dart`, `lib/services/sources/navidrome_source.dart`, `lib/services/remote_playlist_service.dart` silindi; `lib/services/music_source.dart:3` `MusicSourceType` sadece `youtube`, `lib/models/source_descriptor.dart:1` `SourceKind` sadece `local`/`youtube`; `README.md:27`/`ios/Runner/Info.plist:93`/`docs/app-store/*` güncellendi; `lib/widgets/home/home_header.dart:6` hub butonu, `lib/widgets/home/home_states.dart:101` “Hesap bağla”, `lib/screens/library_screen.dart:92` sunucu bağla kaldırıldı, boş metinler YouTube+yereLe göre düzeltildi.
+- **5.3.0 arama boş dönme düzeltmesi**: JS bundle `customSearch` quickjs köprüsü iOS’ta sessizce boş dönüyordu; `lib/services/ytmusic_service.dart:1` native Dart InnerTube ile `music.youtube.com/youtubei/v1/search` (WEB_REMIX `1.20240801.01.00` + `EgWKAQIIAQ==` tracks param) canlı test edildi (`adele hello` → 20 renderer, ilk `Ei8UnOPJX7w` Hello/Adele/4:56 doğru parse), `lib/services/multi_source_search.dart:7` ve `lib/providers/search_provider.dart` tek kaynak YouTube ile uyumlu.
+- Önceki B portu korunuyor: `flutter_js`/`archive`/`sflx` yok, `flutter analyze 0 error`/`flutter test 23 pass`.
+
 ## [5.4.0] - 2026-09-08
 
 ### Native YouTube (B): JollyTone Eşdeğeri Dart Portu

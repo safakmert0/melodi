@@ -1,17 +1,11 @@
 import 'dart:typed_data';
 
-enum MusicSourceType { youtube, jiosaavn, deezer, navidrome, hifi, appleMusic, soundcloud }
+enum MusicSourceType { youtube }
 
 extension MusicSourceTypeCapabilities on MusicSourceType {
-  bool get supportsFullTrack =>
-      this == MusicSourceType.youtube ||
-      this == MusicSourceType.jiosaavn ||
-      this == MusicSourceType.navidrome ||
-      this == MusicSourceType.hifi ||
-      this == MusicSourceType.appleMusic ||
-      this == MusicSourceType.soundcloud;
+  bool get supportsFullTrack => this == MusicSourceType.youtube;
 
-  bool get isPreviewCatalogue => this == MusicSourceType.deezer;
+  bool get isPreviewCatalogue => false;
 }
 
 class OnlineTrack {
@@ -43,22 +37,7 @@ class OnlineTrack {
 
   String get sourceLabel {
     if (extensionName != null && extensionName!.isNotEmpty) return extensionName!;
-    switch (source) {
-      case MusicSourceType.youtube:
-        return 'YouTube';
-      case MusicSourceType.jiosaavn:
-        return 'JioSaavn';
-      case MusicSourceType.deezer:
-        return 'Deezer';
-      case MusicSourceType.navidrome:
-        return 'Navidrome';
-      case MusicSourceType.hifi:
-        return 'Hi-Fi';
-      case MusicSourceType.appleMusic:
-        return 'Apple Music';
-      case MusicSourceType.soundcloud:
-        return 'SoundCloud';
-    }
+    return 'YouTube';
   }
 
   OnlineTrack copyWith({

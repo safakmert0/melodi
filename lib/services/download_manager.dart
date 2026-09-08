@@ -670,11 +670,9 @@ class DownloadManager {
       }
 
       if (metadata != null) {
-        final placeholderId = task.spotifyTrackId.startsWith('navidrome:')
+        final placeholderId = task.spotifyTrackId.startsWith('spotify:')
             ? task.spotifyTrackId
-            : task.spotifyTrackId.startsWith('spotify:')
-                ? task.spotifyTrackId
-                : 'spotify:${task.spotifyTrackId}';
+            : 'spotify:${task.spotifyTrackId}';
         SongModel? placeholder = await db.getSongById(placeholderId);
         if (placeholder == null) {
           final titleKey = _matchKey(task.title);
@@ -694,10 +692,7 @@ class DownloadManager {
           }
         }
         final normalized = metadata.copyWith(
-          id: placeholder?.id ??
-              (task.spotifyTrackId.startsWith('navidrome:')
-                  ? task.spotifyTrackId
-                  : metadata.id),
+          id: placeholder?.id ?? metadata.id,
           title: task.title,
           artist: task.artist,
           album:

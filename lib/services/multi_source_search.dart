@@ -3,8 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'music_source.dart';
 import 'sources/youtube_source.dart';
 
-/// Çevrimiçi tek yapı: gömülü YouTube paketi (hesapsız, sunucusuz).
-/// Navidrome/Subsonic sunucu girişi kaldırıldı.
+/// Çevrimiçi tek yapı: YouTube (hesapsız, sunucusuz).
 class MultiSourceSearch {
   static final MultiSourceSearch _instance = MultiSourceSearch._();
   factory MultiSourceSearch() => _instance;

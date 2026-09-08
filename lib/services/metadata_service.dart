@@ -175,7 +175,7 @@ class MetadataService {
       String? url;
       String sourceLabel = 'unknown';
       try {
-        // Personal Navidrome library (single online source).
+        // Çevrimiçi tek kaynak: YouTube.
         final results = await MultiSourceSearch()
             .searchAllSync('$artist $title', limitPerSource: 5);
         final best = _bestOnlineCover(results, title, artist);
