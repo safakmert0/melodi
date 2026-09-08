@@ -7,7 +7,7 @@ import '../providers/search_provider.dart';
 import '../services/music_source.dart';
 import '../services/podcast_service.dart';
 import '../widgets/search/search_result_tiles.dart';
-import 'navidrome_settings_screen.dart';
+import 'settings_screen.dart';
 import 'podcast_detail_screen.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -84,13 +84,13 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
               actions: [
                 IconButton(
-                  tooltip: 'Sunucu ayarları',
+                  tooltip: 'Ayarlar',
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => const NavidromeSettingsScreen(),
+                      builder: (_) => const SettingsScreen(),
                     ),
                   ),
-                  icon: const Icon(Icons.dns_rounded),
+                  icon: const Icon(Icons.settings_rounded),
                 ),
                 const SizedBox(width: 8),
               ],

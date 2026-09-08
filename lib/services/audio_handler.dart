@@ -12,12 +12,11 @@ import 'review_service.dart';
 import 'track_matcher.dart';
 import 'multi_source_search.dart';
 import 'music_source.dart';
-import 'navidrome_service.dart';
+import 'ytmusic_bundle.dart';
 
 class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   final AudioPlayer _player = AudioPlayer();
   final DatabaseService _db = DatabaseService.instance;
-  final NavidromeService _navidrome = NavidromeService.instance;
 
   List<SongModel> _queue = [];
   List<SongModel> _originalQueue = [];
@@ -522,9 +521,6 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     }
   }
 
-  /// Resolves a streamable audio source for an imported "online" track by
-  /// matching it against the personal Navidrome library. Uses the track's
-  /// own metadata so no pre-stored id is required.
   Future<AudioSource> _resolveOnlineAudioSource(SongModel song) async {
     final onlineTrack = OnlineTrack(
       id: song.id,
@@ -532,13 +528,22 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       artist: song.artist,
       album: song.album.isEmpty ? null : song.album,
       duration: song.duration,
-      source: MusicSourceType.navidrome,
+      source: MusicSourceType.youtube,
     );
     final url = await MultiSourceSearch().getStreamUrlWithFallback(
       onlineTrack,
     );
     if (url == null) {
       throw StateError('Eşleşen şarkı bulunamadı');
+    }
+    if (url.startsWith('youtube://')) {
+      final videoId = url.replaceFirst('youtube://', '');
+      final path = await YtMusicBundle.instance.getPlayablePath(
+        trackId: videoId,
+        title: song.title,
+        artist: song.artist,
+      );
+      if (path != null) return AudioSource.file(path);
     }
     return AudioSource.uri(Uri.parse(url));
   }
@@ -555,18 +560,22 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
 
     try {
       song = await _resolvePlayableSong(song);
-      // Determine audio source based on file path type. Tek yapı:
-      // yerel dosya, Navidrome/subsonic akışı (http) ya da online://
-      // (Navidrome eşleşmesi). Eski youtube:// kayıtları çözümlenemez.
       AudioSource audioSource;
       if (song.filePath.startsWith('youtube://')) {
-        throw StateError(
-            'Bu parça eski çevrimiçi kaynaktan kaldı ve artık desteklenmiyor');
+        final videoId = song.filePath.replaceFirst('youtube://', '');
+        final path = await YtMusicBundle.instance.getPlayablePath(
+          trackId: videoId,
+          title: song.title,
+          artist: song.artist,
+        );
+        if (path != null) {
+          audioSource = AudioSource.file(path);
+        } else {
+          throw StateError('YouTube parçası çözümlenemedi');
+        }
       } else if (song.filePath.startsWith('http')) {
         audioSource = AudioSource.uri(Uri.parse(song.filePath));
       } else if (song.filePath.startsWith('online://')) {
-        // Imported playlist tracks without a direct stream id: match them to
-        // the personal Navidrome library and play from there.
         audioSource = await _resolveOnlineAudioSource(song);
       } else {
         audioSource = AudioSource.file(song.filePath);
@@ -708,67 +717,45 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     if (downloaded != null) return downloaded;
     if (!song.filePath.startsWith('spotify://')) return song;
 
-    // Spotify supplies library metadata, not downloadable audio. When the
-    // user owns the same track on a connected personal server, prefer that
-    // exact title/artist/duration match before trying a public resolver.
+    // Çevrimiçi tek yapı: gömülü YouTube paketi üzerinden çalma.
+    // Spotify kaydı için YouTube'ta arama yap ve en iyi eşleşmeyi çal.
     try {
-      if (await _navidrome.isConfigured()) {
-        final candidates = await _navidrome.search(
-          '${song.artist} - ${song.title}',
-          limit: 8,
-        );
-        candidates.sort((a, b) {
+      final results = await YtMusicBundle.instance.search(
+        '${song.artist} - ${song.title}',
+      );
+      if (results.isNotEmpty) {
+        // En iyi eşleşmeyi seç (başlık/sanatçı skoru)
+        results.sort((a, b) {
           final aScore = TrackMatcher.scoreWithDuration(
             song.title,
             song.artist,
             song.duration.inMilliseconds,
-            a.title,
-            a.artist,
-            a.duration.inMilliseconds,
+            (a['name'] ?? a['title'] ?? '').toString(),
+            (a['artists'] ?? a['artist'] ?? '').toString(),
+            0,
           );
           final bScore = TrackMatcher.scoreWithDuration(
             song.title,
             song.artist,
             song.duration.inMilliseconds,
-            b.title,
-            b.artist,
-            b.duration.inMilliseconds,
+            (b['name'] ?? b['title'] ?? '').toString(),
+            (b['artists'] ?? b['artist'] ?? '').toString(),
+            0,
           );
           return bScore.compareTo(aScore);
         });
-        if (candidates.isNotEmpty) {
-          final best = candidates.first;
-          final score = TrackMatcher.scoreWithDuration(
-            song.title,
-            song.artist,
-            song.duration.inMilliseconds,
-            best.title,
-            best.artist,
-            best.duration.inMilliseconds,
-          );
-          if (score >= 0.72 && best.streamUrl != null) {
-            final artwork = song.albumArt ??
-                await _navidrome.fetchArtwork(best.thumbnailUrl);
-            final resolved = song.copyWith(
-              filePath: best.streamUrl,
-              album: best.album ?? song.album,
-              duration:
-                  best.duration > Duration.zero ? best.duration : song.duration,
-              albumArt: artwork,
-            );
-            _replaceSongInQueues(resolved);
-            return resolved;
-          }
+        final best = results.first;
+        final id = (best['id'] ?? '').toString().trim();
+        if (id.isNotEmpty) {
+          final resolved = song.copyWith(filePath: 'youtube://$id');
+          _replaceSongInQueues(resolved);
+          return resolved;
         }
       }
     } catch (e) {
-      debugPrint('Navidrome Spotify match failed: $e');
+      debugPrint('YouTube Spotify match failed: $e');
     }
-
-    // Tek yapı: public YouTube çözümleme kaldırıldı. Eski spotify://
-    // kayıtları yalnızca kişisel Navidrome kütüphanesiyle eşleşirse çalar.
-    throw StateError(
-        'Bu parça sunucuda bulunamadı; Navidrome kütüphaneni kontrol et');
+    throw StateError('Eşleşen parça bulunamadı');
   }
 
   Future<SongModel?> _resolveDownloadedSong(SongModel song) async {

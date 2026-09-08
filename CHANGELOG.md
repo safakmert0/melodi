@@ -4,6 +4,15 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.3.0] - 2026-09-08
+
+### Sunucusuz Tek Yapı: YouTube (Gömülü) + Yerel
+- İstek üzerine **Navidrome/Subsonic sunucu girişi tamamen kaldırıldı** — Ayarlar’daki “Sunucu” bölümü, arama çubuğundaki sunucu ikonu ve indirme için sunucu kontrolü gitti.
+- Çevrimiçi **tek yapı artık sadece gömülü YouTube** (`assets/extensions/ytmusic-spotiflac.sflx` quickjs, `lib/services/ytmusic_bundle.dart`, `lib/services/sources/youtube_source.dart`). Arama `YouTube` + yerel; `lib/services/multi_source_search.dart` sadece `YouTubeSource`.
+- Çalma: `youtube://` ve `online://` artık yine YouTube paketi üzerinden dosya indirilerek çalar (`lib/services/audio_handler.dart`), eski `youtube://` kayıtları destekleniyor.
+- İndirme: `lib/services/download_manager.dart` `isNavidrome` dalı kaldırıldı, `YtMusicBundle.downloadToFile` hattıyla doğrudan `Documents/Melodi/Offline`’a gider.
+- Yerel çalma LocalAudioPlayer detaylarında: `Documents` izleme, artwork/lyrics embedding, Files entegrasyonu korunur.
+
 ## [5.2.0] - 2026-09-08
 
 ### Gömülü YouTube + Navidrome

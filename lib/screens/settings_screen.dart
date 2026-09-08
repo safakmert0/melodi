@@ -13,7 +13,6 @@ import 'support_screen.dart';
 import 'downloads_screen.dart';
 import 'storage_screen.dart';
 import 'diagnostics_screen.dart';
-import 'navidrome_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -349,21 +348,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 16),
-                Divider(color: MelodiTheme.outlineVariant, height: 1),
-                _SectionTitle('Sunucu'),
-                _SettingsTile(
-                  icon: Icons.dns_rounded,
-                  iconColor: Colors.indigo,
-                  title: 'Navidrome / Subsonic',
-                  subtitle: 'Kişisel müzik sunucunu bağla',
-                  trailing:
-                      Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => const NavidromeSettingsScreen()),
-                  ),
-                ),
                 const SizedBox(height: 16),
                 Divider(color: MelodiTheme.outlineVariant, height: 1),
                 _SectionTitle(AppLocale.tr('about')),

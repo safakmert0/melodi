@@ -9,7 +9,6 @@ import 'database_service.dart';
 import 'lyrics_embedding_service.dart';
 import 'lyrics_service.dart';
 import 'metadata_service.dart';
-import 'navidrome_service.dart';
 import 'storage_manager.dart';
 import 'audio_quality_service.dart';
 import 'ytmusic_bundle.dart';
@@ -223,29 +222,9 @@ class DownloadManager {
       task.error = 'Kaynaklar aranıyor...';
       _notify();
 
-      // Navidrome kaydıysa sunucudan, değilse gömülü YouTube paketinden indir.
-      // Ne sunucu ne hesap gerekmez.
-      final songId = (task.sourceVideoId != null &&
-              task.sourceVideoId!.isNotEmpty)
-          ? task.sourceVideoId!
+      String? streamUrl = (task.directUrl != null && task.directUrl!.isNotEmpty)
+          ? task.directUrl
           : null;
-      final isNavidrome =
-          songId != null && songId.startsWith('navidrome:');
-      String? streamUrl;
-      if (isNavidrome) {
-        if (!await NavidromeService.instance.isConfigured()) {
-          task.state = DownloadState.failed;
-          task.error = 'Önce Navidrome sunucunu bağla';
-          _notify();
-          _activeDownloads--;
-          _processQueue();
-          return;
-        }
-        // İndirme adresi her denemede taze üretilir (Subsonic tuzu tek kullanımlık).
-        streamUrl = NavidromeService.instance.downloadUrl(songId!);
-      } else if (task.directUrl != null && task.directUrl!.isNotEmpty) {
-        streamUrl = task.directUrl;
-      }
 
       if (streamUrl == null || task.cancelled) {
         task.state = DownloadState.failed;
@@ -259,21 +238,22 @@ class DownloadManager {
       task.progress = 0.3;
       _notify();
 
-      // Yerel yol geldiyse ağı hiç kullanmadan doğrudan içeri aktar.
       String? resultPath;
       if (!_isHttpUrl(streamUrl) && await File(streamUrl).exists()) {
         debugPrint('Download using local file: $streamUrl');
         resultPath = streamUrl;
-      } else if (!isNavidrome) {
+      } else {
         // YouTube: paketin kendi hattıyla doğrudan indirme dizinine indir.
         task.progress = 0.15;
         task.error = 'YouTube indiriliyor...';
         _notify();
         resultPath = await _downloadViaBundle(task, downloadDir)
             .timeout(const Duration(minutes: 8), onTimeout: () => null);
-      } else {
-        resultPath = await _downloadFromUrl(streamUrl, task, downloadDir)
-            .timeout(const Duration(minutes: 5), onTimeout: () => null);
+        // Fallback: direkt URL üzerinden indirme (nadiren)
+        if (resultPath == null && _isHttpUrl(streamUrl)) {
+          resultPath = await _downloadFromUrl(streamUrl, task, downloadDir)
+              .timeout(const Duration(minutes: 5), onTimeout: () => null);
+        }
       }
 
 

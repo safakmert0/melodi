@@ -1,13 +1,10 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'music_source.dart';
-import 'sources/navidrome_source.dart';
 import 'sources/youtube_source.dart';
 
-/// Çevrimiçi yapılar: gömülü YouTube paketi (hesapsız) + kişisel
-/// Navidrome/Subsonic sunucusu (isteğe bağlı).
-/// Bu sınıf, genel arama + akış + yedek çözümleme için tek giriş noktası
-/// olarak kaldı; böylece arayüz ve indirme yöneticisi değişmeden çalışır.
+/// Çevrimiçi tek yapı: gömülü YouTube paketi (hesapsız, sunucusuz).
+/// Navidrome/Subsonic sunucu girişi kaldırıldı.
 class MultiSourceSearch {
   static final MultiSourceSearch _instance = MultiSourceSearch._();
   factory MultiSourceSearch() => _instance;
@@ -15,16 +12,12 @@ class MultiSourceSearch {
 
   final List<MusicSource> _sources = [
     YouTubeSource(),
-    NavidromeSource(),
   ];
 
   List<MusicSource> get sources => List.unmodifiable(_sources);
 
-  /// Display ranking for search results. Navidrome (full-track, personal
-  /// server) is the only online source; preview-only catalogues are gone.
   static const Map<MusicSourceType, int> _fullTrackRank = {
     MusicSourceType.youtube: 0,
-    MusicSourceType.navidrome: 1,
   };
 
   int _displayRank(OnlineTrack track) {
@@ -159,16 +152,12 @@ class MultiSourceSearch {
     }));
   }
 
-  /// Try to get stream URL with fallback across all sources.
-  /// Tek yapıda yedek: parçanın kendi kaynağı tutmazsa ad/sanatçı ile
-  /// Navidrome'da yeniden arama yapılır.
   Future<String?> getStreamUrlWithFallback(
     OnlineTrack track, {
     String? query,
     Set<String> excludedUrls = const {},
     bool preferStableYouTubeReference = false,
   }) async {
-    // 1. Parçanın kendi kaynağını dene.
     if (track.source.supportsFullTrack) {
       try {
         final url = await getStreamUrl(track);
@@ -177,35 +166,6 @@ class MultiSourceSearch {
             normalized.isNotEmpty &&
             !excludedUrls.contains(normalized)) {
           return normalized;
-        }
-      } catch (_) {}
-    }
-
-    // 2. Yedek: diğer kaynakta ad/sanatçı ile yeniden ara.
-    final searchQuery = (query != null && query.trim().isNotEmpty)
-        ? query.trim()
-        : '${track.artist} - ${track.title}'.trim();
-    if (searchQuery.isEmpty) return null;
-    final others = _sources
-        .where((s) => s.type != track.source && s.type.supportsFullTrack)
-        .toList();
-    for (final source in others) {
-      try {
-        final results = await source.search(searchQuery, limit: 5);
-        results.sort(
-            (a, b) => _matchScore(b, track).compareTo(_matchScore(a, track)));
-        for (final result in results) {
-          if (_matchScore(result, track) < 2) continue;
-          try {
-            final url = await getStreamUrl(result);
-            final normalized = url?.trim();
-            if (normalized == null ||
-                normalized.isEmpty ||
-                excludedUrls.contains(normalized)) {
-              continue;
-            }
-            return normalized;
-          } catch (_) {}
         }
       } catch (_) {}
     }
