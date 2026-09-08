@@ -14,6 +14,8 @@ import '../providers/player_provider.dart';
 import '../providers/playlist_provider.dart';
 import '../widgets/library/library_components.dart';
 import '../widgets/song_tile.dart';
+import 'batch_artwork_screen.dart';
+import 'batch_metadata_editor_screen.dart';
 import 'create_playlist_screen.dart';
 import 'playlist_detail_screen.dart';
 import 'profile_screen.dart';
@@ -334,6 +336,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
             child: Text(allSelected ? 'Bırak' : 'Tümünü seç'),
           ),
           IconButton(
+            tooltip: 'Kapak ara',
+            icon: const Icon(Icons.image_search_rounded, size: 20),
+            onPressed: _selectedIds.isEmpty
+                ? null
+                : () => _openBatchArtwork(songs),
+          ),
+          IconButton(
+            tooltip: 'Metadata düzenle',
+            icon: const Icon(Icons.edit_rounded, size: 18),
+            onPressed: _selectedIds.isEmpty
+                ? null
+                : () => _openBatchMetadata(songs),
+          ),
+          IconButton(
             tooltip: 'Listeye ekle',
             icon: const Icon(Icons.playlist_add_rounded, size: 20),
             onPressed: _selectedIds.isEmpty
@@ -418,6 +434,24 @@ class _LibraryScreenState extends State<LibraryScreen> {
       SnackBar(content: Text('$removed parça silindi')),
     );
     _exitSelection();
+  }
+
+  Future<void> _openBatchArtwork(List<SongModel> songs) async {
+    final selected = songs.where((s) => _selectedIds.contains(s.id)).toList();
+    if (selected.isEmpty) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => BatchArtworkScreen(songs: selected)),
+    );
+    if (mounted) _exitSelection();
+  }
+
+  Future<void> _openBatchMetadata(List<SongModel> songs) async {
+    final selected = songs.where((s) => _selectedIds.contains(s.id)).toList();
+    if (selected.isEmpty) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => BatchMetadataEditorScreen(songs: selected)),
+    );
+    if (mounted) _exitSelection();
   }
 
   List<Widget> _collectionSlivers(

@@ -4,6 +4,13 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.7.0] - 2026-09-08
+
+### LA_Player Batch + CarPlay Birebir
+- **Batch Artwork (`lib/screens/batch_artwork_screen.dart:1`)**: `Batch search and apply artwork` %d/%d ilerleme, `Auto-Download Artwork` switch, `Searching artwork %d/%d` + `Tap an artwork to apply`, seçili kapakları `ArtworkEmbeddingService.embedCoverArt` + `DatabaseService.updateTrackAlbumArt` ile gömer, `lib/screens/library_screen.dart:336` seçim çubuğuna `Kapak ara` butonu eklendi.
+- **Toplu Metadata (`lib/screens/batch_metadata_editor_screen.dart:1`)**: Title/Artist/Album checkbox’lı toplu editör, LA hatası `Cannot apply same Title and Artist to multiple selected files.` korunuyor, `lib/services/database_service.dart:updateTrackMetadata` ile uygular, seçim çubuğuna `Metadata düzenle` eklendi.
+- **CarPlay (`ios/Runner/CarPlaySceneDelegate.swift:1` + `Info.plist:111` + `Runner.entitlements:11` + `project.pbxproj:14`)**: LA_Player `CPTemplateApplicationScene`/`CarPlaySceneDelegate` birebir, `com.apple.developer.carplay-audio` entitlement, `MPNowPlayingInfoCenter`/`MPRemoteCommandCenter` ile Oynat/Duraklat/Sonraki, sideload’da `carplay.no-playlists` mesajı yok.
+
 ## [5.6.0] - 2026-09-08
 
 ### LA_Player FilesTab Birebir Aktarım
