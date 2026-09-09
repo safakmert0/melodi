@@ -6,9 +6,9 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
 /// JollyTone cok katmanli hat birebir:
 /// `yt_audio_stream` + `stream_client` karsiligi.
-/// Cok istemcili manifest (safari + androidVr harman), imza cozme
-/// (kutuphane ici js challenge), HLS destegi ve iOS uyumu icin
-/// mp4 (m4a) tercihli en yuksek bitrate secimi.
+/// Kutuphane yonetimli manifest (androidSdkless: PO Token istemez;
+/// bos donerse otomatik tv yedegi), imza cozme, HLS destegi ve
+/// iOS uyumu icin mp4 (m4a) tercihli en yuksek bitrate secimi.
 class ExplodeStreamService {
   ExplodeStreamService._();
   static final ExplodeStreamService _instance = ExplodeStreamService._();
@@ -26,15 +26,12 @@ class ExplodeStreamService {
   Future<AudioOnlyStreamInfo?> _pickAudio(String videoId) async {
     final id = videoId.trim();
     if (id.isEmpty) return null;
+    // Istemciyi kutuphaneye birak: varsayilan androidSdkless PO Token
+    // istemez; bos donerse kutuphane otomatik tv ile tekrar dener.
+    // (safari/androidVr acikca gecilirse tv yedegi devre disi kalir.)
     final manifest = await _yt.videos.streams
-        .getManifest(
-          id,
-          ytClients: const [
-            YoutubeApiClient.safari,
-            YoutubeApiClient.androidVr,
-          ],
-        )
-        .timeout(const Duration(seconds: 20));
+        .getManifest(id)
+        .timeout(const Duration(seconds: 30));
     final audios = manifest.audioOnly.toList();
     if (audios.isEmpty) return null;
     // iOS (just_audio/AVPlayer) mp4/m4a ister; once mp4 icinden en buyugu,

@@ -79,7 +79,7 @@ class MultiSourceSearch {
   final Map<String, _CachedStreamUrl> _streamUrlCache = {};
   static const Duration _streamUrlCacheTtl = Duration(minutes: 3);
 
-  Stream<List<OnlineTrack>> searchAll(String query, {int limitPerSource = 10}) {
+  Stream<List<OnlineTrack>> searchAll(String query, {int limitPerSource = 25}) {
     _controller?.close();
     _controller = StreamController<List<OnlineTrack>>.broadcast();
 
@@ -88,7 +88,7 @@ class MultiSourceSearch {
   }
 
   Future<List<OnlineTrack>> searchAllSync(String query,
-      {int limitPerSource = 10}) async {
+      {int limitPerSource = 25}) async {
     final futures = _sources.map((source) async {
       try {
         return await source.search(query, limit: limitPerSource);

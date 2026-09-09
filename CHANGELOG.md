@@ -4,6 +4,12 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.10.2] - 2026-09-10
+
+### Akis Duzeltmesi: androidSdkless + 25 Sonuc
+- 5.9.0'da manifest icin `safari`+`androidVr`'yi acikca geciyorduk; ikisi de PO Token/bot duvarina takiliyor ve kutuphanenin otomatik `tv` yedegini devre disi birakiyordu. `lib/services/explode_stream_service.dart:1` artik istemci secimini kutuphaneye birakiyor (varsayilan `androidSdkless`: PO Token istemez, bos donerse `tv` dener).
+- Arama sonucu 10 degil 25: `lib/services/multi_source_search.dart:82` `limitPerSource` 10→25 (API zaten ~20 donuyordu, biz kesiyorduk).
+
 ## [5.10.1] - 2026-09-10
 
 ### Build Hotfix — withSecurityScope iOS'ta Yok
