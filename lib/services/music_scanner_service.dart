@@ -211,6 +211,7 @@ class MusicScannerService {
   Future<List<String>> _copyIntoLibrary(List<String> paths) async {
     try {
       final docs = await _libraryDocsDir();
+      final docsNorm = _norm(docs.path);
       final imported = Directory('${docs.path}/Melodi/Offline/Imported Files');
       await imported.create(recursive: true);
       final out = <String>[];
@@ -218,8 +219,10 @@ class MusicScannerService {
         try {
           final src = File(p);
           if (!await src.exists()) continue;
-          // Zaten kutuphanedeyse kopyalama.
-          if (p.startsWith(imported.path)) {
+          // Kopyasiz izleme: dosya zaten uygulama Documents'i altindaysa
+          // yerinde birak (sistem taramasi kapsar, cift kayit olmaz).
+          // Disaridaysa (temp/Inbox/iCloud) kalici kopya olustur.
+          if (_isWithin(_norm(p), docsNorm)) {
             out.add(p);
             continue;
           }
@@ -252,6 +255,20 @@ class MusicScannerService {
       if (home.isNotEmpty) return Directory('$home/Documents');
       return Directory('.');
     }
+  }
+
+  String _norm(String path) {
+    var n = path.replaceAll('\\', '/');
+    while (n.contains('//')) {
+      n = n.replaceAll('//', '/');
+    }
+    return n;
+  }
+
+  bool _isWithin(String path, String dir) {
+    if (path == dir) return true;
+    final prefix = dir.endsWith('/') ? dir : '$dir/';
+    return path.startsWith(prefix);
   }
 
   Future<List<app.SongModel>> _enrichMissingArtwork(

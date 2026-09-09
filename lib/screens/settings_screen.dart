@@ -23,8 +23,8 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late String _selectedLanguage;
   String _appVersion = AppConstants.appVersion;
-  String? _watchedFolder;
   List<String> _watchedFolders = const [];
+  String? _systemFolder;
   bool _watchedAutoScan = true;
   bool _watchedLoading = false;
 
@@ -39,37 +39,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadWatchedFolder() async {
-    final folder = await WatchedFolderService.instance.getWatchedFolder();
     final folders = await WatchedFolderService.instance.getWatchedFolders();
+    String? system;
+    try {
+      system = await WatchedFolderService.instance.systemFolderPath();
+    } catch (_) {}
     final auto = await WatchedFolderService.instance.isAutoScanEnabled();
     if (mounted) {
       setState(() {
-        _watchedFolder = folder;
         _watchedFolders = folders;
+        _systemFolder = system;
         _watchedAutoScan = auto;
       });
     }
   }
 
+  String _shortPath(String path) {
+    final parts = path.split(RegExp(r'[/\\\\]')).where((e) => e.isNotEmpty).toList();
+    if (parts.length <= 3) return path;
+    return '…/${parts.sublist(parts.length - 3).join('/')}';
+  }
+
   Future<void> _pickWatchedFolder() async {
     setState(() => _watchedLoading = true);
     final path = await WatchedFolderService.instance.pickAndSaveWatchedFolder();
-    if (mounted) {
-      setState(() => _watchedLoading = false);
-      if (path != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('İzlenecek klasör: $path')),
-        );
-        await _loadWatchedFolder();
-        // Hemen tara
-        final count = await WatchedFolderService.instance.scanWatchedFolder();
-        if (mounted && count > 0) {
-          context.read<LibraryProvider>().refresh();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$count yeni parça kitaplığa eklendi')),
-          );
-        }
-      }
+    if (!mounted) return;
+    setState(() => _watchedLoading = false);
+    await _loadWatchedFolder();
+    if (!mounted) return;
+    if (path == null) return; // iptal
+    if (path == _systemFolder) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                'Dosyalar zaten uygulama klasöründe — kopyalanmadan izleniyor')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('İzlenecek klasör: ${_shortPath(path)}')),
+      );
+    }
+    // Hemen tara
+    final count = await WatchedFolderService.instance.scanWatchedFolder();
+    if (mounted && count > 0) {
+      context.read<LibraryProvider>().refresh();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$count yeni parça kitaplığa eklendi')),
+      );
     }
   }
 
@@ -77,8 +93,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await WatchedFolderService.instance.clearWatchedFolder();
     await _loadWatchedFolder();
     if (mounted) {
+      context.read<LibraryProvider>().refresh();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('İzlenecek klasör temizlendi')),
+        const SnackBar(content: Text('İzleme listesi temizlendi')),
       );
     }
   }
@@ -87,6 +104,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await WatchedFolderService.instance.removeWatchedFolder(path);
     await _loadWatchedFolder();
     if (mounted) {
+      context.read<LibraryProvider>().refresh();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Klasör izleme listesinden kaldırıldı')),
       );
@@ -251,41 +269,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       : Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                   onTap: _pickWatchedFolder,
                 ),
-                if (_watchedFolder != null) ...[
-                  for (final folder in _watchedFolders) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardTheme.color ??
-                            Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        dense: true,
-                        leading: const Icon(Icons.folder_rounded,
-                            color: Colors.deepPurple),
-                        title: Text(
-                          folder,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: IconButton(
-                          tooltip: 'İzlemeyi bırak',
-                          icon: const Icon(Icons.close_rounded),
-                          onPressed: () => _removeWatchedFolder(folder),
-                        ),
-                      ),
-                    ),
-                  ],
+                // Kullanıcının ekledikleri (silinebilir)
+                for (final folder in _watchedFolders) ...[
                   const SizedBox(height: 8),
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
-                        color: Theme.of(context).cardTheme.color ??
-                            Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(12)),
-                    child: SwitchListTile(
+                      color: Theme.of(context).cardTheme.color ??
+                          Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.folder_rounded,
+                          color: Colors.deepPurple),
+                      title: Text(
+                        _shortPath(folder),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: IconButton(
+                        tooltip: 'İzlemeyi bırak',
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => _removeWatchedFolder(folder),
+                      ),
+                    ),
+                  ),
+                ],
+                // Uygulama klasörü: her zaman izlenir, silinemez, kopyasız.
+                if (_systemFolder != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardTheme.color ??
+                          Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.phone_iphone_rounded,
+                          color: Colors.deepPurple),
+                      title: Text(
+                        _shortPath(_systemFolder!),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: const Text(
+                        'Uygulama klasörü · her zaman izlenir · kopyasız',
+                        style: TextStyle(fontSize: 11),
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                      color: Theme.of(context).cardTheme.color ??
+                          Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12)),
+                  child: SwitchListTile(
                       secondary: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
@@ -347,7 +391,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ],
                     ),
                   ),
-                ],
                 const SizedBox(height: 16),
                 Divider(color: MelodiTheme.outlineVariant, height: 1),
                 _SectionTitle(AppLocale.tr('about')),

@@ -4,6 +4,15 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.8.1] - 2026-09-09
+
+### Tarama Sekmesi Kalkti + Izlenen Klasor Duzeltmesi + Kopyasiz Izleme
+- Alt bar 4 sekmeye indi: Basla/Kesif/Kaydedilenler/Ayarlar (`lib/widgets/main_shell.dart:12`, Tarama kaldirildi; klasor izleme Ayarlar > Izlenen Klasorler'de).
+- Silinemeyen klasor bug'i cozuldu: `lib/services/watched_folder_service.dart:53` `getWatchedFolders()` artik SADECE kullanici klasorlerini donuyor; sistem `Documents/Melodi` taramaya dahil ama listede yok. Ayarlar'da sistem satiri ayri ("her zaman izlenir · kopyasiz", silme yok), kullanici satirlarinda silme calisiyor.
+- Temizle gercekten temizliyor: `clear/removeWatchedFolder` DB'deki kullanici klasorlerini siliyor + sistem disi yollardaki kayitlari kutuphaneden dusuruyor (dosyalar durur) + kutuphane yenileniyor; sistem izlemesi kapanmiyor.
+- Kopyasiz izleme: `pickAndSaveWatchedFolder` + `music_scanner _copyIntoLibrary` artik Documents altindaki dosyalari kopyalamadan yerinde izliyor; sadece disaridaki (iCloud/temp) dosyalar `Melodi/Offline/Imported Files` gelen kutusuna kopyalaniyor. Cift kayit bitti.
+- Embed oynatici duzeltmesi (5.8.0'dan sarkan): iOS satir-ici medya izni (`allowsInlineMediaPlayback`), nocookie embed, hata ekrani + Tekrar dene/YouTube'da ac butonlari.
+
 ## [5.8.0] - 2026-09-09
 
 ### JollyTone Birebir Kopya: Embed Yedek + Sekme Iskeleti

@@ -16,7 +16,8 @@ class EmbedPlaybackService {
   static String embedUrl(String videoId, {bool autoplay = true}) {
     final id = videoId.trim();
     final auto = autoplay ? '1' : '0';
-    return 'https://www.youtube.com/embed/$id?autoplay=$auto&playsinline=1&rel=0';
+    // nocookie embed, kisitli kliplerde daha az "yapilandirma hatasi" veriyor.
+    return 'https://www.youtube-nocookie.com/embed/$id?autoplay=$auto&playsinline=1&rel=0&enablejsapi=1&origin=https://www.youtube.com';
   }
 
   static String watchUrl(String videoId) =>

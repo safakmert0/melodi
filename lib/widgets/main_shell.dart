@@ -2,21 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/localization.dart';
-import '../screens/files_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/library_screen.dart';
 import '../screens/search_screen.dart';
 import '../screens/settings_screen.dart';
 import '../widgets/mini_player.dart';
 
-/// JollyTone iskeleti birebir: Basla / Kesif / Kaydedilenler / Tarama / Ayarlar
-/// (Home=Basla main_screen, Search=Kesif search_screen, Library=Kaydedilenler saved_screen,
-/// Files=Tarama browse_screen, Settings=Ayarlar settings_screen) + MiniPlayer (bottom_player).
+/// Basla / Kesif / Kaydedilenler / Ayarlar + MiniPlayer.
+/// Klasor izleme Ayarlar > Izlenen Klasorler'den yonetilir (kopyasiz izleme).
 const List<Widget> _pages = [
   HomeScreen(key: PageStorageKey('home')),
   SearchScreen(key: PageStorageKey('search')),
   LibraryScreen(key: PageStorageKey('library')),
-  FilesScreen(key: PageStorageKey('files')),
   SettingsScreen(key: PageStorageKey('settings')),
 ];
 
@@ -24,7 +21,6 @@ const List<_ShellDestination> _destinations = [
   _ShellDestination(icon: Icons.home_outlined, selectedIcon: Icons.home, labelKey: 'basla'),
   _ShellDestination(icon: Icons.search_outlined, selectedIcon: Icons.search, labelKey: 'kesif'),
   _ShellDestination(icon: Icons.library_music_outlined, selectedIcon: Icons.library_music, labelKey: 'kaydedilenler'),
-  _ShellDestination(icon: Icons.folder_outlined, selectedIcon: Icons.folder, labelKey: 'tarama'),
   _ShellDestination(icon: Icons.settings_outlined, selectedIcon: Icons.settings, labelKey: 'ayarlar'),
 ];
 
@@ -64,10 +60,6 @@ class _MainShellState extends State<MainShell> {
           if (locale == 'de') return 'Gespeichert';
           if (locale == 'en') return 'Saved';
           return 'Kaydedilenler';
-        case 'tarama':
-          if (locale == 'de') return 'Durchsuchen';
-          if (locale == 'en') return 'Browse';
-          return 'Tarama';
         case 'ayarlar':
           if (locale == 'de') return 'Einstellungen';
           if (locale == 'en') return 'Settings';
