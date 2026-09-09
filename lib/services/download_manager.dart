@@ -618,66 +618,71 @@ class DownloadManager {
           .timeout(const Duration(seconds: 10), onTimeout: () => null);
       await sourceFile.rename(destPath);
 
-      // ── Kapak resmi gömme (önceden atlanıyordu) ──
-      Uint8List? artworkBytes;
-      if (!isVideo) {
-        task.progress = 0.83;
-        task.error = 'Kapak resmi ekleniyor...';
-        _notify();
+      // ── Kapak + söz aramasını paralel koştur (süre yarıya iner) ──
+      task.progress = 0.83;
+      task.error = 'Kapak ve sözler hazırlanıyor...';
+      _notify();
+      final artworkFuture = () async {
+        if (isVideo) return null;
         if (task.imageUrl != null && task.imageUrl!.isNotEmpty) {
           try {
-            artworkBytes = await _downloadImageBytes(task.imageUrl!)
+            final b = await _downloadImageBytes(task.imageUrl!)
                 .timeout(const Duration(seconds: 10), onTimeout: () => null);
+            if (b != null && b.isNotEmpty) return b;
           } catch (_) {}
         }
-        if (artworkBytes == null || artworkBytes.isEmpty) {
-          try {
-            artworkBytes = await ArtworkService.fetchArtwork(
-              title: task.title,
-              artist: task.artist,
-              album: task.album ?? '',
-              duration: metadata?.duration ?? Duration.zero,
-            ).timeout(const Duration(seconds: 10), onTimeout: () => null);
-          } catch (_) {}
+        try {
+          return await ArtworkService.fetchArtwork(
+            title: task.title,
+            artist: task.artist,
+            album: task.album ?? '',
+            duration: metadata?.duration ?? Duration.zero,
+          ).timeout(const Duration(seconds: 10), onTimeout: () => null);
+        } catch (_) {
+          return null;
         }
-        if (artworkBytes != null && artworkBytes.isNotEmpty) {
-          try {
-            final ok = await ArtworkEmbeddingService.embedCoverArt(
-              filePath: destPath,
-              artwork: artworkBytes,
-            ).timeout(const Duration(seconds: 15), onTimeout: () => false);
-            if (ok) {
-              try {
-                metadata = await MetadataService.extractMetadata(destPath)
-                        .timeout(const Duration(seconds: 8),
-                            onTimeout: () => null) ??
-                    metadata;
-              } catch (_) {}
-            }
-          } catch (e) {
-            debugPrint('Artwork embedding failed: $e');
+      }();
+      final lyricsFuture = () async {
+        try {
+          return await LyricsService.fetchLyrics(
+            artist: task.artist,
+            track: task.title,
+            album: task.album,
+            durationMs: task.expectedDurationMs > 0
+                ? task.expectedDurationMs
+                : metadata?.duration.inMilliseconds,
+            preferSynced: true,
+          ).timeout(const Duration(seconds: 10), onTimeout: () => null);
+        } catch (error) {
+          debugPrint('Downloaded lyrics lookup failed: $error');
+          return null;
+        }
+      }();
+      final fetched = await Future.wait([artworkFuture, lyricsFuture]);
+      Uint8List? artworkBytes = fetched[0] as Uint8List?;
+      final lyricsResult = fetched[1] as LyricsResult?;
+      if (!isVideo && artworkBytes != null && artworkBytes.isNotEmpty) {
+        try {
+          final ok = await ArtworkEmbeddingService.embedCoverArt(
+            filePath: destPath,
+            artwork: artworkBytes,
+          ).timeout(const Duration(seconds: 15), onTimeout: () => false);
+          if (ok) {
+            try {
+              metadata = await MetadataService.extractMetadata(destPath)
+                      .timeout(const Duration(seconds: 8),
+                          onTimeout: () => null) ??
+                  metadata;
+            } catch (_) {}
           }
+        } catch (e) {
+          debugPrint('Artwork embedding failed: $e');
         }
       }
 
       task.progress = 0.86;
-      task.error = 'Senkronize sözler ekleniyor...';
       _notify();
 
-      LyricsResult? lyricsResult;
-      try {
-        lyricsResult = await LyricsService.fetchLyrics(
-          artist: task.artist,
-          track: task.title,
-          album: task.album,
-          durationMs: task.expectedDurationMs > 0
-              ? task.expectedDurationMs
-              : metadata?.duration.inMilliseconds,
-          preferSynced: true,
-        ).timeout(const Duration(seconds: 10), onTimeout: () => null);
-      } catch (error) {
-        debugPrint('Downloaded lyrics lookup failed: $error');
-      }
       final lyricsText = lyricsResult?.syncedLrc ?? lyricsResult?.plainText;
 
       if (!isVideo) {

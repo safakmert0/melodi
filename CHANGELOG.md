@@ -4,6 +4,12 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.10.4] - 2026-09-10
+
+### Yuzdelik Ilerleme + Hizli Indirme Sonrasi Islem
+- Indirme kartinda canli **% gosterge** (`download_components`): barin yaninda `%42` gibi yazar.
+- Indirme sonrasi kapak + soz aramasi artik **paralel** kosuyor (once sirayla ~20sn+ suruyordu); gomuleme ayni kaldi. Toplam indirme suresi kisaldi.
+
 ## [5.10.3] - 2026-09-10
 
 ### Gomulu Calis Surekliligi + Indirme Seffafligi
