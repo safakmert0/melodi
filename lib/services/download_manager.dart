@@ -12,6 +12,7 @@ import 'metadata_service.dart';
 import 'storage_manager.dart';
 import 'audio_quality_service.dart';
 import 'explode_stream_service.dart';
+import 'ytmusic_service.dart';
 
 enum DownloadState { pending, downloading, completed, failed }
 
@@ -528,7 +529,31 @@ class DownloadManager {
         isCancelled: () => task.cancelled,
       ).timeout(const Duration(minutes: 10), onTimeout: () => null);
       if (path == null || path.isEmpty || !await File(path).exists()) {
-        debugPrint('Explode download failed for $videoId');
+        debugPrint('Explode download failed for $videoId, trying InnerTube');
+        // Yedek hat: uygulamanın kendi müzik-istemcili InnerTube indiricisi.
+        // Explode istemcileri LOGIN_REQUIRED döndüğünde bunlar çalışabilir.
+        try {
+          task.progress = 0.3;
+          task.error = 'Alternatif kaynaktan indiriliyor...';
+          _notify();
+          final inner = await YtMusicService.instance.downloadToFile(
+            trackId: videoId,
+            title: task.title,
+            artist: task.artist,
+            outputPath: tmpPath,
+          ).timeout(const Duration(minutes: 6), onTimeout: () => null);
+          final innerPath = inner?['file_path']?.toString() ?? '';
+          if (inner != null &&
+              inner['success'] == true &&
+              innerPath.isNotEmpty &&
+              await File(innerPath).exists()) {
+            task.progress = 0.75;
+            _notify();
+            return innerPath;
+          }
+        } catch (e) {
+          debugPrint('InnerTube download fallback error: $e');
+        }
         return null;
       }
       task.progress = 0.75;

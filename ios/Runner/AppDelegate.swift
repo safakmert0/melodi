@@ -11,6 +11,7 @@ import WebKit
   private var widgetHandler: WidgetHandler?
   private var lyricsMetadataWriterHandler: LyricsMetadataWriterHandler?
   private var ffmpegRingtoneHandler: FFmpegRingtoneHandler?
+  private var watchedFolderHandler: WatchedFolderHandler?
 
   override func application(
     _ application: UIApplication,
@@ -58,6 +59,7 @@ import WebKit
     widgetHandler = WidgetHandler(messenger: messenger)
     lyricsMetadataWriterHandler = LyricsMetadataWriterHandler(messenger: messenger)
     ffmpegRingtoneHandler = FFmpegRingtoneHandler(messenger: messenger)
+    watchedFolderHandler = WatchedFolderHandler(messenger: messenger)
 
     GeneratedPluginRegistrant.register(with: self)
     if let registrar = self.registrar(forPlugin: "HLSDownloader") {

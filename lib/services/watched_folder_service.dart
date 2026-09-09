@@ -2,11 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'database_service.dart';
 import 'music_scanner_service.dart';
+import 'watched_folder_bookmarks.dart';
 
 /// Her açılışta seçili klasörü tarayıp yeni dosyaları kitaplığa ekleyen servis.
 /// Ayarlar > İzlenecek Klasör ile yönetilir; onboarding sonrası da erişilebilir.
@@ -23,6 +25,9 @@ class WatchedFolderService {
   final DatabaseService _db = DatabaseService.instance;
   final MusicScannerService _scanner = MusicScannerService();
   final ValueNotifier<int> libraryRevision = ValueNotifier<int>(0);
+  /// Son klasör seçiminin kullanıcıya gösterilecek notu (örn. iCloud reddi).
+  /// pickAndSaveWatchedFolder başında temizlenir.
+  String? lastPickNotice;
   Timer? _watchTimer;
   bool _scanRunning = false;
 
@@ -108,6 +113,11 @@ class WatchedFolderService {
         for (final folder in folders) {'path': folder, 'enabled': true},
       ]),
     );
+    if (Platform.isIOS) {
+      // Bookmark kaydını da düşür (yerel kopya akışından kalan inbox
+      // kayıtları etkilenmez; onlar kutu içidir).
+      await WatchedFolderBookmarks.removeFolder(normalized);
+    }
     // Klasor artik izlenmiyor: altindaki kayitlari kutuphaneden dusur
     // (dosyalara dokunulmaz). Sistem klasoru alti korunur.
     await _removeLibraryEntriesUnder(normalized);
@@ -124,6 +134,7 @@ class WatchedFolderService {
       for (final folder in removed) {
         await _removeLibraryEntriesUnder(folder);
       }
+      if (Platform.isIOS) await WatchedFolderBookmarks.clearFolders();
       libraryRevision.value++;
     } catch (_) {}
     // Sistem klasoru izlenmeye devam eder; izlemeyi tamamen durdurma.
@@ -160,20 +171,37 @@ class WatchedFolderService {
     return path.startsWith(prefix);
   }
 
-  /// Dosya seçiciyle klasör seçtir ve kaydet. iOS’ta getDirectoryPath desteklenmiyorsa
-  /// çoklu dosya seçimi ile klasörü çıkar.
-  ///
-  /// Kopyasiz izleme: secilen dosya zaten uygulama Documents'i altindaysa
-  /// kopyalanmaz, yerinde izlenir (sistem taramasi kapsar). Disaridaysa
-  /// (iCloud, baska uygulama) kalici erisim icin gelen kutusuna kopyalanir.
-  /// Donus: kopya yapildiysa gelen kutusu yolu, hepsi yerindeyse sistem
-  /// klasoru yolu, iptal/bos ise null.
+  /// Dosya seçiciyle klasör seçtir ve kaydet. iOS’ta önce native klasör
+  /// seçici + security-scoped bookmark denenir: başarılıysa dış klasör
+  /// KOPYALANMADAN yerinde izlenir. Kanal yoksa (eski derleme) ya da seçim
+  /// desteklenmiyorsa eski akışa düşülür: kutu dışı dosyalar kalıcı erişim
+  /// için gelen kutusuna kopyalanır.
+  /// Donus: izlenen klasor yolu, iptal/bos ise null.
   Future<String?> pickAndSaveWatchedFolder() async {
+    lastPickNotice = null;
     try {
       if (Platform.isIOS) {
-        // iOS does not grant a normal app a permanent arbitrary-directory
-        // path. Files outside our Documents container are imported into it;
-        // this directory remains visible in Files and can really be polled.
+        try {
+          final picked = await WatchedFolderBookmarks.pickFolder();
+          if (picked.icloudRejected) {
+            lastPickNotice =
+                'iCloud klasörleri izlenmiyor; Dosyalar > iPhone\'umda altından yerel bir klasör seç.';
+            return null;
+          }
+          final bookmarked = picked.path;
+          if (bookmarked != null && bookmarked.isNotEmpty) {
+            // Kopyasız izleme: bookmark kaydedildi, yerinde tara.
+            await setWatchedFolder(bookmarked);
+            await scanWatchedFolder();
+            return bookmarked;
+          }
+          // null: kullanıcı vazgeçti (ya da native hata; loglandı).
+          return null;
+        } on MissingPluginException {
+          // Eski derleme: dosya kopyalama akışına devam et.
+          debugPrint('WatchedFolder native picker yok, kopyalama akışına düşüldü');
+        }
+        // ... (aşağıdaki dosya seçici akışı yalnızca kanal yoksa çalışır)
         final result = await FilePicker.platform.pickFiles(
           allowMultiple: true,
           type: FileType.custom,
@@ -297,6 +325,10 @@ class WatchedFolderService {
       // gosterilmez ve silinemez.
       try {
         result.add(await systemFolderPath());
+      } catch (_) {}
+      // Bookmark'lı dış klasörler: erişimi tazele, yerinde tara (kopyasız).
+      try {
+        result.addAll(await WatchedFolderBookmarks.resolveFolders());
       } catch (_) {}
     }
     result.addAll(await _userFolders());

@@ -56,6 +56,7 @@ class YouTubeSource implements MusicSource {
         duration: duration,
         thumbnailUrl: thumb.isEmpty ? null : thumb,
         source: MusicSourceType.youtube,
+        itemType: (m['item_type'] ?? '').toString(),
       );
     } catch (_) {
       return null;
@@ -86,6 +87,15 @@ class YouTubeSource implements MusicSource {
 
   @override
   Future<String?> getStreamUrl(OnlineTrack track) async {
+    // Önce müzik-istemcili InnerTube (JollyTone hattı): müzik içeriğinde
+    // LOGIN_REQUIRED duvarına daha az takılır. Olmazsa explode yedeği.
+    try {
+      final innerTube =
+          await YtMusicService.instance.getStreamUrl(track.id);
+      if (innerTube != null && innerTube.isNotEmpty) return innerTube;
+    } catch (e) {
+      debugPrint('YouTube InnerTube stream miss: $e');
+    }
     try {
       // Dogrudan akis URL'i: dosya indirmeden just_audio ile streaming.
       return await ExplodeStreamService.instance.getStreamUrl(track.id);

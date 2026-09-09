@@ -510,6 +510,10 @@ class YtMusicService {
         'duration': duration,
         'thumbnail': thumb,
         'explicit': _hasExplicitBadge(c),
+        // YTM altyazı dizisi parçanın türünü söyler ("Song" / "Video").
+        // Video klipler gömülü oynatıcıda ve doğrudan akışta daha sık
+        // engellenir; müzik sürümünü öne almak için türü taşı.
+        'item_type': _itemTypeOf(c),
       };
     } catch (e) {
       debugPrint('parseItemExtended error $e');
@@ -547,8 +551,32 @@ class YtMusicService {
     return null;
   }
 
-  bool _hasExplicitBadge(Map<String, dynamic> c) {
-    final badges = c['badges'] as List?;
+  /// YTM arama öğesinin türü: altyazı dizisinde "Song" ya da "Video" yazar.
+  /// Müzik sürümleri (art track) doğrudan akışta ve gömülü oynatıcıda
+  /// neredeyse hiç engellenmez; video klipler sık engellenir.
+  String _itemTypeOf(Map<String, dynamic> c) {
+    final tokens = <String>[];
+    void addRuns(List? runs) {
+      if (runs == null) return;
+      for (final r in runs) {
+        final txt = (r as Map)['text']?.toString().trim().toLowerCase() ?? '';
+        if (txt.isNotEmpty) tokens.add(txt);
+      }
+    }
+
+    final flexColumns = c['flexColumns'] as List?;
+    if (flexColumns != null && flexColumns.length > 1) {
+      final fc1 = flexColumns[1] as Map?;
+      final fcr = fc1?['musicResponsiveListItemFlexColumnRenderer'] as Map?;
+      addRuns((fcr?['text'] as Map?)?['runs'] as List?);
+    }
+    addRuns((c['subtitle'] as Map?)?['runs'] as List?);
+    if (tokens.contains('video')) return 'video';
+    if (tokens.contains('song')) return 'song';
+    return '';
+  }
+
+  bool _hasExplicitBadge(Map<String, dynamic> c) {    final badges = c['badges'] as List?;
     if (badges == null) return false;
     for (final b in badges) {
       final r = (b as Map)['musicInlineBadgeRenderer'] as Map?;
@@ -619,7 +647,9 @@ class YtMusicService {
       'album_type': '',
       'explicit': t['explicit'] == true,
       'provider_id': 'ytmusic-native',
-      'item_type': 'track',
+      'item_type': (t['item_type']?.toString().trim().isNotEmpty ?? false)
+          ? t['item_type'].toString()
+          : 'track',
     };
   }
 
@@ -648,6 +678,22 @@ class YtMusicService {
   }
 
   // ---------- InnerTube download ----------
+  /// Sadece çalınabilir ses URL'i çözer (dosya indirmez).
+  /// JollyTone hattı: önce müzik-istemcili InnerTube player, çünkü
+  /// youtube.com player ucundaki istemciler daha sık LOGIN_REQUIRED döner.
+  Future<String?> getStreamUrl(String videoId) async {
+    try {
+      final result = await _requestInnerTubeAudioDownload(videoId.trim())
+          .timeout(const Duration(seconds: 15));
+      final url = result['url']?.toString() ?? '';
+      if (url.isEmpty || !url.startsWith('http')) return null;
+      return url;
+    } catch (e) {
+      debugPrint('YtMusic stream error $e');
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>?> downloadToFile({
     required String trackId,
     String title = '',

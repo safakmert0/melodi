@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:io';
 import 'dart:math';
 import '../core/constants.dart';
 import '../core/localization.dart';
@@ -67,7 +68,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _watchedLoading = false);
     await _loadWatchedFolder();
     if (!mounted) return;
-    if (path == null) return; // iptal
+    if (path == null) {
+      final notice = WatchedFolderService.instance.lastPickNotice;
+      if (notice != null && notice.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(notice),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+      return; // iptal
+    }
     if (path == _systemFolder) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -75,8 +87,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 'Dosyalar zaten uygulama klasöründe — kopyalanmadan izleniyor')),
       );
     } else {
+      // iOS kum havuzu: uygulama dışı seçilenler kalıcı erişim için içeri
+      // kopyalanır (Apple kısıtı). Bookmark ile seçilenler kopyasız izlenir.
+      final copiedIn = Platform.isIOS && path.contains('Imported Files');
+      final copyless = Platform.isIOS && !copiedIn;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('İzlenecek klasör: ${_shortPath(path)}')),
+        SnackBar(
+          content: Text(copiedIn
+              ? 'iOS kısıtı: seçilenler Melodi içine kopyalandı ve izleniyor. Kopyasız izleme için klasör seçiciyi kullan ya da dosyaları Dosyalar > Melodi klasörüne koy.'
+              : copyless
+                  ? 'İzlenecek klasör (kopyasız): ${_shortPath(path)}'
+                  : 'İzlenecek klasör: ${_shortPath(path)}'),
+          duration: const Duration(seconds: 4),
+        ),
       );
     }
     // Hemen tara

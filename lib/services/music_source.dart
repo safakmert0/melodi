@@ -20,6 +20,9 @@ class OnlineTrack {
   final String? streamUrl;
   final String? extensionId;
   final String? extensionName;
+  /// YTM arama türü: 'song' (müzik/art track), 'video' (klip) ya da ''.
+  /// Müzik sürümleri akışta/gömülü oynatıcıda neredeyse hiç engellenmez.
+  final String itemType;
 
   const OnlineTrack({
     required this.id,
@@ -33,12 +36,17 @@ class OnlineTrack {
     this.streamUrl,
     this.extensionId,
     this.extensionName,
+    this.itemType = '',
   });
 
   String get sourceLabel {
     if (extensionName != null && extensionName!.isNotEmpty) return extensionName!;
     return 'YouTube';
   }
+
+  /// Klip sürümü mü? Klipler gömülü oynatıcıda ve doğrudan akışta
+  /// daha sık engellenir (embed kapalı / giriş koruması).
+  bool get isVideo => itemType.trim().toLowerCase() == 'video';
 
   OnlineTrack copyWith({
     String? id,
@@ -52,6 +60,7 @@ class OnlineTrack {
     String? streamUrl,
     String? extensionId,
     String? extensionName,
+    String? itemType,
   }) {
     return OnlineTrack(
       id: id ?? this.id,
@@ -65,6 +74,7 @@ class OnlineTrack {
       streamUrl: streamUrl ?? this.streamUrl,
       extensionId: extensionId ?? this.extensionId,
       extensionName: extensionName ?? this.extensionName,
+      itemType: itemType ?? this.itemType,
     );
   }
 }

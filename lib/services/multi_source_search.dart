@@ -30,6 +30,9 @@ class MultiSourceSearch {
     final relevanceA = _queryRelevance(a, query);
     final relevanceB = _queryRelevance(b, query);
     if (relevanceA != relevanceB) return relevanceB.compareTo(relevanceA);
+    // Müzik sürümü (art track) önce: klipler gömülü oynatıcıda ve
+    // doğrudan akışta daha sık engellenir (embed kapalı / giriş koruması).
+    if (a.isVideo != b.isVideo) return a.isVideo ? 1 : -1;
     final ra = _displayRank(a);
     final rb = _displayRank(b);
     if (ra != rb) return ra.compareTo(rb);

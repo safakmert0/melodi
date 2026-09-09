@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:path_provider/path_provider.dart';
@@ -366,10 +367,31 @@ class MusicScannerService {
     final librarySongs = await scanMediaLibrary();
     allSongs.addAll(librarySongs);
 
-    final watchedFolder = await _db.getSetting('watched_folder');
-    if (watchedFolder != null && watchedFolder.isNotEmpty) {
-      final dirSongs = await scanDirectoryAndSync(watchedFolder);
-      allSongs.addAll(dirSongs);
+    // Tekli (legacy) + çoklu izleme listesi birlikte taranır.
+    // Eskiden sadece legacy anahtar okunuyordu; çoklu listedekiler
+    // pull-to-refresh taramasına girmiyordu.
+    final folders = <String>{};
+    final legacy = await _db.getSetting('watched_folder');
+    if (legacy != null && legacy.trim().isNotEmpty) {
+      folders.add(legacy.trim());
+    }
+    try {
+      final raw = await _db.getSetting('watched_folders');
+      if (raw != null && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          for (final item in decoded.whereType<Map>()) {
+            final p = item['path']?.toString().trim() ?? '';
+            if (item['enabled'] != false && p.isNotEmpty) folders.add(p);
+          }
+        }
+      }
+    } catch (_) {}
+    for (final folder in folders) {
+      try {
+        final dirSongs = await scanDirectoryAndSync(folder);
+        allSongs.addAll(dirSongs);
+      } catch (_) {}
     }
 
     return allSongs;

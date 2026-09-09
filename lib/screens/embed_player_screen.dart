@@ -20,6 +20,19 @@ class _EmbedPlayerScreenState extends State<EmbedPlayerScreen> {
   late final WebViewController _controller;
   bool _loading = true;
   String? _error;
+  // nocookie bazı ağlarda, youtube.com bazı kliplerde takılır;
+  // ilk hatada diğer host bir kez denenir.
+  bool _triedAlternateHost = false;
+  bool _useNocookie = true;
+
+  String get _embedUrl {
+    final id = widget.track.id.trim();
+    const auto = '1';
+    if (_useNocookie) {
+      return 'https://www.youtube-nocookie.com/embed/$id?autoplay=$auto&playsinline=1&rel=0&enablejsapi=1&origin=https://www.youtube.com';
+    }
+    return 'https://www.youtube.com/embed/$id?autoplay=$auto&playsinline=1&rel=0';
+  }
 
   @override
   void initState() {
@@ -43,17 +56,23 @@ class _EmbedPlayerScreenState extends State<EmbedPlayerScreen> {
             if (mounted) setState(() => _loading = false);
           },
           onWebResourceError: (error) {
-            if (mounted) {
-              setState(() {
-                _loading = false;
-                _error = error.description;
-              });
+            if (!mounted) return;
+            if (!_triedAlternateHost) {
+              _triedAlternateHost = true;
+              _useNocookie = !_useNocookie;
+              setState(() => _loading = true);
+              _controller.loadRequest(Uri.parse(_embedUrl));
+              return;
             }
+            setState(() {
+              _loading = false;
+              _error = error.description;
+            });
           },
         ),
       )
       ..loadRequest(
-        Uri.parse(EmbedPlaybackService.embedUrl(widget.track.id)),
+        Uri.parse(_embedUrl),
       );
   }
 
@@ -120,7 +139,13 @@ class _EmbedPlayerScreenState extends State<EmbedPlayerScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 OutlinedButton.icon(
-                  onPressed: () => _controller.reload(),
+                  onPressed: () {
+                    setState(() {
+                      _error = null;
+                      _loading = true;
+                    });
+                    _controller.loadRequest(Uri.parse(_embedUrl));
+                  },
                   icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: const Text('Tekrar dene'),
                 ),
