@@ -23,6 +23,16 @@ class ExplodeStreamService {
 
   Map<String, String> get streamHeaders => {'User-Agent': _userAgent};
 
+  String? _lastError;
+
+  /// Son cagrinin kisa hata aciklamasi (basarida null).
+  String? get lastError => _lastError;
+
+  static String _shortErr(Object e) {
+    final s = e.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
+    return s.length > 160 ? '${s.substring(0, 160)}…' : s;
+  }
+
   Future<AudioOnlyStreamInfo?> _pickAudio(String videoId) async {
     final id = videoId.trim();
     if (id.isEmpty) return null;
@@ -55,12 +65,17 @@ class ExplodeStreamService {
   /// Dogrudan calinabilir akis URL'i (just_audio AudioSource.uri ile).
   /// Dosya indirmeden streaming calis — JollyTone hizi buradan gelir.
   Future<String?> getStreamUrl(String videoId) async {
+    _lastError = null;
     try {
       final info = await _pickAudio(videoId);
       final url = info?.url.toString() ?? '';
-      if (url.isEmpty || !url.startsWith('http')) return null;
+      if (url.isEmpty || !url.startsWith('http')) {
+        _lastError = 'Akış bulunamadı (manifest boş)';
+        return null;
+      }
       return url;
     } catch (e) {
+      _lastError = _shortErr(e);
       debugPrint('Explode stream error: $e');
       return null;
     }
@@ -74,9 +89,13 @@ class ExplodeStreamService {
     void Function(int received, int? total)? onProgress,
     bool Function()? isCancelled,
   }) async {
+    _lastError = null;
     try {
       final info = await _pickAudio(videoId);
-      if (info == null) return null;
+      if (info == null) {
+        _lastError = _lastError ?? 'Akış bulunamadı (manifest boş)';
+        return null;
+      }
       var path = outputPath.trim();
       if (path.isEmpty) return null;
       final ext = info.container.name.toLowerCase().contains('mp4')
@@ -118,9 +137,11 @@ class ExplodeStreamService {
       }
       return path;
     } on TimeoutException catch (e) {
+      _lastError = 'Zaman aşımı: ${_shortErr(e)}';
       debugPrint('Explode download timeout: $e');
       return null;
     } catch (e) {
+      _lastError = _shortErr(e);
       debugPrint('Explode download error: $e');
       return null;
     }

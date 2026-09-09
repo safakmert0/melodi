@@ -1,13 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
-import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
+import '../providers/player_provider.dart';
 import '../services/embed_playback_service.dart';
 import '../services/music_source.dart';
 
 /// JollyTone tarzi gomulu oynatici: direkt stream blokluysa embed ile dinle.
+/// Controller serviste yasar; geri donunce muzik durmaz, mini player'da surer.
 class EmbedPlayerScreen extends StatefulWidget {
   const EmbedPlayerScreen({super.key, required this.track});
   final OnlineTrack track;
@@ -20,60 +23,37 @@ class _EmbedPlayerScreenState extends State<EmbedPlayerScreen> {
   late final WebViewController _controller;
   bool _loading = true;
   String? _error;
-  // nocookie bazı ağlarda, youtube.com bazı kliplerde takılır;
-  // ilk hatada diğer host bir kez denenir.
-  bool _triedAlternateHost = false;
-  bool _useNocookie = true;
-
-  String get _embedUrl {
-    final id = widget.track.id.trim();
-    const auto = '1';
-    if (_useNocookie) {
-      return 'https://www.youtube-nocookie.com/embed/$id?autoplay=$auto&playsinline=1&rel=0&enablejsapi=1&origin=https://www.youtube.com';
-    }
-    return 'https://www.youtube.com/embed/$id?autoplay=$auto&playsinline=1&rel=0';
-  }
 
   @override
   void initState() {
     super.initState();
-    // iOS: satir ici medya + otomatik oynatmaya izin ver, yoksa
-    // YouTube embed "yapilandirma hatasi" gosteriyor.
-    PlatformWebViewControllerCreationParams params =
-        const PlatformWebViewControllerCreationParams();
-    if (WebViewPlatform.instance is WebKitWebViewPlatform) {
-      params = WebKitWebViewControllerCreationParams(
-        allowsInlineMediaPlayback: true,
-        mediaTypesRequiringUserAction: const {},
-      );
-    }
-    _controller = WebViewController.fromPlatformCreationParams(params)
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFF000000))
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageFinished: (_) {
-            if (mounted) setState(() => _loading = false);
-          },
-          onWebResourceError: (error) {
-            if (!mounted) return;
-            if (!_triedAlternateHost) {
-              _triedAlternateHost = true;
-              _useNocookie = !_useNocookie;
-              setState(() => _loading = true);
-              _controller.loadRequest(Uri.parse(_embedUrl));
-              return;
-            }
+    final svc = EmbedPlaybackService.instance;
+    _controller = svc.controller();
+    _controller.setNavigationDelegate(
+      NavigationDelegate(
+        onPageFinished: (_) {
+          if (mounted) setState(() => _loading = false);
+        },
+        onWebResourceError: (error) {
+          if (mounted) {
             setState(() {
               _loading = false;
               _error = error.description;
             });
-          },
-        ),
-      )
-      ..loadRequest(
-        Uri.parse(_embedUrl),
-      );
+          }
+        },
+      ),
+    );
+    // Iki ses ust uste binmesin: yerel calis varsa durdur.
+    try {
+      final player = context.read<PlayerProvider>();
+      if (player.isPlaying) unawaited(player.pause());
+    } catch (_) {}
+    if (svc.activeTrack.value?.id != widget.track.id) {
+      unawaited(svc.play(widget.track));
+    } else {
+      _loading = false;
+    }
   }
 
   Future<void> _openInYouTube() async {
@@ -116,7 +96,7 @@ class _EmbedPlayerScreenState extends State<EmbedPlayerScreen> {
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                'Oynatici hatasi: $_error\nBazi kliplerde embed kapali olabilir; asagidan YouTube uygulamasinda acmayi dene.',
+                'Oynatici hatasi: $_error\nBazi kliplerde embed kapali olabilir (Hata 150/153); asagidan YouTube uygulamasinda acmayi dene.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.error),
@@ -126,7 +106,7 @@ class _EmbedPlayerScreenState extends State<EmbedPlayerScreen> {
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                'Dogrudan akis aginda engelli (YouTube giris korumasi). Gomulu oynatici ile dinliyorsun; indirme bu parcada kapali olabilir.',
+                'Dogrudan akis aginda engelli (YouTube giris korumasi). Gomulu oynatici ile dinliyorsun; geri donsen de muzik surer.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color:
@@ -141,10 +121,11 @@ class _EmbedPlayerScreenState extends State<EmbedPlayerScreen> {
                 OutlinedButton.icon(
                   onPressed: () {
                     setState(() {
-                      _error = null;
                       _loading = true;
+                      _error = null;
                     });
-                    _controller.loadRequest(Uri.parse(_embedUrl));
+                    unawaited(EmbedPlaybackService.instance
+                        .play(widget.track));
                   },
                   icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: const Text('Tekrar dene'),

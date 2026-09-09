@@ -4,6 +4,13 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.10.3] - 2026-09-10
+
+### Gomulu Calis Surekliligi + Indirme Seffafligi
+- Geri donunce muzik susmuyor: `lib/services/embed_playback_service.dart:1` controller artik singleton yasiyor; `lib/widgets/mini_player.dart:24` gomulu parcayi baslik/sanatci + Durdur ile gosteriyor, dokununca ekrana donuyor. Yerel calis baslayinca gomulu otomatik durur (`player_provider`), gomulu acilinca yerel duraklar.
+- Indirme neden takildigi gorunuyor: `explode_stream_service` gercek hatayi (`lastError`) donduruyor, `download_manager` onu mesaja yaziyor, `download_provider stateText` canli durumu gosteriyor. Bot duvari surerse mesajda sebebi yazar.
+- Not: Hata 153 = klibin sahibi embed'i kapatmis, o parcada cozum dogrudan akis; dogrudan akis telefon aginda `androidSdkless` ile denenir.
+
 ## [5.10.2] - 2026-09-10
 
 ### Akis Duzeltmesi: androidSdkless + 25 Sonuc

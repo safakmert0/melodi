@@ -179,6 +179,8 @@ class DownloadProvider extends ChangeNotifier {
       case DownloadState.pending:
         return 'Pending';
       case DownloadState.downloading:
+        // Canli durum mesajini goster (orn. 'YouTube indiriliyor...').
+        if (task.error != null && task.error!.isNotEmpty) return task.error!;
         if (task.progress < 0.25) return 'Resolving source...';
         if (task.progress < 0.75) return 'Downloading...';
         if (task.progress < 0.90) return 'Embedding metadata...';

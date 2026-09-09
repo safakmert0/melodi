@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../models/song_model.dart';
 import '../services/audio_handler.dart';
 import '../services/database_service.dart';
+import '../services/embed_playback_service.dart';
 import '../services/carplay_service.dart';
 import '../services/listening_recorder.dart';
 import '../services/widget_service.dart';
@@ -137,6 +138,8 @@ class PlayerProvider extends ChangeNotifier {
   }
 
   Future<void> playSong(SongModel song) async {
+    // Gomulu calis varsa durdur (iki ses ust uste binmesin).
+    EmbedPlaybackService.instance.stop();
     final isRemote = song.filePath.startsWith('youtube://') ||
         song.filePath.startsWith('spotify://') ||
         song.filePath.startsWith('online://') ||
@@ -190,6 +193,7 @@ class PlayerProvider extends ChangeNotifier {
   }
 
   Future<void> playFromQueue(List<SongModel> songs, int index) async {
+    EmbedPlaybackService.instance.stop();
     await _handler.playFromQueue(List<SongModel>.from(songs), index);
     _handler.savePlayerState();
     notifyListeners();

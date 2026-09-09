@@ -259,10 +259,11 @@ class DownloadManager {
               .timeout(const Duration(minutes: 5), onTimeout: () => null);
         }
         if (resultPath == null) {
-          // InnerTube su an LOGIN_REQUIRED donuyor; kullaniciya acik soyle.
+          final detail = ExplodeStreamService.instance.lastError;
           task.state = DownloadState.failed;
-          task.error =
-              'YouTube su an giris istiyor (bot korumasi). Arama calisir, indirme/çalma gecici kapali.';
+          task.error = (detail != null && detail.isNotEmpty)
+              ? 'İndirme başarısız: $detail'
+              : 'YouTube şu an giriş istiyor (bot koruması). Arama çalışır, indirme geçici kapalı.';
           _notify();
           _activeDownloads--;
           _processQueue();
