@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
+import '../explode_stream_service.dart';
 import '../music_source.dart';
 import '../ytmusic_service.dart';
 
-/// YouTube kaynağı: uygulamaya gömülü ytmusic paketi üzerinden.
-/// Ne sunucu ister ne hesap; arama + indirme paketin kendi hattıyla yapılır.
+/// YouTube kaynağı (JollyTone katmani): arama InnerTube, akis/indirme
+/// youtube_explode cok istemcili manifest + imza cozme ile.
+/// Ne sunucu ister ne hesap.
 class YouTubeSource implements MusicSource {
   @override
   MusicSourceType get type => MusicSourceType.youtube;
@@ -85,11 +87,8 @@ class YouTubeSource implements MusicSource {
   @override
   Future<String?> getStreamUrl(OnlineTrack track) async {
     try {
-      return await YtMusicService.instance.getPlayablePath(
-        trackId: track.id,
-        title: track.title,
-        artist: track.artist,
-      );
+      // Dogrudan akis URL'i: dosya indirmeden just_audio ile streaming.
+      return await ExplodeStreamService.instance.getStreamUrl(track.id);
     } catch (e) {
       debugPrint('YouTube stream error: $e');
       return null;

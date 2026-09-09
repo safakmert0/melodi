@@ -4,6 +4,14 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.9.0] - 2026-09-09
+
+### JollyTone Motoru Komple Entegre: youtube_explode_dart
+- `youtube_explode_dart: ^3.1.0` eklendi; yeni `lib/services/explode_stream_service.dart:1` JollyTone `yt_audio_stream`+`stream_client` karsiligi: cok istemcili manifest (`safari`+`androidVr` harman), kutuphane ici imza cozme, HLS destegi, iOS icin mp4/m4a tercihli en yuksek bitrate.
+- Calma artik dosya indirmeyi beklemiyor: `lib/services/audio_handler.dart` `youtube://` dogrudan akis URL'i (`AudioSource.uri`) ile just_audio streaming — JollyTone hizi buradan gelir. `lib/services/sources/youtube_source.dart:86` ayni hatta gecti.
+- Indirme gercek bayt pipe: `lib/services/download_manager.dart:482` `_downloadViaBundle` explode ile ilerlemeli (%20-75) + iptal destekli indiriyor; Arama (`YtMusicService`) aynen calisiyor.
+- Olmazsa embed yedegi korunuyor (`search_result_tiles` -> `EmbedPlayerScreen`).
+
 ## [5.8.1] - 2026-09-09
 
 ### Tarama Sekmesi Kalkti + Izlenen Klasor Duzeltmesi + Kopyasiz Izleme

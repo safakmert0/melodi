@@ -8,6 +8,7 @@ import 'package:audio_session/audio_session.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
 import 'database_service.dart';
+import 'explode_stream_service.dart';
 import 'review_service.dart';
 import 'track_matcher.dart';
 import 'multi_source_search.dart';
@@ -538,12 +539,14 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     }
     if (url.startsWith('youtube://')) {
       final videoId = url.replaceFirst('youtube://', '');
-      final path = await YtMusicService.instance.getPlayablePath(
-        trackId: videoId,
-        title: song.title,
-        artist: song.artist,
-      );
-      if (path != null) return AudioSource.file(path);
+      final streamUrl =
+          await ExplodeStreamService.instance.getStreamUrl(videoId);
+      if (streamUrl != null) {
+        return AudioSource.uri(
+          Uri.parse(streamUrl),
+          headers: ExplodeStreamService.instance.streamHeaders,
+        );
+      }
     }
     return AudioSource.uri(Uri.parse(url));
   }
@@ -562,14 +565,15 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       song = await _resolvePlayableSong(song);
       AudioSource audioSource;
       if (song.filePath.startsWith('youtube://')) {
+        // Dogrudan akis: dosyayi beklemeden just_audio ile streaming.
         final videoId = song.filePath.replaceFirst('youtube://', '');
-        final path = await YtMusicService.instance.getPlayablePath(
-          trackId: videoId,
-          title: song.title,
-          artist: song.artist,
-        );
-        if (path != null) {
-          audioSource = AudioSource.file(path);
+        final streamUrl =
+            await ExplodeStreamService.instance.getStreamUrl(videoId);
+        if (streamUrl != null) {
+          audioSource = AudioSource.uri(
+            Uri.parse(streamUrl),
+            headers: ExplodeStreamService.instance.streamHeaders,
+          );
         } else {
           throw StateError('YouTube parçası çözümlenemedi');
         }

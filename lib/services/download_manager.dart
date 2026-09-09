@@ -11,7 +11,7 @@ import 'lyrics_service.dart';
 import 'metadata_service.dart';
 import 'storage_manager.dart';
 import 'audio_quality_service.dart';
-import 'ytmusic_service.dart';
+import 'explode_stream_service.dart';
 
 enum DownloadState { pending, downloading, completed, failed }
 
@@ -500,8 +500,8 @@ class DownloadManager {
   static bool _isHttpUrl(String url) =>
       url.startsWith('http://') || url.startsWith('https://');
 
-  /// YouTube parçasını gömülü paketin hattıyla doğrudan indirme dizinine
-  /// indirir. Video kimliği `sourceVideoId` alanından alınır.
+  /// YouTube parçasını explode hattıyla (cok istemci + imza cozme)
+  /// doğrudan indirme dizinine indirir. Video kimliği `sourceVideoId` alanından alınır.
   Future<String?> _downloadViaBundle(
       DownloadTask task, Directory downloadDir) async {
     final videoId = (task.sourceVideoId ?? '').trim();
@@ -515,37 +515,27 @@ class DownloadManager {
       task.progress = 0.2;
       task.error = 'YouTube indiriliyor...';
       _notify();
-      final result = await YtMusicService.instance.downloadToFile(
-        trackId: videoId,
-        title: task.title,
-        artist: task.artist,
+      final path = await ExplodeStreamService.instance.downloadToFile(
+        videoId: videoId,
         outputPath: tmpPath,
-      );
-      if (result == null || result['success'] != true) {
-        debugPrint('Bundle download failed: ${result?['error']}');
-        return null;
-      }
-      var path = (result['file_path'] ?? '').toString();
-      if (path.isEmpty || !await File(path).exists()) return null;
-      final actualExt = (result['actual_extension'] ?? '').toString();
-      if (actualExt.isNotEmpty &&
-          !path.toLowerCase().endsWith(actualExt.toLowerCase())) {
-        try {
-          final normalizedExt =
-              actualExt.startsWith('.') ? actualExt : '.$actualExt';
-          final renamed = path.replaceFirst(
-              RegExp(r'\.[A-Za-z0-9]{1,5}$'), normalizedExt);
-          if (renamed != path) {
-            await File(path).rename(renamed);
-            path = renamed;
+        onProgress: (received, total) {
+          if (total != null && total > 0) {
+            task.progress = (0.2 + (received / total) * 0.55).clamp(0.2, 0.75);
+            task.error = 'YouTube indiriliyor...';
+            _notify();
           }
-        } catch (_) {}
+        },
+        isCancelled: () => task.cancelled,
+      ).timeout(const Duration(minutes: 10), onTimeout: () => null);
+      if (path == null || path.isEmpty || !await File(path).exists()) {
+        debugPrint('Explode download failed for $videoId');
+        return null;
       }
       task.progress = 0.75;
       _notify();
       return path;
     } catch (e) {
-      debugPrint('Bundle download error: $e');
+      debugPrint('Explode download error: $e');
       return null;
     }
   }
