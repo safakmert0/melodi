@@ -9,21 +9,23 @@ import '../screens/search_screen.dart';
 import '../screens/settings_screen.dart';
 import '../widgets/mini_player.dart';
 
-/// LA_Player eşdeğeri kabuk — Files (Imported Files + pull-to-refresh) + Library + Search + Settings
+/// JollyTone iskeleti birebir: Basla / Kesif / Kaydedilenler / Tarama / Ayarlar
+/// (Home=Basla main_screen, Search=Kesif search_screen, Library=Kaydedilenler saved_screen,
+/// Files=Tarama browse_screen, Settings=Ayarlar settings_screen) + MiniPlayer (bottom_player).
 const List<Widget> _pages = [
   HomeScreen(key: PageStorageKey('home')),
-  FilesScreen(key: PageStorageKey('files')),
-  LibraryScreen(key: PageStorageKey('library')),
   SearchScreen(key: PageStorageKey('search')),
+  LibraryScreen(key: PageStorageKey('library')),
+  FilesScreen(key: PageStorageKey('files')),
   SettingsScreen(key: PageStorageKey('settings')),
 ];
 
 const List<_ShellDestination> _destinations = [
-  _ShellDestination(icon: Icons.home_outlined, selectedIcon: Icons.home, labelKey: 'home'),
-  _ShellDestination(icon: Icons.folder_outlined, selectedIcon: Icons.folder, labelKey: 'files'),
-  _ShellDestination(icon: Icons.library_music_outlined, selectedIcon: Icons.library_music, labelKey: 'library'),
-  _ShellDestination(icon: Icons.search_outlined, selectedIcon: Icons.search, labelKey: 'search'),
-  _ShellDestination(icon: Icons.settings_outlined, selectedIcon: Icons.settings, labelKey: 'settings'),
+  _ShellDestination(icon: Icons.home_outlined, selectedIcon: Icons.home, labelKey: 'basla'),
+  _ShellDestination(icon: Icons.search_outlined, selectedIcon: Icons.search, labelKey: 'kesif'),
+  _ShellDestination(icon: Icons.library_music_outlined, selectedIcon: Icons.library_music, labelKey: 'kaydedilenler'),
+  _ShellDestination(icon: Icons.folder_outlined, selectedIcon: Icons.folder, labelKey: 'tarama'),
+  _ShellDestination(icon: Icons.settings_outlined, selectedIcon: Icons.settings, labelKey: 'ayarlar'),
 ];
 
 class MainShell extends StatefulWidget {
@@ -48,12 +50,35 @@ class _MainShellState extends State<MainShell> {
     final useRail = MediaQuery.sizeOf(context).width >= 600;
 
     String labelFor(String key) {
-      if (key == 'files') {
-        if (AppLocale.currentLocale == 'tr') return 'Dosyalar';
-        if (AppLocale.currentLocale == 'de') return 'Dateien';
-        return 'Files';
+      final locale = AppLocale.currentLocale;
+      switch (key) {
+        case 'basla':
+          if (locale == 'de') return 'Start';
+          if (locale == 'en') return 'Home';
+          return 'Başla';
+        case 'kesif':
+          if (locale == 'de') return 'Entdecken';
+          if (locale == 'en') return 'Explore';
+          return 'Keşif';
+        case 'kaydedilenler':
+          if (locale == 'de') return 'Gespeichert';
+          if (locale == 'en') return 'Saved';
+          return 'Kaydedilenler';
+        case 'tarama':
+          if (locale == 'de') return 'Durchsuchen';
+          if (locale == 'en') return 'Browse';
+          return 'Tarama';
+        case 'ayarlar':
+          if (locale == 'de') return 'Einstellungen';
+          if (locale == 'en') return 'Settings';
+          return 'Ayarlar';
+        case 'files':
+          if (locale == 'tr') return 'Dosyalar';
+          if (locale == 'de') return 'Dateien';
+          return 'Files';
+        default:
+          return AppLocale.tr(key);
       }
-      return AppLocale.tr(key);
     }
 
     final destinations = List<NavigationDestination>.generate(

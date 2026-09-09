@@ -4,6 +4,13 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.8.0] - 2026-09-09
+
+### JollyTone Birebir Kopya: Embed Yedek + Sekme Iskeleti
+- `webview_flutter: ^4.7.0` eklendi (JollyTone IPA'daki `webview_flutter_wkwebview` ile ayni). `lib/services/embed_playback_service.dart:1` + `lib/screens/embed_player_screen.dart:1`: direkt InnerTube `LOGIN_REQUIRED` dondugunde `youtube.com/embed/VIDEO_ID` ile dinleme. `lib/widgets/search/search_result_tiles.dart:148` `_play` artik once direkt dener, olmazsa embed ekrana duser.
+- Sekmeler JollyTone adlariyla: `lib/widgets/main_shell.dart:12` Basla/Kesif/Kaydedilenler/Tarama/Ayarlar (basla_ekran/main_screen, kesif_ekran/search_screen, kaydedilenler_ekran/saved_screen, tarama_ekran/browse_screen, ayarlar_ekran/settings_screen karsiligi).
+- Canli prob: `music.youtube.com` arama 200 OK; `youtubei/v1/player` 6 varyantta da LOGIN_REQUIRED (bu agdan). Cobalt/yt1d/Piped/Invidious public olu. Embed her agda acar.
+
 ## [5.7.3] - 2026-09-09
 
 ### Arama Gosterim + Indirme Kuyrugu + Offline Kopyalama

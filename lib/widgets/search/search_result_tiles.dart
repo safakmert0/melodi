@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/song_model.dart';
+import '../../screens/embed_player_screen.dart';
+import '../../services/embed_playback_service.dart';
 import '../../theme/app_tokens.dart';
 import '../../providers/download_provider.dart';
 import '../../providers/library_provider.dart';
@@ -181,6 +183,17 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
       }
 
       if (!mounted) return;
+      // JollyTone parity: direkt blokluysa embed oynaticiya dus.
+      final fallbackTrack = widget.track;
+      if (EmbedPlaybackService.isPlayableId(fallbackTrack.id)) {
+        EmbedPlaybackService.instance.logFallback(
+            fallbackTrack.id, lastError?.toString() ?? 'direct blocked');
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+              builder: (_) => EmbedPlayerScreen(track: fallbackTrack)),
+        );
+        return;
+      }
       final detail = lastError == null ? '' : ': $lastError';
       _message('Oynatma başarısız; sunucuya ulaşılamadı$detail',
           error: true);
