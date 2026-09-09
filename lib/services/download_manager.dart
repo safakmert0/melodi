@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:background_downloader/background_downloader.dart' as bg;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import '../models/song_model.dart';
@@ -504,6 +505,9 @@ class DownloadManager {
 
   /// YouTube parçasını explode hattıyla (cok istemci + imza cozme)
   /// doğrudan indirme dizinine indirir. Video kimliği `sourceVideoId` alanından alınır.
+  ///
+  /// Aktarim iOS URLSession arka plan indiricisiyle yapilir: uygulama
+  /// arkaplana alininca da indirme surer. Cozumleme foreground'da olur.
   Future<String?> _downloadViaBundle(
       DownloadTask task, Directory downloadDir) async {
     final videoId = (task.sourceVideoId ?? '').trim();
@@ -514,6 +518,31 @@ class DownloadManager {
       final baseName =
           safeTitle.isEmpty ? videoId : '${safeTitle}_$videoId';
       final tmpPath = '${downloadDir.path}/.tmp_$baseName.bin';
+      // 1. Akışı çözümle (manifest; hızlı olmalı).
+      task.progress = 0.15;
+      task.error = 'Kaynak çözümleniyor...';
+      _notify();
+      final resolved = await ExplodeStreamService.instance
+          .resolveStream(videoId)
+          .timeout(const Duration(seconds: 45), onTimeout: () => null);
+      if (resolved != null && !task.cancelled) {
+        // 2. Arka plan transferi.
+        task.progress = 0.2;
+        task.error = 'YouTube indiriliyor...';
+        _notify();
+        final bgPath = await _backgroundFetch(
+          task,
+          url: resolved.url,
+          headers: resolved.headers,
+          filename: '.tmp_$baseName${resolved.ext}',
+        );
+        if (bgPath != null && bgPath.isNotEmpty) {
+          task.progress = 0.75;
+          _notify();
+          return bgPath;
+        }
+        if (task.cancelled) return null;
+      }
       task.progress = 0.2;
       task.error = 'YouTube indiriliyor...';
       _notify();
@@ -562,6 +591,63 @@ class DownloadManager {
       return path;
     } catch (e) {
       debugPrint('Explode download error: $e');
+      return null;
+    }
+  }
+
+  /// iOS URLSession arka plan transferi. Uygulama arkaplana alininca ya da
+  /// ekran kilitlenince de indirme surer; bosta `null` doner (on plan yedek
+  /// devreye girer). Iptalde yarim dosyayi temizler.
+  Future<String?> _backgroundFetch(
+    DownloadTask task, {
+    required String url,
+    required Map<String, String> headers,
+    required String filename,
+  }) async {
+    try {
+      final bgTask = bg.DownloadTask(
+        url: url,
+        filename: filename,
+        headers: headers,
+        baseDirectory: bg.BaseDirectory.applicationDocuments,
+        directory: 'Melodi/Offline',
+        retries: 2,
+        metaData: task.id,
+      );
+      final result = await bg.FileDownloader()
+          .download(
+            bgTask,
+            onProgress: (p) {
+              task.progress =
+                  (0.2 + p.clamp(0.0, 1.0) * 0.55).clamp(0.2, 0.75);
+              _notify();
+            },
+          )
+          .timeout(const Duration(minutes: 15),
+              onTimeout: () => throw TimeoutException('arka plan indirme'));
+      final path = await bgTask.filePath();
+      if (task.cancelled) {
+        try {
+          if (path.isNotEmpty && await File(path).exists()) {
+            await File(path).delete();
+          }
+        } catch (_) {}
+        return null;
+      }
+      if (result.status != bg.TaskStatus.complete) {
+        debugPrint('Background download status: ${result.status}');
+        return null;
+      }
+      if (path.isEmpty || !await File(path).exists()) return null;
+      if (await File(path).length() < 1000) {
+        try {
+          await File(path).delete();
+        } catch (_) {}
+        return null;
+      }
+      return path;
+    } catch (e) {
+      debugPrint('Background download error: $e');
       return null;
     }
   }

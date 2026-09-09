@@ -33,7 +33,26 @@ class ExplodeStreamService {
     return s.length > 160 ? '${s.substring(0, 160)}…' : s;
   }
 
-  Future<AudioOnlyStreamInfo?> _pickAudio(String videoId) async {
+  /// Kapsayici adi -> dosya uzantisi. Bilinmeyende orijinal adi koru
+  /// (mp3/m4a/flac/opus/webm/3gp ne gelirse).
+  static String _extForContainer(String containerName) {
+    final n = containerName.toLowerCase().trim();
+    if (n.contains('mp4') || n.contains('m4a')) return '.m4a';
+    if (n.contains('webm')) return '.opus';
+    if (n.contains('3gp')) return '.3gp';
+    if (n.contains('mp3')) return '.mp3';
+    if (n.contains('flac')) return '.flac';
+    if (n.contains('ogg') || n.contains('opus')) return '.opus';
+    if (n.contains('wav')) return '.wav';
+    final clean = n.replaceAll(RegExp(r'[^a-z0-9]'), '');
+    if (clean.isNotEmpty && clean.length <= 5) return '.$clean';
+    return '.m4a';
+  }
+
+  Future<AudioOnlyStreamInfo?> _pickAudio(
+    String videoId, {
+    bool forDownload = false,
+  }) async {
     final id = videoId.trim();
     if (id.isEmpty) return null;
     // Istemciyi kutuphaneye birak: varsayilan androidSdkless PO Token
@@ -44,13 +63,36 @@ class ExplodeStreamService {
         .timeout(const Duration(seconds: 30));
     final audios = manifest.audioOnly.toList();
     if (audios.isEmpty) return null;
-    // iOS (just_audio/AVPlayer) mp4/m4a ister; once mp4 icinden en buyugu,
-    // yoksa genel en yuksek bitrate (JollyTone withHighestBitrate).
-    AudioOnlyStreamInfo? bestMp4;
     AudioOnlyStreamInfo? biggest;
     for (final a in audios) {
       if (biggest == null || a.size.totalBytes > biggest.size.totalBytes) {
         biggest = a;
+      }
+    }
+    // Indirme: uzanti fark etmez, ne varsa en buyugu (mp3/m4a/opus/webm).
+    // Yalnizca canli-yayin listesi (m3u8) indirilemez, elenir.
+    if (forDownload) {
+      AudioOnlyStreamInfo? bestFile;
+      for (final a in audios) {
+        if (a.container.name.toLowerCase().contains('m3u8')) continue;
+        if (bestFile == null ||
+            a.size.totalBytes > bestFile.size.totalBytes) {
+          bestFile = a;
+        }
+      }
+      return bestFile ?? biggest ?? manifest.audioOnly.withHighestBitrate();
+    }
+    // Akis: iOS (just_audio/AVPlayer) yalnizca AAC/MP4 calar; opus/webm
+    // secti mi yukleme (-1) hatasi verir. Siralama: AAC > mp4 > en buyuk.
+    AudioOnlyStreamInfo? bestAac;
+    AudioOnlyStreamInfo? bestMp4;
+    for (final a in audios) {
+      final codec = a.audioCodec.toLowerCase();
+      if (codec.contains('mp4a') || codec.contains('aac')) {
+        if (bestAac == null ||
+            a.size.totalBytes > bestAac.size.totalBytes) {
+          bestAac = a;
+        }
       }
       if (a.container.name.toLowerCase().contains('mp4')) {
         if (bestMp4 == null ||
@@ -59,7 +101,10 @@ class ExplodeStreamService {
         }
       }
     }
-    return bestMp4 ?? biggest ?? manifest.audioOnly.withHighestBitrate();
+    return bestAac ??
+        bestMp4 ??
+        biggest ??
+        manifest.audioOnly.withHighestBitrate();
   }
 
   /// Dogrudan calinabilir akis URL'i (just_audio AudioSource.uri ile).
@@ -81,6 +126,36 @@ class ExplodeStreamService {
     }
   }
 
+  /// Cozumlenmis akis (arka plan indiriciye verilir).
+  /// Donus null ise [_lastError] sebebi aciklar.
+  Future<({String url, Map<String, String> headers, int totalBytes, String ext})?>
+      resolveStream(String videoId) async {
+    _lastError = null;
+    try {
+      final info = await _pickAudio(videoId, forDownload: true);
+      if (info == null) {
+        _lastError = _lastError ?? 'Akış bulunamadı (manifest boş)';
+        return null;
+      }
+      final url = info.url.toString();
+      if (url.isEmpty || !url.startsWith('http')) {
+        _lastError = 'Akış bulunamadı (manifest boş)';
+        return null;
+      }
+      final ext = _extForContainer(info.container.name);
+      return (
+        url: url,
+        headers: Map<String, String>.from(streamHeaders),
+        totalBytes: info.size.totalBytes,
+        ext: ext,
+      );
+    } catch (e) {
+      _lastError = _shortErr(e);
+      debugPrint('Explode resolve error: $e');
+      return null;
+    }
+  }
+
   /// Gercek dosya indirme (byte pipe + ilerleme + iptal).
   /// Donus: dosya yolu veya null.
   Future<String?> downloadToFile({
@@ -91,16 +166,14 @@ class ExplodeStreamService {
   }) async {
     _lastError = null;
     try {
-      final info = await _pickAudio(videoId);
+      final info = await _pickAudio(videoId, forDownload: true);
       if (info == null) {
         _lastError = _lastError ?? 'Akış bulunamadı (manifest boş)';
         return null;
       }
       var path = outputPath.trim();
       if (path.isEmpty) return null;
-      final ext = info.container.name.toLowerCase().contains('mp4')
-          ? '.m4a'
-          : '.opus';
+      final ext = _extForContainer(info.container.name);
       if (!path.toLowerCase().endsWith(ext)) {
         if (RegExp(r'\.[A-Za-z0-9]{1,5}$').hasMatch(path)) {
           path = path.replaceFirst(RegExp(r'\.[A-Za-z0-9]{1,5}$'), ext);

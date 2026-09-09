@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:audio_service/audio_service.dart';
+import 'package:background_downloader/background_downloader.dart';
 import 'core/constants.dart';
 import 'core/localization.dart';
 import 'services/audio_handler.dart';
@@ -82,6 +83,12 @@ Future<void> main() async {
       await NotificationService.instance.init();
     } catch (e) {
       AppLogger.e('NotificationService init failed: $e');
+    }
+    try {
+      // Arka plan indirmeler (iOS URLSession): uygulama arkaplandayken surer.
+      await FileDownloader().start();
+    } catch (e) {
+      AppLogger.e('FileDownloader start failed: $e');
     }
     try {
       await AudioEffectsService().initialize();

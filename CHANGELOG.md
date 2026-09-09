@@ -4,6 +4,14 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.10.5] - 2026-09-10
+
+### Arka Planda Indirme + AAC Secimi + Gercek Surum
+- Arka plan destegi: `background_downloader: ^9.5.9` eklendi; `lib/services/download_manager.dart:597` `_backgroundFetch` iOS URLSession ile indirir — uygulama arkaplanda/kilitte de surer, bitince ayni kapak/soz islem hattina girer. Olmazsa on plan yedek devreye girer.
+- Dogrudan calis iyilestirmesi: akista **AAC codec** oncelikli secim (AVPlayer opus/webm'de `-1 bilinmeyen hata` veriyordu; tanilamadaki hata buydu). **Indirmede uzanti farki kalkti**: ne varsa en buyuk dosya iner (m4a/opus/webm/3gp), canli liste haric tutulur.
+- Cift calis karisikligi bitti: yerel calis baslayinca gomulu durur (`play`), gomulu acilinca yerel duraklar; iki mini player ust uste gelmez.
+- Tanilama raporu artik gercek surumu yazar (`PackageInfo`, sabit `5.0.1` kalkti).
+
 ## [5.10.4] - 2026-09-10
 
 ### Yuzdelik Ilerleme + Hizli Indirme Sonrasi Islem

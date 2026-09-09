@@ -200,6 +200,8 @@ class PlayerProvider extends ChangeNotifier {
   }
 
   Future<void> play() async {
+    // Gomulu calis varsa durdur (iki ses + cift mini player olmasin).
+    EmbedPlaybackService.instance.stop();
     await _handler.play();
     notifyListeners();
   }
