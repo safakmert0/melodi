@@ -4,6 +4,14 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.7.3] - 2026-09-09
+
+### Arama Gosterim + Indirme Kuyrugu + Offline Kopyalama
+- `lib/screens/search_screen.dart:20` `_controller` listener eklendi: yazarken parent rebuild olmadigi icin `if (_hasQuery)` hep false kaliyor, sonuclar hic gosterilmiyordu. Artik arama sonuclari ekrana geliyor.
+- `lib/services/download_manager.dart:225` erken-return kaldirildi: `directUrl==null` iken `sourceVideoId` varken bile `Eslesen sarki bulunamadi` verip cikiyordu. Artik videoId varsa bundle indiriyor; InnerTube LOGIN_REQUIRED ise acik hata yaziyor.
+- `lib/services/music_scanner_service.dart:191` LA parity: `importFromPaths` artik dosyalari `Documents/Melodi/Offline/Imported Files` altina kopyaliyor (temp/Inbox silinmesi sorunu bitti).
+- Not: canli testte `music.youtube.com` arama 200 + sonuc var, ama `www.youtube.com/youtubei/v1/player` tum istemcilerde LOGIN_REQUIRED (bot korumasi). Cobalt/yt1d/Piped/Invidious public hepsi olu (403/502/api=False). O yuzden YouTube cal/indirme su an acik hata verir; arama + offline tam calisir.
+
 ## [5.7.2] - 2026-09-08
 
 ### Sideload Crash Hotfix — SideStore Ana Ekrana Atma

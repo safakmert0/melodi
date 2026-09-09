@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:on_audio_query/on_audio_query.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/song_model.dart' as app;
@@ -190,7 +191,10 @@ class MusicScannerService {
 
   Future<List<app.SongModel>> importFromPaths(List<String> paths) async {
     try {
-      var songs = await MetadataService.extractMultipleMetadata(paths);
+      // LA_Player parity: secilen dosyalari Documents/Melodi/Offline/Imported Files
+      // altina kopyala; temp/Inbox yollari iOS'ta silinir.
+      final copied = await _copyIntoLibrary(paths);
+      var songs = await MetadataService.extractMultipleMetadata(copied);
       final existingPaths =
           await _db.getAllSongs().then((s) => s.map((e) => e.filePath).toSet());
       songs = songs.where((s) => !existingPaths.contains(s.filePath)).toList();
@@ -201,6 +205,52 @@ class MusicScannerService {
       return songs;
     } catch (e) {
       return [];
+    }
+  }
+
+  Future<List<String>> _copyIntoLibrary(List<String> paths) async {
+    try {
+      final docs = await _libraryDocsDir();
+      final imported = Directory('${docs.path}/Melodi/Offline/Imported Files');
+      await imported.create(recursive: true);
+      final out = <String>[];
+      for (final p in paths) {
+        try {
+          final src = File(p);
+          if (!await src.exists()) continue;
+          // Zaten kutuphanedeyse kopyalama.
+          if (p.startsWith(imported.path)) {
+            out.add(p);
+            continue;
+          }
+          final name = p.split(Platform.pathSeparator).last;
+          var dest = '${imported.path}/$name';
+          var i = 1;
+          while (await File(dest).exists()) {
+            final base = name.replaceAll(RegExp(r'\.[^.]+$'), '');
+            final ext = name.contains('.') ? name.split('.').last : 'mp3';
+            dest = '${imported.path}/$base ($i).$ext';
+            i++;
+          }
+          await src.copy(dest);
+          out.add(dest);
+        } catch (_) {
+          out.add(p);
+        }
+      }
+      return out.isEmpty ? paths : out;
+    } catch (_) {
+      return paths;
+    }
+  }
+
+  Future<Directory> _libraryDocsDir() async {
+    try {
+      return await getApplicationDocumentsDirectory();
+    } catch (_) {
+      final home = Platform.environment['HOME'] ?? '';
+      if (home.isNotEmpty) return Directory('$home/Documents');
+      return Directory('.');
     }
   }
 

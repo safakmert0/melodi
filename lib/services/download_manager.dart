@@ -222,13 +222,14 @@ class DownloadManager {
       task.error = 'Kaynaklar aranıyor...';
       _notify();
 
-      String? streamUrl = (task.directUrl != null && task.directUrl!.isNotEmpty)
+      final streamUrl = (task.directUrl != null && task.directUrl!.isNotEmpty)
           ? task.directUrl
           : null;
+      final videoId = (task.sourceVideoId ?? '').trim();
 
-      if (streamUrl == null || task.cancelled) {
+      if (task.cancelled) {
         task.state = DownloadState.failed;
-        task.error = 'Eşleşen şarkı bulunamadı';
+        task.error = 'İptal edildi';
         _notify();
         _activeDownloads--;
         _processQueue();
@@ -239,21 +240,43 @@ class DownloadManager {
       _notify();
 
       String? resultPath;
-      if (!_isHttpUrl(streamUrl) && await File(streamUrl).exists()) {
+      if (streamUrl != null &&
+          !_isHttpUrl(streamUrl) &&
+          await File(streamUrl).exists()) {
         debugPrint('Download using local file: $streamUrl');
         resultPath = streamUrl;
-      } else {
-        // YouTube: paketin kendi hattıyla doğrudan indirme dizinine indir.
+      } else if (videoId.isNotEmpty) {
+        // YouTube: InnerTube ile dogrudan indirme dizinine indir.
         task.progress = 0.15;
         task.error = 'YouTube indiriliyor...';
         _notify();
         resultPath = await _downloadViaBundle(task, downloadDir)
             .timeout(const Duration(minutes: 8), onTimeout: () => null);
-        // Fallback: direkt URL üzerinden indirme (nadiren)
-        if (resultPath == null && _isHttpUrl(streamUrl)) {
+        // Fallback: direkt URL uzerinden indirme (nadiren)
+        if (resultPath == null && streamUrl != null && _isHttpUrl(streamUrl)) {
           resultPath = await _downloadFromUrl(streamUrl, task, downloadDir)
               .timeout(const Duration(minutes: 5), onTimeout: () => null);
         }
+        if (resultPath == null) {
+          // InnerTube su an LOGIN_REQUIRED donuyor; kullaniciya acik soyle.
+          task.state = DownloadState.failed;
+          task.error =
+              'YouTube su an giris istiyor (bot korumasi). Arama calisir, indirme/çalma gecici kapali.';
+          _notify();
+          _activeDownloads--;
+          _processQueue();
+          return;
+        }
+      } else if (streamUrl != null && _isHttpUrl(streamUrl)) {
+        resultPath = await _downloadFromUrl(streamUrl, task, downloadDir)
+            .timeout(const Duration(minutes: 5), onTimeout: () => null);
+      } else {
+        task.state = DownloadState.failed;
+        task.error = 'Eşleşen şarkı bulunamadı';
+        _notify();
+        _activeDownloads--;
+        _processQueue();
+        return;
       }
 
 

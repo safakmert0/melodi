@@ -24,6 +24,15 @@ class _SearchScreenState extends State<SearchScreen> {
 
   bool get _hasQuery => _controller.text.trim().isNotEmpty;
 
+  @override
+  void initState() {
+    super.initState();
+    // TextField degisiminde parent rebuild olmazsa sonuclar hic gosterilmez.
+    _controller.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
+
   Future<void> _maybeOpenPodcast(String value) async {
     if (!PodcastService.isPodcastUrl(value)) return;
     final navigator = Navigator.of(context);
