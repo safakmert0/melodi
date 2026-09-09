@@ -103,7 +103,10 @@ class WatchedFolderHandler: NSObject {
             return
         }
         do {
-            let bookmark = try url.bookmarkData(options: [.withSecurityScope],
+            // iOS'ta .withSecurityScope bayragi YOK (macOS'e ozel, derleyici
+            // hatasi verir). Belge seciciden gelen URL'nin bookmark'i zaten
+            // otomatik guvenlik kapsamli olur; bos secenek yeterlidir.
+            let bookmark = try url.bookmarkData(options: [],
                                                  includingResourceValuesForKeys: nil,
                                                  relativeTo: nil)
             var stored = loadBookmarks()
@@ -127,7 +130,7 @@ class WatchedFolderHandler: NSObject {
         for (key, data) in stored {
             var stale = false
             guard let url = try? URL(resolvingBookmarkData: data,
-                                     options: [.withSecurityScope, .withoutUI],
+                                     options: [.withoutUI],
                                      relativeTo: nil,
                                      bookmarkDataIsStale: &stale) else {
                 stored.removeValue(forKey: key)
@@ -136,7 +139,7 @@ class WatchedFolderHandler: NSObject {
             }
             if stale {
                 // Yenilemeyi dene, olmazsa kaydi dusur.
-                if let fresh = try? url.bookmarkData(options: [.withSecurityScope],
+                if let fresh = try? url.bookmarkData(options: [],
                                                      includingResourceValuesForKeys: nil,
                                                      relativeTo: nil) {
                     stored[key] = fresh

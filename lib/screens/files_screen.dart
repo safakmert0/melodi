@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/localization.dart';
 import '../providers/library_provider.dart';
 import '../providers/player_provider.dart';
+import '../services/music_scanner_service.dart';
 import '../services/storage_manager.dart';
 import '../widgets/song_tile.dart';
 import '../models/song_model.dart';
@@ -62,6 +63,33 @@ class _FilesScreenState extends State<FilesScreen> {
     await _load();
   }
 
+  /// Bulunulan klasörü yerinde yeniden tarar (kopyasız) + listeyi yeniler.
+  Future<void> _rescan() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final library = context.read<LibraryProvider>();
+    setState(() => _loading = true);
+    try {
+      final base = await StorageManager.instance.getStorageLocation();
+      final dir = _currentPath.isEmpty ? base : _currentPath;
+      final added = await MusicScannerService().scanDirectoryAndSync(dir);
+      if (mounted) {
+        await library.refresh();
+        await _load();
+      }
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(added.isEmpty
+                ? 'Yeni dosya yok'
+                : '${added.length} yeni parça eklendi'),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   Future<void> _enterDir(String path) async {
     setState(() => _currentPath = path);
     await _load();
@@ -112,6 +140,11 @@ class _FilesScreenState extends State<FilesScreen> {
               await context.read<LibraryProvider>().importFromDirectory();
               await _load();
             },
+          ),
+          IconButton(
+            tooltip: 'Tekrar tara',
+            icon: const Icon(Icons.sync_rounded),
+            onPressed: _rescan,
           ),
         ],
       ),

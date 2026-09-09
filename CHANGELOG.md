@@ -4,6 +4,16 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.10.1] - 2026-09-10
+
+### Build Hotfix — withSecurityScope iOS'ta Yok
+- 5.10.0 CI'da patladi (`Build iOS Device`, Swift: `'withSecurityScope' is unavailable in iOS` x3). Bayrak macOS'e ozelmis; iOS'ta belge seciciden gelen bookmark zaten otomatik guvenlik kapsamli. `ios/Runner/WatchedFolderHandler.swift:106/130/139` bos secenige (`[]`/`.withoutUI`) cevildi, bookmark cozumu + `startAccessingSecurityScopedResource` aynen calisir.
+
+## [5.10.0] - 2026-09-09
+
+### Kopyasiz Izleme: Security-Scoped Bookmark
+- Yeni `ios/Runner/WatchedFolderHandler.swift:19` (`com.melodi/watched_folders`): klasor secimi, bookmark saklama/cozme, silme/temizleme. `lib/services/watched_folder_bookmarks.dart:11` Dart koprusu + testleri. Dis klasorler kopyalanmadan yerinde izlenir.
+
 ## [5.9.0] - 2026-09-09
 
 ### JollyTone Motoru Komple Entegre: youtube_explode_dart
