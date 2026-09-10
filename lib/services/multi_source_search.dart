@@ -4,12 +4,8 @@ import '../core/app_config.dart';
 import 'extension_service.dart';
 import 'music_source.dart';
 import 'sources/youtube_music_source.dart';
-import 'sources/jiosaavn_source.dart';
-import 'sources/deezer_source.dart';
 import 'sources/navidrome_source.dart';
 import 'sources/hifi_source.dart';
-import 'sources/apple_music_source.dart';
-import 'sources/soundcloud_source.dart';
 import 'sources/extension_source.dart';
 
 class MultiSourceSearch {
@@ -21,25 +17,10 @@ class MultiSourceSearch {
     NavidromeSource(),
     HiFiSource(),
     YouTubeMusicSource(),
-    JioSaavnSource(),
-    DeezerSource(),
-    AppleMusicSource(),
-    SoundCloudSource(),
   ];
 
   List<MusicSource> get _filteredSources {
-    if (!AppConfig.isAppStoreBuild) return _sources;
-    try {
-      final hasBackend =
-          ExtensionService.instance.installed.any((e) => e.enabled);
-      if (hasBackend) return _sources;
-    } catch (_) {}
-    // App Store without premium extension: hide YouTube/JioSaavn full-track
-    return _sources
-        .where((s) =>
-            s.type != MusicSourceType.youtube &&
-            s.type != MusicSourceType.jiosaavn)
-        .toList();
+    return _sources;
   }
 
   List<MusicSource> get _extensionSources {
@@ -76,10 +57,7 @@ class MultiSourceSearch {
   static const Map<MusicSourceType, int> _fullTrackRank = {
     MusicSourceType.navidrome: 0,
     MusicSourceType.youtube: 1,
-    MusicSourceType.jiosaavn: 2,
-    MusicSourceType.appleMusic: 3,
-    MusicSourceType.soundcloud: 4,
-    MusicSourceType.hifi: 5,
+    MusicSourceType.hifi: 2,
   };
 
   int _displayRank(OnlineTrack track) {
