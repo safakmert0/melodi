@@ -87,8 +87,17 @@ class YouTubeSource implements MusicSource {
 
   @override
   Future<String?> getStreamUrl(OnlineTrack track) async {
-    // Önce müzik-istemcili InnerTube (JollyTone hattı): müzik içeriğinde
-    // LOGIN_REQUIRED duvarına daha az takılır. Olmazsa explode yedeği.
+    // Once explode (dogrulanmis AAC URL): el yapimi InnerTube,
+    // cozulmemis n-parametreli link dondurup AVPlayer'da -1 hatasi
+    // verdirebiliyor; o yuzden yedekte kalir.
+    try {
+      // Dogrudan akis URL'i: dosya indirmeden just_audio ile streaming.
+      final direct =
+          await ExplodeStreamService.instance.getStreamUrl(track.id);
+      if (direct != null && direct.isNotEmpty) return direct;
+    } catch (e) {
+      debugPrint('YouTube stream error: $e');
+    }
     try {
       final innerTube =
           await YtMusicService.instance.getStreamUrl(track.id);
@@ -96,13 +105,7 @@ class YouTubeSource implements MusicSource {
     } catch (e) {
       debugPrint('YouTube InnerTube stream miss: $e');
     }
-    try {
-      // Dogrudan akis URL'i: dosya indirmeden just_audio ile streaming.
-      return await ExplodeStreamService.instance.getStreamUrl(track.id);
-    } catch (e) {
-      debugPrint('YouTube stream error: $e');
-      return null;
-    }
+    return null;
   }
 
   @override

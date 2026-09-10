@@ -4,6 +4,11 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.10.8] - 2026-09-10
+
+### Calma Onceligi: Dogrulanmis Akis Once
+- Tanilamadaki `just_audio (-1) bilinmeyen hata`nin kaynagi bulundu: `youtube_source` el yapimi InnerTube sonucunu once donduruyordu; cozulmemis `n` parametreli link AVPlayer'da patliyordu. Artik once explode'un HEAD-dogrulamali AAC URL'i denenir, InnerTube yedektedir.
+
 ## [5.10.7] - 2026-09-10
 
 ### Sadece Kendi Oynatici + CarPlay Komple Yok
