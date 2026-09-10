@@ -7,8 +7,8 @@ import '../providers/search_provider.dart';
 import '../services/music_source.dart';
 import '../services/podcast_service.dart';
 import '../widgets/search/search_result_tiles.dart';
+import 'settings_screen.dart';
 import 'podcast_detail_screen.dart';
-import 'source_hub_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -21,9 +21,17 @@ class _SearchScreenState extends State<SearchScreen> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
   MusicSourceType? _selectedSource;
-  String? _selectedExtensionId;
 
   bool get _hasQuery => _controller.text.trim().isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    // TextField degisiminde parent rebuild olmazsa sonuclar hic gosterilmez.
+    _controller.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
 
   Future<void> _maybeOpenPodcast(String value) async {
     if (!PodcastService.isPodcastUrl(value)) return;
@@ -85,13 +93,13 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
               actions: [
                 IconButton(
-                  tooltip: 'Müzik kaynakları',
+                  tooltip: 'Ayarlar',
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => const SourceHubScreen(),
+                      builder: (_) => const SettingsScreen(),
                     ),
                   ),
-                  icon: const Icon(Icons.hub_rounded),
+                  icon: const Icon(Icons.settings_rounded),
                 ),
                 const SizedBox(width: 8),
               ],
@@ -107,7 +115,6 @@ class _SearchScreenState extends State<SearchScreen> {
                     offset: query.length,
                   );
                   context.read<SearchProvider>().search(query);
-                  setState(() => _selectedSource = null);
                 },
               ),
             const SliverPadding(padding: EdgeInsets.only(bottom: 176)),
@@ -133,9 +140,6 @@ class _SearchScreenState extends State<SearchScreen> {
               onPressed: () {
                 _controller.clear();
                 context.read<SearchProvider>().clearResults();
-                setState(() {
-                  _selectedSource = null;
-                });
               },
               icon: const Icon(Icons.close_rounded),
             ),
@@ -153,7 +157,6 @@ class _SearchScreenState extends State<SearchScreen> {
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
         onChanged: (query) {
-          setState(() => _selectedSource = null);
           context.read<SearchProvider>().search(query.trim());
         },
         onSubmitted: (query) {
@@ -194,13 +197,13 @@ class _SearchScreenState extends State<SearchScreen> {
     if (provider.onlineResults.isNotEmpty) {
       children.add(
         _ResultHeader(
-          title: 'Diğer kaynaklarda',
+          title: 'Çevrimiçi',
           count: provider.onlineResults.length,
           icon: Icons.public_rounded,
         ),
       );
       children.add(
-        SearchSourceFilters(
+        _SourceFilterChips(
           tracks: provider.onlineResults,
           selected: _selectedSource,
           onChanged: (value) => setState(() => _selectedSource = value),
@@ -236,6 +239,59 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     return SliverList(delegate: SliverChildListDelegate(children));
+  }
+}
+
+class _SourceFilterChips extends StatelessWidget {
+  const _SourceFilterChips({
+    required this.tracks,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final List<OnlineTrack> tracks;
+  final MusicSourceType? selected;
+  final ValueChanged<MusicSourceType?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final counts = <MusicSourceType, int>{};
+    for (final track in tracks) {
+      counts.update(track.source, (value) => value + 1, ifAbsent: () => 1);
+    }
+    final cs = Theme.of(context).colorScheme;
+    Widget chip(MusicSourceType? source, String label, int count) {
+      final active = selected == source;
+      return Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: FilterChip(
+          selected: active,
+          showCheckmark: false,
+          label: Text('$label $count', style: const TextStyle(fontSize: 13)),
+          side: BorderSide(color: cs.outlineVariant),
+          selectedColor: cs.surfaceContainerHighest,
+          backgroundColor: cs.surface,
+          onSelected: (_) => onChanged(source),
+        ),
+      );
+    }
+
+    String name(MusicSourceType source) => switch (source) {
+          MusicSourceType.youtube => 'YouTube',
+          _ => source.name,
+        };
+    return SizedBox(
+      height: 42,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: [
+          chip(null, 'Tümü', tracks.length),
+          for (final entry in counts.entries)
+            chip(entry.key, name(entry.key), entry.value),
+        ],
+      ),
+    );
   }
 }
 

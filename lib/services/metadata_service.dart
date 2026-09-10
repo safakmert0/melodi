@@ -6,7 +6,6 @@ import '../core/constants.dart';
 import 'database_service.dart';
 import 'lyrics_service.dart';
 import 'multi_source_search.dart';
-import 'sources/youtube_music_source.dart';
 import 'music_source.dart';
 import 'musicbrainz_service.dart';
 
@@ -159,9 +158,7 @@ class MetadataService {
     return files;
   }
 
-  static Future<BackfillReport> backfillAlbumArt({
-    YouTubeMusicSource? ytmusicSource,
-  }) async {
+  static Future<BackfillReport> backfillAlbumArt() async {
     final tracks = await _db.getTracksMissingArt();
     final failures = <String>[];
     int updated = 0;
@@ -178,15 +175,13 @@ class MetadataService {
       String? url;
       String sourceLabel = 'unknown';
       try {
-        // YouTube Music (no-auth search source).
-        if (ytmusicSource != null) {
-          final results =
-              await ytmusicSource.search('$artist $title', limit: 5);
-          final best = _bestOnlineCover(results, title, artist);
-          if (best != null) {
-            url = best.thumbnailUrl;
-            sourceLabel = 'YouTube Music';
-          }
+        // Çevrimiçi tek kaynak: YouTube.
+        final results = await MultiSourceSearch()
+            .searchAllSync('$artist $title', limitPerSource: 5);
+        final best = _bestOnlineCover(results, title, artist);
+        if (best != null) {
+          url = best.thumbnailUrl;
+          sourceLabel = best.sourceLabel;
         }
 
         // 3. Any other configured source as a last resort.
@@ -224,9 +219,7 @@ class MetadataService {
         updated: updated, total: tracks.length, failures: failures);
   }
 
-  static Future<BackfillReport> backfillLyrics({
-    YouTubeMusicSource? ytmusicSource,
-  }) async {
+  static Future<BackfillReport> backfillLyrics() async {
     final db = await _db.database;
     final tracks = await db.rawQuery('''
       SELECT s.id, s.title, s.artist, s.album, s.durationMs, s.filePath
@@ -468,11 +461,9 @@ class MetadataService {
     return enriched;
   }
 
-  static Future<BackfillReport> backfillAll({
-    YouTubeMusicSource? ytmusicSource,
-  }) async {
-    final art = await backfillAlbumArt(ytmusicSource: ytmusicSource);
-    final lyrics = await backfillLyrics(ytmusicSource: ytmusicSource);
+  static Future<BackfillReport> backfillAll() async {
+    final art = await backfillAlbumArt();
+    final lyrics = await backfillLyrics();
     final meta = await backfillTrackMetadata();
     return art + lyrics + meta;
   }

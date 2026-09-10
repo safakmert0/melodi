@@ -2,11 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'database_service.dart';
 import 'music_scanner_service.dart';
+import 'watched_folder_bookmarks.dart';
 
 /// Her açılışta seçili klasörü tarayıp yeni dosyaları kitaplığa ekleyen servis.
 /// Ayarlar > İzlenecek Klasör ile yönetilir; onboarding sonrası da erişilebilir.
@@ -23,34 +25,35 @@ class WatchedFolderService {
   final DatabaseService _db = DatabaseService.instance;
   final MusicScannerService _scanner = MusicScannerService();
   final ValueNotifier<int> libraryRevision = ValueNotifier<int>(0);
+  /// Son klasör seçiminin kullanıcıya gösterilecek notu (örn. iCloud reddi).
+  /// pickAndSaveWatchedFolder başında temizlenir.
+  String? lastPickNotice;
   Timer? _watchTimer;
   bool _scanRunning = false;
 
   static const Duration scanInterval = Duration(seconds: 5);
 
+  /// Uygulamanin kendi klasoru (Documents/Melodi). Her zaman izlenir,
+  /// silinemez; indirmeler ve kopyasiz izleme buradan kapsanir.
+  Future<String> systemFolderPath() async {
+    final documents = await getApplicationDocumentsDirectory();
+    final localMelodi = Directory(p.join(documents.path, 'Melodi'));
+    await localMelodi.create(recursive: true);
+    return localMelodi.path;
+  }
+
   Future<String?> getWatchedFolder() async {
     try {
-      final v = await _db.getSetting(_watchedFolderKey);
-      if (v != null && v.trim().isNotEmpty) return v.trim();
-      final multiple = await _db.getSetting('watched_folders');
-      if (multiple != null && multiple.isNotEmpty) {
-        final decoded = jsonDecode(multiple);
-        if (decoded is List) {
-          for (final item in decoded.whereType<Map>()) {
-            if (item['enabled'] != false &&
-                (item['path']?.toString().trim() ?? '').isNotEmpty) {
-              return item['path'].toString().trim();
-            }
-          }
-        }
-      }
-      final folders = await _enabledFolders();
+      final folders = await _userFolders();
       if (folders.isNotEmpty) return folders.first;
     } catch (_) {}
     return null;
   }
 
-  Future<List<String>> getWatchedFolders() => _enabledFolders();
+  /// Ayarlar UI listesi: SADECE kullanicinin ekledikleri (silinebilir).
+  /// Eskiden sistem klasoru de listeye kariyordu; silme/temizleme bu yuzden
+  /// ise yaramiyor gorunuyordu.
+  Future<List<String>> getWatchedFolders() => _userFolders();
 
   Future<bool> isAutoScanEnabled() async {
     try {
@@ -77,7 +80,7 @@ class WatchedFolderService {
   Future<void> setWatchedFolder(String path) async {
     try {
       final normalized = path.trim();
-      final folders = await _enabledFolders();
+      final folders = await _userFolders();
       if (!folders.contains(normalized)) folders.add(normalized);
       await _db.setSetting(
         _watchedFolderKey,
@@ -98,7 +101,7 @@ class WatchedFolderService {
 
   Future<void> removeWatchedFolder(String path) async {
     final normalized = path.trim();
-    final folders = await _enabledFolders()
+    final folders = await _userFolders()
       ..removeWhere((folder) => folder == normalized);
     await _db.setSetting(
       _watchedFolderKey,
@@ -110,26 +113,95 @@ class WatchedFolderService {
         for (final folder in folders) {'path': folder, 'enabled': true},
       ]),
     );
+    if (Platform.isIOS) {
+      // Bookmark kaydını da düşür (yerel kopya akışından kalan inbox
+      // kayıtları etkilenmez; onlar kutu içidir).
+      await WatchedFolderBookmarks.removeFolder(normalized);
+    }
+    // Klasor artik izlenmiyor: altindaki kayitlari kutuphaneden dusur
+    // (dosyalara dokunulmaz). Sistem klasoru alti korunur.
+    await _removeLibraryEntriesUnder(normalized);
+    libraryRevision.value++;
     await startMonitoring();
   }
 
   Future<void> clearWatchedFolder() async {
     try {
+      final removed = await _userFolders();
       await _db.setSetting(_watchedFolderKey, '');
       await _db.setSetting(_watchedFolderLastScanKey, '');
       await _db.setSetting('watched_folders', '[]');
+      for (final folder in removed) {
+        await _removeLibraryEntriesUnder(folder);
+      }
+      if (Platform.isIOS) await WatchedFolderBookmarks.clearFolders();
+      libraryRevision.value++;
     } catch (_) {}
-    stopMonitoring();
+    // Sistem klasoru izlenmeye devam eder; izlemeyi tamamen durdurma.
+    await startMonitoring();
   }
 
-  /// Dosya seçiciyle klasör seçtir ve kaydet. iOS’ta getDirectoryPath desteklenmiyorsa
-  /// çoklu dosya seçimi ile klasörü çıkar.
+  /// Verilen klasor altindaki sarki kayitlarini DB'den siler.
+  /// Dosyalar silinmez. Sistem (uygulama) klasoru alti korunur cunku
+  /// sistem taramasi kapsar; silinseler bile geri gelirler.
+  Future<void> _removeLibraryEntriesUnder(String folder) async {
+    try {
+      final normFolder = p.normalize(folder);
+      if (Platform.isIOS) {
+        final system = p.normalize(await systemFolderPath());
+        if (_isWithin(normFolder, system)) return;
+      }
+      final songs = await _db.getAllSongs();
+      for (final song in songs) {
+        try {
+          if (_isWithin(p.normalize(song.filePath), normFolder)) {
+            await _db.deleteSong(song.id);
+          }
+        } catch (_) {}
+      }
+    } catch (e) {
+      debugPrint('WatchedFolder cleanup failed: $e');
+    }
+  }
+
+  bool _isWithin(String path, String dir) {
+    if (path == dir) return true;
+    final sep = Platform.pathSeparator;
+    final prefix = dir.endsWith(sep) ? dir : '$dir$sep';
+    return path.startsWith(prefix);
+  }
+
+  /// Dosya seçiciyle klasör seçtir ve kaydet. iOS’ta önce native klasör
+  /// seçici + security-scoped bookmark denenir: başarılıysa dış klasör
+  /// KOPYALANMADAN yerinde izlenir. Kanal yoksa (eski derleme) ya da seçim
+  /// desteklenmiyorsa eski akışa düşülür: kutu dışı dosyalar kalıcı erişim
+  /// için gelen kutusuna kopyalanır.
+  /// Donus: izlenen klasor yolu, iptal/bos ise null.
   Future<String?> pickAndSaveWatchedFolder() async {
+    lastPickNotice = null;
     try {
       if (Platform.isIOS) {
-        // iOS does not grant a normal app a permanent arbitrary-directory
-        // path. Import selected files into our Documents container instead;
-        // this directory remains visible in Files and can really be polled.
+        try {
+          final picked = await WatchedFolderBookmarks.pickFolder();
+          if (picked.icloudRejected) {
+            lastPickNotice =
+                'iCloud klasörleri izlenmiyor; Dosyalar > iPhone\'umda altından yerel bir klasör seç.';
+            return null;
+          }
+          final bookmarked = picked.path;
+          if (bookmarked != null && bookmarked.isNotEmpty) {
+            // Kopyasız izleme: bookmark kaydedildi, yerinde tara.
+            await setWatchedFolder(bookmarked);
+            await scanWatchedFolder();
+            return bookmarked;
+          }
+          // null: kullanıcı vazgeçti (ya da native hata; loglandı).
+          return null;
+        } on MissingPluginException {
+          // Eski derleme: dosya kopyalama akışına devam et.
+          debugPrint('WatchedFolder native picker yok, kopyalama akışına düşüldü');
+        }
+        // ... (aşağıdaki dosya seçici akışı yalnızca kanal yoksa çalışır)
         final result = await FilePicker.platform.pickFiles(
           allowMultiple: true,
           type: FileType.custom,
@@ -150,25 +222,39 @@ class WatchedFolderService {
         );
         if (result == null || result.files.isEmpty) return null;
         final documents = await getApplicationDocumentsDirectory();
-        final imports = Directory(p.join(documents.path, 'Melodi', 'Imports'));
-        await imports.create(recursive: true);
+        final docsNorm = p.normalize(documents.path);
+        final inbox = Directory(
+            p.join(documents.path, 'Melodi', 'Offline', 'Imported Files'));
+        await inbox.create(recursive: true);
+        var copied = 0;
+        var inPlace = 0;
         for (final picked in result.files) {
           final sourcePath = picked.path;
           if (sourcePath == null || !await File(sourcePath).exists()) continue;
-          var destination = p.join(imports.path, p.basename(sourcePath));
+          if (_isWithin(p.normalize(sourcePath), docsNorm)) {
+            // Zaten uygulama klasorunde: kopyalama, yerinde izle.
+            inPlace++;
+            continue;
+          }
+          var destination = p.join(inbox.path, p.basename(sourcePath));
           var suffix = 1;
           while (await File(destination).exists()) {
             destination = p.join(
-              imports.path,
+              inbox.path,
               '${p.basenameWithoutExtension(sourcePath)} ($suffix)${p.extension(sourcePath)}',
             );
             suffix++;
           }
           await File(sourcePath).copy(destination);
+          copied++;
         }
-        await setWatchedFolder(imports.path);
         await scanWatchedFolder();
-        return imports.path;
+        if (copied > 0) {
+          await setWatchedFolder(inbox.path);
+          return inbox.path;
+        }
+        if (inPlace > 0) return systemFolderPath();
+        return null;
       }
       String? dir = await FilePicker.platform.getDirectoryPath(
         dialogTitle: 'İzlenecek klasörü seç',
@@ -210,16 +296,9 @@ class WatchedFolderService {
     }
   }
 
-  Future<List<String>> _enabledFolders() async {
+  /// Kullanicinin ekledigi klasorler (DB). Sistem klasoru dahil DEGIL.
+  Future<List<String>> _userFolders() async {
     final result = <String>{};
-    if (Platform.isIOS) {
-      // Files > On My iPhone > Melodi is the app Documents container. Always
-      // watch its user-facing Melodi directory, including Imports/Offline.
-      final documents = await getApplicationDocumentsDirectory();
-      final localMelodi = Directory(p.join(documents.path, 'Melodi'));
-      await localMelodi.create(recursive: true);
-      result.add(localMelodi.path);
-    }
     final single = await _db.getSetting(_watchedFolderKey);
     if (single != null && single.trim().isNotEmpty) result.add(single.trim());
     final raw = await _db.getSetting('watched_folders');
@@ -234,6 +313,25 @@ class WatchedFolderService {
         }
       } catch (_) {}
     }
+    return result.toList();
+  }
+
+  Future<List<String>> _enabledFolders() async {
+    final result = <String>{};
+    if (Platform.isIOS) {
+      // Files > On My iPhone > Melodi is the app Documents container. Always
+      // watch its user-facing Melodi directory, including Imports/Offline.
+      // Bu sistem klasorudur: taramaya dahildir ama kullanici listesinde
+      // gosterilmez ve silinemez.
+      try {
+        result.add(await systemFolderPath());
+      } catch (_) {}
+      // Bookmark'lı dış klasörler: erişimi tazele, yerinde tara (kopyasız).
+      try {
+        result.addAll(await WatchedFolderBookmarks.resolveFolders());
+      } catch (_) {}
+    }
+    result.addAll(await _userFolders());
     return result.toList();
   }
 

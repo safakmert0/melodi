@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import '../models/song_model.dart';
 import '../services/audio_handler.dart';
 import '../services/database_service.dart';
-import '../services/carplay_service.dart';
 import '../services/listening_recorder.dart';
 import '../services/widget_service.dart';
 
@@ -173,7 +172,6 @@ class PlayerProvider extends ChangeNotifier {
     _playStartTime = DateTime.now();
     _startScrobbleTimer(song);
     _handler.savePlayerState();
-    CarPlayService.updateNowPlaying(song);
     ListeningRecorder.instance.recordPlayback(
       song.id,
       song.title,

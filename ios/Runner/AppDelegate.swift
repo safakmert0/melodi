@@ -6,11 +6,11 @@ import WebKit
 @main
 @objc class AppDelegate: FlutterAppDelegate {
   private var airPlayHandler: AirPlayHandler?
-  private var carPlayHandler: CarPlayHandler?
   private var voiceControlHandler: VoiceControlHandler?
   private var widgetHandler: WidgetHandler?
   private var lyricsMetadataWriterHandler: LyricsMetadataWriterHandler?
   private var ffmpegRingtoneHandler: FFmpegRingtoneHandler?
+  private var watchedFolderHandler: WatchedFolderHandler?
 
   override func application(
     _ application: UIApplication,
@@ -53,11 +53,11 @@ import WebKit
       }
     }
     airPlayHandler = AirPlayHandler(messenger: messenger)
-    carPlayHandler = CarPlayHandler(messenger: messenger)
     voiceControlHandler = VoiceControlHandler(messenger: messenger)
     widgetHandler = WidgetHandler(messenger: messenger)
     lyricsMetadataWriterHandler = LyricsMetadataWriterHandler(messenger: messenger)
     ffmpegRingtoneHandler = FFmpegRingtoneHandler(messenger: messenger)
+    watchedFolderHandler = WatchedFolderHandler(messenger: messenger)
 
     GeneratedPluginRegistrant.register(with: self)
     if let registrar = self.registrar(forPlugin: "HLSDownloader") {

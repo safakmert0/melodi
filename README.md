@@ -24,9 +24,9 @@
 | ▶️ **Now Playing** | Full-screen player with album art, seek bar, queue |
 | 📋 **Playlists** | Create, edit, reorder, delete |
 | ❤️ **Favorites** | Mark songs as favorites |
-| 🔍 **Unified Search** | Search the device, Navidrome/Subsonic and supported online sources |
-| 🌐 **Personal Server** | Secure HTTPS Navidrome/Subsonic playback, playlists and offline downloads |
-| 🔗 **Spotify Library** | Import playlists and match owned server tracks by title, artist and duration |
+| 🔍 **YouTube Search** | Search YouTube (native InnerTube) + device library |
+| 🌐 **Offline** | Direct YouTube downloads to Documents/Melodi/Offline, no server/account needed |
+| 🔗 **Local Library** | Import from Files, watched folder, artwork/lyrics embedding |
 | 🔀 **Queue** | Add to queue, reorder, shuffle, repeat |
 | 📱 **Lock Screen** | Background playback with lock screen controls |
 | 🗄️ **SQLite Database** | Persistent storage for songs, playlists, favorites |

@@ -133,7 +133,7 @@ public class HLSDownloader: NSObject, FlutterPlugin, AVAssetDownloadDelegate {
     
     public func assetDownloadTask(_ task: AVAssetDownloadTask, didLoad timeRange: CMTimeRange, totalTimeRangesLoaded loadedTimeRanges: [NSValue], timeRangeExpectedToLoad: CMTimeRange) {
         // Progress reporting
-        let loadedDuration = loadedTimeRangesLoaded.reduce(0) { $0 + $1.timeRangeValue.duration.seconds }
+        let loadedDuration = loadedTimeRanges.reduce(0) { $0 + $1.timeRangeValue.duration.seconds }
         let totalDuration = timeRangeExpectedToLoad.duration.seconds
         
         if totalDuration > 0 {
@@ -193,7 +193,7 @@ public class HLSDownloader: NSObject, FlutterPlugin, AVAssetDownloadDelegate {
     
     public func application(_ application: UIApplication, handleEventsForBackgroundURLSession identifier: String, completionHandler: @escaping () -> Void) {
         if identifier == backgroundSessionIdentifier {
-            downloadSession.session.getTasksWithCompletionHandler { dataTasks, uploadTasks, downloadTasks in
+            downloadSession.getTasksWithCompletionHandler { dataTasks, uploadTasks, downloadTasks in
                 // Restore active downloads
                 for task in downloadTasks {
                     if let assetTask = task as? AVAssetDownloadTask {

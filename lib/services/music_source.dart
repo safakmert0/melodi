@@ -1,17 +1,11 @@
 import 'dart:typed_data';
 
-enum MusicSourceType { youtube, jiosaavn, deezer, navidrome, hifi, appleMusic, soundcloud }
+enum MusicSourceType { youtube }
 
 extension MusicSourceTypeCapabilities on MusicSourceType {
-  bool get supportsFullTrack =>
-      this == MusicSourceType.youtube ||
-      this == MusicSourceType.jiosaavn ||
-      this == MusicSourceType.navidrome ||
-      this == MusicSourceType.hifi ||
-      this == MusicSourceType.appleMusic ||
-      this == MusicSourceType.soundcloud;
+  bool get supportsFullTrack => this == MusicSourceType.youtube;
 
-  bool get isPreviewCatalogue => this == MusicSourceType.deezer;
+  bool get isPreviewCatalogue => false;
 }
 
 class OnlineTrack {
@@ -26,6 +20,9 @@ class OnlineTrack {
   final String? streamUrl;
   final String? extensionId;
   final String? extensionName;
+  /// YTM arama türü: 'song' (müzik/art track), 'video' (klip) ya da ''.
+  /// Müzik sürümleri akışta/gömülü oynatıcıda neredeyse hiç engellenmez.
+  final String itemType;
 
   const OnlineTrack({
     required this.id,
@@ -39,27 +36,17 @@ class OnlineTrack {
     this.streamUrl,
     this.extensionId,
     this.extensionName,
+    this.itemType = '',
   });
 
   String get sourceLabel {
     if (extensionName != null && extensionName!.isNotEmpty) return extensionName!;
-    switch (source) {
-      case MusicSourceType.youtube:
-        return 'YouTube';
-      case MusicSourceType.jiosaavn:
-        return 'JioSaavn';
-      case MusicSourceType.deezer:
-        return 'Deezer';
-      case MusicSourceType.navidrome:
-        return 'Navidrome';
-      case MusicSourceType.hifi:
-        return 'Hi-Fi';
-      case MusicSourceType.appleMusic:
-        return 'Apple Music';
-      case MusicSourceType.soundcloud:
-        return 'SoundCloud';
-    }
+    return 'YouTube';
   }
+
+  /// Klip sürümü mü? Klipler gömülü oynatıcıda ve doğrudan akışta
+  /// daha sık engellenir (embed kapalı / giriş koruması).
+  bool get isVideo => itemType.trim().toLowerCase() == 'video';
 
   OnlineTrack copyWith({
     String? id,
@@ -73,6 +60,7 @@ class OnlineTrack {
     String? streamUrl,
     String? extensionId,
     String? extensionName,
+    String? itemType,
   }) {
     return OnlineTrack(
       id: id ?? this.id,
@@ -86,6 +74,7 @@ class OnlineTrack {
       streamUrl: streamUrl ?? this.streamUrl,
       extensionId: extensionId ?? this.extensionId,
       extensionName: extensionName ?? this.extensionName,
+      itemType: itemType ?? this.itemType,
     );
   }
 }

@@ -225,6 +225,13 @@ class DownloadTaskCard extends StatelessWidget {
                     const SizedBox(height: 6),
                     Row(children: [
                       Expanded(child: Text(stateLabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: failed ? scheme.error : active ? scheme.onSurfaceVariant : scheme.onSurfaceVariant, fontSize: 10))),
+                      if (active && task.state == DownloadState.downloading)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: Text('%${(task.progress.clamp(0.0, 1.0) * 100).round()}',
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: scheme.onSurface, fontSize: 11, fontWeight: FontWeight.w700)),
+                        ),
                       Text(_qualityLabel(task.requestedQuality), style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant, fontSize: 9)),
                     ]),
                     if (active) ...[const SizedBox(height: 6), LinearProgressIndicator(value: task.state == DownloadState.pending ? null : task.progress.clamp(0, 1), minHeight: 2, backgroundColor: scheme.surfaceContainerHighest, color: scheme.onSurfaceVariant, borderRadius: BorderRadius.circular(2))],

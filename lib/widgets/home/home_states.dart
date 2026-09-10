@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../core/melodi_design.dart';
 import '../../providers/library_provider.dart';
-import '../../screens/source_hub_screen.dart';
 
 class HomeLibraryError extends StatelessWidget {
   const HomeLibraryError({
@@ -81,8 +80,8 @@ class HomeEmptyLibrary extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Dosyalarını içe aktar veya bir müzik hesabı bağla. '
-            'Melodi hepsini tek kitaplıkta düzenler.',
+            'Dosyalarını içe aktar, Melodi hepsini tek kitaplıkta düzenler. '
+            'Çevrimiçi için YouTube araması kullan.',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: scheme.onSurfaceVariant,
@@ -94,14 +93,6 @@ class HomeEmptyLibrary extends StatelessWidget {
             onPressed: library.importFromFiles,
             icon: const Icon(Icons.add_rounded, size: 18),
             label: const Text('Müzik ekle'),
-          ),
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const SourceHubScreen()),
-            ),
-            icon: const Icon(Icons.hub_rounded, size: 18),
-            label: const Text('Hesap bağla'),
           ),
         ],
       ),

@@ -4,9 +4,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:html/parser.dart' as html_parser;
-import '../models/extension.dart';
-import 'extension_service.dart';
-import 'js_extension_service.dart';
 import '../services/database_service.dart';
 
 class LrcLine {
@@ -304,7 +301,6 @@ class LyricsService {
     final durationSec = durationMs == null ? null : (durationMs / 1000).round();
     final batches = <List<Future<LyricsResult?> Function()>>[
       [
-        () => _tryExtensionLyrics(artist, track, durationMs),
         () => _tryPaxSearchProvider('spotify', artist, track),
         () => _tryPaxDirect(
               'musixmatch/lyrics',
@@ -504,35 +500,6 @@ class LyricsService {
       client.close(force: true);
     }
   }
-
-  static Future<LyricsResult?> _tryExtensionLyrics(
-      String artist, String track, int? durationMs) async {
-    await ExtensionService.instance.ensureLoaded();
-    for (final installed in ExtensionService.instance.installed) {
-      final manifest = installed.manifest;
-      if (!installed.enabled || !manifest.capabilities.contains('lyrics'))
-        continue;
-      final bundle = manifest.homepage;
-      if (bundle == null || bundle.isEmpty) continue;
-      final value = await JsExtensionService.instance.fetchLyrics(
-        RegistryEntry(
-          id: manifest.id,
-          name: manifest.name,
-          url: bundle,
-          version: manifest.version,
-          kind: manifest.kind,
-          permissions: manifest.permissions,
-        ),
-        title: track,
-        artist: artist,
-        durationMs: durationMs,
-      );
-      final parsed = _lyricsFromFlexiblePayload(value, manifest.name);
-      if (parsed != null) return parsed;
-    }
-    return null;
-  }
-
   static Future<LyricsResult?> _tryPaxSearchProvider(
       String provider, String artist, String track) async {
     final search = await _getJson(

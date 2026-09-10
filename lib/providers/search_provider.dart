@@ -97,6 +97,12 @@ class SearchProvider extends ChangeNotifier {
     Set<String> excludedUrls = const {},
     bool forPlayback = false,
   }) async {
+    // YouTube çözümü dosyanın tamamını indirebilir; kısa zaman aşımı
+    // her seferinde boş döndürürdü.
+    final needsDownload = track.source == MusicSourceType.youtube;
+    final timeout = needsDownload
+        ? const Duration(minutes: 3)
+        : const Duration(milliseconds: 4800);
     return await _multiSource
         .getStreamUrlWithFallback(
           track,
@@ -104,7 +110,7 @@ class SearchProvider extends ChangeNotifier {
           excludedUrls: excludedUrls,
           preferStableYouTubeReference: forPlayback,
         )
-        .timeout(const Duration(milliseconds: 4800));
+        .timeout(timeout);
   }
 
   void addRecentSearch(String query) {

@@ -8,7 +8,8 @@ import '../screens/search_screen.dart';
 import '../screens/settings_screen.dart';
 import '../widgets/mini_player.dart';
 
-/// Sade kabuk — LA Player gibi düz, blur ve ağır animasyon yok.
+/// Basla / Kesif / Kaydedilenler / Ayarlar + MiniPlayer.
+/// Klasor izleme Ayarlar > Izlenen Klasorler'den yonetilir (kopyasiz izleme).
 const List<Widget> _pages = [
   HomeScreen(key: PageStorageKey('home')),
   SearchScreen(key: PageStorageKey('search')),
@@ -17,10 +18,10 @@ const List<Widget> _pages = [
 ];
 
 const List<_ShellDestination> _destinations = [
-  _ShellDestination(icon: Icons.home_outlined, selectedIcon: Icons.home, labelKey: 'home'),
-  _ShellDestination(icon: Icons.search_outlined, selectedIcon: Icons.search, labelKey: 'search'),
-  _ShellDestination(icon: Icons.library_music_outlined, selectedIcon: Icons.library_music, labelKey: 'library'),
-  _ShellDestination(icon: Icons.settings_outlined, selectedIcon: Icons.settings, labelKey: 'settings'),
+  _ShellDestination(icon: Icons.home_outlined, selectedIcon: Icons.home, labelKey: 'basla'),
+  _ShellDestination(icon: Icons.search_outlined, selectedIcon: Icons.search, labelKey: 'kesif'),
+  _ShellDestination(icon: Icons.library_music_outlined, selectedIcon: Icons.library_music, labelKey: 'kaydedilenler'),
+  _ShellDestination(icon: Icons.settings_outlined, selectedIcon: Icons.settings, labelKey: 'ayarlar'),
 ];
 
 class MainShell extends StatefulWidget {
@@ -44,6 +45,34 @@ class _MainShellState extends State<MainShell> {
     final theme = Theme.of(context);
     final useRail = MediaQuery.sizeOf(context).width >= 600;
 
+    String labelFor(String key) {
+      final locale = AppLocale.currentLocale;
+      switch (key) {
+        case 'basla':
+          if (locale == 'de') return 'Start';
+          if (locale == 'en') return 'Home';
+          return 'Başla';
+        case 'kesif':
+          if (locale == 'de') return 'Entdecken';
+          if (locale == 'en') return 'Explore';
+          return 'Keşif';
+        case 'kaydedilenler':
+          if (locale == 'de') return 'Gespeichert';
+          if (locale == 'en') return 'Saved';
+          return 'Kaydedilenler';
+        case 'ayarlar':
+          if (locale == 'de') return 'Einstellungen';
+          if (locale == 'en') return 'Settings';
+          return 'Ayarlar';
+        case 'files':
+          if (locale == 'tr') return 'Dosyalar';
+          if (locale == 'de') return 'Dateien';
+          return 'Files';
+        default:
+          return AppLocale.tr(key);
+      }
+    }
+
     final destinations = List<NavigationDestination>.generate(
       _destinations.length,
       (i) {
@@ -51,7 +80,7 @@ class _MainShellState extends State<MainShell> {
         return NavigationDestination(
           icon: Icon(d.icon),
           selectedIcon: Icon(d.selectedIcon),
-          label: AppLocale.tr(d.labelKey),
+          label: labelFor(d.labelKey),
         );
       },
     );
@@ -89,7 +118,7 @@ class _MainShellState extends State<MainShell> {
                       NavigationRailDestination(
                         icon: Icon(d.icon),
                         selectedIcon: Icon(d.selectedIcon),
-                        label: Text(AppLocale.tr(d.labelKey)),
+                        label: Text(labelFor(d.labelKey)),
                       ),
                   ],
                 ),

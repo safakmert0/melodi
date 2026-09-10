@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:on_audio_query/on_audio_query.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/song_model.dart' as app;
@@ -190,7 +192,10 @@ class MusicScannerService {
 
   Future<List<app.SongModel>> importFromPaths(List<String> paths) async {
     try {
-      var songs = await MetadataService.extractMultipleMetadata(paths);
+      // LA_Player parity: secilen dosyalari Documents/Melodi/Offline/Imported Files
+      // altina kopyala; temp/Inbox yollari iOS'ta silinir.
+      final copied = await _copyIntoLibrary(paths);
+      var songs = await MetadataService.extractMultipleMetadata(copied);
       final existingPaths =
           await _db.getAllSongs().then((s) => s.map((e) => e.filePath).toSet());
       songs = songs.where((s) => !existingPaths.contains(s.filePath)).toList();
@@ -202,6 +207,69 @@ class MusicScannerService {
     } catch (e) {
       return [];
     }
+  }
+
+  Future<List<String>> _copyIntoLibrary(List<String> paths) async {
+    try {
+      final docs = await _libraryDocsDir();
+      final docsNorm = _norm(docs.path);
+      final imported = Directory('${docs.path}/Melodi/Offline/Imported Files');
+      await imported.create(recursive: true);
+      final out = <String>[];
+      for (final p in paths) {
+        try {
+          final src = File(p);
+          if (!await src.exists()) continue;
+          // Kopyasiz izleme: dosya zaten uygulama Documents'i altindaysa
+          // yerinde birak (sistem taramasi kapsar, cift kayit olmaz).
+          // Disaridaysa (temp/Inbox/iCloud) kalici kopya olustur.
+          if (_isWithin(_norm(p), docsNorm)) {
+            out.add(p);
+            continue;
+          }
+          final name = p.split(Platform.pathSeparator).last;
+          var dest = '${imported.path}/$name';
+          var i = 1;
+          while (await File(dest).exists()) {
+            final base = name.replaceAll(RegExp(r'\.[^.]+$'), '');
+            final ext = name.contains('.') ? name.split('.').last : 'mp3';
+            dest = '${imported.path}/$base ($i).$ext';
+            i++;
+          }
+          await src.copy(dest);
+          out.add(dest);
+        } catch (_) {
+          out.add(p);
+        }
+      }
+      return out.isEmpty ? paths : out;
+    } catch (_) {
+      return paths;
+    }
+  }
+
+  Future<Directory> _libraryDocsDir() async {
+    try {
+      return await getApplicationDocumentsDirectory();
+    } catch (_) {
+      final home = Platform.environment['HOME'] ?? '';
+      if (home.isNotEmpty) return Directory('$home/Documents');
+      return Directory('.');
+    }
+  }
+
+  String _norm(String path) {
+    var n = path.replaceAll('\\', '/');
+    while (n.contains('//')) {
+      n = n.replaceAll('//', '/');
+    }
+    return n;
+  }
+
+  bool _isWithin(String path, String dir) {
+    if (path == dir) return true;
+    final prefix = dir.endsWith('/') ? dir : '$dir/';
+    return path.startsWith(prefix);
   }
 
   Future<List<app.SongModel>> _enrichMissingArtwork(
@@ -299,10 +367,31 @@ class MusicScannerService {
     final librarySongs = await scanMediaLibrary();
     allSongs.addAll(librarySongs);
 
-    final watchedFolder = await _db.getSetting('watched_folder');
-    if (watchedFolder != null && watchedFolder.isNotEmpty) {
-      final dirSongs = await scanDirectoryAndSync(watchedFolder);
-      allSongs.addAll(dirSongs);
+    // Tekli (legacy) + çoklu izleme listesi birlikte taranır.
+    // Eskiden sadece legacy anahtar okunuyordu; çoklu listedekiler
+    // pull-to-refresh taramasına girmiyordu.
+    final folders = <String>{};
+    final legacy = await _db.getSetting('watched_folder');
+    if (legacy != null && legacy.trim().isNotEmpty) {
+      folders.add(legacy.trim());
+    }
+    try {
+      final raw = await _db.getSetting('watched_folders');
+      if (raw != null && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          for (final item in decoded.whereType<Map>()) {
+            final p = item['path']?.toString().trim() ?? '';
+            if (item['enabled'] != false && p.isNotEmpty) folders.add(p);
+          }
+        }
+      }
+    } catch (_) {}
+    for (final folder in folders) {
+      try {
+        final dirSongs = await scanDirectoryAndSync(folder);
+        allSongs.addAll(dirSongs);
+      } catch (_) {}
     }
 
     return allSongs;

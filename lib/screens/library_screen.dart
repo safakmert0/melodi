@@ -14,10 +14,11 @@ import '../providers/player_provider.dart';
 import '../providers/playlist_provider.dart';
 import '../widgets/library/library_components.dart';
 import '../widgets/song_tile.dart';
+import 'batch_artwork_screen.dart';
+import 'batch_metadata_editor_screen.dart';
 import 'create_playlist_screen.dart';
 import 'playlist_detail_screen.dart';
 import 'profile_screen.dart';
-import 'source_hub_screen.dart';
 import 'video_tools_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
@@ -40,6 +41,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
   late LibrarySourceFilter _source;
   late LibraryContentFilter _content;
   bool _isGridView = false;
+  bool _selectionMode = false;
+  final Set<String> _selectedIds = {};
 
   @override
   void initState() {
@@ -87,7 +90,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     child: LibraryHeader(
                       onProfile: () => _open(const ProfileScreen()),
                       onSearch: () => _showSearch(context, library),
-                      onSources: () => _open(const SourceHubScreen()),
+                      onSources: () => _showSearch(context, library),
                       onAdd: () => _showAddMenu(context, library),
                     ),
                   ),
@@ -196,7 +199,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
         LibraryEmptyState(
           title: 'Bu kaynakta parça yok',
           message:
-              'Dosya veya klasör ekleyebilir, hesaplarını bağlayabilir ya da aygıtını yeniden tarayabilirsin.',
+              'Dosya veya klasör ekleyebilir ya da aygıtını yeniden tarayabilirsin.',
+
           onAdd: () => _showAddMenu(context, context.read<LibraryProvider>()),
         ),
       ];
@@ -230,21 +234,224 @@ class _LibraryScreenState extends State<LibraryScreen> {
     }
 
     return [
+      if (_selectionMode)
+        SliverToBoxAdapter(child: _SelectionBar(songs: songs)),
       SliverList.builder(
         itemCount: songs.length,
         itemBuilder: (context, index) {
           final song = songs[index];
           final player = context.watch<PlayerProvider>();
-          return SongTile(
-            key: ValueKey(song.id),
-            song: song,
-            isPlaying: player.currentSong?.id == song.id,
-            onTap: () => player.playSong(song),
-            showFileSize: true,
+          final selected = _selectedIds.contains(song.id);
+          if (!_selectionMode) {
+            return GestureDetector(
+              onLongPress: () => _enterSelection(song.id),
+              child: SongTile(
+                key: ValueKey(song.id),
+                song: song,
+                isPlaying: player.currentSong?.id == song.id,
+                onTap: () => player.playSong(song),
+                showFileSize: true,
+              ),
+            );
+          }
+          final scheme = Theme.of(context).colorScheme;
+          return GestureDetector(
+            onLongPress: () => _toggleSelect(song.id),
+            child: SongTile(
+              key: ValueKey(song.id),
+              song: song,
+              isPlaying: player.currentSong?.id == song.id,
+              onTap: () => _toggleSelect(song.id),
+              showFileSize: true,
+              trailing: Checkbox(
+                value: selected,
+                activeColor: scheme.primary,
+                onChanged: (_) => _toggleSelect(song.id),
+              ),
+            ),
           );
         },
       ),
     ];
+  }
+
+  void _toggleSelect(String id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+        if (_selectedIds.isEmpty) _selectionMode = false;
+      } else {
+        _selectedIds.add(id);
+      }
+    });
+  }
+
+  void _enterSelection(String id) {
+    setState(() {
+      _selectionMode = true;
+      _selectedIds.add(id);
+    });
+  }
+
+  void _exitSelection() {
+    setState(() {
+      _selectionMode = false;
+      _selectedIds.clear();
+    });
+  }
+
+  Widget _SelectionBar({required List<SongModel> songs}) {
+    final scheme = Theme.of(context).colorScheme;
+    final allSelected =
+        songs.isNotEmpty && _selectedIds.length >= songs.length;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: 'Kapat',
+            icon: const Icon(Icons.close_rounded, size: 20),
+            onPressed: _exitSelection,
+          ),
+          Text(
+            '${_selectedIds.length} seçildi',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const Spacer(),
+          TextButton(
+            onPressed: () => setState(() {
+              if (allSelected) {
+                _selectedIds.clear();
+              } else {
+                _selectedIds.addAll(songs.map((s) => s.id));
+              }
+            }),
+            child: Text(allSelected ? 'Bırak' : 'Tümünü seç'),
+          ),
+          IconButton(
+            tooltip: 'Kapak ara',
+            icon: const Icon(Icons.image_search_rounded, size: 20),
+            onPressed: _selectedIds.isEmpty
+                ? null
+                : () => _openBatchArtwork(songs),
+          ),
+          IconButton(
+            tooltip: 'Metadata düzenle',
+            icon: const Icon(Icons.edit_rounded, size: 18),
+            onPressed: _selectedIds.isEmpty
+                ? null
+                : () => _openBatchMetadata(songs),
+          ),
+          IconButton(
+            tooltip: 'Listeye ekle',
+            icon: const Icon(Icons.playlist_add_rounded, size: 20),
+            onPressed: _selectedIds.isEmpty
+                ? null
+                : () => _addSelectionToPlaylist(),
+          ),
+          IconButton(
+            tooltip: 'Sil',
+            icon: Icon(Icons.delete_outline_rounded,
+                size: 20, color: scheme.error),
+            onPressed:
+                _selectedIds.isEmpty ? null : () => _deleteSelection(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _addSelectionToPlaylist() async {
+    final playlists = context.read<PlaylistProvider>().playlists;
+    if (playlists.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Önce bir çalma listesi oluşturun')),
+        );
+      }
+      return;
+    }
+    final picked = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Listeye ekle'),
+        children: [
+          for (final playlist in playlists)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(context).pop(playlist.id),
+              child: Text(
+                  '${playlist.name} (${playlist.songIds.length})'),
+            ),
+        ],
+      ),
+    );
+    if (picked == null || !mounted) return;
+    final ids = _selectedIds.toList();
+    await context
+        .read<PlaylistProvider>()
+        .addSongsToPlaylist(picked, ids);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${ids.length} parça listeye eklendi')),
+    );
+    _exitSelection();
+  }
+
+  Future<void> _deleteSelection() async {
+    final count = _selectedIds.length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Seçilenler silinsin mi?'),
+        content: Text(
+            '$count parça kitaplıktan kaldırılacak. Uygulama dosyaları da silinir.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Sil'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final removed = await context
+        .read<LibraryProvider>()
+        .deleteSongs(_selectedIds.toList());
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$removed parça silindi')),
+    );
+    _exitSelection();
+  }
+
+  Future<void> _openBatchArtwork(List<SongModel> songs) async {
+    final selected = songs.where((s) => _selectedIds.contains(s.id)).toList();
+    if (selected.isEmpty) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => BatchArtworkScreen(songs: selected)),
+    );
+    if (mounted) _exitSelection();
+  }
+
+  Future<void> _openBatchMetadata(List<SongModel> songs) async {
+    final selected = songs.where((s) => _selectedIds.contains(s.id)).toList();
+    if (selected.isEmpty) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => BatchMetadataEditorScreen(songs: selected)),
+    );
+    if (mounted) _exitSelection();
   }
 
   List<Widget> _collectionSlivers(
@@ -668,12 +875,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
               action: _LibraryAddAction.scan,
             ),
             const _AddActionTile(
-              icon: Icons.hub_rounded,
-              title: 'Müzik kaynağı bağla',
-              subtitle: 'Spotify, YouTube Music ve diğerleri',
-              action: _LibraryAddAction.sources,
-            ),
-            const _AddActionTile(
               icon: Icons.video_file_rounded,
               title: 'Videodan Zil Sesi Oluştur',
               subtitle: 'Video dosyasından ses çıkarıp zil sesi yap',
@@ -690,15 +891,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
       _open(const CreatePlaylistScreen());
       return;
     }
-    if (action == _LibraryAddAction.sources) {
-      _open(const SourceHubScreen());
-      return;
-    }
     if (action == _LibraryAddAction.videoTools) {
       _open(const VideoToolsScreen());
       return;
     }
 
+    final before = library.songCount;
     try {
       switch (action) {
         case _LibraryAddAction.files:
@@ -711,13 +909,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
           await library.scanMusic();
           break;
         case _LibraryAddAction.playlist:
-        case _LibraryAddAction.sources:
         case _LibraryAddAction.videoTools:
           break;
       }
       if (mounted) {
+        final added = library.songCount - before;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Kitaplık güncellendi')),
+          SnackBar(
+              content: Text(added > 0
+                  ? '$added parça eklendi (toplam ${library.songCount})'
+                  : 'Yeni parça bulunamadı (toplam ${library.songCount})')),
         );
       }
     } catch (error) {
@@ -828,4 +1029,4 @@ class _CollectionEntry {
   final VoidCallback onTap;
 }
 
-enum _LibraryAddAction { playlist, files, folder, scan, sources, videoTools }
+enum _LibraryAddAction { playlist, files, folder, scan, videoTools }

@@ -74,44 +74,6 @@ class AirPlayHandler: NSObject {
     }
 }
 
-// MARK: - CarPlay Handler
-class CarPlayHandler: NSObject {
-    private let channel: FlutterMethodChannel
-
-    init(messenger: FlutterBinaryMessenger) {
-        channel = FlutterMethodChannel(name: "com.melodi/carplay", binaryMessenger: messenger)
-        super.init()
-        channel.setMethodCallHandler(handle)
-    }
-
-    func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        switch call.method {
-        case "setNowPlaying":
-            guard let args = call.arguments as? [String: Any],
-                  let title = args["title"] as? String,
-                  let artist = args["artist"] as? String else {
-                result(false)
-                return
-            }
-            let album = args["album"] as? String ?? ""
-            let durationMs = args["durationMs"] as? Double ?? 0
-
-            var info = [String: Any]()
-            info[MPMediaItemPropertyTitle] = title
-            info[MPMediaItemPropertyArtist] = artist
-            info[MPMediaItemPropertyAlbumTitle] = album
-            info[MPMediaItemPropertyPlaybackDuration] = NSNumber(value: durationMs / 1000.0)
-            info[MPNowPlayingInfoPropertyPlaybackRate] = 1.0
-
-            MPNowPlayingInfoCenter.default().nowPlayingInfo = info
-            result(true)
-
-        default:
-            result(FlutterMethodNotImplemented)
-        }
-    }
-}
-
 // MARK: - Voice Control Handler
 class VoiceControlHandler: NSObject {
     private let channel: FlutterMethodChannel

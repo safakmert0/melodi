@@ -7,13 +7,8 @@ import '../../providers/download_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../providers/player_provider.dart';
 import '../../providers/search_provider.dart';
-import '../../services/extension_service.dart';
-import '../../services/multi_source_search.dart';
 import '../../services/music_source.dart';
-import '../../services/sources/extension_source.dart';
 import '../image_with_fallback.dart';
-
-Color musicSourceColor(MusicSourceType source) => const Color(0xFF3A3A3C);
 
 class LocalSearchResultTile extends StatelessWidget {
   const LocalSearchResultTile({super.key, required this.song});
@@ -106,9 +101,7 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
               border: Border.all(color: cs.outlineVariant),
             ),
             child: Text(
-              track.source.isPreviewCatalogue
-                  ? '${track.sourceLabel} · katalog'
-                  : track.sourceLabel,
+              track.sourceLabel,
               style: TextStyle(
                 color: cs.onSurfaceVariant,
                 fontSize: 10,
@@ -160,11 +153,10 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
     final playerProvider = context.read<PlayerProvider>();
     Object? lastError;
     try {
-      for (var attempt = 0; attempt < 3; attempt++) {
+      for (var attempt = 0; attempt < 2; attempt++) {
         final url = await searchProvider.getStreamUrlWithFallback(
           widget.track,
           excludedUrls: attemptedUrls,
-          forPlayback: true,
         );
         if (!mounted) return;
         if (url == null || url.isEmpty) break;
@@ -189,9 +181,9 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
       }
 
       if (!mounted) return;
+      // Tek oynatici: tikla-oynasin. Dogrudan akis yoksa kisa hata ver.
       final detail = lastError == null ? '' : ': $lastError';
-      _message('Oynatma başarısız; erişilebilen kaynaklar denendi$detail',
-          error: true);
+      _message('Çalınamadı$detail', error: true);
     } finally {
       if (mounted) setState(() => _playing = false);
     }
@@ -208,7 +200,7 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
         builder: (context) => AlertDialog(
           title: const Text('Müzik kitaplıkta mevcut'),
           content: Text(
-            '“${widget.track.title}” adlı müzik kitaplığında zaten var. '
+            '"${widget.track.title}" adlı müzik kitaplığında zaten var. '
             'Yine de indirmek istiyor musunuz?',
           ),
           actions: [
@@ -225,293 +217,30 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
       );
       if (shouldContinue != true || !mounted) return;
     }
-    final selection = await _showDownloadSourceSheet(context, widget.track);
-    if (selection.choice == _DownloadChoice.cancelled) return;
-    if (!mounted) return;
     setState(() => _downloading = true);
     try {
-      String? url;
-      if (selection.choice == _DownloadChoice.auto) {
-        url = await context
-            .read<SearchProvider>()
-            .getStreamUrlWithFallback(widget.track);
-      } else {
-        url = await _getStreamForSpecificSource(selection, widget.track);
-        if (url == null || url.isEmpty) {
-          _message(
-              '${_downloadSourceLabel(selection.choice, extensionName: selection.extensionName)} kaynağında bulunamadı, otomatik deneniyor...',
-              error: false);
-          url = await context
-              .read<SearchProvider>()
-              .getStreamUrlWithFallback(widget.track);
-        }
-      }
-      if (!mounted) return;
-      if (url == null || url.isEmpty) {
-        _message('${widget.track.title} için indirilebilir kaynak bulunamadı',
-            error: true);
-        return;
-      }
       final track = widget.track;
-      context.read<DownloadProvider>().enqueueTrack(
+      final queued = context.read<DownloadProvider>().enqueueTrack(
             spotifyTrackId: track.id,
             title: track.title,
             artist: track.artist,
             album: track.album ?? track.sourceLabel,
             imageUrl: track.thumbnailUrl,
-            sourceVideoId:
-                track.source == MusicSourceType.youtube ? track.id : null,
+            sourceVideoId: track.id,
             expectedDurationMs: track.duration.inMilliseconds,
-            directUrl: url,
           );
-      final label = selection.choice == _DownloadChoice.auto
-          ? 'otomatik'
-          : _downloadSourceLabel(selection.choice,
-              extensionName: selection.extensionName);
-      _message('${track.title} indirme kuyruğuna eklendi ($label)');
+      if (!mounted) return;
+      if (queued) {
+        _message('${track.title} indirme kuyruğuna eklendi');
+      } else {
+        _message('Bu parça zaten kuyrukta ya da indirilmiş');
+      }
     } catch (error) {
       if (mounted) _message('İndirme hatası: $error', error: true);
     } finally {
       if (mounted) setState(() => _downloading = false);
     }
   }
-
-  Future<String?> _getStreamForSpecificSource(
-      _DownloadSelection selection, OnlineTrack track) async {
-    try {
-      // Extension-specific: try that extension directly
-      if (selection.extensionId != null && selection.extensionId!.isNotEmpty) {
-        try {
-          final extSources = MultiSourceSearch()
-              .allSourcesForUi
-              .whereType<ExtensionMusicSource>()
-              .where((s) => s.id == selection.extensionId)
-              .toList();
-          if (extSources.isNotEmpty) {
-            final src = extSources.first;
-            // If track already from that extension, try direct
-            if (track.extensionId == selection.extensionId) {
-              final direct = await src.getStreamUrl(track);
-              if (direct != null) return direct;
-            }
-            final query = '${track.artist} - ${track.title}'.trim();
-            final results = await src.search(query, limit: 5);
-            if (results.isNotEmpty) {
-              results.sort((a, b) {
-                final da =
-                    (a.duration.inMilliseconds - track.duration.inMilliseconds)
-                        .abs();
-                final db =
-                    (b.duration.inMilliseconds - track.duration.inMilliseconds)
-                        .abs();
-                return da.compareTo(db);
-              });
-              for (final cand in results) {
-                final url = await src.getStreamUrl(cand);
-                if (url != null) return url;
-              }
-            }
-          }
-        } catch (_) {}
-      }
-      final type = _choiceToSourceType(selection.choice);
-      if (type == null) return null;
-      if (track.source == type && track.extensionId == selection.extensionId) {
-        final direct = await MultiSourceSearch().getStreamUrl(track);
-        if (direct != null) return direct;
-      }
-      final query = '${track.artist} - ${track.title}'.trim();
-      final results =
-          await MultiSourceSearch().searchAllSync(query, limitPerSource: 5);
-      final candidates = results
-          .where((t) =>
-              t.source == type &&
-              (selection.extensionId == null ||
-                  t.extensionId == selection.extensionId))
-          .toList();
-      // Fallback to any of that type if extension-specific empty
-      final filtered = candidates.isEmpty
-          ? results.where((t) => t.source == type).toList()
-          : candidates;
-      if (filtered.isEmpty) return null;
-      filtered.sort((a, b) {
-        final da =
-            (a.duration.inMilliseconds - track.duration.inMilliseconds).abs();
-        final db =
-            (b.duration.inMilliseconds - track.duration.inMilliseconds).abs();
-        return da.compareTo(db);
-      });
-      for (final cand in filtered) {
-        final url = await MultiSourceSearch().getStreamUrl(cand);
-        if (url != null) return url;
-      }
-      return null;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<_DownloadSelection> _showDownloadSourceSheet(
-      BuildContext context, OnlineTrack track) async {
-    final installed =
-        ExtensionService.instance.installed.where((e) => e.enabled).toList();
-    final hasHifiExt = installed.any((e) => e.manifest.kind.name == 'hifi');
-    final hasBackendExt =
-        installed.any((e) => e.manifest.kind.name == 'backend');
-    final result = await showModalBottomSheet<_DownloadSelection>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) {
-        final cs = Theme.of(ctx).colorScheme;
-        Widget tile(_DownloadChoice c, String title, String subtitle,
-            IconData icon, Color color,
-            {String? extensionId}) {
-          return ListTile(
-            leading: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: color, size: 22),
-            ),
-            title: Text(title,
-                style: const TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: Text(subtitle,
-                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
-            trailing: const Icon(Icons.chevron_right_rounded, size: 20),
-            onTap: () => Navigator.of(ctx)
-                .pop(_DownloadSelection(c, extensionId: extensionId)),
-          );
-        }
-
-        return SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 12, 8, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                            color: cs.outlineVariant,
-                            borderRadius: BorderRadius.circular(2))),
-                  ),
-                  const SizedBox(height: 12),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text('Kaynak seç',
-                        style: Theme.of(ctx)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700)),
-                  ),
-                  const SizedBox(height: 4),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                        '"${track.title}" için hangi kaynaktan indirilsin?',
-                        style: TextStyle(
-                            color: cs.onSurfaceVariant, fontSize: 13)),
-                  ),
-                  const SizedBox(height: 12),
-                  tile(
-                      _DownloadChoice.auto,
-                      'Otomatik (önerilen)',
-                      'En iyi eşleşme tüm kaynaklarda aranır',
-                      Icons.auto_awesome_rounded,
-                      cs.primary),
-                  if (hasBackendExt) ...[
-                    for (final ext in installed
-                        .where((e) => e.manifest.kind.name == 'backend')
-                        .take(3))
-                      tile(
-                          _DownloadChoice.youtube,
-                          'YouTube · ${ext.manifest.name}',
-                          '${ext.manifest.author} · v${ext.manifest.version} · eklenti',
-                          Icons.smart_display_rounded,
-                          const Color(0xFFFF3B30),
-                          extensionId: ext.manifest.id),
-                    tile(
-                        _DownloadChoice.youtube,
-                        'YouTube (genel)',
-                        'Tüm YouTube kaynakları denenecek',
-                        Icons.smart_display_rounded,
-                        const Color(0xFFFF3B30)),
-                  ] else
-                    tile(
-                        _DownloadChoice.youtube,
-                        'YouTube',
-                        'Açık kaynak · Piped/yt-dlp',
-                        Icons.smart_display_rounded,
-                        const Color(0xFFFF3B30)),
-                  if (hasHifiExt)
-                    for (final ext in installed
-                        .where((e) => e.manifest.kind.name == 'hifi')
-                        .take(3))
-                      tile(
-                          _DownloadChoice.hifi,
-                          'Hi-Fi · ${ext.manifest.name}',
-                          '${ext.manifest.author} · ${ext.manifest.version} · Lossless',
-                          Icons.graphic_eq_rounded,
-                          const Color(0xFF1ED760),
-                          extensionId: ext.manifest.id),
-                  if (!hasHifiExt)
-                    tile(
-                        _DownloadChoice.hifi,
-                        'Hi-Fi',
-                        'Lossless sunucu (eklenti gerekli)',
-                        Icons.graphic_eq_rounded,
-                        const Color(0xFF1ED760)),
-                  tile(
-                      _DownloadChoice.jiosaavn,
-                      'JioSaavn',
-                      '320kbps · Hindistan kataloğu',
-                      Icons.waves_rounded,
-                      const Color(0xFF2BC5B4)),
-                  tile(_DownloadChoice.navidrome, 'Navidrome', 'Kendi sunucun',
-                      Icons.dns_rounded, const Color(0xFF6C8CFF)),
-                  const SizedBox(height: 8),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-    return result ?? _DownloadSelection(_DownloadChoice.cancelled);
-  }
-
-  String _downloadSourceLabel(_DownloadChoice c, {String? extensionName}) {
-    if (extensionName != null && extensionName.isNotEmpty) {
-      if (c == _DownloadChoice.hifi) return 'Hi-Fi · $extensionName';
-      if (c == _DownloadChoice.youtube) return 'YouTube · $extensionName';
-    }
-    return switch (c) {
-      _DownloadChoice.youtube => 'YouTube',
-      _DownloadChoice.hifi => 'Hi-Fi',
-      _DownloadChoice.jiosaavn => 'JioSaavn',
-      _DownloadChoice.navidrome => 'Navidrome',
-      _DownloadChoice.auto => 'Otomatik',
-      _DownloadChoice.cancelled => 'İptal',
-    };
-  }
-
-  MusicSourceType? _choiceToSourceType(_DownloadChoice c) => switch (c) {
-        _DownloadChoice.youtube => MusicSourceType.youtube,
-        _DownloadChoice.hifi => MusicSourceType.hifi,
-        _DownloadChoice.jiosaavn => MusicSourceType.jiosaavn,
-        _DownloadChoice.navidrome => MusicSourceType.navidrome,
-        _ => null,
-      };
 
   void _message(String message, {bool error = false}) {
     final theme = Theme.of(context);
@@ -550,79 +279,4 @@ class _BusyIndicator extends StatelessWidget {
       ),
     );
   }
-}
-
-class SearchSourceFilters extends StatelessWidget {
-  const SearchSourceFilters({
-    super.key,
-    required this.tracks,
-    required this.selected,
-    required this.onChanged,
-  });
-
-  final List<OnlineTrack> tracks;
-  final MusicSourceType? selected;
-  final ValueChanged<MusicSourceType?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final counts = <MusicSourceType, int>{};
-    for (final track in tracks) {
-      counts.update(track.source, (value) => value + 1, ifAbsent: () => 1);
-    }
-    return SizedBox(
-      height: 42,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: [
-          _chip(context, null, 'Tümü', tracks.length),
-          for (final entry in counts.entries)
-            _chip(context, entry.key, _name(entry.key), entry.value),
-        ],
-      ),
-    );
-  }
-
-  Widget _chip(
-    BuildContext context,
-    MusicSourceType? source,
-    String label,
-    int count,
-  ) {
-    final active = selected == source;
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        selected: active,
-        showCheckmark: false,
-        label: Text('$label $count', style: const TextStyle(fontSize: 13)),
-        side: BorderSide(color: cs.outlineVariant),
-        selectedColor: cs.surfaceContainerHighest,
-        backgroundColor: cs.surface,
-        onSelected: (_) => onChanged(source),
-      ),
-    );
-  }
-
-  static String _name(MusicSourceType source) => switch (source) {
-        MusicSourceType.youtube => 'YouTube',
-        MusicSourceType.jiosaavn => 'JioSaavn',
-        MusicSourceType.deezer => 'Deezer',
-        MusicSourceType.navidrome => 'Navidrome',
-        MusicSourceType.hifi => 'Hi-Fi',
-        MusicSourceType.appleMusic => 'Apple Music',
-        MusicSourceType.soundcloud => 'SoundCloud',
-      };
-}
-
-enum _DownloadChoice { auto, youtube, hifi, jiosaavn, navidrome, cancelled }
-
-class _DownloadSelection {
-  const _DownloadSelection(this.choice, {this.extensionId})
-      : extensionName = null;
-  final _DownloadChoice choice;
-  final String? extensionId;
-  final String? extensionName;
 }

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../core/localization.dart';
 import '../../screens/profile_screen.dart';
 import '../../screens/settings_screen.dart';
-import '../../screens/source_hub_screen.dart';
 import '../../screens/search_screen.dart';
 
 class HomeHeader extends StatelessWidget {
@@ -26,16 +25,6 @@ class HomeHeader extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    _HeaderButton(
-                      tooltip: 'Müzik kaynaklarını bağla',
-                      icon: Icons.hub_outlined,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const SourceHubScreen(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
                     Tooltip(
                       message: 'Profil',
                       child: InkWell(

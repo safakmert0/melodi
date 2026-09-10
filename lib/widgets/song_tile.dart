@@ -26,7 +26,6 @@ class SongTile extends StatelessWidget {
   final bool showArtwork;
   final bool showFavorite;
   final double artworkSize;
-  final Widget? wrongMatchButton;
   final double? confidence;
   final bool showFileSize;
 
@@ -46,7 +45,6 @@ class SongTile extends StatelessWidget {
     this.showArtwork = true,
     this.showFavorite = true,
     this.artworkSize = 48,
-    this.wrongMatchButton,
     this.confidence,
     this.showFileSize = false,
   });
@@ -176,7 +174,6 @@ class SongTile extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (wrongMatchButton != null) wrongMatchButton!,
               _DownloadIndicator(song: song),
               if (showFavorite)
                 IconButton(

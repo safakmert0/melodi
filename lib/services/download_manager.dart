@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:background_downloader/background_downloader.dart' as bg;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import '../models/song_model.dart';
@@ -9,12 +10,10 @@ import 'database_service.dart';
 import 'lyrics_embedding_service.dart';
 import 'lyrics_service.dart';
 import 'metadata_service.dart';
-import 'multi_source_search.dart';
-import 'music_source.dart';
 import 'storage_manager.dart';
 import 'audio_quality_service.dart';
-import 'track_matcher.dart';
-import 'youtube_downloader.dart';
+import 'explode_stream_service.dart';
+import 'ytmusic_service.dart';
 
 enum DownloadState { pending, downloading, completed, failed }
 
@@ -22,7 +21,8 @@ class DownloadTask {
   final String id;
   final String spotifyTrackId;
   final String? sourceVideoId;
-  final String? directUrl;
+  // Bayat URL retry'de tazelenebilsin diye final değil.
+  String? directUrl;
   final String title;
   final String artist;
   final String? album;
@@ -70,8 +70,6 @@ class DownloadManager {
   static const int _maxRetries = 3;
   final StreamController<List<DownloadTask>> _controller =
       StreamController<List<DownloadTask>>.broadcast();
-  final YouTubeDownloader _youtubeDownloader = YouTubeDownloader();
-  final MultiSourceSearch _multiSource = MultiSourceSearch();
 
   Future<void> _cleanupOrphanedParts() async {
     try {
@@ -184,34 +182,6 @@ class DownloadManager {
     return (candidate.inMilliseconds - expectedMs).abs() <= toleranceMs;
   }
 
-  List<OnlineTrack> _rankOnlineTracks(
-      Iterable<OnlineTrack> tracks, DownloadTask task) {
-    final candidates = tracks
-        .where((track) =>
-            isDurationCompatible(track.duration, task.expectedDurationMs))
-        .toList();
-    candidates.sort((a, b) {
-      final aScore = TrackMatcher.scoreWithDuration(
-        task.title,
-        task.artist,
-        task.expectedDurationMs,
-        a.title,
-        a.artist,
-        a.duration.inMilliseconds,
-      );
-      final bScore = TrackMatcher.scoreWithDuration(
-        task.title,
-        task.artist,
-        task.expectedDurationMs,
-        b.title,
-        b.artist,
-        b.duration.inMilliseconds,
-      );
-      return bScore.compareTo(aScore);
-    });
-    return candidates;
-  }
-
   Future<void> _processQueue() async {
     // Wi-Fi only kontrolü — Evermusic/SpotiFLAC esintili
     if (_wifiOnly) {
@@ -254,197 +224,14 @@ class DownloadManager {
       task.error = 'Kaynaklar aranıyor...';
       _notify();
 
-      final query = '${task.artist} - ${task.title}';
-      String? streamUrl = task.directUrl;
-      List<OnlineTrack> allTracks = const [];
+      final streamUrl = (task.directUrl != null && task.directUrl!.isNotEmpty)
+          ? task.directUrl
+          : null;
+      final videoId = (task.sourceVideoId ?? '').trim();
 
-      if (streamUrl == null || streamUrl.isEmpty) {
-        try {
-          allTracks = await _multiSource
-              .searchAllSync(query, limitPerSource: 3)
-              .timeout(const Duration(seconds: 15));
-        } on TimeoutException {
-          debugPrint('Download search timeout for "$query"');
-          allTracks = [];
-        } catch (_) {
-          allTracks = [];
-        }
-      }
-      if (allTracks.isNotEmpty) {
-        final priorityOrder = [
-          MusicSourceType.navidrome,
-          MusicSourceType.jiosaavn,
-        ];
-        for (final sourceType in priorityOrder) {
-          final sourceTracks = _rankOnlineTracks(
-            allTracks.where((track) => track.source == sourceType),
-            task,
-          );
-          if (sourceTracks.isEmpty) continue;
-          for (final track in sourceTracks.take(2)) {
-            if (task.cancelled) break;
-            try {
-              task.progress = 0.1;
-              task.error = '${track.sourceLabel} deneniyor...';
-              _notify();
-              final url = await _multiSource
-                  .getStreamUrl(track)
-                  .timeout(const Duration(seconds: 12), onTimeout: () => null);
-              if (url != null && url.isNotEmpty) {
-                streamUrl = url;
-                break;
-              }
-            } catch (_) {}
-          }
-          if (streamUrl != null) break;
-        }
-      }
-
-      if (streamUrl == null && !task.cancelled) {
-        final ytTracks = _rankOnlineTracks(
-          allTracks.where((track) => track.source == MusicSourceType.youtube),
-          task,
-        );
-        String? videoId = task.sourceVideoId;
-        if (videoId == null && ytTracks.isNotEmpty) {
-          videoId = ytTracks.first.id;
-        } else if (videoId == null) {
-          task.progress = 0.1;
-          task.error = 'YouTube aranıyor...';
-          _notify();
-          List<OnlineTrack> searchResults = const [];
-          try {
-            searchResults = await _multiSource
-                .searchAllSync(
-                  query,
-                  limitPerSource: 5,
-                )
-                .timeout(const Duration(seconds: 15));
-          } catch (_) {
-            searchResults = [];
-          }
-          var ytResults = searchResults
-              .where((t) => t.source == MusicSourceType.youtube)
-              .toList();
-          if (ytResults.isEmpty && task.title.trim().isNotEmpty) {
-            // "Artist - Title" returned nothing; retry with the title alone so
-            // common tagging mismatches still resolve to a playable track.
-            List<OnlineTrack> titleOnly = const [];
-            try {
-              titleOnly = await _multiSource
-                  .searchAllSync(
-                    task.title.trim(),
-                    limitPerSource: 5,
-                  )
-                  .timeout(const Duration(seconds: 15));
-            } catch (_) {}
-            ytResults = titleOnly
-                .where((t) => t.source == MusicSourceType.youtube)
-                .toList();
-          }
-          if (ytResults.isNotEmpty) {
-            videoId = ytResults.first.id;
-          }
-        }
-
-        if (videoId != null) {
-          final String vid = videoId;
-          final asVideo = (await DatabaseService.instance
-                  .getSetting('download_as_video')) ==
-              'true';
-
-          Future<String?> fetch(bool video) {
-            Future<String?> fut;
-            if (video) {
-              fut = _youtubeDownloader.downloadVideoTrack(
-                vid,
-                task.title,
-                task.artist,
-                downloadDir,
-              );
-            } else {
-              fut = _youtubeDownloader.downloadFullTrack(
-                vid,
-                task.title,
-                downloadDir,
-                quality: task.requestedQuality,
-              );
-            }
-            return fut.timeout(const Duration(minutes: 5),
-                onTimeout: () => null);
-          }
-
-          final attempts = asVideo ? [true, false] : [false];
-          String? resultPath;
-          for (final video in attempts) {
-            if (task.cancelled) break;
-            task.progress = 0.15;
-            task.error = video
-                ? 'YouTube video indiriliyor...'
-                : 'YouTube indiriliyor (Backend/Piped)...';
-            _notify();
-            try {
-              resultPath = await fetch(video);
-            } catch (_) {
-              resultPath = null;
-            }
-            if (resultPath != null) break;
-          }
-
-          if (resultPath != null) {
-            task.filePath = resultPath;
-            task.progress = 0.8;
-            _notify();
-
-            if (!task.cancelled) {
-              String? importedPath;
-              try {
-                importedPath = await _importDownloadedFile(resultPath, task)
-                    .timeout(const Duration(minutes: 2), onTimeout: () => null);
-              } catch (_) {
-                importedPath = null;
-              }
-              if (importedPath != null) {
-                task.filePath = importedPath;
-                task.state = DownloadState.completed;
-                task.progress = 1.0;
-                task.error = null;
-                try {
-                  await db
-                      .upsertDownloadedTrack(task.spotifyTrackId, importedPath)
-                      .timeout(const Duration(seconds: 5));
-                } catch (_) {}
-                onDownloadComplete?.call();
-              } else {
-                final downloadedFile = File(resultPath);
-                if (await downloadedFile.exists()) {
-                  task.filePath = resultPath;
-                  task.state = DownloadState.completed;
-                  task.progress = 1.0;
-                  task.error = null;
-                  try {
-                    await db
-                        .upsertDownloadedTrack(task.spotifyTrackId, resultPath)
-                        .timeout(const Duration(seconds: 5));
-                  } catch (_) {}
-                  onDownloadComplete?.call();
-                } else {
-                  task.state = DownloadState.failed;
-                  task.error ??= 'İndirilen dosya bulunamadı';
-                }
-              }
-            }
-            _notify();
-            _activeDownloads--;
-            _processQueue();
-            return;
-          }
-        }
-      }
-
-      if (streamUrl == null || task.cancelled) {
+      if (task.cancelled) {
         task.state = DownloadState.failed;
-        task.error = 'Eşleşen şarkı bulunamadı';
+        task.error = 'İptal edildi';
         _notify();
         _activeDownloads--;
         _processQueue();
@@ -454,23 +241,48 @@ class DownloadManager {
       task.progress = 0.3;
       _notify();
 
-      var resultPath = await _downloadFromUrl(streamUrl, task, downloadDir)
-          .timeout(const Duration(minutes: 5), onTimeout: () => null);
-
-      if (resultPath == null && !task.cancelled) {
-        try {
-          resultPath = await _downloadFromYouTube(
-            task: task,
-            searchResults: allTracks,
-            query: query,
-          ).timeout(const Duration(minutes: 5));
-        } on TimeoutException {
-          debugPrint('YouTube fallback timeout');
-          resultPath = null;
-        } catch (_) {
-          resultPath = null;
+      String? resultPath;
+      if (streamUrl != null &&
+          !_isHttpUrl(streamUrl) &&
+          await File(streamUrl).exists()) {
+        debugPrint('Download using local file: $streamUrl');
+        resultPath = streamUrl;
+      } else if (videoId.isNotEmpty) {
+        // YouTube: InnerTube ile dogrudan indirme dizinine indir.
+        task.progress = 0.15;
+        task.error = 'YouTube indiriliyor...';
+        _notify();
+        resultPath = await _downloadViaBundle(task, downloadDir)
+            .timeout(const Duration(minutes: 8), onTimeout: () => null);
+        // Fallback: direkt URL uzerinden indirme (nadiren)
+        if (resultPath == null && streamUrl != null && _isHttpUrl(streamUrl)) {
+          resultPath = await _downloadFromUrl(streamUrl, task, downloadDir)
+              .timeout(const Duration(minutes: 5), onTimeout: () => null);
         }
+        if (resultPath == null) {
+          final detail = ExplodeStreamService.instance.lastError;
+          task.state = DownloadState.failed;
+          task.error = (detail != null && detail.isNotEmpty)
+              ? 'İndirme başarısız: $detail'
+              : 'YouTube şu an giriş istiyor (bot koruması). Arama çalışır, indirme geçici kapalı.';
+          _notify();
+          _activeDownloads--;
+          _processQueue();
+          return;
+        }
+      } else if (streamUrl != null && _isHttpUrl(streamUrl)) {
+        resultPath = await _downloadFromUrl(streamUrl, task, downloadDir)
+            .timeout(const Duration(minutes: 5), onTimeout: () => null);
+      } else {
+        task.state = DownloadState.failed;
+        task.error = 'Eşleşen şarkı bulunamadı';
+        _notify();
+        _activeDownloads--;
+        _processQueue();
+        return;
       }
+
+
 
       if (resultPath == null || task.cancelled) {
         if (task.cancelled) {
@@ -569,59 +381,6 @@ class DownloadManager {
     _processQueue();
   }
 
-  Future<String?> _downloadFromYouTube({
-    required DownloadTask task,
-    required List<OnlineTrack> searchResults,
-    required String query,
-  }) async {
-    try {
-      final ytTracks = _rankOnlineTracks(
-        searchResults.where((track) => track.source == MusicSourceType.youtube),
-        task,
-      );
-      String? videoId = task.sourceVideoId;
-      videoId ??= ytTracks.isEmpty ? null : ytTracks.first.id;
-      if (videoId == null) {
-        task.progress = 0.15;
-        task.error = 'YouTube yedek kaynağı aranıyor...';
-        _notify();
-        List<OnlineTrack> fallbackResults = const [];
-        try {
-          fallbackResults = await _multiSource
-              .searchAllSync(
-                query,
-                limitPerSource: 5,
-              )
-              .timeout(const Duration(seconds: 15));
-        } catch (_) {}
-        final ytResults = fallbackResults
-            .where((t) => t.source == MusicSourceType.youtube)
-            .toList();
-        if (ytResults.isNotEmpty) {
-          videoId = ytResults.first.id;
-        }
-      }
-      if (videoId == null || task.cancelled) return null;
-      task.progress = 0.2;
-      task.error = 'YouTube yedek kaynağından indiriliyor...';
-      _notify();
-      try {
-        return await _youtubeDownloader
-            .downloadFullTrack(
-              videoId,
-              task.title,
-              Directory(await StorageManager.instance.getStorageLocation()),
-              quality: task.requestedQuality,
-            )
-            .timeout(const Duration(minutes: 5), onTimeout: () => null);
-      } on TimeoutException {
-        return null;
-      }
-    } catch (error) {
-      debugPrint('YouTube fallback download error: $error');
-      return null;
-    }
-  }
 
   Future<String?> _downloadFromUrl(
       String url, DownloadTask task, Directory dir) async {
@@ -684,6 +443,8 @@ class DownloadManager {
           return await _downloadFromUrl(url, task, dir)
               .timeout(const Duration(minutes: 5));
         }
+        debugPrint(
+            'Download HTTP ${response.statusCode} for $url (403/429 genelde bayat googlevideo URL demektir)');
         return null;
       }
       // 206 ise append, 200 ise overwrite
@@ -739,6 +500,158 @@ class DownloadManager {
     }
   }
 
+  static bool _isHttpUrl(String url) =>
+      url.startsWith('http://') || url.startsWith('https://');
+
+  /// YouTube parçasını explode hattıyla (cok istemci + imza cozme)
+  /// doğrudan indirme dizinine indirir. Video kimliği `sourceVideoId` alanından alınır.
+  ///
+  /// Aktarim iOS URLSession arka plan indiricisiyle yapilir: uygulama
+  /// arkaplana alininca da indirme surer. Cozumleme foreground'da olur.
+  Future<String?> _downloadViaBundle(
+      DownloadTask task, Directory downloadDir) async {
+    final videoId = (task.sourceVideoId ?? '').trim();
+    if (videoId.isEmpty) return null;
+    try {
+      final safeTitle =
+          '${task.artist} - ${task.title}'.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
+      final baseName =
+          safeTitle.isEmpty ? videoId : '${safeTitle}_$videoId';
+      final tmpPath = '${downloadDir.path}/.tmp_$baseName.bin';
+      // 1. Akışı çözümle (manifest; hızlı olmalı).
+      task.progress = 0.15;
+      task.error = 'Kaynak çözümleniyor...';
+      _notify();
+      final resolved = await ExplodeStreamService.instance
+          .resolveStream(videoId)
+          .timeout(const Duration(seconds: 45), onTimeout: () => null);
+      if (resolved != null && !task.cancelled) {
+        // 2. Arka plan transferi.
+        task.progress = 0.2;
+        task.error = 'YouTube indiriliyor...';
+        _notify();
+        final bgPath = await _backgroundFetch(
+          task,
+          url: resolved.url,
+          headers: resolved.headers,
+          filename: '.tmp_$baseName${resolved.ext}',
+        );
+        if (bgPath != null && bgPath.isNotEmpty) {
+          task.progress = 0.75;
+          _notify();
+          return bgPath;
+        }
+        if (task.cancelled) return null;
+      }
+      task.progress = 0.2;
+      task.error = 'YouTube indiriliyor...';
+      _notify();
+      final path = await ExplodeStreamService.instance.downloadToFile(
+        videoId: videoId,
+        outputPath: tmpPath,
+        onProgress: (received, total) {
+          if (total != null && total > 0) {
+            task.progress = (0.2 + (received / total) * 0.55).clamp(0.2, 0.75);
+            task.error = 'YouTube indiriliyor...';
+            _notify();
+          }
+        },
+        isCancelled: () => task.cancelled,
+      ).timeout(const Duration(minutes: 10), onTimeout: () => null);
+      if (path == null || path.isEmpty || !await File(path).exists()) {
+        debugPrint('Explode download failed for $videoId, trying InnerTube');
+        // Yedek hat: uygulamanın kendi müzik-istemcili InnerTube indiricisi.
+        // Explode istemcileri LOGIN_REQUIRED döndüğünde bunlar çalışabilir.
+        try {
+          task.progress = 0.3;
+          task.error = 'Alternatif kaynaktan indiriliyor...';
+          _notify();
+          final inner = await YtMusicService.instance.downloadToFile(
+            trackId: videoId,
+            title: task.title,
+            artist: task.artist,
+            outputPath: tmpPath,
+          ).timeout(const Duration(minutes: 6), onTimeout: () => null);
+          final innerPath = inner?['file_path']?.toString() ?? '';
+          if (inner != null &&
+              inner['success'] == true &&
+              innerPath.isNotEmpty &&
+              await File(innerPath).exists()) {
+            task.progress = 0.75;
+            _notify();
+            return innerPath;
+          }
+        } catch (e) {
+          debugPrint('InnerTube download fallback error: $e');
+        }
+        return null;
+      }
+      task.progress = 0.75;
+      _notify();
+      return path;
+    } catch (e) {
+      debugPrint('Explode download error: $e');
+      return null;
+    }
+  }
+
+  /// iOS URLSession arka plan transferi. Uygulama arkaplana alininca ya da
+  /// ekran kilitlenince de indirme surer; bosta `null` doner (on plan yedek
+  /// devreye girer). Iptalde yarim dosyayi temizler.
+  Future<String?> _backgroundFetch(
+    DownloadTask task, {
+    required String url,
+    required Map<String, String> headers,
+    required String filename,
+  }) async {
+    try {
+      final bgTask = bg.DownloadTask(
+        url: url,
+        filename: filename,
+        headers: headers,
+        baseDirectory: bg.BaseDirectory.applicationDocuments,
+        directory: 'Melodi/Offline',
+        retries: 2,
+        metaData: task.id,
+      );
+      final result = await bg.FileDownloader()
+          .download(
+            bgTask,
+            onProgress: (p) {
+              task.progress =
+                  (0.2 + p.clamp(0.0, 1.0) * 0.55).clamp(0.2, 0.75);
+              _notify();
+            },
+          )
+          .timeout(const Duration(minutes: 15),
+              onTimeout: () => throw TimeoutException('arka plan indirme'));
+      final path = await bgTask.filePath();
+      if (task.cancelled) {
+        try {
+          if (path.isNotEmpty && await File(path).exists()) {
+            await File(path).delete();
+          }
+        } catch (_) {}
+        return null;
+      }
+      if (result.status != bg.TaskStatus.complete) {
+        debugPrint('Background download status: ${result.status}');
+        return null;
+      }
+      if (path.isEmpty || !await File(path).exists()) return null;
+      if (await File(path).length() < 1000) {
+        try {
+          await File(path).delete();
+        } catch (_) {}
+        return null;
+      }
+      return path;
+    } catch (e) {
+      debugPrint('Background download error: $e');
+      return null;
+    }
+  }
+
   String _downloadExtension(String url, ContentType? contentType) {
     final mime = contentType?.mimeType.toLowerCase();
     if (mime == 'audio/flac' || mime == 'audio/x-flac') return 'flac';
@@ -791,66 +704,71 @@ class DownloadManager {
           .timeout(const Duration(seconds: 10), onTimeout: () => null);
       await sourceFile.rename(destPath);
 
-      // ── Kapak resmi gömme (önceden atlanıyordu) ──
-      Uint8List? artworkBytes;
-      if (!isVideo) {
-        task.progress = 0.83;
-        task.error = 'Kapak resmi ekleniyor...';
-        _notify();
+      // ── Kapak + söz aramasını paralel koştur (süre yarıya iner) ──
+      task.progress = 0.83;
+      task.error = 'Kapak ve sözler hazırlanıyor...';
+      _notify();
+      final artworkFuture = () async {
+        if (isVideo) return null;
         if (task.imageUrl != null && task.imageUrl!.isNotEmpty) {
           try {
-            artworkBytes = await _downloadImageBytes(task.imageUrl!)
+            final b = await _downloadImageBytes(task.imageUrl!)
                 .timeout(const Duration(seconds: 10), onTimeout: () => null);
+            if (b != null && b.isNotEmpty) return b;
           } catch (_) {}
         }
-        if (artworkBytes == null || artworkBytes.isEmpty) {
-          try {
-            artworkBytes = await ArtworkService.fetchArtwork(
-              title: task.title,
-              artist: task.artist,
-              album: task.album ?? '',
-              duration: metadata?.duration ?? Duration.zero,
-            ).timeout(const Duration(seconds: 10), onTimeout: () => null);
-          } catch (_) {}
+        try {
+          return await ArtworkService.fetchArtwork(
+            title: task.title,
+            artist: task.artist,
+            album: task.album ?? '',
+            duration: metadata?.duration ?? Duration.zero,
+          ).timeout(const Duration(seconds: 10), onTimeout: () => null);
+        } catch (_) {
+          return null;
         }
-        if (artworkBytes != null && artworkBytes.isNotEmpty) {
-          try {
-            final ok = await ArtworkEmbeddingService.embedCoverArt(
-              filePath: destPath,
-              artwork: artworkBytes,
-            ).timeout(const Duration(seconds: 15), onTimeout: () => false);
-            if (ok) {
-              try {
-                metadata = await MetadataService.extractMetadata(destPath)
-                        .timeout(const Duration(seconds: 8),
-                            onTimeout: () => null) ??
-                    metadata;
-              } catch (_) {}
-            }
-          } catch (e) {
-            debugPrint('Artwork embedding failed: $e');
+      }();
+      final lyricsFuture = () async {
+        try {
+          return await LyricsService.fetchLyrics(
+            artist: task.artist,
+            track: task.title,
+            album: task.album,
+            durationMs: task.expectedDurationMs > 0
+                ? task.expectedDurationMs
+                : metadata?.duration.inMilliseconds,
+            preferSynced: true,
+          ).timeout(const Duration(seconds: 10), onTimeout: () => null);
+        } catch (error) {
+          debugPrint('Downloaded lyrics lookup failed: $error');
+          return null;
+        }
+      }();
+      final fetched = await Future.wait([artworkFuture, lyricsFuture]);
+      Uint8List? artworkBytes = fetched[0] as Uint8List?;
+      final lyricsResult = fetched[1] as LyricsResult?;
+      if (!isVideo && artworkBytes != null && artworkBytes.isNotEmpty) {
+        try {
+          final ok = await ArtworkEmbeddingService.embedCoverArt(
+            filePath: destPath,
+            artwork: artworkBytes,
+          ).timeout(const Duration(seconds: 15), onTimeout: () => false);
+          if (ok) {
+            try {
+              metadata = await MetadataService.extractMetadata(destPath)
+                      .timeout(const Duration(seconds: 8),
+                          onTimeout: () => null) ??
+                  metadata;
+            } catch (_) {}
           }
+        } catch (e) {
+          debugPrint('Artwork embedding failed: $e');
         }
       }
 
       task.progress = 0.86;
-      task.error = 'Senkronize sözler ekleniyor...';
       _notify();
 
-      LyricsResult? lyricsResult;
-      try {
-        lyricsResult = await LyricsService.fetchLyrics(
-          artist: task.artist,
-          track: task.title,
-          album: task.album,
-          durationMs: task.expectedDurationMs > 0
-              ? task.expectedDurationMs
-              : metadata?.duration.inMilliseconds,
-          preferSynced: true,
-        ).timeout(const Duration(seconds: 10), onTimeout: () => null);
-      } catch (error) {
-        debugPrint('Downloaded lyrics lookup failed: $error');
-      }
       final lyricsText = lyricsResult?.syncedLrc ?? lyricsResult?.plainText;
 
       if (!isVideo) {
@@ -882,11 +800,9 @@ class DownloadManager {
       }
 
       if (metadata != null) {
-        final placeholderId = task.spotifyTrackId.startsWith('navidrome:')
+        final placeholderId = task.spotifyTrackId.startsWith('spotify:')
             ? task.spotifyTrackId
-            : task.spotifyTrackId.startsWith('spotify:')
-                ? task.spotifyTrackId
-                : 'spotify:${task.spotifyTrackId}';
+            : 'spotify:${task.spotifyTrackId}';
         SongModel? placeholder = await db.getSongById(placeholderId);
         if (placeholder == null) {
           final titleKey = _matchKey(task.title);
@@ -906,10 +822,7 @@ class DownloadManager {
           }
         }
         final normalized = metadata.copyWith(
-          id: placeholder?.id ??
-              (task.spotifyTrackId.startsWith('navidrome:')
-                  ? task.spotifyTrackId
-                  : metadata.id),
+          id: placeholder?.id ?? metadata.id,
           title: task.title,
           artist: task.artist,
           album:
@@ -1057,6 +970,5 @@ class DownloadManager {
 
   void dispose() {
     _controller.close();
-    _multiSource.dispose();
   }
 }

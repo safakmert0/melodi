@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import '../core/constants.dart';
@@ -19,8 +20,14 @@ class DiagnosticsService {
   Future<Map<String, dynamic>> generateDiagnosticBundle() async {
     final db = DatabaseService.instance;
 
-    final version = AppConstants.appVersion;
-    final buildNumber = AppConstants.buildNumber;
+    // Gercek surum (sabit degil): tanilama raporu dogru derlemeyi gostersin.
+    var version = AppConstants.appVersion;
+    var buildNumber = AppConstants.buildNumber;
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (info.version.isNotEmpty) version = info.version;
+      if (info.buildNumber.isNotEmpty) buildNumber = info.buildNumber;
+    } catch (_) {}
 
     final os = Platform.operatingSystem;
     final osVersion = Platform.operatingSystemVersion;

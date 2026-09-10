@@ -104,7 +104,7 @@ class _PlaylistImportScreenState extends State<PlaylistImportScreen> {
                 TextField(
                   controller: _urlController,
                   decoration: InputDecoration(
-                    hintText: 'https://open.spotify.com/playlist/...',
+                    hintText: 'Parça adı yazın veya M3U/CUE dosyası seçin',
                     prefixIcon: const Icon(Icons.link_rounded),
                     border: OutlineInputBorder(
                       borderRadius:

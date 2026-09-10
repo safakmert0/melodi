@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
 import '../models/album_model.dart';
 import '../models/artist_model.dart';
@@ -541,6 +543,36 @@ class LibraryProvider extends ChangeNotifier {
 
   Future<void> refresh() async {
     await loadAll();
+  }
+
+  /// Seçili parçaları kitaplıktan siler. Dosya silme yalnızca uygulamanın
+  /// kendi dizinindeki dosyalar için yapılır; dışarıdaki dosyalara dokunulmaz.
+  /// Dönüş: silinen kayıt sayısı.
+  Future<int> deleteSongs(List<String> ids) async {
+    var removed = 0;
+    String docs = '';
+    try {
+      docs = (await getApplicationDocumentsDirectory()).path;
+    } catch (_) {}
+    for (final id in ids) {
+      try {
+        final matches = _songs.where((s) => s.id == id).toList();
+        final path = matches.isEmpty ? null : matches.first.filePath;
+        await _db.deleteSong(id);
+        if (path != null &&
+            path.isNotEmpty &&
+            docs.isNotEmpty &&
+            path.startsWith(docs)) {
+          try {
+            final file = File(path);
+            if (await file.exists()) await file.delete();
+          } catch (_) {}
+        }
+        removed++;
+      } catch (_) {}
+    }
+    await refresh();
+    return removed;
   }
 
   Future<void> cacheArtwork(String songId, Uint8List artwork) async {
