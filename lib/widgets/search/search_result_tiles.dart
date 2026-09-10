@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/song_model.dart';
 import '../../screens/embed_player_screen.dart';
@@ -183,15 +184,48 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
       }
 
       if (!mounted) return;
-      // JollyTone parity: direkt blokluysa embed oynaticiya dus.
+      // Tek oynatici ilkesi: direkt calinamazsa otomatik ikinci ekran
+      // acma; kullaniciya sor (gomulu dene / YouTube'da ac / vazgec).
       final fallbackTrack = widget.track;
       if (EmbedPlaybackService.isPlayableId(fallbackTrack.id)) {
         EmbedPlaybackService.instance.logFallback(
             fallbackTrack.id, lastError?.toString() ?? 'direct blocked');
-        await Navigator.of(context).push(
-          MaterialPageRoute<void>(
-              builder: (_) => EmbedPlayerScreen(track: fallbackTrack)),
+        final choice = await showDialog<String>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Doğrudan çalınamadı'),
+            content: Text(
+                '"${fallbackTrack.title}" uygulamanın oynatıcısında açılamadı. Ne yapayım?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop('cancel'),
+                child: const Text('Vazgeç'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop('external'),
+                child: const Text("YouTube'da aç"),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop('embed'),
+                child: const Text('Gömülü dene'),
+              ),
+            ],
+          ),
         );
+        if (!mounted) return;
+        if (choice == 'embed') {
+          await Navigator.of(context).push(
+            MaterialPageRoute<void>(
+                builder: (_) => EmbedPlayerScreen(track: fallbackTrack)),
+          );
+          return;
+        }
+        if (choice == 'external') {
+          final uri = Uri.parse(
+              EmbedPlaybackService.watchUrl(fallbackTrack.id));
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          return;
+        }
         return;
       }
       final detail = lastError == null ? '' : ': $lastError';

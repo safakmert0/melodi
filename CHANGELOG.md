@@ -4,6 +4,11 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.10.6] - 2026-09-10
+
+### Tek Oynatici: Otomatik Ikinci Ekran Yok
+- Oynat'a basinca direkt calinamazsa artik otomatik YouTube ekrani acilmiyor; soruyor: Vazgec / YouTube'da ac / Gomulu dene (`search_result_tiles`). Secilmeden ikinci ekran ve ikinci bar cikmaz.
+
 ## [5.10.5] - 2026-09-10
 
 ### Arka Planda Indirme + AAC Secimi + Gercek Surum
