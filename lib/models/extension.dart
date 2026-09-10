@@ -228,9 +228,13 @@ class ExtensionManifest {
 
   /// SpotiFLAC tarzı ağ izin kontrolü — permissions boşsa tüm https izinli.
   bool isUrlAllowed(String url) {
-    if (permissions.isEmpty) return true;
+    if (permissions.isEmpty) {
+      return true;
+    }
     final uri = Uri.tryParse(url);
-    if (uri == null || !uri.hasScheme) return false;
+    if (uri == null || !uri.hasScheme) {
+      return false;
+    }
     final host = uri.host.toLowerCase();
     for (final p in permissions) {
       final allowed = p.toLowerCase();
@@ -421,9 +425,11 @@ class RegistryEntry {
                     tags.contains('deezer'));
         if (hasLossless) {
           kind = ExtensionKind.hifi;
-        } else if (folder == 'modules' || type == 'module')
+        } else if (folder == 'modules' || type == 'module') {
           kind = ExtensionKind.backend;
-        else if (type == 'artwork') kind = ExtensionKind.backend;
+        } else if (type == 'artwork') {
+          kind = ExtensionKind.backend;
+        }
       }
     }
     return RegistryEntry(
@@ -540,7 +546,9 @@ class ExtensionRegistry {
                   e.containsKey('file') ||
                   e.containsKey('pkg') ||
                   e.containsKey('url')));
-          if (!anyModuleLike) continue;
+          if (!anyModuleLike) {
+            continue;
+          }
         }
         for (final item in val) {
           if (item is! Map) continue;

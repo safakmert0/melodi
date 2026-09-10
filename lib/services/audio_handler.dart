@@ -516,16 +516,16 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   }
 
   @override
-  Future<void> seekForward([bool immediate = true]) async {
-    final offset = Duration(seconds: immediate ? 10 : 30);
+  Future<void> seekForward([bool begin = true]) async {
+    final offset = Duration(seconds: begin ? 10 : 30);
     final newPos = _player.position + offset;
     final dur = _player.duration ?? Duration.zero;
     await _player.seek(newPos > dur ? dur : newPos);
   }
 
   @override
-  Future<void> seekBackward([bool immediate = true]) async {
-    final offset = Duration(seconds: immediate ? 10 : 30);
+  Future<void> seekBackward([bool begin = true]) async {
+    final offset = Duration(seconds: begin ? 10 : 30);
     final newPos = _player.position - offset;
     await _player.seek(newPos < Duration.zero ? Duration.zero : newPos);
   }
