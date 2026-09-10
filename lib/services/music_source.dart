@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
-enum MusicSourceType { youtube }
+enum MusicSourceType { youtube, hifi }
 
 extension MusicSourceTypeCapabilities on MusicSourceType {
-  bool get supportsFullTrack => this == MusicSourceType.youtube;
+  bool get supportsFullTrack => this == MusicSourceType.youtube || this == MusicSourceType.hifi;
 
   bool get isPreviewCatalogue => false;
 }
@@ -41,7 +41,12 @@ class OnlineTrack {
 
   String get sourceLabel {
     if (extensionName != null && extensionName!.isNotEmpty) return extensionName!;
-    return 'YouTube';
+    switch (source) {
+      case MusicSourceType.youtube:
+        return 'YouTube';
+      case MusicSourceType.hifi:
+        return 'Hi-Fi';
+    }
   }
 
   /// Klip sürümü mü? Klipler gömülü oynatıcıda ve doğrudan akışta

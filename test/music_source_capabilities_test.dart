@@ -7,6 +7,11 @@ void main() {
       expect(MusicSourceType.youtube.supportsFullTrack, isTrue);
       expect(MusicSourceType.youtube.isPreviewCatalogue, isFalse);
     });
+
+    test('hifi is full track and not preview', () {
+      expect(MusicSourceType.hifi.supportsFullTrack, isTrue);
+      expect(MusicSourceType.hifi.isPreviewCatalogue, isFalse);
+    });
   });
 
   group('OnlineTrack item type', () {

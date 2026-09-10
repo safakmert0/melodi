@@ -217,16 +217,38 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
       );
       if (shouldContinue != true || !mounted) return;
     }
+    // Context okumaları async boşluk öncesi alınır (use_build_context_synchronously).
+    final searchProvider = context.read<SearchProvider>();
+    final downloadProvider = context.read<DownloadProvider>();
     setState(() => _downloading = true);
     try {
       final track = widget.track;
-      final queued = context.read<DownloadProvider>().enqueueTrack(
+      // Hi-Fi: id Spotify URL'sidir, videoId değildir. Önce sunucuda FLAC
+      // akış adresini çöz, doğrudan dosya indirme olarak kuyruğa ekle.
+      String? directUrl;
+      String? sourceVideoId = track.id;
+      if (track.source == MusicSourceType.hifi) {
+        sourceVideoId = null;
+        try {
+          directUrl = await searchProvider
+              .getStreamUrl(track)
+              .timeout(const Duration(minutes: 6));
+        } catch (_) {
+          directUrl = null;
+        }
+        if ((directUrl == null || directUrl.isEmpty) && mounted) {
+          _message('Hi-Fi akışı alınamadı, sonra tekrar dene', error: true);
+          return;
+        }
+      }
+      final queued = downloadProvider.enqueueTrack(
             spotifyTrackId: track.id,
             title: track.title,
             artist: track.artist,
             album: track.album ?? track.sourceLabel,
             imageUrl: track.thumbnailUrl,
-            sourceVideoId: track.id,
+            sourceVideoId: sourceVideoId,
+            directUrl: directUrl,
             expectedDurationMs: track.duration.inMilliseconds,
           );
       if (!mounted) return;

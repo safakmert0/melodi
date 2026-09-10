@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'music_source.dart';
+import 'sources/hifi_source.dart';
 import 'sources/youtube_source.dart';
 
-/// Çevrimiçi tek yapı: YouTube (hesapsız, sunucusuz).
+/// Çevrimiçi yapı: YouTube (hesapsız, sunucusuz) + Hi-Fi (kayıpsız FLAC,
+/// Melodi backend üzerinden).
 class MultiSourceSearch {
   static final MultiSourceSearch _instance = MultiSourceSearch._();
   factory MultiSourceSearch() => _instance;
@@ -11,12 +13,14 @@ class MultiSourceSearch {
 
   final List<MusicSource> _sources = [
     YouTubeSource(),
+    HiFiSource(),
   ];
 
   List<MusicSource> get sources => List.unmodifiable(_sources);
 
   static const Map<MusicSourceType, int> _fullTrackRank = {
     MusicSourceType.youtube: 0,
+    MusicSourceType.hifi: 1,
   };
 
   int _displayRank(OnlineTrack track) {
@@ -148,6 +152,8 @@ class MultiSourceSearch {
       if (!track.source.supportsFullTrack) return;
       // YouTube çözümleme dosyanın tamamını indirebilir; aramada önden indirme.
       if (track.source == MusicSourceType.youtube) return;
+      // HiFi akışı sunucuda FLAC indirir (30-120 sn); aramada tetikleme.
+      if (track.source == MusicSourceType.hifi) return;
       try {
         await getStreamUrl(track).timeout(const Duration(seconds: 4));
       } catch (_) {}

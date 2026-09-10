@@ -98,11 +98,14 @@ class SearchProvider extends ChangeNotifier {
     bool forPlayback = false,
   }) async {
     // YouTube çözümü dosyanın tamamını indirebilir; kısa zaman aşımı
-    // her seferinde boş döndürürdü.
-    final needsDownload = track.source == MusicSourceType.youtube;
-    final timeout = needsDownload
-        ? const Duration(minutes: 3)
-        : const Duration(milliseconds: 4800);
+    // her seferinde boş döndürürdü. HiFi sunucuda FLAC indirir (30-120 sn).
+    final needsLongTimeout = track.source == MusicSourceType.youtube ||
+        track.source == MusicSourceType.hifi;
+    final timeout = track.source == MusicSourceType.hifi
+        ? const Duration(minutes: 6)
+        : needsLongTimeout
+            ? const Duration(minutes: 3)
+            : const Duration(milliseconds: 4800);
     return await _multiSource
         .getStreamUrlWithFallback(
           track,
