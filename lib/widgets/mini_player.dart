@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/player_provider.dart';
-import '../screens/embed_player_screen.dart';
 import '../screens/now_playing_screen.dart';
-import '../services/embed_playback_service.dart';
-import '../services/music_source.dart';
 
 /// Sade mini player — LA Player gibi düz, ince progress, sistem yüzeyi
 class MiniPlayer extends StatefulWidget {
@@ -24,88 +21,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ValueListenableBuilder<OnlineTrack?>(
-          valueListenable: EmbedPlaybackService.instance.activeTrack,
-          builder: (context, track, _) {
-            if (track == null) return const SizedBox.shrink();
-            final scheme = Theme.of(context).colorScheme;
-            return Material(
-              color: scheme.surface,
-              child: InkWell(
-                onTap: () => Navigator.of(context, rootNavigator: true).push(
-                  MaterialPageRoute<void>(
-                      builder: (_) => EmbedPlayerScreen(track: track)),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Divider(
-                        height: 1,
-                        thickness: 0.5,
-                        color:
-                            scheme.outlineVariant.withValues(alpha: 0.3)),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: scheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Icon(Icons.smart_display_rounded,
-                                size: 20,
-                                color: scheme.onSurfaceVariant),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(track.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleSmall
-                                        ?.copyWith(
-                                            fontWeight: FontWeight.w500)),
-                                Text('${track.artist} · YouTube',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(
-                                            color: scheme
-                                                .onSurfaceVariant)),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: 'Durdur',
-                            icon: const Icon(Icons.close_rounded),
-                            onPressed: () =>
-                                EmbedPlaybackService.instance.stop(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-        Consumer<PlayerProvider>(
+    return Consumer<PlayerProvider>(
       builder: (context, player, _) {
         final song = player.currentSong;
         if (song == null) return const SizedBox.shrink();
@@ -179,8 +95,6 @@ class _MiniPlayerState extends State<MiniPlayer> {
           ),
         );
       },
-    ),
-      ],
     );
   }
 

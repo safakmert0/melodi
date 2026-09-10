@@ -4,6 +4,12 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.10.7] - 2026-09-10
+
+### Sadece Kendi Oynatici + CarPlay Komple Yok
+- Gomulu/YouTube secenekleri kaldirildi: Oynat'a basinca ya uygulamanin oynaticisinda calar ya kisa hata verir. `embed_player_screen`/`embed_playback_service` silindi, webview bagimliligi dustu, mini player tek bar.
+- CarPlay tamamen cikarildi (Dart stub + native handler + AppDelegate kaydi); build'de entitlement/scene zaten yoktu. Kilit ekrani `audio_service` ile calismaya devam eder.
+
 ## [5.10.6] - 2026-09-10
 
 ### Tek Oynatici: Otomatik Ikinci Ekran Yok

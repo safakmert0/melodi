@@ -6,7 +6,6 @@ import WebKit
 @main
 @objc class AppDelegate: FlutterAppDelegate {
   private var airPlayHandler: AirPlayHandler?
-  private var carPlayHandler: CarPlayHandler?
   private var voiceControlHandler: VoiceControlHandler?
   private var widgetHandler: WidgetHandler?
   private var lyricsMetadataWriterHandler: LyricsMetadataWriterHandler?
@@ -54,7 +53,6 @@ import WebKit
       }
     }
     airPlayHandler = AirPlayHandler(messenger: messenger)
-    carPlayHandler = CarPlayHandler(messenger: messenger)
     voiceControlHandler = VoiceControlHandler(messenger: messenger)
     widgetHandler = WidgetHandler(messenger: messenger)
     lyricsMetadataWriterHandler = LyricsMetadataWriterHandler(messenger: messenger)

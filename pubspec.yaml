@@ -1,7 +1,7 @@
 name: melodi
 description: A source-aware music library, streaming companion, downloader, and local player for iOS.
 publish_to: 'none'
-version: 5.10.6+29
+version: 5.10.7+30
 
 environment:
   sdk: ^3.4.0
@@ -37,11 +37,6 @@ dependencies:
 
   # URL Launcher
   url_launcher: ^6.3.1
-
-  # JollyTone parity: embed playback fallback (WKWebView)
-  webview_flutter: ^4.7.0
-  webview_flutter_platform_interface: ^2.14.0
-  webview_flutter_wkwebview: ^3.23.0
 
   # JollyTone parity: multi-client stream manifest + imza cozme + HLS
   youtube_explode_dart: ^3.1.0
