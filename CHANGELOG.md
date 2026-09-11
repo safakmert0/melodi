@@ -4,6 +4,14 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.11.0] - 2026-09-11
+
+### Hi-Fi Kaynagi Geri + Backend Stabilite
+- Hi-Fi kaynagi geri geldi (`MusicSourceType.hifi`): `HiFiSource` Melodi backend uzerinden Spotify katalog arar, sunucuda FLAC indirir, Navidrome kutuphanesinden akıtır. Aramada 2. sirada, prefetch disi.
+- Oynatma/indirme cozumu: HiFi icin 6 dk timeout (`search_provider`, `search_result_tiles` directUrl ile kuyruk).
+- Ayarlar > Hi-Fi Sunucusu: backend URL goruntuleme/duzenleme/sifirlama (`hifi_backend_url` DB'de saklanir).
+- Backend: `/api/hifi/download` poll 20sn → 5dk (60x5sn); zaman asiminda 504 doner. Qobuz direkt login tasinmadi — SpotiFLAC ici qobuz/tidal/deezer saglayicilari yeterli (amazon degraded).
+
 ## [5.10.8] - 2026-09-10
 
 ### Calma Onceligi: Dogrulanmis Akis Once
