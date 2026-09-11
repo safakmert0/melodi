@@ -49,9 +49,11 @@ class _SupportScreenState extends State<SupportScreen> {
   @override
   void initState() {
     super.initState();
+    // NOT: onDone'da `_subscription.cancel` tear-off'u ilk atamadan ÖNCE
+    // okunduğu için LateInitializationError veriyordu (tanılama id 3).
+    // Kapatma zaten dispose()'ta yapılıyor; onDone'a gerek yok.
     _subscription = _iap.purchaseStream.listen(
       _handlePurchase,
-      onDone: _subscription.cancel,
       onError: (_) {},
     );
     _loadStore();

@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
 import 'database_service.dart';
 import 'explode_stream_service.dart';
+import 'sources/youtube_source.dart';
 import 'review_service.dart';
 import 'track_matcher.dart';
 import 'multi_source_search.dart';
@@ -539,6 +540,14 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     }
     if (url.startsWith('youtube://')) {
       final videoId = url.replaceFirst('youtube://', '');
+      final backendProxy =
+          await YouTubeSource.backendStreamUrl(videoId).timeout(
+        const Duration(seconds: 12),
+        onTimeout: () => null,
+      );
+      if (backendProxy != null) {
+        return AudioSource.uri(Uri.parse(backendProxy));
+      }
       final streamUrl =
           await ExplodeStreamService.instance.getStreamUrl(videoId);
       if (streamUrl != null) {
@@ -566,16 +575,26 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       AudioSource audioSource;
       if (song.filePath.startsWith('youtube://')) {
         // Dogrudan akis: dosyayi beklemeden just_audio ile streaming.
+        // Önce backend proxy (stabil, expire yok), olmazsa cihazda explode.
         final videoId = song.filePath.replaceFirst('youtube://', '');
-        final streamUrl =
-            await ExplodeStreamService.instance.getStreamUrl(videoId);
-        if (streamUrl != null) {
-          audioSource = AudioSource.uri(
-            Uri.parse(streamUrl),
-            headers: ExplodeStreamService.instance.streamHeaders,
-          );
+        final backendProxy =
+            await YouTubeSource.backendStreamUrl(videoId).timeout(
+          const Duration(seconds: 12),
+          onTimeout: () => null,
+        );
+        if (backendProxy != null) {
+          audioSource = AudioSource.uri(Uri.parse(backendProxy));
         } else {
-          throw StateError('YouTube parçası çözümlenemedi');
+          final streamUrl =
+              await ExplodeStreamService.instance.getStreamUrl(videoId);
+          if (streamUrl != null) {
+            audioSource = AudioSource.uri(
+              Uri.parse(streamUrl),
+              headers: ExplodeStreamService.instance.streamHeaders,
+            );
+          } else {
+            throw StateError('YouTube parçası çözümlenemedi');
+          }
         }
       } else if (song.filePath.startsWith('http')) {
         audioSource = AudioSource.uri(Uri.parse(song.filePath));

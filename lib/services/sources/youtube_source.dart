@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import '../explode_stream_service.dart';
 import '../music_source.dart';
 import '../ytmusic_service.dart';
+import 'hifi_source.dart';
 
 /// YouTube kaynağı (JollyTone katmani): arama InnerTube, akis/indirme
 /// youtube_explode cok istemcili manifest + imza cozme ile.
@@ -87,9 +89,19 @@ class YouTubeSource implements MusicSource {
 
   @override
   Future<String?> getStreamUrl(OnlineTrack track) async {
-    // Once explode (dogrulanmis AAC URL): el yapimi InnerTube,
-    // cozulmemis n-parametreli link dondurup AVPlayer'da -1 hatasi
-    // verdirebiliyor; o yuzden yedekte kalir.
+    final videoId = track.id.trim();
+    // 1) Backend proxy (yt-dlp Range): stabil, expire olmaz, AVPlayer uyumlu
+    // m4a döner. Cihazdan çözülen googlevideo URL'leri iOS'ta sık sık
+    // -11849/-1 ile patlıyordu; proxy'de bu sorun yok.
+    if (videoId.isNotEmpty) {
+      try {
+        final proxy = await backendStreamUrl(videoId);
+        if (proxy != null) return proxy;
+      } catch (e) {
+        debugPrint('YouTube backend proxy miss: $e');
+      }
+    }
+    // 2) Cihazda explode (dogrulanmis AAC URL).
     try {
       // Dogrudan akis URL'i: dosya indirmeden just_audio ile streaming.
       final direct =
@@ -104,6 +116,27 @@ class YouTubeSource implements MusicSource {
       if (innerTube != null && innerTube.isNotEmpty) return innerTube;
     } catch (e) {
       debugPrint('YouTube InnerTube stream miss: $e');
+    }
+    return null;
+  }
+
+  /// Backend `/api/stream/{videoId}` adresini doğrular (HEAD, kısa timeout).
+  /// Backend ayaktaysa ve video çözülüyorsa adresi döner, yoksa null.
+  /// Doğrulama yapılmadan dönülmez: ölü proxy, explode yedeğini öldürürdü.
+  static Future<String?> backendStreamUrl(String videoId) async {
+    final id = videoId.trim();
+    if (id.isEmpty) return null;
+    try {
+      final base = await HiFiSource().baseUrl();
+      if (base.isEmpty) return null;
+      final proxy = '$base/api/stream/$id';
+      final resp = await http
+          .head(Uri.parse(proxy))
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200 || resp.statusCode == 206) return proxy;
+      debugPrint('YouTube backend proxy HEAD ${resp.statusCode} for $id');
+    } catch (e) {
+      debugPrint('YouTube backend proxy check failed: $e');
     }
     return null;
   }

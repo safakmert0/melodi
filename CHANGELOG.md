@@ -4,6 +4,15 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.11.1] - 2026-09-11
+
+### Cevrimici Calma + Indirme Duzenlemesi (Backend Proxy)
+- YouTube akisi once backend `/api/stream` proxy'sinden deneniyor (yt-dlp Range, expire yok, AVPlayer uyumlu m4a); olmazsa cihazda explode, en son InnerTube (`youtube_source`, `audio_handler` youtube:// dallari).
+- YouTube indirme once backend proxy'den iniyor, basarisizsa sessizce explode hattina dusuyor (`download_manager`).
+- Explode secimi dosya boyu yerine bitrate ile (AAC > mp4), HLS/m3u8 akistan eleniyor.
+- Destek ekrani acilis crash'i duzeltildi (`_subscription` LateInitializationError).
+- Backend: `/api/download` bos dosya bug'i duzeltildi (tempdir erken siliniyordu).
+
 ## [5.11.0] - 2026-09-11
 
 ### Hi-Fi Kaynagi Geri + Backend Stabilite

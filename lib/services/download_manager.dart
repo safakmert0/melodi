@@ -13,6 +13,7 @@ import 'metadata_service.dart';
 import 'storage_manager.dart';
 import 'audio_quality_service.dart';
 import 'explode_stream_service.dart';
+import 'sources/hifi_source.dart';
 import 'ytmusic_service.dart';
 
 enum DownloadState { pending, downloading, completed, failed }
@@ -513,6 +514,34 @@ class DownloadManager {
     final videoId = (task.sourceVideoId ?? '').trim();
     if (videoId.isEmpty) return null;
     try {
+      // 0. Backend proxy (yt-dlp, Range): cihazda manifest/bot duvarına
+      // takılsa bile sunucu üzerinden iner. Başarısız olursa sessizce
+      // explode hattına düşer.
+      try {
+        final base = await HiFiSource()
+            .baseUrl()
+            .timeout(const Duration(seconds: 10), onTimeout: () => '');
+        if (base.isNotEmpty && !task.cancelled) {
+          task.progress = 0.12;
+          task.error = 'Sunucu üzerinden indiriliyor...';
+          _notify();
+          final viaProxy = await _downloadFromUrl(
+            '$base/api/stream/$videoId',
+            task,
+            downloadDir,
+          ).timeout(const Duration(minutes: 5), onTimeout: () => null);
+          if (viaProxy != null &&
+              viaProxy.isNotEmpty &&
+              await File(viaProxy).exists()) {
+            task.progress = 0.75;
+            _notify();
+            return viaProxy;
+          }
+          if (task.cancelled) return null;
+        }
+      } catch (e) {
+        debugPrint('Backend proxy download miss: $e');
+      }
       final safeTitle =
           '${task.artist} - ${task.title}'.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
       final baseName =

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:collection/collection.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
 /// JollyTone cok katmanli hat birebir:
@@ -49,6 +50,17 @@ class ExplodeStreamService {
     return '.m4a';
   }
 
+  static bool _isHls(AudioOnlyStreamInfo a) {
+    final container = a.container.name.toLowerCase();
+    if (container.contains('m3u8') || container.contains('hls')) return true;
+    final url = a.url.toString().toLowerCase();
+    return url.contains('.m3u8');
+  }
+
+  static int _score(AudioOnlyStreamInfo a) => a.bitrate.bitsPerSecond > 0
+      ? a.bitrate.bitsPerSecond
+      : a.size.totalBytes;
+
   Future<AudioOnlyStreamInfo?> _pickAudio(
     String videoId, {
     bool forDownload = false,
@@ -63,48 +75,38 @@ class ExplodeStreamService {
         .timeout(const Duration(seconds: 30));
     final audios = manifest.audioOnly.toList();
     if (audios.isEmpty) return null;
-    AudioOnlyStreamInfo? biggest;
-    for (final a in audios) {
-      if (biggest == null || a.size.totalBytes > biggest.size.totalBytes) {
-        biggest = a;
-      }
-    }
-    // Indirme: uzanti fark etmez, ne varsa en buyugu (mp3/m4a/opus/webm).
-    // Yalnizca canli-yayin listesi (m3u8) indirilemez, elenir.
+    int byBitrate(AudioOnlyStreamInfo a, AudioOnlyStreamInfo b) =>
+        _score(b).compareTo(_score(a));
+    // Indirme: uzanti fark etmez, ne varsa en yuksek bitrate'li dosya
+    // (mp3/m4a/opus/webm). Yalnizca canli-yayin listesi (m3u8) indirilemez.
     if (forDownload) {
-      AudioOnlyStreamInfo? bestFile;
-      for (final a in audios) {
-        if (a.container.name.toLowerCase().contains('m3u8')) continue;
-        if (bestFile == null ||
-            a.size.totalBytes > bestFile.size.totalBytes) {
-          bestFile = a;
-        }
-      }
-      return bestFile ?? biggest ?? manifest.audioOnly.withHighestBitrate();
+      final files = audios.where((a) => !_isHls(a)).toList()..sort(byBitrate);
+      if (files.isNotEmpty) return files.first;
+      final any = audios.toList()..sort(byBitrate);
+      return any.firstOrNull ?? manifest.audioOnly.withHighestBitrate();
     }
-    // Akis: iOS (just_audio/AVPlayer) yalnizca AAC/MP4 calar; opus/webm
-    // secti mi yukleme (-1) hatasi verir. Siralama: AAC > mp4 > en buyuk.
-    AudioOnlyStreamInfo? bestAac;
-    AudioOnlyStreamInfo? bestMp4;
-    for (final a in audios) {
-      final codec = a.audioCodec.toLowerCase();
-      if (codec.contains('mp4a') || codec.contains('aac')) {
-        if (bestAac == null ||
-            a.size.totalBytes > bestAac.size.totalBytes) {
-          bestAac = a;
-        }
-      }
-      if (a.container.name.toLowerCase().contains('mp4')) {
-        if (bestMp4 == null ||
-            a.size.totalBytes > bestMp4.size.totalBytes) {
-          bestMp4 = a;
-        }
-      }
-    }
-    return bestAac ??
-        bestMp4 ??
-        biggest ??
-        manifest.audioOnly.withHighestBitrate();
+    // Akis: HLS listesi just_audio AVPlayer'da acilmaz, elenir.
+    // iOS (just_audio/AVPlayer) yalnizca AAC/MP4 calar; opus/webm
+    // secti mi yukleme (-1) hatasi verir. Siralama: AAC > mp4 > en yuksek
+    // bitrate. totalBytes DEGIL bitrate karsilastirilir (uzun dusuk
+    // kalite dosya, kisa yuksek kaliteden buyuk olabilir).
+    final playable = audios.where((a) => !_isHls(a)).toList();
+    final pool = playable.isNotEmpty ? playable : audios;
+    final aac = pool
+        .where((a) {
+          final codec = a.audioCodec.toLowerCase();
+          return codec.contains('mp4a') || codec.contains('aac');
+        })
+        .toList()
+      ..sort(byBitrate);
+    if (aac.isNotEmpty) return aac.first;
+    final mp4 = pool
+        .where((a) => a.container.name.toLowerCase().contains('mp4'))
+        .toList()
+      ..sort(byBitrate);
+    if (mp4.isNotEmpty) return mp4.first;
+    pool.sort(byBitrate);
+    return pool.firstOrNull ?? manifest.audioOnly.withHighestBitrate();
   }
 
   /// Dogrudan calinabilir akis URL'i (just_audio AudioSource.uri ile).
