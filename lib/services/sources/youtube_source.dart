@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../explode_stream_service.dart';
 import '../music_source.dart';
+import '../track_matcher.dart';
 import '../ytmusic_service.dart';
 import 'hifi_source.dart';
 
@@ -139,6 +140,51 @@ class YouTubeSource implements MusicSource {
       debugPrint('YouTube backend proxy check failed: $e');
     }
     return null;
+  }
+
+  /// Hızlı çalma çözümü: başlık/sanatçıdan YouTube karşılığını bulup
+  /// backend proxy (yoksa explode) adresini döner. Sunucuda FLAC
+  /// indirmeyi beklemez — Hi-Fi parçaları anında çalmak içindir.
+  /// Kalite değil hız önceliklidir.
+  Future<String?> getFastStreamUrlForMetadata({
+    required String title,
+    required String artist,
+    int durationMs = 0,
+  }) async {
+    final t = title.trim();
+    final a = artist.trim();
+    if (t.isEmpty) return null;
+    try {
+      final results = await YtMusicService.instance
+          .search(a.isEmpty ? t : '$a - $t', limit: 8)
+          .timeout(const Duration(seconds: 15));
+      String bestId = '';
+      var bestScore = -1.0;
+      for (final m in results) {
+        final id = (m['id'] ?? '').toString().trim();
+        if (id.length != 11) continue;
+        var score = TrackMatcher.scoreWithDuration(
+          t,
+          a,
+          durationMs,
+          (m['name'] ?? '').toString(),
+          (m['artists'] ?? '').toString(),
+          0,
+        );
+        if ((m['item_type'] ?? '').toString() == 'song') score += 0.2;
+        if (score > bestScore) {
+          bestScore = score;
+          bestId = id;
+        }
+      }
+      if (bestId.isEmpty) return null;
+      final proxy = await backendStreamUrl(bestId);
+      if (proxy != null) return proxy;
+      return await ExplodeStreamService.instance.getStreamUrl(bestId);
+    } catch (e) {
+      debugPrint('YouTube fast resolve miss: $e');
+      return null;
+    }
   }
 
   @override

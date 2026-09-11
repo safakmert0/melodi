@@ -166,6 +166,28 @@ class MultiSourceSearch {
     Set<String> excludedUrls = const {},
     bool preferStableYouTubeReference = false,
   }) async {
+    // Hızlı çalma: Hi-Fi parça için sunucuda FLAC indirmeyi (30-120 sn)
+    // bekleme; YouTube karşılığını proxy'den akıt. Bulunamazsa alta düşer.
+    if (preferStableYouTubeReference &&
+        track.source == MusicSourceType.hifi) {
+      try {
+        final fast = await (_sources
+                .firstWhere((s) => s.type == MusicSourceType.youtube)
+            as YouTubeSource)
+            .getFastStreamUrlForMetadata(
+              title: track.title,
+              artist: track.artist,
+              durationMs: track.duration.inMilliseconds,
+            )
+            .timeout(const Duration(seconds: 30));
+        final normalized = fast?.trim();
+        if (normalized != null &&
+            normalized.isNotEmpty &&
+            !excludedUrls.contains(normalized)) {
+          return normalized;
+        }
+      } catch (_) {}
+    }
     if (track.source.supportsFullTrack) {
       try {
         final url = await getStreamUrl(track);

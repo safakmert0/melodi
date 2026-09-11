@@ -157,6 +157,8 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
         final url = await searchProvider.getStreamUrlWithFallback(
           widget.track,
           excludedUrls: attemptedUrls,
+          // Hızlı çalma: Hi-Fi'da FLAC indirmeyi bekleme, YouTube'dan akıt.
+          forPlayback: true,
         );
         if (!mounted) return;
         if (url == null || url.isEmpty) break;

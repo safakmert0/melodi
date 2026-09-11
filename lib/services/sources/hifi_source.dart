@@ -106,8 +106,20 @@ class HiFiSource implements MusicSource {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final song = data['song'] as Map<String, dynamic>?;
       final streamPath = song?['stream_url']?.toString();
-      if (streamPath == null || streamPath.isEmpty) return null;
-      return '$base$streamPath';
+      if (streamPath != null && streamPath.isNotEmpty) {
+        return '$base$streamPath';
+      }
+      // Sunucu indirdi ama tarama bitmeden `song` boş dönebilir. Bu durumda
+      // indirme "başarısız" sayılmamalı: kütüphanede kısa süre bekle.
+      if (data['status'] == 'done') {
+        for (var i = 0; i < 8; i++) {
+          await Future.delayed(const Duration(seconds: 5));
+          final found = await _findInLibrary(base, track);
+          if (found != null) return found;
+        }
+        debugPrint('HiFi downloaded but not yet in library: ${track.title}');
+      }
+      return null;
     } catch (e) {
       debugPrint('HiFi download error: $e');
       return null;

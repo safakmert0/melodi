@@ -9,7 +9,6 @@ import '../core/localization.dart';
 import '../providers/library_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/database_service.dart';
-import '../services/sources/hifi_source.dart';
 import '../services/watched_folder_service.dart';
 import 'support_screen.dart';
 import 'downloads_screen.dart';
@@ -29,7 +28,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _systemFolder;
   bool _watchedAutoScan = true;
   bool _watchedLoading = false;
-  String _hifiBackendUrl = HiFiSource.defaultBaseUrl;
 
   @override
   void initState() {
@@ -39,83 +37,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) setState(() => _appVersion = info.version);
     });
     _loadWatchedFolder();
-    _loadHifiBackend();
-  }
-
-  Future<void> _loadHifiBackend() async {
-    try {
-      final url = await HiFiSource().baseUrl();
-      if (mounted) setState(() => _hifiBackendUrl = url);
-    } catch (_) {}
-  }
-
-  Future<void> _showHifiBackendDialog() async {
-    final controller = TextEditingController(text: _hifiBackendUrl);
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hi-Fi Sunucusu'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Kayıpsız FLAC kaynağı. Boş bırakılırsa varsayılan kullanılır.',
-              style: TextStyle(fontSize: 13),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.url,
-              decoration: const InputDecoration(
-                hintText: 'https://...',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop('__reset__'),
-            child: const Text('Varsayılan'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Vazgeç'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: const Text('Kaydet'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (result == null || !mounted) return;
-    try {
-      if (result == '__reset__') {
-        await HiFiSource().setBaseUrl(HiFiSource.defaultBaseUrl);
-        setState(() => _hifiBackendUrl = HiFiSource.defaultBaseUrl);
-      } else if (result.isNotEmpty) {
-        final normalized = result.replaceAll(RegExp(r'/+$'), '');
-        final uri = Uri.tryParse(normalized);
-        if (uri == null || !uri.hasScheme || !uri.hasAuthority) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Geçersiz adres')),
-          );
-          return;
-        }
-        await HiFiSource().setBaseUrl(normalized);
-        setState(() => _hifiBackendUrl = normalized);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Kaydedilemedi: $e')),
-        );
-      }
-    }
   }
 
   Future<void> _loadWatchedFolder() async {
@@ -335,16 +256,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const DownloadsScreen()),
                   ),
-                ),
-                const SizedBox(height: 8),
-                _SettingsTile(
-                  icon: Icons.high_quality_rounded,
-                  iconColor: Colors.pink,
-                  title: 'Hi-Fi Sunucusu',
-                  subtitle: _hifiBackendUrl,
-                  trailing:
-                      Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
-                  onTap: _showHifiBackendDialog,
                 ),
                 const SizedBox(height: 8),
                 Consumer<LibraryProvider>(

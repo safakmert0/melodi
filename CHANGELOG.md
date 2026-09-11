@@ -4,6 +4,14 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.11.2] - 2026-09-11
+
+### Hizli Calma + Ayar Temizligi
+- Hi-Fi parcalar artik Oynat'a basinca sunucuda FLAC indirmeyi beklemiyor; YouTube karsiligi proxy'den aninda akitiliyor (kalite degil hiz). FLAC indirme yalnizca Indir butonunda.
+- Hi-Fi indirme saglamlasti: sunucu indirip tarama bitmeden `song` bos donerse kütüphanede 40 sn bekleniyor, hemen hata verilmiyor.
+- Ayarlar'daki "Hi-Fi Sunucusu" satiri kaldirildi (sunucu adresi kodda sabit).
+- CI: tag release'te tek `Melodi-unsigned.ipa`.
+
 ## [5.11.1] - 2026-09-11
 
 ### Cevrimici Calma + Indirme Duzenlemesi (Backend Proxy)
