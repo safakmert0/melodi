@@ -1,12 +1,10 @@
-# DEPRECATED: Bu workflow legacy'dir. Tag release için build-ipa.yml tercih edin (daha robust, Xcode 16.4 + entitlements fix içerir).
-# Uyumluluk için korunuyor (macos-15/Xcode16.4 ile senkronize edildi).
+# DEPRECATED: Bu workflow legacy'dir. Tag release için build-ipa.yml kullanılır
+# (tek unsigned IPA). Bu workflow tag push'ta çalışmaz, release'e dosya
+# yüklemez; yalnızca manuel derleme içindir.
 name: iOS Build & Release (Legacy)
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - 'v*'
 
 permissions:
   contents: write
@@ -83,12 +81,3 @@ jobs:
           name: melodi-ios-${{ github.ref_name }}
           path: melodi-*-unsigned.ipa
           retention-days: 30
-      
-      - name: Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: melodi-*-unsigned.ipa
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
