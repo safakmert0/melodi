@@ -1,13 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/song_model.dart';
+import '../../services/music_source.dart';
+import '../../services/sources/youtube_source.dart';
 import '../../theme/app_tokens.dart';
 import '../../providers/download_provider.dart';
 import '../../providers/library_provider.dart';
 import '../../providers/player_provider.dart';
 import '../../providers/search_provider.dart';
-import '../../services/music_source.dart';
 import '../image_with_fallback.dart';
 
 class LocalSearchResultTile extends StatelessWidget {
@@ -54,13 +57,14 @@ class OnlineSearchResultTile extends StatefulWidget {
 }
 
 class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
-  bool _playing = false;
   bool _downloading = false;
 
   @override
   Widget build(BuildContext context) {
     final track = widget.track;
     final cs = Theme.of(context).colorScheme;
+    final resolvingKey = context.read<SearchProvider>().resolvingTrackKey;
+    final myKey = SearchProvider.trackKeyOf(track);
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       leading: ClipRRect(
@@ -131,14 +135,17 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
               icon: const Icon(Icons.download_rounded, size: 20),
               onPressed: _download,
             ),
-          if (_playing)
-            const _BusyIndicator()
-          else
-            IconButton(
-              tooltip: 'Oynat',
-              icon: const Icon(Icons.play_arrow_rounded),
-              onPressed: _play,
-            ),
+          ValueListenableBuilder<String?>(
+            valueListenable: resolvingKey,
+            builder: (context, resolving, _) {
+              if (resolving == myKey) return const _BusyIndicator();
+              return IconButton(
+                tooltip: 'Oynat',
+                icon: const Icon(Icons.play_arrow_rounded),
+                onPressed: _play,
+              );
+            },
+          ),
         ],
       ),
       onTap: _play,
@@ -146,14 +153,20 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
   }
 
   Future<void> _play() async {
-    if (_playing) return;
-    setState(() => _playing = true);
-    final attemptedUrls = <String>{};
+    // Context okumaları async boşluk öncesi alınır.
     final searchProvider = context.read<SearchProvider>();
     final playerProvider = context.read<PlayerProvider>();
+    final key = SearchProvider.trackKeyOf(widget.track);
+    // Aynı parçaya tekrar dokunma: zaten çözülüyor.
+    if (searchProvider.resolvingTrackKey.value == key) return;
+    // Yeni dokunuş öncekini hükümsüz kılar: eski spinner durur, eski iş
+    // bitse bile çalmayı ele geçiremez.
+    searchProvider.resolvingTrackKey.value = key;
+    final attemptedUrls = <String>{};
     Object? lastError;
     try {
       for (var attempt = 0; attempt < 2; attempt++) {
+        if (searchProvider.resolvingTrackKey.value != key) return;
         final url = await searchProvider.getStreamUrlWithFallback(
           widget.track,
           excludedUrls: attemptedUrls,
@@ -161,6 +174,7 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
           forPlayback: true,
         );
         if (!mounted) return;
+        if (searchProvider.resolvingTrackKey.value != key) return;
         if (url == null || url.isEmpty) break;
         attemptedUrls.add(url);
 
@@ -183,11 +197,14 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
       }
 
       if (!mounted) return;
+      if (searchProvider.resolvingTrackKey.value != key) return;
       // Tek oynatici: tikla-oynasin. Dogrudan akis yoksa kisa hata ver.
       final detail = lastError == null ? '' : ': $lastError';
       _message('Çalınamadı$detail', error: true);
     } finally {
-      if (mounted) setState(() => _playing = false);
+      if (searchProvider.resolvingTrackKey.value == key) {
+        searchProvider.resolvingTrackKey.value = null;
+      }
     }
   }
 
@@ -227,20 +244,41 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
       final track = widget.track;
       // Hi-Fi: id Spotify URL'sidir, videoId değildir. Önce sunucuda FLAC
       // akış adresini çöz, doğrudan dosya indirme olarak kuyruğa ekle.
+      // Kaliteli servis vermezse otomatik YouTube (yt-dlp) yedeğine düş.
+      // İkisi paralel çözülür, ek bekleme olmaz.
       String? directUrl;
       String? sourceVideoId = track.id;
+      String? fallbackVideoId;
       if (track.source == MusicSourceType.hifi) {
         sourceVideoId = null;
-        try {
-          directUrl = await searchProvider
+        final resolved = await Future.wait([
+          searchProvider
               .getStreamUrl(track)
-              .timeout(const Duration(minutes: 6));
-        } catch (_) {
-          directUrl = null;
-        }
-        if ((directUrl == null || directUrl.isEmpty) && mounted) {
-          _message('Hi-Fi akışı alınamadı, sonra tekrar dene', error: true);
-          return;
+              .timeout(const Duration(minutes: 6))
+              .then((v) => v ?? '')
+              .catchError((_) => ''),
+          YouTubeSource()
+              .resolveVideoId(
+                title: track.title,
+                artist: track.artist,
+                durationMs: track.duration.inMilliseconds,
+              )
+              .timeout(const Duration(seconds: 45))
+              .then((v) => v ?? '')
+              .catchError((_) => ''),
+        ]);
+        directUrl = resolved[0].isEmpty ? null : resolved[0];
+        fallbackVideoId = resolved[1].isEmpty ? null : resolved[1];
+        if (directUrl == null) {
+          // FLAC yok: YouTube yedeği zorunlu.
+          if (fallbackVideoId == null || fallbackVideoId.isEmpty) {
+            if (mounted) {
+              _message('Hi-Fi akışı alınamadı, sonra tekrar dene',
+                  error: true);
+            }
+            return;
+          }
+          sourceVideoId = fallbackVideoId;
         }
       }
       final queued = downloadProvider.enqueueTrack(
@@ -251,6 +289,7 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
             imageUrl: track.thumbnailUrl,
             sourceVideoId: sourceVideoId,
             directUrl: directUrl,
+            fallbackVideoId: fallbackVideoId,
             expectedDurationMs: track.duration.inMilliseconds,
           );
       if (!mounted) return;

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../database_service.dart';
 import '../explode_stream_service.dart';
 import '../music_source.dart';
 import '../track_matcher.dart';
@@ -151,18 +152,51 @@ class YouTubeSource implements MusicSource {
     required String artist,
     int durationMs = 0,
   }) async {
+    final bestId = await resolveVideoId(
+      title: title,
+      artist: artist,
+      durationMs: durationMs,
+    );
+    if (bestId == null || bestId.isEmpty) return null;
+    try {
+      final proxy = await backendStreamUrl(bestId);
+      if (proxy != null) return proxy;
+      return await ExplodeStreamService.instance.getStreamUrl(bestId);
+    } catch (e) {
+      debugPrint('YouTube fast stream miss: $e');
+      return null;
+    }
+  }
+
+  /// Başlık/sanatçıdan en iyi YouTube video kimliğini bulur.
+  /// Önce kalıcı önbelleğe bakar (tekrar çalmalar aramasız ~anında),
+  /// yoksa YTM aramasıyla çözüp önbelleğe yazar. İndirme yedeği için de
+  /// kullanılır (Hi-Fi olmazsa YouTube'tan indirme).
+  Future<String?> resolveVideoId({
+    required String title,
+    required String artist,
+    int durationMs = 0,
+  }) async {
     final t = title.trim();
     final a = artist.trim();
     if (t.isEmpty) return null;
+    final cacheKey =
+        'ytid_${(a.isEmpty ? t : '$a - $t').toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_')}';
+    try {
+      final cached = await DatabaseService.instance.getSetting(cacheKey);
+      if (cached != null && RegExp(r'^[A-Za-z0-9_-]{11}$').hasMatch(cached)) {
+        return cached;
+      }
+    } catch (_) {}
     try {
       final results = await YtMusicService.instance
           .search(a.isEmpty ? t : '$a - $t', limit: 8)
-          .timeout(const Duration(seconds: 15));
+          .timeout(const Duration(seconds: 12));
       String bestId = '';
       var bestScore = -1.0;
       for (final m in results) {
         final id = (m['id'] ?? '').toString().trim();
-        if (id.length != 11) continue;
+        if (!RegExp(r'^[A-Za-z0-9_-]{11}$').hasMatch(id)) continue;
         var score = TrackMatcher.scoreWithDuration(
           t,
           a,
@@ -178,9 +212,10 @@ class YouTubeSource implements MusicSource {
         }
       }
       if (bestId.isEmpty) return null;
-      final proxy = await backendStreamUrl(bestId);
-      if (proxy != null) return proxy;
-      return await ExplodeStreamService.instance.getStreamUrl(bestId);
+      try {
+        await DatabaseService.instance.setSetting(cacheKey, bestId);
+      } catch (_) {}
+      return bestId;
     } catch (e) {
       debugPrint('YouTube fast resolve miss: $e');
       return null;

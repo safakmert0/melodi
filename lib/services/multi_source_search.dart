@@ -150,12 +150,12 @@ class MultiSourceSearch {
   Future<void> prefetchStreamUrls(Iterable<OnlineTrack> tracks) async {
     await Future.wait(tracks.take(4).map((track) async {
       if (!track.source.supportsFullTrack) return;
-      // YouTube çözümleme dosyanın tamamını indirebilir; aramada önden indirme.
-      if (track.source == MusicSourceType.youtube) return;
       // HiFi akışı sunucuda FLAC indirir (30-120 sn); aramada tetikleme.
       if (track.source == MusicSourceType.hifi) return;
+      // YouTube: backend proxy HEAD ile sunucuda önden çözülür, tap'te
+      // önbellekten anında dönülür (tam dosya indirilmez).
       try {
-        await getStreamUrl(track).timeout(const Duration(seconds: 4));
+        await getStreamUrl(track).timeout(const Duration(seconds: 10));
       } catch (_) {}
     }));
   }

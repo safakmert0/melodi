@@ -609,8 +609,12 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
         initialPosition: Duration.zero,
       );
 
-      // Wait for duration to be available with retry (stream proxy may take longer than 500ms)
-      for (int i = 0; i < 20; i++) {
+      // Ses gecikmesin diye çalmayı hemen başlat; süre/kapak bildirimi
+      // arka planda tamamlanır (mediaItem durationStream ile güncellenir).
+      _playWithoutBlocking();
+
+      // Kısa süre bekle (uzun bekleme ilk sesi geciktiriyordu)
+      for (int i = 0; i < 5; i++) {
         await Future.delayed(const Duration(milliseconds: 100));
         if (_player.duration != null && _player.duration!.inMilliseconds > 0) {
           break;
@@ -687,7 +691,6 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       await _db.updatePlayCount(song.id);
       _isInitialized = true;
       _broadcastState();
-      _playWithoutBlocking();
     } catch (e, stackTrace) {
       debugPrint('Playback failed for ${song.title}: $e\n$stackTrace');
       await _db.insertErrorLog('playback', e.toString(), stackTrace.toString());

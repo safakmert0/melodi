@@ -12,8 +12,26 @@ import '../music_source.dart';
 /// Akış: ara → sunucu FLAC indirir → Navidrome kütüphanesine ekler →
 /// `/api/library/stream/{id}` döner (30-120 sn sürebilir).
 class HiFiSource implements MusicSource {
-  static const String defaultBaseUrl =
-      'https://melodi.213-142-134-37.nip.io';
+  // Sunucu adresi IPA içinde düz metin durmasın diye XOR+base64 ile saklanır
+  // (statik `strings` incelemesine karşı; ağ trafiğinde zaten TLS var).
+  // Not: kararlı tersine mühendisliğe karşı tam koruma sağlamaz.
+  static const String _encBaseUrl =
+      'JREYHxdTZ0YrDE9dVFsYE3xWQV5QW2VYdV0OAQccWEg9SwUA';
+  static const List<int> _encKey = [
+    77, 101, 108, 111, 100, 105, 72, 105, 70, 105, 35, 50, 48, 50, 54, 33
+  ];
+
+  static String get defaultBaseUrl {
+    try {
+      final raw = base64Decode(_encBaseUrl);
+      final plain =
+          List<int>.generate(raw.length, (i) => raw[i] ^ _encKey[i % 16]);
+      final url = utf8.decode(plain).trim();
+      if (url.startsWith('https://')) return url;
+    } catch (_) {}
+    return '';
+  }
+
   static const String _baseUrlKey = 'hifi_backend_url';
   static const Duration _searchTimeout = Duration(seconds: 30);
   static const Duration _downloadTimeout = Duration(minutes: 5);

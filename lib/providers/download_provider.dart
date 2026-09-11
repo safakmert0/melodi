@@ -96,6 +96,7 @@ class DownloadProvider extends ChangeNotifier {
     String? imageUrl,
     String? sourceVideoId,
     String? directUrl,
+    String? fallbackVideoId,
     int expectedDurationMs = 0,
   }) {
     final normalizedTitle = title.trim().toLowerCase();
@@ -123,6 +124,7 @@ class DownloadProvider extends ChangeNotifier {
       imageUrl: imageUrl,
       sourceVideoId: sourceVideoId,
       directUrl: directUrl,
+      fallbackVideoId: fallbackVideoId,
       expectedDurationMs: expectedDurationMs,
     );
   }

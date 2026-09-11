@@ -20,6 +20,14 @@ class SearchProvider extends ChangeNotifier {
   StreamSubscription<List<OnlineTrack>>? _onlineSub;
   int _searchGeneration = 0;
 
+  /// Şu an akış adresi çözülüp çalınmaya hazırlanan parça anahtarı
+  /// (`source:id`). Yeni bir Oynat dokunuşu öncekini hükümsüz kılar:
+  /// eski tile'ın spinner'ı durur, eski iş bitse bile çalmayı ele geçiremez.
+  final ValueNotifier<String?> resolvingTrackKey = ValueNotifier(null);
+
+  static String trackKeyOf(OnlineTrack track) =>
+      '${track.source.name}:${track.id.trim()}';
+
   List<SongModel> get results => _results;
   List<OnlineTrack> get onlineResults => _onlineResults;
   List<String> get recentSearches => _recentSearches;
@@ -144,6 +152,7 @@ class SearchProvider extends ChangeNotifier {
   void dispose() {
     _debounce?.cancel();
     _onlineSub?.cancel();
+    resolvingTrackKey.dispose();
     _multiSource.dispose();
     super.dispose();
   }

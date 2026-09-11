@@ -4,6 +4,15 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.11.3] - 2026-09-11
+
+### Daha Hizli Calma + Indirme Yedegi + Gizli Sunucu
+- Oynat'a basinca ses kaynagi hazir olur olmaz caliyor (sure/kapak beklemesi kalkti).
+- Aramada ilk sonuclar onden cozuluyor; Hi-Fi eslesmesi kalici onbellekte (tekrar calmalar aramasiz).
+- Coklu tile spinner bug'i: yeni Oynat dokunusu eski cozumlemeyi hukumsuz kilar, tek spinner doner.
+- Indirme yedegi: FLAC (kaliteli servis) olmazsa otomatik YouTube/yt-dlp'den iner; telefonda FLAC takilirsa da ayni yedek devreye girer.
+- Sunucu adresi kodda sifreli saklaniyor (duz metin yok).
+
 ## [5.11.2] - 2026-09-11
 
 ### Hizli Calma + Ayar Temizligi

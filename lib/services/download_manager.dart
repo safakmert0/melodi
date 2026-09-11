@@ -24,6 +24,8 @@ class DownloadTask {
   final String? sourceVideoId;
   // Bayat URL retry'de tazelenebilsin diye final değil.
   String? directUrl;
+  // Hi-Fi (FLAC) olmazsa otomatik YouTube yedeği için video kimliği.
+  final String? fallbackVideoId;
   final String title;
   final String artist;
   final String? album;
@@ -41,6 +43,7 @@ class DownloadTask {
     required this.spotifyTrackId,
     this.sourceVideoId,
     this.directUrl,
+    this.fallbackVideoId,
     required this.title,
     required this.artist,
     this.album,
@@ -136,6 +139,7 @@ class DownloadManager {
     String? imageUrl,
     String? sourceVideoId,
     String? directUrl,
+    String? fallbackVideoId,
     int expectedDurationMs = 0,
   }) {
     final normalizedTitle = title.trim().toLowerCase();
@@ -151,6 +155,7 @@ class DownloadManager {
       spotifyTrackId: spotifyTrackId,
       sourceVideoId: sourceVideoId,
       directUrl: directUrl,
+      fallbackVideoId: fallbackVideoId,
       title: title,
       artist: artist,
       album: album,
@@ -274,6 +279,29 @@ class DownloadManager {
       } else if (streamUrl != null && _isHttpUrl(streamUrl)) {
         resultPath = await _downloadFromUrl(streamUrl, task, downloadDir)
             .timeout(const Duration(minutes: 5), onTimeout: () => null);
+        // FLAC (kaliteli servis) telefona inmezse otomatik YouTube yedeği.
+        final fallbackId = (task.fallbackVideoId ?? '').trim();
+        if ((resultPath == null || resultPath.isEmpty) &&
+            fallbackId.isNotEmpty &&
+            !task.cancelled) {
+          try {
+            final base = await HiFiSource()
+                .baseUrl()
+                .timeout(const Duration(seconds: 10), onTimeout: () => '');
+            if (base.isNotEmpty) {
+              task.error = 'Alternatif kaynaktan indiriliyor...';
+              _notify();
+              resultPath = await _downloadFromUrl(
+                '$base/api/stream/$fallbackId',
+                task,
+                downloadDir,
+              ).timeout(const Duration(minutes: 5), onTimeout: () => null);
+            }
+          } catch (e) {
+            debugPrint('Download fallback miss: $e');
+          }
+          if (task.cancelled) resultPath = null;
+        }
       } else {
         task.state = DownloadState.failed;
         task.error = 'Eşleşen şarkı bulunamadı';
