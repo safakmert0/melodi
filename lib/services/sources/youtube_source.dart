@@ -4,6 +4,7 @@ import '../database_service.dart';
 import '../explode_stream_service.dart';
 import '../music_source.dart';
 import '../track_matcher.dart';
+import '../webview_stream_service.dart';
 import '../ytmusic_service.dart';
 import 'hifi_source.dart';
 
@@ -103,7 +104,18 @@ class YouTubeSource implements MusicSource {
         debugPrint('YouTube backend proxy miss: $e');
       }
     }
-    // 2) Cihazda el yapimi InnerTube (ANDROID 19.29.1, bot takilmaz,
+    // 2) Gizli tarayici (gercek oynatici baglami: bot duvari yok,
+    // n/imza gecerli). musx tarifidir.
+    try {
+      final web = await WebViewStreamService.instance
+          .resolveAudio(track.id)
+          .timeout(const Duration(seconds: 40), onTimeout: () => null);
+      final webUrl = web?['url']?.toString() ?? '';
+      if (webUrl.isNotEmpty) return webUrl;
+    } catch (e) {
+      debugPrint('YouTube webview stream miss: $e');
+    }
+    // 3) Cihazda el yapimi InnerTube (ANDROID 19.29.1, bot takilmaz,
     // AAC oncelikli). Kutuphane istemcileri (20.x) su an bot korumali
     // oldugu icin once bu denenir; explode yedekte kalir.
     try {
@@ -113,7 +125,7 @@ class YouTubeSource implements MusicSource {
     } catch (e) {
       debugPrint('YouTube InnerTube stream miss: $e');
     }
-    // 3) Cihazda explode (dogrulanmis AAC URL).
+    // 4) Cihazda explode (dogrulanmis AAC URL).
     try {
       // Dogrudan akis URL'i: dosya indirmeden just_audio ile streaming.
       final direct =

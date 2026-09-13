@@ -44,6 +44,10 @@ dependencies:
   # Arka planda indirme (iOS URLSession): uygulama arkaplanda da surer
   background_downloader: ^9.5.9
 
+  # Gizli tarayiciyla gercek oynatici baglaminda akis cozme (musx tarifi):
+  # bot duvarina takilmaz, n/imza gecerli URL dondurur.
+  flutter_inappwebview: ^6.1.5
+
   # Sharing
   share_plus: ^12.0.2
 

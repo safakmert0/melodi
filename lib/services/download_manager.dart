@@ -11,6 +11,7 @@ import 'lyrics_embedding_service.dart';
 import 'lyrics_service.dart';
 import 'metadata_service.dart';
 import 'parallel_downloader.dart';
+import 'webview_stream_service.dart';
 import 'storage_manager.dart';
 import 'audio_quality_service.dart';
 import 'explode_stream_service.dart';
@@ -531,6 +532,47 @@ class DownloadManager {
       final baseName =
           safeTitle.isEmpty ? videoId : '${safeTitle}_$videoId';
       final tmpPath = '${downloadDir.path}/.tmp_$baseName.bin';
+      // 0a. Gizli tarayici cozumu (gercek oynatici baglami) + paralel
+      // indirme. Bot duvarinda en saglam cihattir.
+      try {
+        if (!task.cancelled) {
+          task.progress = 0.1;
+          task.error = 'Kaynak çözümleniyor...';
+          _notify();
+          final web = await WebViewStreamService.instance
+              .resolveAudio(videoId)
+              .timeout(const Duration(seconds: 40), onTimeout: () => null);
+          final webUrl = web?['url']?.toString() ?? '';
+          if (webUrl.startsWith('http') && !task.cancelled) {
+            final webPath = await ParallelDownloader.download(
+              url: webUrl,
+              outputPath: tmpPath,
+              headers: Map<String, String>.from(
+                  ExplodeStreamService.instance.streamHeaders),
+              connections: 6,
+              onProgress: (received, total) {
+                if (total != null && total > 0) {
+                  task.progress =
+                      (0.1 + (received / total) * 0.62).clamp(0.1, 0.72);
+                  task.error = 'YouTube indiriliyor...';
+                  _notify();
+                }
+              },
+              isCancelled: () => task.cancelled,
+              timeout: const Duration(minutes: 5),
+            ).timeout(const Duration(minutes: 5, seconds: 30),
+                onTimeout: () => null);
+            if (webPath != null && webPath.isNotEmpty) {
+              task.progress = 0.75;
+              _notify();
+              return webPath;
+            }
+            if (task.cancelled) return null;
+          }
+        }
+      } catch (e) {
+        debugPrint('Webview download miss: $e');
+      }
       // 0b. Hizli hat: el yapimi istemci (ANDROID 19.29.1) ile URL cozup
       // paralel indir. Kutuphane manifest'i bot duvarina takilsa bile
       // bu hat calisir; timeout'lari beklemez.
