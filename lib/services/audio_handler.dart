@@ -695,6 +695,21 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       debugPrint('Playback failed for ${song.title}: $e\n$stackTrace');
       await _db.insertErrorLog('playback', e.toString(), stackTrace.toString());
       _isInitialized = true;
+      // Cevrimici sarkida URL bayatlamis/403 olabilir: siradakine atlamadan
+      // once ayni parcayi taze cozumlemeyle BIR kez daha dene. Ic cagri
+      // _resolvePlayableSong ile yeni URL uretir; dongu riski yoktur
+      // (ic cagri allowFailureFallback:false ile calisir).
+      if (allowFailureFallback && _isRemotePath(song.filePath)) {
+        try {
+          await _playCurrent(
+            allowFailureFallback: false,
+            surfaceError: false,
+          );
+          return;
+        } catch (_) {
+          // Taze deneme de olmadi; kuyruk yedegine dus.
+        }
+      }
       if (!allowFailureFallback) {
         Error.throwWithStackTrace(e, stackTrace);
       }

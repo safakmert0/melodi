@@ -10,9 +10,11 @@ import 'database_service.dart';
 import 'lyrics_embedding_service.dart';
 import 'lyrics_service.dart';
 import 'metadata_service.dart';
+import 'parallel_downloader.dart';
 import 'storage_manager.dart';
 import 'audio_quality_service.dart';
 import 'explode_stream_service.dart';
+import 'hls_stream_service.dart';
 import 'sources/hifi_source.dart';
 import 'ytmusic_service.dart';
 
@@ -413,19 +415,17 @@ class DownloadManager {
 
   Future<String?> _downloadFromUrl(
       String url, DownloadTask task, Directory dir) async {
-    // JollyTone/Evermusic/SpotiFLAC esintili: Range resume + background-friendly
-    // Non-http(s) scheme (e.g. youtube://) cannot be fetched via HttpClient — fail fast
+    // YouTube tek-baglanti kisitlamasini asmak icin paralel cok baglantili
+    // indirme (her baglanti ayri kota alir). Non-http scheme fail fast.
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       debugPrint('Download from URL skipped non-http url: $url');
       return null;
     }
-    File? partFile;
-    HttpClient? client;
     try {
       final sanitized = task.title.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
-      String safeTitle = sanitized.isEmpty ? 'download' : sanitized;
+      final safeTitle = sanitized.isEmpty ? 'download' : sanitized;
 
-      // Önce HEAD ile uzantıyı tahmin et (contentType için), sonra resume
+      // Önce HEAD ile uzantıyı tahmin et (ucuz, 6 sn cap).
       String ext = 'm4a';
       try {
         final headClient = HttpClient()
@@ -435,97 +435,53 @@ class DownloadManager {
             'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
         final headResp =
             await headReq.close().timeout(const Duration(seconds: 6));
-        if (headResp.headers.contentType != null)
+        if (headResp.headers.contentType != null) {
           ext = _downloadExtension(url, headResp.headers.contentType);
+        }
         headClient.close();
       } catch (_) {
         ext = _downloadExtension(url, null);
       }
 
-      // Keep the name stable so a retry resumes the same partial download.
+      // Keep the name stable so retries target the same file.
       final stableId = task.id.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
       final filePath = '${dir.path}/${safeTitle}_$stableId.$ext';
-      final partPath = '$filePath.part';
-      partFile = File(partPath);
-      int existing = 0;
-      if (await partFile.exists()) existing = await partFile.length();
 
-      client = HttpClient()
-        ..userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)'
-        ..connectionTimeout = const Duration(seconds: 15);
-      final request = await client
-          .getUrl(Uri.parse(url))
-          .timeout(const Duration(seconds: 15));
-      request.headers.set('User-Agent',
-          'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
-      if (existing > 1024) {
-        request.headers.set(HttpHeaders.rangeHeader, 'bytes=$existing-');
-      }
-      final response =
-          await request.close().timeout(const Duration(seconds: 15));
-      if (response.statusCode != 200 && response.statusCode != 206) {
-        if (existing > 0 && response.statusCode == 416) {
-          // Range not satisfiable, restart
-          try {
-            await partFile.delete();
-          } catch (_) {}
-          return await _downloadFromUrl(url, task, dir)
-              .timeout(const Duration(minutes: 5));
-        }
-        debugPrint(
-            'Download HTTP ${response.statusCode} for $url (403/429 genelde bayat googlevideo URL demektir)');
-        return null;
-      }
-      // 206 ise append, 200 ise overwrite
-      final isResume = existing > 0 && response.statusCode == 206;
-      final baseBytes = isResume ? existing : 0;
-      final expectedBytes = response.contentLength > 0
-          ? baseBytes + response.contentLength
-          : null;
-      final sink = partFile.openWrite(
-        mode: isResume ? FileMode.append : FileMode.write,
-      );
-      var received = baseBytes;
-      try {
-        await for (final chunk
-            in response.timeout(const Duration(seconds: 120))) {
-          if (task.cancelled) throw const FileSystemException('cancelled');
-          sink.add(chunk);
-          received += chunk.length;
-          if (expectedBytes != null && expectedBytes > 0) {
+      final got = await ParallelDownloader.download(
+        url: url,
+        outputPath: filePath,
+        headers: {
+          'User-Agent':
+              'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
+        },
+        connections: 6,
+        onProgress: (received, total) {
+          if (total != null && total > 0) {
             task.progress =
-                (0.3 + (received / expectedBytes) * 0.48).clamp(0.3, 0.78);
-            task.error =
-                isResume ? 'İndirmeye devam ediliyor...' : 'İndiriliyor...';
+                (0.3 + (received / total) * 0.48).clamp(0.3, 0.78);
+            task.error = 'İndiriliyor...';
             _notify();
           }
-        }
-        await sink.flush();
-      } finally {
-        await sink.close();
-      }
-      final len = await partFile.length();
+        },
+        isCancelled: () => task.cancelled,
+        timeout: const Duration(minutes: 5),
+      ).timeout(const Duration(minutes: 5, seconds: 30),
+          onTimeout: () => null);
+      if (got == null) return null;
+      final len = await File(got).length();
       if (len < 1000) {
         try {
-          await partFile.delete();
+          await File(got).delete();
         } catch (_) {}
         return null;
       }
-      if (expectedBytes != null && len + 1024 < expectedBytes) {
-        // Keep it for the next HTTP Range retry.
-        debugPrint('Incomplete download: $len / $expectedBytes bytes');
-        return null;
-      }
-      await partFile.rename(filePath);
-      return filePath;
+      return got;
     } on TimeoutException catch (e) {
       debugPrint('Download from URL timeout: $e');
       return null;
     } catch (e) {
       debugPrint('Download from URL error: $e');
       return null;
-    } finally {
-      client?.close(force: true);
     }
   }
 
@@ -575,6 +531,39 @@ class DownloadManager {
       final baseName =
           safeTitle.isEmpty ? videoId : '${safeTitle}_$videoId';
       final tmpPath = '${downloadDir.path}/.tmp_$baseName.bin';
+      // 0. HLS hatti (en hizli): fMP4 segmentler paralel cekilir.
+      task.progress = 0.1;
+      task.error = 'Kaynak çözümleniyor...';
+      _notify();
+      try {
+        final hlsUrl = await ExplodeStreamService.instance
+            .getHlsUrl(videoId)
+            .timeout(const Duration(seconds: 45), onTimeout: () => null);
+        if (hlsUrl != null && !task.cancelled) {
+          final hlsPath = await HlsStreamService.instance.downloadHlsToM4a(
+            playlistUrl: hlsUrl,
+            outputPath: tmpPath,
+            headers:
+                Map<String, String>.from(ExplodeStreamService.instance.streamHeaders),
+            onProgress: (received, total) {
+              if (total != null && total > 0) {
+                task.progress =
+                    (0.1 + (received / total) * 0.6).clamp(0.1, 0.7);
+                task.error = 'YouTube indiriliyor...';
+                _notify();
+              }
+            },
+            isCancelled: () => task.cancelled,
+            timeout: const Duration(minutes: 6),
+          );
+          if (hlsPath != null && hlsPath.isNotEmpty) {
+            task.progress = 0.75;
+            _notify();
+            return hlsPath;
+          }
+          if (task.cancelled) return null;
+        }
+      } catch (_) {}
       // 1. Akışı çözümle (manifest; hızlı olmalı).
       task.progress = 0.15;
       task.error = 'Kaynak çözümleniyor...';
@@ -583,9 +572,37 @@ class DownloadManager {
           .resolveStream(videoId)
           .timeout(const Duration(seconds: 45), onTimeout: () => null);
       if (resolved != null && !task.cancelled) {
-        // 2. Arka plan transferi.
+        // HIZLI YOL ÖNCE: paralel foreground indirme (tek-baglanti
+        // YouTube kisitlamasini asar; tipik parca 10-30 sn). Uygulama
+        // arkaplandayken yarisirsa asagidaki bg yedegi devreye girer.
         task.progress = 0.2;
         task.error = 'YouTube indiriliyor...';
+        _notify();
+        final fastPath = await ParallelDownloader.download(
+          url: resolved.url,
+          outputPath:
+              '${downloadDir.path}/.tmp_$baseName${resolved.ext}',
+          headers: resolved.headers,
+          connections: 6,
+          onProgress: (received, total) {
+            if (total != null && total > 0) {
+              task.progress =
+                  (0.2 + (received / total) * 0.55).clamp(0.2, 0.75);
+              _notify();
+            }
+          },
+          isCancelled: () => task.cancelled,
+          timeout: const Duration(minutes: 5),
+        ).timeout(const Duration(minutes: 5, seconds: 30),
+            onTimeout: () => null);
+        if (fastPath != null && fastPath.isNotEmpty) {
+          task.progress = 0.75;
+          _notify();
+          return fastPath;
+        }
+        if (task.cancelled) return null;
+        // YAVAS YOL (yedek): iOS URLSession arka plan transferi.
+        task.error = 'Arka planda deneniyor...';
         _notify();
         final bgPath = await _backgroundFetch(
           task,

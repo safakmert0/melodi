@@ -5,6 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:collection/collection.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
+import 'parallel_downloader.dart';
+import 'hls_stream_service.dart';
+
 /// JollyTone cok katmanli hat birebir:
 /// `yt_audio_stream` + `stream_client` karsiligi.
 /// Kutuphane yonetimli manifest (androidSdkless: PO Token istemez;
@@ -61,18 +64,21 @@ class ExplodeStreamService {
       ? a.bitrate.bitsPerSecond
       : a.size.totalBytes;
 
-  Future<AudioOnlyStreamInfo?> _pickAudio(
-    String videoId, {
-    bool forDownload = false,
-  }) async {
+  Future<StreamManifest?> _fetchManifest(String videoId) async {
     final id = videoId.trim();
     if (id.isEmpty) return null;
     // Istemciyi kutuphaneye birak: varsayilan androidSdkless PO Token
     // istemez; bos donerse kutuphane otomatik tv ile tekrar dener.
     // (safari/androidVr acikca gecilirse tv yedegi devre disi kalir.)
-    final manifest = await _yt.videos.streams
+    return _yt.videos.streams
         .getManifest(id)
         .timeout(const Duration(seconds: 30));
+  }
+
+  AudioOnlyStreamInfo? _pickAudioFromManifest(
+    StreamManifest manifest, {
+    bool forDownload = false,
+  }) {
     final audios = manifest.audioOnly.toList();
     if (audios.isEmpty) return null;
     int byBitrate(AudioOnlyStreamInfo a, AudioOnlyStreamInfo b) =>
@@ -109,23 +115,58 @@ class ExplodeStreamService {
     return pool.firstOrNull ?? manifest.audioOnly.withHighestBitrate();
   }
 
-  /// Dogrudan calinabilir akis URL'i (just_audio AudioSource.uri ile).
-  /// Dosya indirmeden streaming calis — JollyTone hizi buradan gelir.
-  Future<String?> getStreamUrl(String videoId) async {
-    _lastError = null;
+  Future<AudioOnlyStreamInfo?> _pickAudio(
+    String videoId, {
+    bool forDownload = false,
+  }) async {
+    final manifest = await _fetchManifest(videoId);
+    if (manifest == null) return null;
+    return _pickAudioFromManifest(manifest, forDownload: forDownload);
+  }
+
+  /// Yalnizca HLS URL'i (m3u8). Yoksa null.
+  /// Not: HLS URL'i sadece INDIRME hattinda kullanilir; just_audio ile
+  /// dogrudan calinamaz (AVPlayer'da acilmaz), o yuzden calma her zaman
+  /// asamali (progressive) URL kullanir.
+  Future<String?> getHlsUrl(String videoId) async {
     try {
-      final info = await _pickAudio(videoId);
-      final url = info?.url.toString() ?? '';
-      if (url.isEmpty || !url.startsWith('http')) {
-        _lastError = 'Akış bulunamadı (manifest boş)';
-        return null;
-      }
-      return url;
+      final manifest = await _fetchManifest(videoId);
+      if (manifest == null) return null;
+      return HlsStreamService.pickHlsUrl(manifest.hls);
     } catch (e) {
-      _lastError = _shortErr(e);
-      debugPrint('Explode stream error: $e');
+      debugPrint('Explode HLS error: $e');
       return null;
     }
+  }
+
+  /// Dogrudan calinabilir akis URL'i (just_audio AudioSource.uri ile).
+  /// Dosya indirmeden streaming calis — JollyTone hizi buradan gelir.
+  /// Gecici InnerTube/manifest hatalarina karsi 2 deneme yapar.
+  Future<String?> getStreamUrl(String videoId) async {
+    _lastError = null;
+    Object? lastException;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        final info = await _pickAudio(videoId);
+        final url = info?.url.toString() ?? '';
+        if (url.isEmpty || !url.startsWith('http')) {
+          _lastError = 'Akış bulunamadı (manifest boş)';
+        } else {
+          return url;
+        }
+      } catch (e) {
+        lastException = e;
+        _lastError = _shortErr(e);
+        debugPrint('Explode stream error (deneme ${attempt + 1}): $e');
+      }
+      if (attempt == 0) {
+        await Future<void>.delayed(const Duration(seconds: 2));
+      }
+    }
+    if (lastException != null) {
+      debugPrint('Explode stream error: $lastException');
+    }
+    return null;
   }
 
   /// Cozumlenmis akis (arka plan indiriciye verilir).
@@ -158,7 +199,8 @@ class ExplodeStreamService {
     }
   }
 
-  /// Gercek dosya indirme (byte pipe + ilerleme + iptal).
+  /// Gercek dosya indirme: once paralel cok baglantili hizli yol
+  /// (YouTube tek-baglanti kisitlamasini asar), olmazsa klasik pipe.
   /// Donus: dosya yolu veya null.
   Future<String?> downloadToFile({
     required String videoId,
@@ -168,13 +210,38 @@ class ExplodeStreamService {
   }) async {
     _lastError = null;
     try {
-      final info = await _pickAudio(videoId, forDownload: true);
-      if (info == null) {
+      final manifest = await _fetchManifest(videoId);
+      if (manifest == null) {
         _lastError = _lastError ?? 'Akış bulunamadı (manifest boş)';
         return null;
       }
       var path = outputPath.trim();
       if (path.isEmpty) return null;
+      // 0. HLS hattı: fMP4 segmentler paralel cekilip .m4a olur (en hızlı).
+      final hlsUrl = HlsStreamService.pickHlsUrl(manifest.hls);
+      if (hlsUrl != null && !(isCancelled != null && isCancelled())) {
+        final hlsPath = await HlsStreamService.instance.downloadHlsToM4a(
+          playlistUrl: hlsUrl,
+          outputPath: path,
+          headers: Map<String, String>.from(streamHeaders),
+          onProgress: (received, total) {
+            if (total != null && total > 0) {
+              onProgress?.call(received, total);
+            }
+          },
+          isCancelled: isCancelled,
+          timeout: const Duration(minutes: 6),
+        );
+        if (hlsPath != null) return hlsPath;
+        if (isCancelled != null && isCancelled()) return null;
+        debugPrint('Explode: HLS olmadi, asamaliya dusuluyor');
+      }
+      final info =
+          _pickAudioFromManifest(manifest, forDownload: true);
+      if (info == null) {
+        _lastError = _lastError ?? 'Akış bulunamadı (manifest boş)';
+        return null;
+      }
       final ext = _extForContainer(info.container.name);
       if (!path.toLowerCase().endsWith(ext)) {
         if (RegExp(r'\.[A-Za-z0-9]{1,5}$').hasMatch(path)) {
@@ -185,6 +252,19 @@ class ExplodeStreamService {
       }
       final file = File(path);
       await file.parent.create(recursive: true);
+      // Hizli yol: 6 paralel Range baglantisi.
+      final fast = await ParallelDownloader.download(
+        url: info.url.toString(),
+        outputPath: path,
+        headers: Map<String, String>.from(streamHeaders),
+        connections: 6,
+        onProgress: onProgress,
+        isCancelled: isCancelled,
+        timeout: const Duration(minutes: 5),
+      );
+      if (fast != null) return fast;
+      if (isCancelled != null && isCancelled()) return null;
+      debugPrint('Explode: paralel yol olmadi, pipe deneniyor');
       final stream = _yt.videos.streams.get(info);
       final sink = file.openWrite(mode: FileMode.write);
       var received = 0;
