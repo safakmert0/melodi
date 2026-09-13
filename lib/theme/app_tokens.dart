@@ -13,6 +13,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     required this.radiusCover,
     required this.radiusControl,
     required this.radiusCard,
+    required this.radiusPill,
     required this.radiusSheet,
     required this.gapXs,
     required this.gapSm,
@@ -39,7 +40,8 @@ class AppTokens extends ThemeExtension<AppTokens> {
     radiusThumb: 6,
     radiusCover: 8,
     radiusControl: 10,
-    radiusCard: 12,
+    radiusCard: 8,
+    radiusPill: 9999,
     radiusSheet: 16,
     gapXs: 4,
     gapSm: 8,
@@ -65,6 +67,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
   final double radiusCover;
   final double radiusControl;
   final double radiusCard;
+  final double radiusPill;
   final double radiusSheet;
 
   final double gapXs;
@@ -94,6 +97,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
   BorderRadius get borderRadiusThumb => BorderRadius.circular(radiusThumb);
   BorderRadius get borderRadiusCover => BorderRadius.circular(radiusCover);
   BorderRadius get borderRadiusCard => BorderRadius.circular(radiusCard);
+  BorderRadius get borderRadiusPill => BorderRadius.circular(radiusPill);
 
   RoundedRectangleBorder get sheetShape => RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(radiusSheet)),
@@ -106,6 +110,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
     double? radiusCover,
     double? radiusControl,
     double? radiusCard,
+    double? radiusPill,
     double? radiusSheet,
     double? gapXs,
     double? gapSm,
@@ -131,6 +136,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
       radiusCover: radiusCover ?? this.radiusCover,
       radiusControl: radiusControl ?? this.radiusControl,
       radiusCard: radiusCard ?? this.radiusCard,
+      radiusPill: radiusPill ?? this.radiusPill,
       radiusSheet: radiusSheet ?? this.radiusSheet,
       gapXs: gapXs ?? this.gapXs,
       gapSm: gapSm ?? this.gapSm,
@@ -163,6 +169,7 @@ class AppTokens extends ThemeExtension<AppTokens> {
       radiusCover: lerpDouble(radiusCover, other.radiusCover, t),
       radiusControl: lerpDouble(radiusControl, other.radiusControl, t),
       radiusCard: lerpDouble(radiusCard, other.radiusCard, t),
+      radiusPill: lerpDouble(radiusPill, other.radiusPill, t),
       radiusSheet: lerpDouble(radiusSheet, other.radiusSheet, t),
       gapXs: lerpDouble(gapXs, other.gapXs, t),
       gapSm: lerpDouble(gapSm, other.gapSm, t),

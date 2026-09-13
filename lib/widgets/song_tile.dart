@@ -104,8 +104,9 @@ class SongTile extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: isPlaying ? scheme.onSurface : scheme.onSurface,
-                    fontWeight: isPlaying ? FontWeight.w600 : FontWeight.w400,
+                    // Spotify: calan parca yesil + kalin.
+                    color: isPlaying ? scheme.primary : scheme.onSurface,
+                    fontWeight: isPlaying ? FontWeight.w700 : FontWeight.w400,
                     fontSize: 14,
                   ),
             ),

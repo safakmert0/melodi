@@ -153,9 +153,7 @@ class _SearchScreenState extends State<SearchScreen> {
             color: theme.colorScheme.outlineVariant,
           ),
         ),
-        shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
+        shape: const WidgetStatePropertyAll(StadiumBorder()),
         onChanged: (query) {
           context.read<SearchProvider>().search(query.trim());
         },

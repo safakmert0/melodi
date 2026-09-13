@@ -1,9 +1,42 @@
-import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app_tokens.dart';
+import 'spotify_colors.dart';
 
-const int kDefaultSeedColor = 0xFF3A3A3C; // nötr gri — LA Player sade, neon yok
+const int kDefaultSeedColor = 0xFF3A3A3C; // acik tema icin notr gri
+
+/// Spotify DESIGN.md koyu semasi (docs/DESIGN.md).
+const ColorScheme kSpotifyDarkScheme = ColorScheme(
+  brightness: Brightness.dark,
+  primary: SpotifyColors.green,
+  onPrimary: Color(0xFF000000),
+  primaryContainer: SpotifyColors.green,
+  onPrimaryContainer: Color(0xFF000000),
+  secondary: SpotifyColors.silver,
+  onSecondary: SpotifyColors.nearBlack,
+  secondaryContainer: SpotifyColors.midDark,
+  onSecondaryContainer: SpotifyColors.white,
+  tertiary: SpotifyColors.announcementBlue,
+  onTertiary: SpotifyColors.white,
+  error: SpotifyColors.negativeRed,
+  onError: SpotifyColors.white,
+  surface: SpotifyColors.nearBlack,
+  onSurface: SpotifyColors.white,
+  surfaceContainerLowest: SpotifyColors.nearBlack,
+  surfaceContainerLow: SpotifyColors.darkSurface,
+  surfaceContainer: SpotifyColors.midDark,
+  surfaceContainerHigh: SpotifyColors.darkCard,
+  surfaceContainerHighest: SpotifyColors.borderGray,
+  onSurfaceVariant: SpotifyColors.silver,
+  outline: SpotifyColors.borderGray,
+  outlineVariant: SpotifyColors.lightBorder,
+  shadow: Color(0xFF000000),
+  scrim: Color(0xFF000000),
+  inverseSurface: SpotifyColors.white,
+  onInverseSurface: SpotifyColors.nearBlack,
+  inversePrimary: SpotifyColors.greenBorder,
+  surfaceTint: Colors.transparent,
+);
 
 class AppTheme {
   static const Color defaultSeedColor = Color(kDefaultSeedColor);
@@ -58,18 +91,14 @@ class AppTheme {
     Color? seedColor,
     bool isAmoled = false,
   }) {
-    final scheme =
-        dynamicScheme ??
-        ColorScheme.fromSeed(
-          seedColor: seedColor ?? defaultSeedColor,
-          brightness: Brightness.dark,
-        );
+    // Spotify dili: sabit koyu sema (tohumdan turetilmez).
+    final scheme = dynamicScheme ?? kSpotifyDarkScheme;
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       pageTransitionsTheme: _pageTransitionsTheme,
-      scaffoldBackgroundColor: isAmoled ? Colors.black : null,
+      scaffoldBackgroundColor: SpotifyColors.nearBlack,
       appBarTheme: _appBarTheme(scheme, isAmoled: isAmoled),
       cardTheme: _cardTheme(scheme),
       elevatedButtonTheme: _elevatedButtonTheme(scheme),
@@ -87,8 +116,34 @@ class AppTheme {
       switchTheme: _switchTheme(scheme),
       chipTheme: _chipTheme(scheme),
       dividerTheme: _dividerTheme(scheme),
+      textTheme: _textTheme(scheme),
       extensions: const <ThemeExtension<dynamic>>[AppTokens.standard],
       fontFamily: null,
+    );
+  }
+
+  /// Spotify tipografisi: 700/400 ikiligi, kompakt olcek.
+  static TextTheme _textTheme(ColorScheme scheme) {
+    const white = SpotifyColors.white;
+    const silver = SpotifyColors.silver;
+    return TextTheme(
+      headlineSmall: const TextStyle(
+          color: white, fontSize: 24, fontWeight: FontWeight.w700),
+      titleLarge: const TextStyle(
+          color: white, fontSize: 18, fontWeight: FontWeight.w600),
+      titleMedium: const TextStyle(
+          color: white, fontSize: 16, fontWeight: FontWeight.w700),
+      bodyLarge: const TextStyle(
+          color: white, fontSize: 16, fontWeight: FontWeight.w400),
+      bodyMedium: const TextStyle(
+          color: silver, fontSize: 14, fontWeight: FontWeight.w400),
+      bodySmall: const TextStyle(
+          color: silver, fontSize: 12, fontWeight: FontWeight.w400),
+      labelLarge: const TextStyle(
+          color: white,
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.4),
     );
   }
 
@@ -133,31 +188,47 @@ class AppTheme {
   static ElevatedButtonThemeData _elevatedButtonTheme(ColorScheme scheme) =>
       ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          elevation: 1,
+          elevation: 0,
+          backgroundColor: SpotifyColors.midDark,
+          foregroundColor: SpotifyColors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(_tokens.radiusControl),
+            borderRadius: BorderRadius.circular(_tokens.radiusPill),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          textStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.4,
+          ),
         ),
       );
 
   static FilledButtonThemeData _filledButtonTheme(ColorScheme scheme) =>
       FilledButtonThemeData(
         style: FilledButton.styleFrom(
+          backgroundColor: SpotifyColors.green,
+          foregroundColor: Colors.black,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(_tokens.radiusControl),
+            borderRadius: BorderRadius.circular(_tokens.radiusPill),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 43, vertical: 12),
+          textStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.4,
+          ),
         ),
       );
 
   static OutlinedButtonThemeData _outlinedButtonTheme(ColorScheme scheme) =>
       OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
+          foregroundColor: SpotifyColors.white,
+          side: const BorderSide(color: SpotifyColors.lightBorder),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(_tokens.radiusControl),
+            borderRadius: BorderRadius.circular(_tokens.radiusPill),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         ),
       );
 
@@ -172,30 +243,28 @@ class AppTheme {
       );
 
   static FloatingActionButtonThemeData _fabTheme(ColorScheme scheme) =>
-      FloatingActionButtonThemeData(
-        elevation: 3,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(_tokens.radiusControl),
-        ),
-        backgroundColor: scheme.primaryContainer,
-        foregroundColor: scheme.onPrimaryContainer,
+      const FloatingActionButtonThemeData(
+        elevation: 6,
+        shape: CircleBorder(),
+        backgroundColor: SpotifyColors.green,
+        foregroundColor: Colors.black,
       );
 
   static InputDecorationTheme _inputDecorationTheme(ColorScheme scheme) =>
       InputDecorationTheme(
         filled: true,
-        fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        fillColor: SpotifyColors.midDark,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(_tokens.radiusControl),
+          borderRadius: BorderRadius.circular(_tokens.radiusPill),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(_tokens.radiusControl),
+          borderRadius: BorderRadius.circular(_tokens.radiusPill),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(_tokens.radiusControl),
-          borderSide: BorderSide(color: scheme.primary, width: 2),
+          borderRadius: BorderRadius.circular(_tokens.radiusPill),
+          borderSide: const BorderSide(color: SpotifyColors.white, width: 1),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_tokens.radiusControl),

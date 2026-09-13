@@ -3,8 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../providers/player_provider.dart';
 import '../screens/now_playing_screen.dart';
+import '../theme/spotify_colors.dart';
 
-/// Sade mini player — LA Player gibi düz, ince progress, sistem yüzeyi
+/// Spotify mini kart: #181818 zemin, yesil dairesel play, ince yesil progress.
 class MiniPlayer extends StatefulWidget {
   const MiniPlayer({super.key});
   @override
@@ -35,26 +36,27 @@ class _MiniPlayerState extends State<MiniPlayer> {
             player.handler.stop();
           },
           child: Material(
-            color: scheme.surface,
+            color: SpotifyColors.darkSurface,
             child: InkWell(
               onTap: () => _openPlayer(context),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Divider(height: 1, thickness: 0.5, color: scheme.outlineVariant.withValues(alpha: 0.3)),
                   LinearProgressIndicator(
                     value: (player.duration.inMilliseconds <= 0)
                         ? 0
                         : (player.position.inMilliseconds / player.duration.inMilliseconds).clamp(0.0, 1.0),
                     minHeight: 2,
-                    backgroundColor: scheme.surfaceContainerHighest,
+                    backgroundColor: SpotifyColors.midDark,
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                        SpotifyColors.green),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     child: Row(
                       children: [
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(8),
                           child: SizedBox(
                             width: 40,
                             height: 40,
@@ -73,19 +75,38 @@ class _MiniPlayerState extends State<MiniPlayer> {
                               Text(song.title,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500)),
+                                  style: const TextStyle(
+                                      color: SpotifyColors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700)),
                               Text(song.artist,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+                                  style: const TextStyle(
+                                      color: SpotifyColors.silver,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w400)),
                             ],
                           ),
                         ),
-                        IconButton(
-                          icon: Icon(player.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded),
-                          onPressed: player.playPause,
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: SpotifyColors.greenPlayCircle,
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            icon: Icon(
+                                player.isPlaying
+                                    ? Icons.pause_rounded
+                                    : Icons.play_arrow_rounded,
+                                color: Colors.black),
+                            onPressed: player.playPause,
+                          ),
                         ),
-                        IconButton(icon: const Icon(Icons.skip_next_rounded), onPressed: player.skipToNext),
+                        IconButton(
+                            icon: const Icon(Icons.skip_next_rounded,
+                                color: SpotifyColors.silver),
+                            onPressed: player.skipToNext),
                       ],
                     ),
                   ),
@@ -99,7 +120,8 @@ class _MiniPlayerState extends State<MiniPlayer> {
   }
 
   Widget _fallback(ColorScheme s) => Container(
-        color: s.surfaceContainerHighest,
-        child: Icon(Icons.music_note_rounded, size: 20, color: s.onSurfaceVariant),
+        color: SpotifyColors.midDark,
+        child: const Icon(Icons.music_note_rounded,
+            size: 20, color: SpotifyColors.silver),
       );
 }
