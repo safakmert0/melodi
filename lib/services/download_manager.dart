@@ -531,6 +531,49 @@ class DownloadManager {
       final baseName =
           safeTitle.isEmpty ? videoId : '${safeTitle}_$videoId';
       final tmpPath = '${downloadDir.path}/.tmp_$baseName.bin';
+      // 0b. Hizli hat: el yapimi istemci (ANDROID 19.29.1) ile URL cozup
+      // paralel indir. Kutuphane manifest'i bot duvarina takilsa bile
+      // bu hat calisir; timeout'lari beklemez.
+      try {
+        if (!task.cancelled) {
+          task.progress = 0.12;
+          task.error = 'Kaynak çözümleniyor...';
+          _notify();
+          final fastUrl = await YtMusicService.instance
+              .getStreamUrl(videoId)
+              .timeout(const Duration(seconds: 25), onTimeout: () => null);
+          if (fastUrl != null &&
+              fastUrl.startsWith('http') &&
+              !task.cancelled) {
+            final fastPath = await ParallelDownloader.download(
+              url: fastUrl,
+              outputPath: tmpPath,
+              headers: Map<String, String>.from(
+                  ExplodeStreamService.instance.streamHeaders),
+              connections: 6,
+              onProgress: (received, total) {
+                if (total != null && total > 0) {
+                  task.progress =
+                      (0.12 + (received / total) * 0.6).clamp(0.12, 0.72);
+                  task.error = 'YouTube indiriliyor...';
+                  _notify();
+                }
+              },
+              isCancelled: () => task.cancelled,
+              timeout: const Duration(minutes: 5),
+            ).timeout(const Duration(minutes: 5, seconds: 30),
+                onTimeout: () => null);
+            if (fastPath != null && fastPath.isNotEmpty) {
+              task.progress = 0.75;
+              _notify();
+              return fastPath;
+            }
+            if (task.cancelled) return null;
+          }
+        }
+      } catch (e) {
+        debugPrint('Fast innertube download miss: $e');
+      }
       // 0. HLS hatti (en hizli): fMP4 segmentler paralel cekilir.
       task.progress = 0.1;
       task.error = 'Kaynak çözümleniyor...';

@@ -103,7 +103,17 @@ class YouTubeSource implements MusicSource {
         debugPrint('YouTube backend proxy miss: $e');
       }
     }
-    // 2) Cihazda explode (dogrulanmis AAC URL).
+    // 2) Cihazda el yapimi InnerTube (ANDROID 19.29.1, bot takilmaz,
+    // AAC oncelikli). Kutuphane istemcileri (20.x) su an bot korumali
+    // oldugu icin once bu denenir; explode yedekte kalir.
+    try {
+      final innerTube =
+          await YtMusicService.instance.getStreamUrl(track.id);
+      if (innerTube != null && innerTube.isNotEmpty) return innerTube;
+    } catch (e) {
+      debugPrint('YouTube InnerTube stream miss: $e');
+    }
+    // 3) Cihazda explode (dogrulanmis AAC URL).
     try {
       // Dogrudan akis URL'i: dosya indirmeden just_audio ile streaming.
       final direct =
@@ -111,13 +121,6 @@ class YouTubeSource implements MusicSource {
       if (direct != null && direct.isNotEmpty) return direct;
     } catch (e) {
       debugPrint('YouTube stream error: $e');
-    }
-    try {
-      final innerTube =
-          await YtMusicService.instance.getStreamUrl(track.id);
-      if (innerTube != null && innerTube.isNotEmpty) return innerTube;
-    } catch (e) {
-      debugPrint('YouTube InnerTube stream miss: $e');
     }
     return null;
   }

@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
+import 'parallel_downloader.dart';
+
 /// Native Dart YTMusic servis (JollyTone eşdeğeri, sunucusuz).
 /// JS paketi yerine doğrudan InnerTube WEB_REMIX + ANDROID vb istemcilerle
 /// arama ve indirme yapar — `flutter_js` yok, asset yok.
@@ -32,6 +34,60 @@ class YtMusicService {
   };
 
   static const List<Map<String, dynamic>> _innerTubeClients = [
+    // JollyTone tarifi: ANDROID 19.29.1 (Eylul 2024) PO-token oncesi
+    // surumdur; bot dogrulamasina takilmadan direkt URL dondurur.
+    // Yeni surumler (21.x) "gir-wis yap" (LOGIN_REQUIRED) ile olur.
+    // youtube.com + music.youtube.com ikisi de denenir.
+    {
+      'name': 'android_19',
+      'clientHeaderName': '3',
+      'requiresGvsPoToken': false,
+      'host': 'https://www.youtube.com',
+      'body': {
+        'context': {
+          'client': {
+            'clientName': 'ANDROID',
+            'clientVersion': '19.29.1',
+            'androidSdkVersion': 30,
+            'hl': 'en',
+            'gl': 'US',
+            'timeZone': 'UTC',
+            'utcOffsetMinutes': 0,
+            'osName': 'Android',
+            'osVersion': '11',
+            'platform': 'MOBILE',
+          }
+        }
+      },
+      'ua':
+          'com.google.android.youtube/19.29.1 (Linux; U; Android 11) gzip',
+      'key': _innerTubeApiKey,
+    },
+    {
+      'name': 'android_19_music',
+      'clientHeaderName': '3',
+      'requiresGvsPoToken': false,
+      'host': 'https://music.youtube.com',
+      'body': {
+        'context': {
+          'client': {
+            'clientName': 'ANDROID',
+            'clientVersion': '19.29.1',
+            'androidSdkVersion': 30,
+            'hl': 'en',
+            'gl': 'US',
+            'timeZone': 'UTC',
+            'utcOffsetMinutes': 0,
+            'osName': 'Android',
+            'osVersion': '11',
+            'platform': 'MOBILE',
+          }
+        }
+      },
+      'ua':
+          'com.google.android.youtube/19.29.1 (Linux; U; Android 11) gzip',
+      'key': _innerTubeApiKey,
+    },
     {
       'name': 'android_vr',
       'clientHeaderName': '28',
@@ -804,12 +860,14 @@ class YtMusicService {
       (body['context']['client'] as Map)['visitorData'] = visitorData;
     }
     final key = clientConfig['key']?.toString() ?? _innerTubeApiKey;
+    final host = clientConfig['host']?.toString() ??
+        'https://www.youtube.com';
     final url = Uri.parse(
-        'https://www.youtube.com/youtubei/v1/player?key=$key&prettyPrint=false');
+        '$host/youtubei/v1/player?key=$key&prettyPrint=false');
     final headers = <String, String>{
       'Content-Type': 'application/json',
       'User-Agent': clientConfig['ua']?.toString() ?? _innerTubeUserAgent,
-      'Origin': 'https://www.youtube.com',
+      'Origin': host,
       'X-YouTube-Client-Name':
           clientConfig['clientHeaderName']?.toString() ?? '3',
       'X-YouTube-Client-Version':
@@ -997,39 +1055,22 @@ class YtMusicService {
     try {
       await file.parent.create(recursive: true);
     } catch (_) {}
-    final uri = Uri.tryParse(url);
-    if (uri == null) return null;
-    final client = HttpClient()..connectionTimeout = const Duration(seconds: 20);
+    // Tek baglanti damlamada takilir (Stream.timeout sifirlanir);
+    // bekcili paralel indirici hizli oldurur, hizli dusurur.
     try {
-      final request = await client
-          .getUrl(uri)
-          .timeout(const Duration(seconds: 25));
-      request.headers.set('User-Agent',
-          'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1');
-      final resp = await request.close().timeout(const Duration(seconds: 25));
-      if (resp.statusCode != 200 && resp.statusCode != 206) return null;
-      final sink = file.openWrite(mode: FileMode.write);
-      try {
-        await for (final data in resp.timeout(const Duration(seconds: 60))) {
-          sink.add(data);
-        }
-        await sink.flush();
-      } finally {
-        await sink.close();
-      }
-      final len = await file.length();
-      if (len < 1000) {
-        try {
-          await file.delete();
-        } catch (_) {}
-        return null;
-      }
-      return path;
+      return await ParallelDownloader.download(
+        url: url,
+        outputPath: path,
+        headers: {
+          'User-Agent':
+              'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+        },
+        connections: 6,
+        timeout: const Duration(minutes: 5),
+      );
     } catch (e) {
       debugPrint('downloadAudioUrl error $e');
       return null;
-    } finally {
-      client.close(force: true);
     }
   }
 }
