@@ -119,12 +119,101 @@ void main() {
         isNull,
       );
     });
+
+    test('damlayan baglantiyi bekci oldurur (takilip kalmaz)', () async {
+      // Her 1 sn'de 1 KB: Stream.timeout sifirlanir ama verim bekcisi
+      // (3 sn / 64 KB) takilmayi yakalamalidir.
+      final server = await _dripServer(
+          totalBytes: 600 * 1024, every: const Duration(seconds: 1));
+      try {
+        final sw = Stopwatch()..start();
+        final result = await ParallelDownloader.download(
+          url: 'http://127.0.0.1:${server.port}/file',
+          outputPath: '${tmp.path}/drip.m4a',
+          connections: 2,
+          stallTimeout: const Duration(seconds: 3),
+          minStallBytes: 64 * 1024,
+          timeout: const Duration(seconds: 60),
+        );
+        sw.stop();
+        expect(result, isNull);
+        // Bekci ~3-10 sn'de oldurmeli; 60 sn cap'e takilmamali.
+        expect(sw.elapsed.inSeconds, lessThan(45));
+      } finally {
+        await server.close(force: true);
+      }
+    });
+
+    test('damlayan tek baglantiyi bekci oldurur', () async {
+      final server = await _dripServer(
+          totalBytes: 300 * 1024, every: const Duration(seconds: 1));
+      try {
+        final sw = Stopwatch()..start();
+        final result = await ParallelDownloader.download(
+          url: 'http://127.0.0.1:${server.port}/file',
+          outputPath: '${tmp.path}/drip_single.m4a',
+          connections: 2,
+          stallTimeout: const Duration(seconds: 3),
+          minStallBytes: 64 * 1024,
+          timeout: const Duration(seconds: 60),
+        );
+        sw.stop();
+        expect(result, isNull);
+        expect(sw.elapsed.inSeconds, lessThan(45));
+      } finally {
+        await server.close(force: true);
+      }
+    });
   });
 }
 
 List<int> _randomBytes(int length) {
   final rnd = Random(42);
   return List<int>.generate(length, (_) => rnd.nextInt(256));
+}
+
+/// Damlayan sunucu: Range'i destekler ama veriyi cok yavas damlatir
+/// (kisitlanmis googlevideo taklidi).
+Future<HttpServer> _dripServer(
+    {required int totalBytes, required Duration every}) async {
+  final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+  server.listen((HttpRequest req) async {
+    try {
+      final range = req.headers.value(HttpHeaders.rangeHeader);
+      var start = 0;
+      var end = totalBytes - 1;
+      var partial = false;
+      if (range != null) {
+        final m = RegExp(r'bytes=(\d*)-(\d*)').firstMatch(range);
+        if (m != null) {
+          if (m.group(1)!.isNotEmpty) start = int.parse(m.group(1)!);
+          if (m.group(2)!.isNotEmpty) end = int.parse(m.group(2)!);
+          partial = true;
+        }
+      }
+      if (partial) {
+        req.response.statusCode = HttpStatus.partialContent;
+        req.response.headers.set(HttpHeaders.contentRangeHeader,
+            'bytes $start-$end/$totalBytes');
+      }
+      req.response.headers.contentLength = end - start + 1;
+      const drip = 1024;
+      var sent = start;
+      while (sent <= end) {
+        final n = (end - sent + 1).clamp(0, drip);
+        req.response.add(List<int>.filled(n, 0xAB));
+        await req.response.flush();
+        sent += n;
+        if (sent <= end) await Future<void>.delayed(every);
+      }
+      await req.response.close();
+    } catch (_) {
+      try {
+        await req.response.close();
+      } catch (_) {}
+    }
+  });
+  return server;
 }
 
 /// Basit dosya sunucusu: istenirse Range (206) destekler.

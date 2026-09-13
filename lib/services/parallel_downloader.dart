@@ -26,6 +26,10 @@ class ParallelDownloader {
   ///
   /// Ara dosyalar `<outputPath>.part` ve `<outputPath>.part.<i>` adlarini
   /// kullanir; basarisizlikta/iptalde temizlenir.
+  ///
+  /// [stallTimeout]/[minStallBytes]: verim bekcisi. Bu surede bu kadar
+  /// bayttan az veri akan parca oldurulur (damlayan kisitli baglantida
+  /// `Stream.timeout` sifirlanir, indirme sonsuza dek %X'te takilir).
   static Future<String?> download({
     required String url,
     required String outputPath,
@@ -34,6 +38,8 @@ class ParallelDownloader {
     void Function(int received, int? total)? onProgress,
     bool Function()? isCancelled,
     Duration timeout = const Duration(minutes: 5),
+    Duration stallTimeout = const Duration(seconds: 45),
+    int minStallBytes = 32 * 1024,
   }) async {
     final uri = Uri.tryParse(url.trim());
     if (uri == null ||
@@ -55,6 +61,8 @@ class ParallelDownloader {
         connections: connections.clamp(1, _maxConnections),
         onProgress: onProgress,
         isCancelled: isCancelled,
+        stallTimeout: stallTimeout,
+        minStallBytes: minStallBytes,
       ).timeout(timeout, onTimeout: () {
         debugPrint('ParallelDownloader: zaman aşımı ($url)');
         return null;
@@ -75,6 +83,8 @@ class ParallelDownloader {
     required int connections,
     void Function(int received, int? total)? onProgress,
     bool Function()? isCancelled,
+    Duration stallTimeout = const Duration(seconds: 45),
+    int minStallBytes = 32 * 1024,
   }) async {
     final partPath = '$path.part';
     final partFile = File(partPath);
@@ -97,6 +107,8 @@ class ParallelDownloader {
         total: total > 0 ? total : null,
         onProgress: onProgress,
         isCancelled: isCancelled,
+        stallTimeout: stallTimeout,
+        minStallBytes: minStallBytes,
       );
     }
 
@@ -113,6 +125,8 @@ class ParallelDownloader {
         total: total,
         onProgress: onProgress,
         isCancelled: isCancelled,
+        stallTimeout: stallTimeout,
+        minStallBytes: minStallBytes,
       );
     }
 
@@ -135,6 +149,8 @@ class ParallelDownloader {
           report();
         },
         isCancelled: isCancelled,
+        stallTimeout: stallTimeout,
+        minStallBytes: minStallBytes,
       ));
     }
     final results = await Future.wait(futures);
@@ -231,6 +247,11 @@ class ParallelDownloader {
   }
 
   /// Tek parcayi indir (1 otomatik tekrarli).
+  ///
+  /// Damlayan baglanti korumasi: [stallTimeout] surede [minStallBytes]'tan
+  /// az veri gelirse parca iptal edilir. `Stream.timeout` her veri
+  /// olayinda sifirlandigi icin yavas ama olu baglantiyi yakalayamaz;
+  /// bu bekci ilerlemeyi olcer.
   static Future<bool> _fetchChunk({
     required Uri uri,
     required Map<String, String> headers,
@@ -239,11 +260,14 @@ class ParallelDownloader {
     required int end,
     required void Function(int count) onBytes,
     bool Function()? isCancelled,
+    Duration stallTimeout = const Duration(seconds: 45),
+    int minStallBytes = 32 * 1024,
   }) async {
     for (var attempt = 0; attempt < 2; attempt++) {
       if (isCancelled != null && isCancelled()) return false;
       HttpClient? client;
       try {
+        debugPrint('ParallelDownloader chunk $start-$end deneme ${attempt + 1}');
         final file = File(tmpPath);
         if (attempt > 0 && await file.exists()) await file.delete();
         client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
@@ -261,18 +285,63 @@ class ParallelDownloader {
         final sink = file.openWrite(mode: FileMode.write);
         var got = 0;
         final want = end - start + 1;
+        // Son anlamli veri zamani: damlama 45 sn'de 32 KB altindaysa olu.
+        var windowStart = DateTime.now();
+        var windowBytes = 0;
+        var stalled = false;
+        StreamSubscription<List<int>>? sub;
+        final done = Completer<void>();
+        Object? streamError;
         try {
-          await for (final data
-              in resp.timeout(const Duration(seconds: 60))) {
-            if (isCancelled != null && isCancelled()) return false;
-            sink.add(data);
-            got += data.length;
-            onBytes(data.length);
-          }
+          sub = resp.listen(
+            (data) {
+              if (stalled) return;
+              sink.add(data);
+              got += data.length;
+              windowBytes += data.length;
+              onBytes(data.length);
+              final now = DateTime.now();
+              if (now.difference(windowStart) >= stallTimeout) {
+                if (windowBytes < minStallBytes) {
+                  stalled = true;
+                  debugPrint('ParallelDownloader chunk $start-$end '
+                      'takildi (${windowBytes}B/${stallTimeout.inSeconds}sn)');
+                  sub?.cancel();
+                  if (!done.isCompleted) done.complete();
+                } else {
+                  windowStart = now;
+                  windowBytes = 0;
+                }
+              }
+            },
+            onDone: () {
+              if (!done.isCompleted) done.complete();
+            },
+            onError: (Object e) {
+              streamError = e;
+              if (!done.isCompleted) done.complete();
+            },
+            cancelOnError: true,
+          );
+          await done.future.timeout(
+            Duration(seconds: stallTimeout.inSeconds * 4 + 120),
+            onTimeout: () {
+              debugPrint(
+                  'ParallelDownloader chunk $start-$end genel zamanasimi');
+              sub?.cancel();
+            },
+          );
           await sink.flush();
         } finally {
           await sink.close();
         }
+        if (stalled) continue;
+        if (streamError != null) {
+          debugPrint(
+              'ParallelDownloader chunk $start-$end hata: $streamError');
+          continue;
+        }
+        if (isCancelled != null && isCancelled()) return false;
         if (got == want) return true;
         debugPrint(
             'ParallelDownloader chunk $start-$end eksik ($got/$want)');
@@ -289,6 +358,7 @@ class ParallelDownloader {
   }
 
   /// Range yoksa / kucuk dosyada klasik tek baglanti.
+  /// Damlayan baglanti bekcisi aynen gecerlidir.
   static Future<String?> _singleConnection({
     required Uri uri,
     required String path,
@@ -296,6 +366,8 @@ class ParallelDownloader {
     required int? total,
     void Function(int received, int? total)? onProgress,
     bool Function()? isCancelled,
+    Duration stallTimeout = const Duration(seconds: 45),
+    int minStallBytes = 32 * 1024,
   }) async {
     final partPath = '$path.part';
     HttpClient? client;
@@ -316,17 +388,58 @@ class ParallelDownloader {
       final sink =
           File(partPath).openWrite(mode: FileMode.write);
       var received = 0;
+      var windowStart = DateTime.now();
+      var windowBytes = 0;
+      var stalled = false;
+      StreamSubscription<List<int>>? sub;
+      final done = Completer<void>();
       try {
-        await for (final data in resp.timeout(const Duration(seconds: 120))) {
-          if (isCancelled != null && isCancelled()) return null;
-          sink.add(data);
-          received += data.length;
-          onProgress?.call(received, expected);
-        }
+        sub = resp.listen(
+          (data) {
+            if (stalled) return;
+            sink.add(data);
+            received += data.length;
+            windowBytes += data.length;
+            onProgress?.call(received, expected);
+            final now = DateTime.now();
+            if (now.difference(windowStart) >= stallTimeout) {
+              if (windowBytes < minStallBytes) {
+                stalled = true;
+                debugPrint('ParallelDownloader single takildi '
+                    '(${windowBytes}B/${stallTimeout.inSeconds}sn)');
+                sub?.cancel();
+                if (!done.isCompleted) done.complete();
+              } else {
+                windowStart = now;
+                windowBytes = 0;
+              }
+            }
+          },
+          onDone: () {
+            if (!done.isCompleted) done.complete();
+          },
+          onError: (_) {
+            if (!done.isCompleted) done.complete();
+          },
+          cancelOnError: true,
+        );
+        await done.future.timeout(
+          Duration(seconds: stallTimeout.inSeconds * 4 + 180),
+          onTimeout: () => sub?.cancel(),
+        );
         await sink.flush();
       } finally {
         await sink.close();
       }
+      if (stalled) {
+        try {
+          if (await File(partPath).exists()) {
+            await File(partPath).delete();
+          }
+        } catch (_) {}
+        return null;
+      }
+      if (isCancelled != null && isCancelled()) return null;
       final len = await File(partPath).length();
       if (len < 1000) {
         try {

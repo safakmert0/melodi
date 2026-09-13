@@ -81,7 +81,7 @@ class MultiSourceSearch {
   // Brief cache of resolved stream URLs so repeated playback/download attempts
   // for the same track don't re-resolve through the network every time.
   final Map<String, _CachedStreamUrl> _streamUrlCache = {};
-  static const Duration _streamUrlCacheTtl = Duration(minutes: 3);
+  static const Duration _streamUrlCacheTtl = Duration(minutes: 2);
 
   Stream<List<OnlineTrack>> searchAll(String query, {int limitPerSource = 25}) {
     _controller?.close();

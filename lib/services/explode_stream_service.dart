@@ -111,6 +111,9 @@ class ExplodeStreamService {
         .toList()
       ..sort(byBitrate);
     if (mp4.isNotEmpty) return mp4.first;
+    // AVPlayer opus/webm calamaz (-1 hatasi): oynatilabilir secim yoksa
+    // opus dondurmek yerine null don, yedek hat devreye girsin.
+    if (!forDownload) return null;
     pool.sort(byBitrate);
     return pool.firstOrNull ?? manifest.audioOnly.withHighestBitrate();
   }

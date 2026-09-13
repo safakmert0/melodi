@@ -142,6 +142,8 @@ class HlsStreamService {
     void Function(int received, int? total)? onProgress,
     bool Function()? isCancelled,
     Duration timeout = const Duration(minutes: 6),
+    Duration stallTimeout = const Duration(seconds: 45),
+    int minStallBytes = 32 * 1024,
   }) async {
     final startUri = Uri.tryParse(playlistUrl.trim());
     var path = outputPath.trim();
@@ -164,6 +166,8 @@ class HlsStreamService {
         headers: headers,
         onProgress: onProgress,
         isCancelled: isCancelled,
+        stallTimeout: stallTimeout,
+        minStallBytes: minStallBytes,
       ).timeout(timeout, onTimeout: () {
         debugPrint('HlsStreamService: zaman aşımı');
         return null;
@@ -180,6 +184,8 @@ class HlsStreamService {
     required Map<String, String> headers,
     void Function(int received, int? total)? onProgress,
     bool Function()? isCancelled,
+    Duration stallTimeout = const Duration(seconds: 45),
+    int minStallBytes = 32 * 1024,
   }) async {
     final merged = Map<String, String>.from(headers);
     merged.putIfAbsent(HttpHeaders.userAgentHeader,
@@ -230,7 +236,8 @@ class HlsStreamService {
           failed = true;
           return;
         }
-        final bytes = await _getBytes(parts[i], merged);
+        final bytes = await _getBytes(parts[i], merged,
+            stallTimeout: stallTimeout, minStallBytes: minStallBytes);
         if (bytes == null || bytes.isEmpty) {
           failed = true;
           return;
@@ -303,7 +310,12 @@ class HlsStreamService {
     }
   }
 
-  Future<List<int>?> _getBytes(Uri uri, Map<String, String> headers) async {
+  Future<List<int>?> _getBytes(
+    Uri uri,
+    Map<String, String> headers, {
+    Duration stallTimeout = const Duration(seconds: 45),
+    int minStallBytes = 32 * 1024,
+  }) async {
     for (var attempt = 0; attempt < 2; attempt++) {
       HttpClient? client;
       try {
@@ -314,9 +326,48 @@ class HlsStreamService {
         final resp = await req.close().timeout(const Duration(seconds: 15));
         if (resp.statusCode != 200) continue;
         final bytes = <int>[];
-        await for (final chunk
-            in resp.timeout(const Duration(seconds: 60))) {
-          bytes.addAll(chunk);
+        var windowStart = DateTime.now();
+        var windowBytes = 0;
+        var stalled = false;
+        StreamSubscription<List<int>>? sub;
+        final done = Completer<void>();
+        try {
+          sub = resp.listen(
+            (chunk) {
+              if (stalled) return;
+              bytes.addAll(chunk);
+              windowBytes += chunk.length;
+              final now = DateTime.now();
+              if (now.difference(windowStart) >= stallTimeout) {
+                if (windowBytes < minStallBytes) {
+                  stalled = true;
+                  sub?.cancel();
+                  if (!done.isCompleted) done.complete();
+                } else {
+                  windowStart = now;
+                  windowBytes = 0;
+                }
+              }
+            },
+            onDone: () {
+              if (!done.isCompleted) done.complete();
+            },
+            onError: (_) {
+              if (!done.isCompleted) done.complete();
+            },
+            cancelOnError: true,
+          );
+          await done.future.timeout(
+            Duration(seconds: stallTimeout.inSeconds * 4 + 60),
+            onTimeout: () => sub?.cancel(),
+          );
+        } finally {
+          // ignore: avoid-ignoring-return-values
+          sub?.cancel();
+        }
+        if (stalled) {
+          debugPrint('HlsStreamService segment takildi: $uri');
+          continue;
         }
         if (bytes.isNotEmpty) return bytes;
       } catch (_) {

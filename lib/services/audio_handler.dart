@@ -699,8 +699,11 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       // once ayni parcayi taze cozumlemeyle BIR kez daha dene. Ic cagri
       // _resolvePlayableSong ile yeni URL uretir; dongu riski yoktur
       // (ic cagri allowFailureFallback:false ile calisir).
+      // Onemli: cozumlu URL onbellegi (3 dk TTL) ayni bayat URL'yi
+      // dondurur; retry'den once temizlenir, yoksa retry etkisiz olur.
       if (allowFailureFallback && _isRemotePath(song.filePath)) {
         try {
+          MultiSourceSearch().clearStreamCache();
           await _playCurrent(
             allowFailureFallback: false,
             surfaceError: false,
