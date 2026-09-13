@@ -539,11 +539,13 @@ class DownloadManager {
           task.progress = 0.1;
           task.error = 'Kaynak çözümleniyor...';
           _notify();
+          debugPrint('📥 DownloadManager: WebView resolving $videoId');
           final web = await WebViewStreamService.instance
               .resolveAudio(videoId)
               .timeout(const Duration(seconds: 40), onTimeout: () => null);
           final webUrl = web?['url']?.toString() ?? '';
           if (webUrl.startsWith('http') && !task.cancelled) {
+            debugPrint('📥 DownloadManager: WebView URL OK, starting parallel download');
             final webPath = await ParallelDownloader.download(
               url: webUrl,
               outputPath: tmpPath,
@@ -563,15 +565,19 @@ class DownloadManager {
             ).timeout(const Duration(minutes: 5, seconds: 30),
                 onTimeout: () => null);
             if (webPath != null && webPath.isNotEmpty) {
+              debugPrint('📥 DownloadManager: WebView download SUCCESS');
               task.progress = 0.75;
               _notify();
               return webPath;
             }
+            debugPrint('📥 DownloadManager: WebView download returned null');
             if (task.cancelled) return null;
+          } else {
+            debugPrint('📥 DownloadManager: WebView returned empty/invalid URL: $webUrl');
           }
         }
       } catch (e) {
-        debugPrint('Webview download miss: $e');
+        debugPrint('📥 DownloadManager WebView exception: $e');
       }
       // 0b. Hizli hat: el yapimi istemci (ANDROID 19.29.1) ile URL cozup
       // paralel indir. Kutuphane manifest'i bot duvarina takilsa bile

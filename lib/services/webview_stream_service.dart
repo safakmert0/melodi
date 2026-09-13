@@ -41,12 +41,17 @@ class WebViewStreamService {
   }
 
   Future<Map<String, dynamic>?> _doResolve(String id) async {
+    debugPrint('🌐 WebViewStream: _doResolve START for $id');
     try {
       await _ensureRunning();
       final controller = _webview?.webViewController;
-      if (controller == null) return null;
+      if (controller == null) {
+        debugPrint('❌ WebViewStream: controller is null');
+        return null;
+      }
       _loadingVideoId = id;
       _pageReady = Completer<void>();
+      debugPrint('🌐 WebViewStream: loading URL for $id');
       await controller.loadUrl(
         urlRequest: URLRequest(
           url: WebUri('https://m.youtube.com/watch?v=$id&hl=en'),
@@ -55,15 +60,23 @@ class WebViewStreamService {
       // Sayfa + oynatici verisi en fazla 20 sn beklenir.
       try {
         await _pageReady!.future.timeout(const Duration(seconds: 20));
+        debugPrint('🌐 WebViewStream: pageReady completed for $id');
       } catch (_) {
-        // Yavassa da bir dene: veri hazir olabilir.
+        debugPrint('🌐 WebViewStream: pageReady timeout, trying anyway for $id');
       }
       final raw = await controller
           .evaluateJavascript(source: _extractJs)
           .timeout(const Duration(seconds: 10));
-      return pickWebAudio(_decodePayload(raw));
+      debugPrint('🌐 WebViewStream: JS evaluated for $id, raw length: ${raw?.toString().length ?? 0}');
+      final result = pickWebAudio(_decodePayload(raw));
+      if (result != null) {
+        debugPrint('✅ WebViewStream: pickWebAudio SUCCESS for $id');
+      } else {
+        debugPrint('❌ WebViewStream: pickWebAudio returned null for $id');
+      }
+      return result;
     } catch (e) {
-      debugPrint('WebViewStream resolve error: $e');
+      debugPrint('❌ WebViewStream resolve error for $id: $e');
       return null;
     } finally {
       _loadingVideoId = null;
@@ -122,11 +135,19 @@ class WebViewStreamService {
   /// Donus: {url, ext, itag} ya da null (cipher'li/yok).
   static Map<String, dynamic>? pickWebAudio(Map<String, dynamic> data) {
     try {
-      if ((data['status']?.toString() ?? '') != 'OK') return null;
+      debugPrint('🌐 WebViewStream: pickWebAudio called, status=${data['status']}, adaptiveCount=${(data['adaptiveFormats'] as List?)?.length ?? 0}');
+      if ((data['status']?.toString() ?? '') != 'OK') {
+        debugPrint('❌ pickWebAudio: status not OK');
+        return null;
+      }
       final adaptive = data['adaptiveFormats'];
-      if (adaptive is! List || adaptive.isEmpty) return null;
+      if (adaptive is! List || adaptive.isEmpty) {
+        debugPrint('❌ pickWebAudio: adaptiveFormats empty or not a list');
+        return null;
+      }
       Map<String, dynamic>? bestAac;
       var bestAacBr = -1;
+      var aacCount = 0;
       for (final raw in adaptive) {
         if (raw is! Map) continue;
         final f = Map<String, dynamic>.from(raw);
@@ -135,17 +156,29 @@ class WebViewStreamService {
         final mime = f['mime']?.toString().toLowerCase() ?? '';
         final br = (f['bitrate'] as num?)?.toInt() ?? 0;
         final isAac = mime.contains('mp4') || mime.contains('m4a');
+        if (isAac) {
+          aacCount++;
+          debugPrint('🌐 pickWebAudio: AAC candidate itag=${f['itag']} br=$br mime=$mime');
+        } else {
+          debugPrint('🌐 pickWebAudio: NON-AAC itag=${f['itag']} br=$br mime=$mime');
+        }
         if (isAac && br > bestAacBr) {
           bestAacBr = br;
           bestAac = f;
         }
       }
+      debugPrint('🌐 pickWebAudio: aacCount=$aacCount bestAac=${bestAac != null} bestBr=$bestAacBr');
       // AVPlayer opus calamaz: sadece AAC, yoksa yedege dus (null).
       final pick = bestAac;
-      if (pick == null) return null;
+      if (pick == null) {
+        debugPrint('❌ pickWebAudio: no AAC format found');
+        return null;
+      }
       final itag = (pick['itag'] as num?)?.toInt() ?? 140;
+      debugPrint('✅ pickWebAudio: SELECTED itag=$itag');
       return {'url': pick['url'].toString(), 'ext': '.m4a', 'itag': itag};
-    } catch (_) {
+    } catch (e) {
+      debugPrint('❌ pickWebAudio exception: $e');
       return null;
     }
   }

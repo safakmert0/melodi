@@ -93,47 +93,67 @@ class YouTubeSource implements MusicSource {
   @override
   Future<String?> getStreamUrl(OnlineTrack track) async {
     final videoId = track.id.trim();
+    debugPrint('🔍 YouTubeSource.getStreamUrl START: $videoId');
     // 1) Backend proxy (yt-dlp Range): stabil, expire olmaz, AVPlayer uyumlu
     // m4a döner. Cihazdan çözülen googlevideo URL'leri iOS'ta sık sık
     // -11849/-1 ile patlıyordu; proxy'de bu sorun yok.
     if (videoId.isNotEmpty) {
       try {
         final proxy = await backendStreamUrl(videoId);
-        if (proxy != null) return proxy;
+        if (proxy != null) {
+          debugPrint('✅ Backend proxy OK: $videoId');
+          return proxy;
+        }
+        debugPrint('❌ Backend proxy returned null');
       } catch (e) {
-        debugPrint('YouTube backend proxy miss: $e');
+        debugPrint('❌ Backend proxy exception: $e');
       }
     }
     // 2) Gizli tarayici (gercek oynatici baglami: bot duvari yok,
     // n/imza gecerli). musx tarifidir.
     try {
+      debugPrint('🌐 WebViewStreamService resolving: $videoId');
       final web = await WebViewStreamService.instance
-          .resolveAudio(track.id)
+          .resolveAudio(videoId)
           .timeout(const Duration(seconds: 40), onTimeout: () => null);
       final webUrl = web?['url']?.toString() ?? '';
-      if (webUrl.isNotEmpty) return webUrl;
+      if (webUrl.isNotEmpty) {
+        debugPrint('✅ WebView OK: $videoId');
+        return webUrl;
+      }
+      debugPrint('❌ WebView returned empty URL');
     } catch (e) {
-      debugPrint('YouTube webview stream miss: $e');
+      debugPrint('❌ WebView exception: $e');
     }
     // 3) Cihazda el yapimi InnerTube (ANDROID 19.29.1, bot takilmaz,
     // AAC oncelikli). Kutuphane istemcileri (20.x) su an bot korumali
     // oldugu icin once bu denenir; explode yedekte kalir.
     try {
+      debugPrint('🎵 InnerTube (19.29.1) resolving: $videoId');
       final innerTube =
-          await YtMusicService.instance.getStreamUrl(track.id);
-      if (innerTube != null && innerTube.isNotEmpty) return innerTube;
+          await YtMusicService.instance.getStreamUrl(videoId);
+      if (innerTube != null && innerTube.isNotEmpty) {
+        debugPrint('✅ InnerTube OK: $videoId');
+        return innerTube;
+      }
+      debugPrint('❌ InnerTube returned empty');
     } catch (e) {
-      debugPrint('YouTube InnerTube stream miss: $e');
+      debugPrint('❌ InnerTube exception: $e');
     }
     // 4) Cihazda explode (dogrulanmis AAC URL).
     try {
-      // Dogrudan akis URL'i: dosya indirmeden just_audio ile streaming.
+      debugPrint('💥 ExplodeStreamService resolving: $videoId');
       final direct =
-          await ExplodeStreamService.instance.getStreamUrl(track.id);
-      if (direct != null && direct.isNotEmpty) return direct;
+          await ExplodeStreamService.instance.getStreamUrl(videoId);
+      if (direct != null && direct.isNotEmpty) {
+        debugPrint('✅ Explode OK: $videoId');
+        return direct;
+      }
+      debugPrint('❌ Explode returned empty');
     } catch (e) {
-      debugPrint('YouTube stream error: $e');
+      debugPrint('❌ Explode exception: $e');
     }
+    debugPrint('🚫 ALL METHODS FAILED for: $videoId');
     return null;
   }
 
