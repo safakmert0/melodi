@@ -2,10 +2,44 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>tr</string>
 	<key>CFBundleDisplayName</key>
 	<string>Melodi</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Audio Files</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.audio</string>
+				<string>public.mp3</string>
+				<string>public.mpeg-4-audio</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>All Files</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.data</string>
+				<string>public.content</string>
+				<string>public.mpeg-4</string>
+				<string>public.movie</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -22,7 +56,49 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>music</string>
+		<string>itms</string>
+		<string>itmss</string>
+		<string>itms-apps</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Melodi needs access to your Apple Music library to import and play your existing songs and playlists.</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>Melodi needs file system access to browse and manage audio files stored on your device.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>Melodi needs access to your documents folder to save and synchronize your audio files between different devices.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>Melodi needs access to your downloads folder to import audio files and save downloaded tracks.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Melodi uses local network access to discover AirPlay devices.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Melodi needs microphone access to enable audio recording and voice-controlled features for enhanced functionality.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Melodi needs write access to your photo library to save created ringtones and audio content to your device.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Melodi can use your photo library to let you pick a custom cover image for your playlists.</string>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+	<key>UIFileSharingEnabled</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
@@ -41,81 +117,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<key>io.flutter.embedded_views_preview</key>
 	<true/>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>audio</string>
-	</array>
-	<key>UIFileSharingEnabled</key>
-	<true/>
-	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<true/>
-	<key>CFBundleDocumentTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeName</key>
-			<string>Audio Files</string>
-			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
-			<key>LSItemContentTypes</key>
-			<array>
-				<string>public.audio</string>
-				<string>public.mp3</string>
-				<string>public.mpeg-4-audio</string>
-			</array>
-			<key>LSHandlerRank</key>
-			<string>Alternate</string>
-		</dict>
-		<dict>
-			<key>CFBundleTypeName</key>
-			<string>All Files</string>
-			<key>CFBundleTypeRole</key>
-			<string>Viewer</string>
-			<key>LSItemContentTypes</key>
-			<array>
-				<string>public.data</string>
-				<string>public.content</string>
-				<string>public.mpeg-4</string>
-				<string>public.movie</string>
-			</array>
-			<key>LSHandlerRank</key>
-			<string>Alternate</string>
-		</dict>
-	</array>
-	<key>NSAppleMusicUsageDescription</key>
-	<string>Melodi needs access to your Apple Music library to import and play your existing songs and playlists.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Melodi can use your photo library to let you pick a custom cover image for your playlists.</string>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>Melodi uses local network access to discover AirPlay devices.</string>
-	<key>NSDownloadsFolderUsageDescription</key>
-	<string>Melodi needs access to your downloads folder to import audio files and save downloaded tracks.</string>
-	<key>NSDocumentsFolderUsageDescription</key>
-	<string>Melodi needs access to your documents folder to save and synchronize your audio files between different devices.</string>
-	<key>NSDesktopFolderUsageDescription</key>
-	<string>Melodi needs file system access to browse and manage audio files stored on your device.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Melodi needs write access to your photo library to save created ringtones and audio content to your device.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Melodi needs microphone access to enable audio recording and voice-controlled features for enhanced functionality.</string>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>music</string>
-		<string>itms</string>
-		<string>itmss</string>
-		<string>itms-apps</string>
-	</array>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-	</dict>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
 </dict>
 </plist>
