@@ -104,6 +104,7 @@ class SearchProvider extends ChangeNotifier {
     OnlineTrack track, {
     Set<String> excludedUrls = const {},
     bool forPlayback = false,
+    bool forceRefresh = false,
   }) async {
     // YouTube çözümü dosyanın tamamını indirebilir; kısa zaman aşımı
     // her seferinde boş döndürürdü. HiFi sunucuda FLAC indirir (30-120 sn).
@@ -120,6 +121,7 @@ class SearchProvider extends ChangeNotifier {
           query: _query,
           excludedUrls: excludedUrls,
           preferStableYouTubeReference: forPlayback,
+          forceRefresh: forceRefresh,
         )
         .timeout(timeout);
   }

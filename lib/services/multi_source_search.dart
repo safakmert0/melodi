@@ -133,11 +133,16 @@ class MultiSourceSearch {
     }
   }
 
-  Future<String?> getStreamUrl(OnlineTrack track) async {
+  Future<String?> getStreamUrl(
+    OnlineTrack track, {
+    bool forceRefresh = false,
+  }) async {
     if (!track.source.supportsFullTrack) return null;
     final cacheKey = '${track.source}:${track.id}';
     final cached = _streamUrlCache[cacheKey];
-    if (cached != null && !cached.isExpired) return cached.url;
+    if (!forceRefresh && cached != null && !cached.isExpired) {
+      return cached.url;
+    }
     final source = _sources.firstWhere(
       (s) => s.type == track.source,
       orElse: () => _sources.first,
@@ -165,6 +170,7 @@ class MultiSourceSearch {
     String? query,
     Set<String> excludedUrls = const {},
     bool preferStableYouTubeReference = false,
+    bool forceRefresh = false,
   }) async {
     // Hızlı çalma: Hi-Fi parça için sunucuda FLAC indirmeyi (30-120 sn)
     // bekleme; YouTube karşılığını proxy'den akıt. Bulunamazsa alta düşer.
@@ -190,12 +196,27 @@ class MultiSourceSearch {
     }
     if (track.source.supportsFullTrack) {
       try {
-        final url = await getStreamUrl(track);
+        // forceRefresh: çalma anında önbellekteki bayat URL değil, taze
+        // URL çözülür. excludedUrls kontrolü önbellek isabeti için de
+        // geçerlidir; yoksa retry aynı ölü URL'yi tekrar beslerdi.
+        final url = await getStreamUrl(track, forceRefresh: forceRefresh);
         final normalized = url?.trim();
         if (normalized != null &&
             normalized.isNotEmpty &&
             !excludedUrls.contains(normalized)) {
           return normalized;
+        }
+        if (normalized != null &&
+            normalized.isNotEmpty &&
+            excludedUrls.contains(normalized)) {
+          final fresh =
+              await getStreamUrl(track, forceRefresh: true).catchError((_) => null);
+          final freshNormalized = fresh?.trim();
+          if (freshNormalized != null &&
+              freshNormalized.isNotEmpty &&
+              !excludedUrls.contains(freshNormalized)) {
+            return freshNormalized;
+          }
         }
       } catch (_) {}
     }

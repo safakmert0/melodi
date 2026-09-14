@@ -167,11 +167,14 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
     try {
       for (var attempt = 0; attempt < 2; attempt++) {
         if (searchProvider.resolvingTrackKey.value != key) return;
+        // Çalma anında taze çözümleme: ilk deneme önbellekten hızlı döner,
+        // retry her zaman ağı tazeler (bayat googlevideo URL'si -1 verir).
         final url = await searchProvider.getStreamUrlWithFallback(
           widget.track,
           excludedUrls: attemptedUrls,
           // Hızlı çalma: Hi-Fi'da FLAC indirmeyi bekleme, YouTube'dan akıt.
           forPlayback: true,
+          forceRefresh: attempt > 0,
         );
         if (!mounted) return;
         if (searchProvider.resolvingTrackKey.value != key) return;
@@ -179,13 +182,18 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
         attemptedUrls.add(url);
 
         final track = widget.track;
+        // YouTube parçalarında imzalı http URL'si kuyruğa GÖMÜLMEZ; stabil
+        // `youtube://videoId` referansı saklanır. Gerçek akış URL'si _load
+        // öncesinde audio_handler içinde taze çözülür, süre dolumu biter.
+        final isYouTubeVideo = track.source == MusicSourceType.youtube &&
+            RegExp(r'^[A-Za-z0-9_-]{11}$').hasMatch(track.id.trim());
         final song = SongModel(
           id: track.id,
           title: track.title,
           artist: track.artist,
           album: track.album ?? track.sourceLabel,
           duration: track.duration,
-          filePath: url,
+          filePath: isYouTubeVideo ? 'youtube://${track.id.trim()}' : url,
           fileSize: 0,
         );
         try {

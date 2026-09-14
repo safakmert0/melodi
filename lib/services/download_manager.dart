@@ -83,7 +83,12 @@ class DownloadManager {
       final dir = Directory(await StorageManager.instance.getStorageLocation());
       if (!await dir.exists()) return;
       await for (final entity in dir.list(followLinks: false)) {
-        if (entity is! File || !entity.path.toLowerCase().endsWith('.part')) {
+        if (entity is! File) continue;
+        final name =
+            entity.path.split(Platform.pathSeparator).last.toLowerCase();
+        // .part (paralel indirici) ve .tmp_ (explode/HLS önbelleği):
+        // sahipsiz kalan yarımlar diski ve eşleşmeyi kirletmesin.
+        if (!name.endsWith('.part') && !name.startsWith('.tmp_')) {
           continue;
         }
         final modified = await entity.lastModified();
@@ -189,6 +194,41 @@ class DownloadManager {
     if (expectedMs <= 0 || candidate.inMilliseconds <= 0) return true;
     final toleranceMs = (expectedMs * 0.15).round().clamp(20000, 60000);
     return (candidate.inMilliseconds - expectedMs).abs() <= toleranceMs;
+  }
+
+  /// Bozuk/kesik indirmeler için alt sınır. Hata sayfaları ve başlık-parçası
+  /// dosyalar bunun altında kalır; gerçek ses dosyaları çok üstündedir.
+  static const int _minAudioBytes = 32 * 1024;
+
+  /// İndirilen dosyanın varlığını, boyutunu ve çözümlenebilir süresini
+  /// doğrular. Bozuk dosya kütüphaneye girerse çalma patlar ve uygulama
+  /// sessizce stream'e düşer; o yüzden import'tan ÖNCE çağrılır.
+  Future<bool> _verifyDownloadedFile(
+    String path,
+    int expectedDurationMs,
+  ) async {
+    try {
+      final file = File(path);
+      if (!await file.exists()) return false;
+      if (await file.length() < _minAudioBytes) {
+        debugPrint('Download verification failed (too small): $path');
+        return false;
+      }
+      final metadata = await MetadataService.extractMetadata(path)
+          .timeout(const Duration(seconds: 15), onTimeout: () => null);
+      if (metadata == null) {
+        debugPrint('Download verification failed (no metadata): $path');
+        return false;
+      }
+      if (metadata.duration.inMilliseconds <= 0) {
+        debugPrint('Download verification failed (zero duration): $path');
+        return false;
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Download verification error: $e');
+      return false;
+    }
   }
 
   Future<void> _processQueue() async {
@@ -315,6 +355,22 @@ class DownloadManager {
       }
 
 
+
+      // Bütünlük kapısı: bozuk/kesik dosya import'a ve veritabanına
+      // girmeden elenir; resultPath null'lanınca aşağıdaki mevcut retry
+      // mekanizması (exponential backoff) devreye girer.
+      if (resultPath != null) {
+        final intact = await _verifyDownloadedFile(
+          resultPath,
+          task.expectedDurationMs,
+        );
+        if (!intact) {
+          try {
+            await File(resultPath).delete();
+          } catch (_) {}
+          resultPath = null;
+        }
+      }
 
       if (resultPath == null || task.cancelled) {
         if (task.cancelled) {
@@ -868,6 +924,13 @@ class DownloadManager {
       var metadata = await MetadataService.extractMetadata(filePath)
           .timeout(const Duration(seconds: 10), onTimeout: () => null);
       await sourceFile.rename(destPath);
+      // Rename sonrası hedef doğrulanır (taşıma yarım kalmış olabilir).
+      final destFile = File(destPath);
+      if (!await destFile.exists() ||
+          await destFile.length() < _minAudioBytes) {
+        debugPrint('Imported file missing or truncated: $destPath');
+        return null;
+      }
 
       // ── Kapak + söz aramasını paralel koştur (süre yarıya iner) ──
       task.progress = 0.83;
@@ -1000,6 +1063,26 @@ class DownloadManager {
           lyrics: lyricsText ?? placeholder?.lyrics ?? metadata.lyrics,
         );
         await db.insertSong(normalized);
+      } else {
+        // Metadata okunamadı diye indirme kaybolmasın: dosya boyut
+        // kapısından geçti, kütüphaneye minimal satır yazılır. Yoksa dosya
+        // diskte durur ama satır olmadığı için uygulama yine stream'e
+        // düşerdi (başarılı görünüp çevrimiçi çalma hatası).
+        final fallbackId = task.spotifyTrackId.startsWith('spotify:')
+            ? task.spotifyTrackId
+            : 'spotify:${task.spotifyTrackId}';
+        final minimal = SongModel(
+          id: fallbackId,
+          title: task.title,
+          artist: task.artist,
+          album: (task.album?.isNotEmpty ?? false)
+              ? task.album!
+              : 'Unknown Album',
+          duration: Duration(milliseconds: task.expectedDurationMs),
+          filePath: destPath,
+          fileSize: await File(destPath).length(),
+        );
+        await db.insertSong(minimal);
       }
 
       return destPath;

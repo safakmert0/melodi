@@ -200,6 +200,24 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
 
             // Load the song but don't play - just prepare for playback
             final song = await _resolvePlayableSong(_queue[_currentIndex]);
+            // Uzak/bayat akış URL'si restore'da _load'a sokulmaz: süre
+            // dolmuş http veya youtube:// referansı oynatma anında taze
+            // çözülür. Kuyruk/sıra bilgisi korunur, kaynak tembel yüklenir.
+            if (_isRemotePath(song.filePath) ||
+                _isExpiringStreamUrl(song.filePath)) {
+              _isInitialized = true;
+              _broadcastState();
+              final media = MediaItem(
+                id: song.id,
+                album: song.album,
+                title: song.title,
+                artist: song.artist,
+                duration: song.duration,
+              );
+              mediaItem.add(media);
+              super.mediaItem.add(media);
+              return;
+            }
             try {
               AudioSource audioSource;
               if (song.filePath.startsWith('http')) {
@@ -469,7 +487,14 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
 
   Future<void> setLoopStyle(LoopStyle mode) async {
     _repeatMode = mode;
+    // Tek kaynak kuralı: kuyruk geçişlerini _onTrackComplete üstlenir.
+    // just_audio'ya her seferinde tek AudioSource verildiği için native
+    // loop kapalı kalır; LoopMode.one/all açılsaydı tamamlanma olayı
+    // just_audio içinde yutulur, sayaç/kapak/bildirim güncellenmezdi.
+    // (restorePlayerState de aynı kuralı uygular.)
     await _player.setLoopMode(LoopMode.off);
+    await savePlayerState();
+    _broadcastState();
   }
 
   @override
@@ -572,6 +597,13 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
 
     try {
       song = await _resolvePlayableSong(song);
+      // Önbellekten gelen bayat http URL'yi _load'a sokma: stabil
+      // referansa çevir, taze akış URL'si aşağıda çözülsün.
+      final freshPath = await _freshStreamPath(song);
+      if (freshPath != song.filePath) {
+        song = song.copyWith(filePath: freshPath);
+        _replaceSongInQueues(song);
+      }
       AudioSource audioSource;
       if (song.filePath.startsWith('youtube://')) {
         // Dogrudan akis: dosyayi beklemeden just_audio ile streaming.
@@ -852,6 +884,34 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       path.startsWith('http://') ||
       path.startsWith('https://');
 
+  static final _youTubeVideoIdPattern = RegExp(r'^[A-Za-z0-9_-]{11}$');
+
+  /// İmzalı ve kısa ömürlü doğrudan akış URL'si mi? Backend proxy
+  /// (`/api/stream/`) ve kütüphane akışları stabil kabul edilir; doğrudan
+  /// googlevideo URL'leri dakikalar içinde 403/-1 ile ölür.
+  bool _isExpiringStreamUrl(String path) {
+    if (!path.startsWith('http://') && !path.startsWith('https://')) {
+      return false;
+    }
+    final lower = path.toLowerCase();
+    if (lower.contains('/api/stream/') ||
+        lower.contains('/api/library/stream/')) {
+      return false;
+    }
+    return lower.contains('googlevideo.com') || lower.contains('expire=');
+  }
+
+  /// _load öncesinde çağrılır: bayat http akış URL'sini stabil referansa
+  /// çevirir. Şarkı kimliği bir YouTube videoId ise `youtube://` döner;
+  /// _playCurrent bunu her seferinde taze proxy/explode URL'sine çözer.
+  Future<String> _freshStreamPath(SongModel song) async {
+    final path = song.filePath;
+    if (!_isExpiringStreamUrl(path)) return path;
+    final id = song.id.trim();
+    if (_youTubeVideoIdPattern.hasMatch(id)) return 'youtube://$id';
+    return path;
+  }
+
   void _replaceSongInQueues(SongModel song) {
     if (_currentIndex >= 0 && _currentIndex < _queue.length) {
       _queue[_currentIndex] = song;
@@ -988,18 +1048,19 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
-    switch (repeatMode) {
-      case AudioServiceRepeatMode.none:
-        _player.setLoopMode(LoopMode.off);
-        break;
-      case AudioServiceRepeatMode.one:
-        _player.setLoopMode(LoopMode.one);
-        break;
-      case AudioServiceRepeatMode.all:
-      case AudioServiceRepeatMode.group:
-        _player.setLoopMode(LoopMode.all);
-        break;
+    // Kilit ekranı / kulaklık / Bluetooth'tan gelen tekrar komutu da tek
+    // kaynağa (_repeatMode) yazılır; native loop yine kapalı tutulur.
+    final style = switch (repeatMode) {
+      AudioServiceRepeatMode.none => LoopStyle.off,
+      AudioServiceRepeatMode.one => LoopStyle.one,
+      AudioServiceRepeatMode.all || AudioServiceRepeatMode.group =>
+        LoopStyle.all,
+    };
+    if (style == _repeatMode) {
+      await _player.setLoopMode(LoopMode.off);
+      return;
     }
+    await setLoopStyle(style);
   }
 
   @override
