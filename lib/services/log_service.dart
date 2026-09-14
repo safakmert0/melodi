@@ -6,7 +6,7 @@ import 'package:path/path.dart' as p;
 
 /// Uygulama icinde loglari toplar, bellekte tutar, dosyaya yazar
 /// (Files app'te Documents/Melodi/logs.txt olarak gorunur).
-class LogService {
+class LogService extends ChangeNotifier {
   LogService._();
   static final LogService _instance = LogService._();
   factory LogService() => _instance;
@@ -97,6 +97,7 @@ class LogService {
     if (_logFile != null) {
       try { _logFile!.writeAsStringSync(''); } catch (_) {}
     }
+    notifyListeners();
   }
 
   void dispose() {
