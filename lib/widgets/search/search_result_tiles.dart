@@ -165,35 +165,21 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
     final attemptedUrls = <String>{};
     Object? lastError;
     try {
-      for (var attempt = 0; attempt < 2; attempt++) {
-        if (searchProvider.resolvingTrackKey.value != key) return;
-        // Çalma anında taze çözümleme: ilk deneme önbellekten hızlı döner,
-        // retry her zaman ağı tazeler (bayat googlevideo URL'si -1 verir).
-        final url = await searchProvider.getStreamUrlWithFallback(
-          widget.track,
-          excludedUrls: attemptedUrls,
-          // Hızlı çalma: Hi-Fi'da FLAC indirmeyi bekleme, YouTube'dan akıt.
-          forPlayback: true,
-          forceRefresh: attempt > 0,
-        );
-        if (!mounted) return;
-        if (searchProvider.resolvingTrackKey.value != key) return;
-        if (url == null || url.isEmpty) break;
-        attemptedUrls.add(url);
-
-        final track = widget.track;
-        // YouTube parçalarında imzalı http URL'si kuyruğa GÖMÜLMEZ; stabil
-        // `youtube://videoId` referansı saklanır. Gerçek akış URL'si _load
-        // öncesinde audio_handler içinde taze çözülür, süre dolumu biter.
-        final isYouTubeVideo = track.source == MusicSourceType.youtube &&
-            RegExp(r'^[A-Za-z0-9_-]{11}$').hasMatch(track.id.trim());
+      final track = widget.track;
+      final isYouTubeVideo = track.source == MusicSourceType.youtube &&
+          RegExp(r'^[A-Za-z0-9_-]{11}$').hasMatch(track.id.trim());
+      if (isYouTubeVideo) {
+        // YouTube: TEK çözümleme noktası audio_handler'dır (_load öncesi
+        // taze proxy/InnerTube/explode). Tile'da ön doğrulama yapılmaz:
+        // hem iki kat gecikme biter hem bayat URL riski kalmaz.
+        // Hata handler'dan yükselir, aşağıda gösterilir.
         final song = SongModel(
           id: track.id,
           title: track.title,
           artist: track.artist,
           album: track.album ?? track.sourceLabel,
           duration: track.duration,
-          filePath: isYouTubeVideo ? 'youtube://${track.id.trim()}' : url,
+          filePath: 'youtube://${track.id.trim()}',
           fileSize: 0,
         );
         try {
@@ -201,6 +187,39 @@ class _OnlineSearchResultTileState extends State<OnlineSearchResultTile> {
           return;
         } catch (error) {
           lastError = error;
+        }
+      } else {
+        for (var attempt = 0; attempt < 2; attempt++) {
+          if (searchProvider.resolvingTrackKey.value != key) return;
+          // Hi-Fi: stabil backend URL'si çalma anında çözülür. İlk deneme
+          // önbellekten hızlı döner, retry ağı tazeler.
+          final url = await searchProvider.getStreamUrlWithFallback(
+            widget.track,
+            excludedUrls: attemptedUrls,
+            // Hızlı çalma: Hi-Fi'da FLAC indirmeyi bekleme, YouTube'dan akıt.
+            forPlayback: true,
+            forceRefresh: attempt > 0,
+          );
+          if (!mounted) return;
+          if (searchProvider.resolvingTrackKey.value != key) return;
+          if (url == null || url.isEmpty) break;
+          attemptedUrls.add(url);
+
+          final song = SongModel(
+            id: track.id,
+            title: track.title,
+            artist: track.artist,
+            album: track.album ?? track.sourceLabel,
+            duration: track.duration,
+            filePath: url,
+            fileSize: 0,
+          );
+          try {
+            await playerProvider.playSong(song);
+            return;
+          } catch (error) {
+            lastError = error;
+          }
         }
       }
 

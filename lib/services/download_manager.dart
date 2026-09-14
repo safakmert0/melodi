@@ -921,7 +921,7 @@ class DownloadManager {
       }
 
       final sourceFile = File(filePath);
-      var metadata = await MetadataService.extractMetadata(filePath)
+      final metadata = await MetadataService.extractMetadata(filePath)
           .timeout(const Duration(seconds: 10), onTimeout: () => null);
       await sourceFile.rename(destPath);
       // Rename sonrası hedef doğrulanır (taşıma yarım kalmış olabilir).
@@ -932,12 +932,119 @@ class DownloadManager {
         return null;
       }
 
-      // ── Kapak + söz aramasını paralel koştur (süre yarıya iner) ──
-      task.progress = 0.83;
-      task.error = 'Kapak ve sözler hazırlanıyor...';
+      // Hızlı kayıt: kapak/söz ağı beklenmeden kütüphane satırı yazılır,
+      // indirme hemen tamamlanır. Zenginleştirme (kapak+söz bulma+gömme,
+      // ~15-45sn) arka planda sürer, bitince aynı satırı günceller.
+      task.progress = 0.86;
+      task.error = 'Kütüphaneye ekleniyor...';
       _notify();
+      final songId = await _insertImportedRow(
+        db,
+        destPath: destPath,
+        task: task,
+        metadata: metadata,
+        isVideo: isVideo,
+      );
+      if (!isVideo) {
+        unawaited(_enrichDownloadedFile(destPath, task, songId));
+      }
+
+      return destPath;
+    } catch (e) {
+      debugPrint('Import downloaded file error: $e');
+      return null;
+    }
+  }
+
+  /// İndirilen dosyanın kütüphane satırını ağ beklemeden yazar.
+  /// Dönen kimlik, arka plandaki zenginleştirmenin güncelleyeceği satırdır.
+  Future<String> _insertImportedRow(
+    DatabaseService db, {
+    required String destPath,
+    required DownloadTask task,
+    required SongModel? metadata,
+    required bool isVideo,
+  }) async {
+    if (!isVideo &&
+        metadata != null &&
+        !isDurationCompatible(metadata.duration, task.expectedDurationMs)) {
+      // Catalogue durations are frequently rounded or refer to a different
+      // edition. A fully downloaded playable file must not be deleted after
+      // spending minutes transferring it; retain it and expose it locally.
+      debugPrint(
+        'Downloaded duration differs from catalogue: '
+        '${metadata.duration.inMilliseconds}/${task.expectedDurationMs}',
+      );
+    }
+
+    if (metadata != null) {
+      final placeholderId = task.spotifyTrackId.startsWith('spotify:')
+          ? task.spotifyTrackId
+          : 'spotify:${task.spotifyTrackId}';
+      SongModel? placeholder = await db.getSongById(placeholderId);
+      if (placeholder == null) {
+        final titleKey = _matchKey(task.title);
+        final artistKey = _matchKey(task.artist.split(',').first);
+        for (final candidate in await db.getAllSongs()) {
+          if (!candidate.filePath.startsWith('spotify://')) continue;
+          final sameTitle = _matchKey(candidate.title) == titleKey;
+          final candidateArtist =
+              _matchKey(candidate.artist.split(',').first);
+          final sameArtist = artistKey.isEmpty ||
+              candidateArtist.contains(artistKey) ||
+              artistKey.contains(candidateArtist);
+          if (sameTitle && sameArtist) {
+            placeholder = candidate;
+            break;
+          }
+        }
+      }
+      final normalized = metadata.copyWith(
+        id: placeholder?.id ?? metadata.id,
+        title: task.title,
+        artist: task.artist,
+        album: (task.album?.isNotEmpty ?? false) ? task.album : metadata.album,
+        filePath: destPath,
+        albumArt: placeholder?.albumArt ?? metadata.albumArt,
+        fileSize: await File(destPath).length(),
+        lyrics: placeholder?.lyrics ?? metadata.lyrics,
+      );
+      await db.insertSong(normalized);
+      return normalized.id;
+    }
+
+    // Metadata okunamadı diye indirme kaybolmasın: dosya boyut kapısından
+    // geçti, kütüphaneye minimal satır yazılır. Yoksa dosya diskte durur
+    // ama satır olmadığı için uygulama yine stream'e düşerdi.
+    final fallbackId = task.spotifyTrackId.startsWith('spotify:')
+        ? task.spotifyTrackId
+        : 'spotify:${task.spotifyTrackId}';
+    final minimal = SongModel(
+      id: fallbackId,
+      title: task.title,
+      artist: task.artist,
+      album:
+          (task.album?.isNotEmpty ?? false) ? task.album! : 'Unknown Album',
+      duration: Duration(milliseconds: task.expectedDurationMs),
+      filePath: destPath,
+      fileSize: await File(destPath).length(),
+    );
+    await db.insertSong(minimal);
+    return minimal.id;
+  }
+
+  /// Kapak+söz bulma/gömme: indirme "tamamlandı" olduktan SONRA arka planda
+  /// koşar. Bitince satır yerinde güncellenir; şarkı o arada silinmişse
+  /// dokunulmaz (silineni diriltmez), yolu değişmişse atlanır.
+  Future<void> _enrichDownloadedFile(
+    String destPath,
+    DownloadTask task,
+    String songId,
+  ) async {
+    try {
+      final db = DatabaseService.instance;
+      // Kapak + söz araması paralel koşar.
       final artworkFuture = () async {
-        if (isVideo) return null;
         if (task.imageUrl != null && task.imageUrl!.isNotEmpty) {
           try {
             final b = await _downloadImageBytes(task.imageUrl!)
@@ -950,7 +1057,7 @@ class DownloadManager {
             title: task.title,
             artist: task.artist,
             album: task.album ?? '',
-            duration: metadata?.duration ?? Duration.zero,
+            duration: Duration(milliseconds: task.expectedDurationMs),
           ).timeout(const Duration(seconds: 10), onTimeout: () => null);
         } catch (_) {
           return null;
@@ -964,7 +1071,7 @@ class DownloadManager {
             album: task.album,
             durationMs: task.expectedDurationMs > 0
                 ? task.expectedDurationMs
-                : metadata?.duration.inMilliseconds,
+                : null,
             preferSynced: true,
           ).timeout(const Duration(seconds: 10), onTimeout: () => null);
         } catch (error) {
@@ -973,122 +1080,43 @@ class DownloadManager {
         }
       }();
       final fetched = await Future.wait([artworkFuture, lyricsFuture]);
-      Uint8List? artworkBytes = fetched[0] as Uint8List?;
+      final Uint8List? artworkBytes = fetched[0] as Uint8List?;
       final lyricsResult = fetched[1] as LyricsResult?;
-      if (!isVideo && artworkBytes != null && artworkBytes.isNotEmpty) {
+      if (artworkBytes != null && artworkBytes.isNotEmpty) {
         try {
-          final ok = await ArtworkEmbeddingService.embedCoverArt(
+          await ArtworkEmbeddingService.embedCoverArt(
             filePath: destPath,
             artwork: artworkBytes,
           ).timeout(const Duration(seconds: 15), onTimeout: () => false);
-          if (ok) {
-            try {
-              metadata = await MetadataService.extractMetadata(destPath)
-                      .timeout(const Duration(seconds: 8),
-                          onTimeout: () => null) ??
-                  metadata;
-            } catch (_) {}
-          }
         } catch (e) {
           debugPrint('Artwork embedding failed: $e');
         }
       }
 
-      task.progress = 0.86;
-      _notify();
-
       final lyricsText = lyricsResult?.syncedLrc ?? lyricsResult?.plainText;
-
-      if (!isVideo) {
+      if (lyricsText != null && lyricsText.isNotEmpty) {
         try {
-          final processed = await LyricsEmbeddingService.embedAndNormalize(
+          await LyricsEmbeddingService.embedAndNormalize(
             filePath: destPath,
             lyrics: lyricsText,
             expectedDurationMs: task.expectedDurationMs,
           ).timeout(const Duration(seconds: 10), onTimeout: () => false);
-          if (processed) {
-            metadata = await MetadataService.extractMetadata(destPath).timeout(
-                    const Duration(seconds: 8),
-                    onTimeout: () => null) ??
-                metadata;
-          }
         } catch (_) {}
       }
 
-      if (!isVideo &&
-          metadata != null &&
-          !isDurationCompatible(metadata.duration, task.expectedDurationMs)) {
-        // Catalogue durations are frequently rounded or refer to a different
-        // edition. A fully downloaded playable file must not be deleted after
-        // spending minutes transferring it; retain it and expose it locally.
-        debugPrint(
-          'Downloaded duration differs from catalogue: '
-          '${metadata.duration.inMilliseconds}/${task.expectedDurationMs}',
-        );
-      }
-
-      if (metadata != null) {
-        final placeholderId = task.spotifyTrackId.startsWith('spotify:')
-            ? task.spotifyTrackId
-            : 'spotify:${task.spotifyTrackId}';
-        SongModel? placeholder = await db.getSongById(placeholderId);
-        if (placeholder == null) {
-          final titleKey = _matchKey(task.title);
-          final artistKey = _matchKey(task.artist.split(',').first);
-          for (final candidate in await db.getAllSongs()) {
-            if (!candidate.filePath.startsWith('spotify://')) continue;
-            final sameTitle = _matchKey(candidate.title) == titleKey;
-            final candidateArtist =
-                _matchKey(candidate.artist.split(',').first);
-            final sameArtist = artistKey.isEmpty ||
-                candidateArtist.contains(artistKey) ||
-                artistKey.contains(candidateArtist);
-            if (sameTitle && sameArtist) {
-              placeholder = candidate;
-              break;
-            }
-          }
-        }
-        final normalized = metadata.copyWith(
-          id: placeholder?.id ?? metadata.id,
-          title: task.title,
-          artist: task.artist,
-          album:
-              (task.album?.isNotEmpty ?? false) ? task.album : metadata.album,
-          filePath: destPath,
-          albumArt: (artworkBytes != null && artworkBytes.isNotEmpty)
-              ? artworkBytes
-              : (placeholder?.albumArt ?? metadata.albumArt),
-          fileSize: await File(destPath).length(),
-          lyrics: lyricsText ?? placeholder?.lyrics ?? metadata.lyrics,
-        );
-        await db.insertSong(normalized);
-      } else {
-        // Metadata okunamadı diye indirme kaybolmasın: dosya boyut
-        // kapısından geçti, kütüphaneye minimal satır yazılır. Yoksa dosya
-        // diskte durur ama satır olmadığı için uygulama yine stream'e
-        // düşerdi (başarılı görünüp çevrimiçi çalma hatası).
-        final fallbackId = task.spotifyTrackId.startsWith('spotify:')
-            ? task.spotifyTrackId
-            : 'spotify:${task.spotifyTrackId}';
-        final minimal = SongModel(
-          id: fallbackId,
-          title: task.title,
-          artist: task.artist,
-          album: (task.album?.isNotEmpty ?? false)
-              ? task.album!
-              : 'Unknown Album',
-          duration: Duration(milliseconds: task.expectedDurationMs),
-          filePath: destPath,
-          fileSize: await File(destPath).length(),
-        );
-        await db.insertSong(minimal);
-      }
-
-      return destPath;
+      final current = await db.getSongById(songId);
+      if (current == null || current.filePath != destPath) return;
+      final updated = current.copyWith(
+        albumArt: (artworkBytes != null && artworkBytes.isNotEmpty)
+            ? artworkBytes
+            : current.albumArt,
+        lyrics: (lyricsText != null && lyricsText.isNotEmpty)
+            ? lyricsText
+            : current.lyrics,
+      );
+      await db.insertSong(updated);
     } catch (e) {
-      debugPrint('Import downloaded file error: $e');
-      return null;
+      debugPrint('Download enrich failed: $e');
     }
   }
 

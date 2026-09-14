@@ -607,7 +607,9 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       AudioSource audioSource;
       if (song.filePath.startsWith('youtube://')) {
         // Dogrudan akis: dosyayi beklemeden just_audio ile streaming.
-        // Önce backend proxy (stabil, expire yok), olmazsa cihazda explode.
+        // Sıra: backend proxy (stabil, expire yok) -> InnerTube (hızlı)
+        // -> explode (yedek). WebView (40sn+) oynatma hattında denenmez,
+        // indirme hattına özeldir.
         final videoId = song.filePath.replaceFirst('youtube://', '');
         final backendProxy =
             await YouTubeSource.backendStreamUrl(videoId).timeout(
@@ -617,7 +619,15 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
         if (backendProxy != null) {
           audioSource = AudioSource.uri(Uri.parse(backendProxy));
         } else {
-          final streamUrl =
+          String? streamUrl;
+          try {
+            streamUrl = await YtMusicService.instance
+                .getStreamUrl(videoId)
+                .timeout(const Duration(seconds: 15), onTimeout: () => null);
+          } catch (_) {
+            streamUrl = null;
+          }
+          streamUrl ??=
               await ExplodeStreamService.instance.getStreamUrl(videoId);
           if (streamUrl != null) {
             audioSource = AudioSource.uri(
