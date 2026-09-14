@@ -32,6 +32,7 @@ import 'services/storage_manager.dart';
 import 'screens/onboarding_screen.dart';
 import 'widgets/main_shell.dart';
 import 'services/watched_folder_service.dart';
+import 'services/log_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -324,6 +325,7 @@ class MelodiApp extends StatelessWidget {
             return rp;
           },
         ),
+        ChangeNotifierProvider(create: (_) => LogService()..init()),
       ],
       child: Consumer2<ThemeProvider, LocaleNotifier>(
         builder: (context, themeProvider, localeNotifier, _) {

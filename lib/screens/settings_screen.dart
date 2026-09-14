@@ -14,6 +14,7 @@ import 'support_screen.dart';
 import 'downloads_screen.dart';
 import 'storage_screen.dart';
 import 'diagnostics_screen.dart';
+import 'debug_log_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -431,6 +432,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
+                _SettingsTile(
+                  icon: Icons.bug_report_rounded,
+                  iconColor: Colors.orange,
+                  title: 'Debug Loglar',
+                  subtitle: 'Uygulama loglarini goruntule, filtrele, paylas',
+                  trailing:
+                      Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const DebugLogScreen()),
+                  ),
+                ),
+
                 _SettingsTile(
                   icon: Icons.person_add_alt_1_rounded,
                   iconColor: Colors.purple,
