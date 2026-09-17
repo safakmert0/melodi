@@ -1,9 +1,7 @@
 #ifndef MELODI_CORE_H
 #define MELODI_CORE_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <stdint.h>
 
 int32_t MelodiCore_Initialize(const char* storage_root);
 const char* MelodiCore_Version();
@@ -40,9 +38,5 @@ void MelodiCore_EmbedCoverArt(const char* file_path, const char* image_data, int
 void MelodiCore_EmbedLyrics(const char* file_path, const char* lyrics);
 const char* MelodiCore_ExtractLyrics(const char* file_path);
 const char* MelodiCore_GetStats();
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

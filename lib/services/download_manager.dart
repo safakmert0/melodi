@@ -479,7 +479,12 @@ class DownloadManager {
       return null;
     }
     try {
-      final sanitized = task.title.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
+      // Dosya adı: yasaklı karakterler tamamen kaldırılır (yerine
+      // alt çizgi konmaz); Türkçe/Unicode harfler korunur.
+      final sanitized = task.title
+          .replaceAll(RegExp(r'[\\/:*?"<>|]'), '')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
       final safeTitle = sanitized.isEmpty ? 'download' : sanitized;
 
       // Önce HEAD ile uzantıyı tahmin et (ucuz, 6 sn cap).
@@ -555,36 +560,11 @@ class DownloadManager {
     final videoId = (task.sourceVideoId ?? '').trim();
     if (videoId.isEmpty) return null;
     try {
-      // 0. Backend proxy (yt-dlp, Range): cihazda manifest/bot duvarına
-      // takılsa bile sunucu üzerinden iner. Başarısız olursa sessizce
-      // explode hattına düşer.
-      try {
-        final base = await HiFiSource()
-            .baseUrl()
-            .timeout(const Duration(seconds: 10), onTimeout: () => '');
-        if (base.isNotEmpty && !task.cancelled) {
-          task.progress = 0.12;
-          task.error = 'Sunucu üzerinden indiriliyor...';
-          _notify();
-          final viaProxy = await _downloadFromUrl(
-            '$base/api/stream/$videoId',
-            task,
-            downloadDir,
-          ).timeout(const Duration(minutes: 5), onTimeout: () => null);
-          if (viaProxy != null &&
-              viaProxy.isNotEmpty &&
-              await File(viaProxy).exists()) {
-            task.progress = 0.75;
-            _notify();
-            return viaProxy;
-          }
-          if (task.cancelled) return null;
-        }
-      } catch (e) {
-        debugPrint('Backend proxy download miss: $e');
-      }
+      // NOT: Backend proxy SON YEDEKtir (asagida). Sunucu IP'si YouTube
+      // tarafindan ~32KB/sn kisildigi icin hizli cihaz-dogrudan hatlar
+      // (HLS, innertube, explode) once denenir.
       final safeTitle =
-          '${task.artist} - ${task.title}'.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
+          '${task.artist} - ${task.title}'.replaceAll(RegExp(r'[\\/:*?"<>|]'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
       final baseName =
           safeTitle.isEmpty ? videoId : '${safeTitle}_$videoId';
       final tmpPath = '${downloadDir.path}/.tmp_$baseName.bin';
@@ -805,6 +785,34 @@ class DownloadManager {
         } catch (e) {
           debugPrint('InnerTube download fallback error: $e');
         }
+        // SON YEDEK: Backend proxy (yt-dlp, Range). Cihaz IP'si bot
+        // duvarına takıldıysa sunucu üzerinden iner; ancak sunucu IP'si
+        // YouTube tarafindan ~32KB/sn kisildigi icin yavastir, en sonda.
+        try {
+          final base = await HiFiSource()
+              .baseUrl()
+              .timeout(const Duration(seconds: 10), onTimeout: () => '');
+          if (base.isNotEmpty && !task.cancelled) {
+            task.progress = 0.6;
+            task.error = 'Sunucu üzerinden indiriliyor...';
+            _notify();
+            final viaProxy = await _downloadFromUrl(
+              '$base/api/stream/$videoId',
+              task,
+              downloadDir,
+            ).timeout(const Duration(minutes: 5), onTimeout: () => null);
+            if (viaProxy != null &&
+                viaProxy.isNotEmpty &&
+                await File(viaProxy).exists()) {
+              task.progress = 0.75;
+              _notify();
+              return viaProxy;
+            }
+            if (task.cancelled) return null;
+          }
+        } catch (e) {
+          debugPrint('Backend proxy download miss: $e');
+        }
         return null;
       }
       task.progress = 0.75;
@@ -911,8 +919,8 @@ class DownloadManager {
         'mkv',
       }.contains(ext.toLowerCase());
       final safeName = '${task.artist} - ${task.title}'
-          .replaceAll(RegExp(r'[^\w\s-]'), '')
-          .replaceAll(RegExp(r'\s+'), ' ');
+          .replaceAll(RegExp(r'[\\/:*?"<>|]'), '')
+          .replaceAll(RegExp(r'\s+'), ' ').trim();
       var destPath = '${musicDir.path}/$safeName.$ext';
       var counter = 1;
       while (File(destPath).existsSync()) {

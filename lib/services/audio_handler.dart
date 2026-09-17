@@ -585,6 +585,32 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     return AudioSource.uri(Uri.parse(url));
   }
 
+  /// Direkt akış URL yarışı: InnerTube + explode paralel başlar, [grace]
+  /// içinde gelen ilk geçerli (boş olmayan) URL kazanır. Sunucu IP'si
+  /// YouTube tarafindan ~32KB/sn kisildigi icin direkt URL'ler proxy'ye
+  /// tercih edilir; sürede gelmezse null döner, çağıran proxy'ye düşer.
+  Future<String?> _fastestDirectUrl(String videoId, Duration grace) async {
+    final winner = Completer<String?>();
+    var remaining = 2;
+    void settle(String? v) {
+      if (winner.isCompleted) return;
+      if (v != null && v.isNotEmpty) {
+        winner.complete(v);
+      } else if (--remaining <= 0) {
+        winner.complete(null);
+      }
+    }
+
+    YtMusicService.instance
+        .getStreamUrl(videoId)
+        .timeout(const Duration(seconds: 15), onTimeout: () => null)
+        .then(settle, onError: (_) => settle(null));
+    ExplodeStreamService.instance
+        .getStreamUrl(videoId)
+        .then(settle, onError: (_) => settle(null));
+    return winner.future.timeout(grace, onTimeout: () => null);
+  }
+
   Future<void> _playCurrent({
     bool allowFailureFallback = true,
     bool surfaceError = true,
@@ -607,33 +633,29 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       AudioSource audioSource;
       if (song.filePath.startsWith('youtube://')) {
         // Dogrudan akis: dosyayi beklemeden just_audio ile streaming.
-        // Sıra: backend proxy (stabil, expire yok) -> InnerTube (hızlı)
-        // -> explode (yedek). WebView (40sn+) oynatma hattında denenmez,
+        // Yarış: InnerTube + explode paralel başlar, 6 sn içinde gelen
+        // kısmasız direkt URL tercih edilir. Gelmezse ılık proxy ile
+        // hemen başlanır. WebView (40sn+) oynatma hattında denenmez,
         // indirme hattına özeldir.
         final videoId = song.filePath.replaceFirst('youtube://', '');
-        final backendProxy =
-            await YouTubeSource.backendStreamUrl(videoId).timeout(
+        final proxyFuture =
+            YouTubeSource.backendStreamUrl(videoId).timeout(
           const Duration(seconds: 12),
           onTimeout: () => null,
         );
-        if (backendProxy != null) {
-          audioSource = AudioSource.uri(Uri.parse(backendProxy));
+        final directUrl = await _fastestDirectUrl(
+          videoId,
+          const Duration(seconds: 6),
+        );
+        if (directUrl != null && directUrl.isNotEmpty) {
+          audioSource = AudioSource.uri(
+            Uri.parse(directUrl),
+            headers: ExplodeStreamService.instance.streamHeaders,
+          );
         } else {
-          String? streamUrl;
-          try {
-            streamUrl = await YtMusicService.instance
-                .getStreamUrl(videoId)
-                .timeout(const Duration(seconds: 15), onTimeout: () => null);
-          } catch (_) {
-            streamUrl = null;
-          }
-          streamUrl ??=
-              await ExplodeStreamService.instance.getStreamUrl(videoId);
-          if (streamUrl != null) {
-            audioSource = AudioSource.uri(
-              Uri.parse(streamUrl),
-              headers: ExplodeStreamService.instance.streamHeaders,
-            );
+          final backendProxy = await proxyFuture;
+          if (backendProxy != null) {
+            audioSource = AudioSource.uri(Uri.parse(backendProxy));
           } else {
             throw StateError('YouTube parçası çözümlenemedi');
           }
