@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/melodi_design.dart';
-import 'follows_service.dart';
+import '../services/follows_service.dart';
 
 /// Takip edilen kanallar: yeni yuklemeler sunucuda otomatik indirilir.
 class FollowsScreen extends StatefulWidget {
