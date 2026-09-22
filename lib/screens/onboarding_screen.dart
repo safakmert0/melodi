@@ -117,12 +117,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Color _pageAccent(ThemeData theme, int page) => switch (page) {
-        1 => const Color(0xFF2EC4B6),
-        2 => const Color(0xFF8C72FF),
-        3 => const Color(0xFFFF9F43),
-        _ => theme.colorScheme.primary,
-      };
+  // Tek vurgu rengi: sayfa aksani daima tema birincilidir.
+  Color _pageAccent(ThemeData theme, int page) => theme.colorScheme.primary;
 
   Widget _pageBody({
     required Widget child,

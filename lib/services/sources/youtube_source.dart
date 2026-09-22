@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../database_service.dart';
 import '../explode_stream_service.dart';
 import '../music_source.dart';
+import '../stream_quality.dart';
 import '../track_matcher.dart';
 import '../webview_stream_service.dart';
 import '../ytmusic_service.dart';
@@ -94,12 +95,15 @@ class YouTubeSource implements MusicSource {
   Future<String?> getStreamUrl(OnlineTrack track) async {
     final videoId = track.id.trim();
     debugPrint('🔍 YouTubeSource.getStreamUrl START: $videoId');
+    // Kalite: hucrede hucre ayari, degilse akış ayari (veri tasarrufu).
+    final quality = await effectiveStreamingQuality();
+    final cap = qualityCapKbps(quality);
     // 1) Backend proxy (yt-dlp Range): stabil, expire olmaz, AVPlayer uyumlu
     // m4a döner. Cihazdan çözülen googlevideo URL'leri iOS'ta sık sık
     // -11849/-1 ile patlıyordu; proxy'de bu sorun yok.
     if (videoId.isNotEmpty) {
       try {
-        final proxy = await backendStreamUrl(videoId);
+        final proxy = await backendStreamUrl(videoId, quality: quality);
         if (proxy != null) {
           debugPrint('✅ Backend proxy OK: $videoId');
           return proxy;
@@ -128,10 +132,12 @@ class YouTubeSource implements MusicSource {
     // 3) Cihazda el yapimi InnerTube (ANDROID 19.29.1, bot takilmaz,
     // AAC oncelikli). Kutuphane istemcileri (20.x) su an bot korumali
     // oldugu icin once bu denenir; explode yedekte kalir.
+    // Oynatma hattı: yalnızca m4a istenir, opus/webm AVPlayer'da (-1)
+    // verir. İndirme hattı (download_manager) opus'u kabul eder, etkilenmez.
     try {
       debugPrint('🎵 InnerTube (19.29.1) resolving: $videoId');
       final innerTube =
-          await YtMusicService.instance.getStreamUrl(videoId);
+          await YtMusicService.instance.getM4aStreamUrl(videoId);
       if (innerTube != null && innerTube.isNotEmpty) {
         debugPrint('✅ InnerTube OK: $videoId');
         return innerTube;
@@ -144,7 +150,7 @@ class YouTubeSource implements MusicSource {
     try {
       debugPrint('💥 ExplodeStreamService resolving: $videoId');
       final direct =
-          await ExplodeStreamService.instance.getStreamUrl(videoId);
+          await ExplodeStreamService.instance.getStreamUrl(videoId, maxBitrateKbps: cap);
       if (direct != null && direct.isNotEmpty) {
         debugPrint('✅ Explode OK: $videoId');
         return direct;
@@ -160,13 +166,17 @@ class YouTubeSource implements MusicSource {
   /// Backend `/api/stream/{videoId}` adresini doğrular (HEAD, kısa timeout).
   /// Backend ayaktaysa ve video çözülüyorsa adresi döner, yoksa null.
   /// Doğrulama yapılmadan dönülmez: ölü proxy, explode yedeğini öldürürdü.
-  static Future<String?> backendStreamUrl(String videoId) async {
+  static Future<String?> backendStreamUrl(String videoId,
+      {String quality = 'high'}) async {
     final id = videoId.trim();
     if (id.isEmpty) return null;
     try {
       final base = await HiFiSource().baseUrl();
       if (base.isEmpty) return null;
-      final proxy = '$base/api/stream/$id';
+      final q = (quality == 'lossless' || quality == 'auto' || quality.isEmpty)
+          ? ''
+          : '?quality=$quality';
+      final proxy = '$base/api/stream/$id$q';
       final resp = await http
           .head(Uri.parse(proxy))
           .timeout(const Duration(seconds: 10));

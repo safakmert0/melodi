@@ -585,10 +585,12 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     return AudioSource.uri(Uri.parse(url));
   }
 
-  /// Direkt akış URL yarışı: InnerTube + explode paralel başlar, [grace]
-  /// içinde gelen ilk geçerli (boş olmayan) URL kazanır. Sunucu IP'si
-  /// YouTube tarafindan ~32KB/sn kisildigi icin direkt URL'ler proxy'ye
-  /// tercih edilir; sürede gelmezse null döner, çağıran proxy'ye düşer.
+  /// Direkt akış URL yarışı: InnerTube (m4a-only) + explode paralel başlar,
+  /// [grace] içinde gelen ilk geçerli (boş olmayan) URL kazanır. InnerTube
+  /// opus/webm döndürürse elenir (AVPlayer (-1) verir); o durumda explode
+  /// AAC veya çağıran proxy m4a'ya düşer. Sunucu IP'si YouTube tarafindan
+  /// ~32KB/sn kisildigi icin direkt URL'ler proxy'ye tercih edilir; sürede
+  /// gelmezse null döner, çağıran proxy'ye düşer.
   Future<String?> _fastestDirectUrl(String videoId, Duration grace) async {
     final winner = Completer<String?>();
     var remaining = 2;
@@ -602,7 +604,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     }
 
     YtMusicService.instance
-        .getStreamUrl(videoId)
+        .getM4aStreamUrl(videoId)
         .timeout(const Duration(seconds: 15), onTimeout: () => null)
         .then(settle, onError: (_) => settle(null));
     ExplodeStreamService.instance

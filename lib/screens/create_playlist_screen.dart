@@ -157,8 +157,8 @@ class _CreatePlaylistScreenState extends State<CreatePlaylistScreen> {
               child: ElevatedButton(
                 onPressed: _createPlaylist,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: MelodiTheme.primaryGreen,
-                  foregroundColor: Colors.black,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
@@ -215,9 +215,9 @@ class _GlassInput extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
+            color: Theme.of(context).colorScheme.surfaceContainerHigh,
             borderRadius: BorderRadius.circular(context.tokens.radiusControl),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1),
+            border: Border.all(color: Theme.of(context).colorScheme.outline, width: 1),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -7,7 +7,6 @@ import '../screens/library_screen.dart';
 import '../screens/search_screen.dart';
 import '../screens/settings_screen.dart';
 import '../widgets/mini_player.dart';
-import '../theme/spotify_colors.dart';
 
 /// Basla / Kesif / Kaydedilenler / Ayarlar + MiniPlayer.
 /// Klasor izleme Ayarlar > Izlenen Klasorler'den yonetilir (kopyasiz izleme).
@@ -98,14 +97,14 @@ class _MainShellState extends State<MainShell> {
             onDestinationSelected: _onNavTap,
             elevation: 0,
             height: 64,
-            backgroundColor: SpotifyColors.nearBlack,
+            backgroundColor: theme.colorScheme.surfaceContainer,
             indicatorColor: Colors.transparent,
             labelTextStyle: WidgetStateProperty.resolveWith((states) {
               final selected = states.contains(WidgetState.selected);
               return TextStyle(
                 color: selected
-                    ? SpotifyColors.white
-                    : SpotifyColors.silver,
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
                 fontSize: 12,
                 fontWeight:
                     selected ? FontWeight.w700 : FontWeight.w400,
@@ -116,19 +115,19 @@ class _MainShellState extends State<MainShell> {
                 NavigationDestination(
                   icon: Icon(
                     _destinations[i].icon,
-                    color: SpotifyColors.silver,
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                   selectedIcon: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(_destinations[i].selectedIcon,
-                          color: SpotifyColors.white),
+                          color: theme.colorScheme.onSurface),
                       const SizedBox(height: 4),
                       Container(
                         width: 4,
                         height: 4,
-                        decoration: const BoxDecoration(
-                          color: SpotifyColors.green,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -150,16 +149,16 @@ class _MainShellState extends State<MainShell> {
                   selectedIndex: _currentIndex,
                   onDestinationSelected: _onNavTap,
                   labelType: NavigationRailLabelType.all,
-                  backgroundColor: SpotifyColors.nearBlack,
+                  backgroundColor: theme.colorScheme.surfaceContainer,
                   selectedIconTheme:
-                      const IconThemeData(color: SpotifyColors.white),
+                      IconThemeData(color: theme.colorScheme.onSurface),
                   unselectedIconTheme:
-                      const IconThemeData(color: SpotifyColors.silver),
-                  selectedLabelTextStyle: const TextStyle(
-                      color: SpotifyColors.white,
+                      IconThemeData(color: theme.colorScheme.onSurfaceVariant),
+                  selectedLabelTextStyle: TextStyle(
+                      color: theme.colorScheme.onSurface,
                       fontWeight: FontWeight.w700),
-                  unselectedLabelTextStyle: const TextStyle(
-                      color: SpotifyColors.silver,
+                  unselectedLabelTextStyle: TextStyle(
+                      color: theme.colorScheme.onSurfaceVariant,
                       fontWeight: FontWeight.w400),
                   destinations: [
                     for (final d in _destinations)

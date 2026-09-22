@@ -261,8 +261,8 @@ class _LibraryHealthScreenState extends State<LibraryHealthScreen> {
               label: Text(
                   '${AppLocale.tr('fix_all')} ($fixableCount fixable / $totalCount)'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: MelodiTheme.primaryGreen,
-                foregroundColor: Colors.black,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                     borderRadius: context.tokens.borderRadiusCover),

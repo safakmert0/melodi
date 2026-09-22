@@ -6,6 +6,7 @@ import '../models/playlist_model.dart';
 import '../models/song_model.dart';
 import '../services/database_service.dart';
 import '../services/download_manager.dart';
+import '../services/playlist_exporter.dart';
 import '../providers/player_provider.dart';
 import '../providers/library_provider.dart';
 import '../providers/playlist_provider.dart';
@@ -82,6 +83,9 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 case 'add':
                   _showAddSongsSheet(context);
                   break;
+                case 'export':
+                  await PlaylistExporter.shareM3u(playlist, _songs);
+                  break;
                 case 'rename':
                   _showRenameDialog(context);
                   break;
@@ -99,6 +103,17 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                         size: 20, color: MelodiTheme.onSurfaceVariant),
                     const SizedBox(width: 8),
                     Text(AppLocale.tr('add_songs')),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'export',
+                child: Row(
+                  children: [
+                    Icon(Icons.share_outlined,
+                        size: 20, color: MelodiTheme.onSurfaceVariant),
+                    const SizedBox(width: 8),
+                    const Text('M3U olarak paylaş'),
                   ],
                 ),
               ),

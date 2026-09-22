@@ -109,7 +109,8 @@ class SearchProvider extends ChangeNotifier {
     // YouTube çözümü dosyanın tamamını indirebilir; kısa zaman aşımı
     // her seferinde boş döndürürdü. HiFi sunucuda FLAC indirir (30-120 sn).
     final needsLongTimeout = track.source == MusicSourceType.youtube ||
-        track.source == MusicSourceType.hifi;
+        track.source == MusicSourceType.hifi ||
+        track.source == MusicSourceType.soundcloud;
     final timeout = track.source == MusicSourceType.hifi
         ? const Duration(minutes: 6)
         : needsLongTimeout

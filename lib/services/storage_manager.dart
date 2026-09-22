@@ -185,12 +185,43 @@ class StorageManager {
   String _matchKey(String value) =>
       value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
 
+  /// Ara/yarim indirme dosyalari: gizli nokta-dosyalari, .part zinciri,
+  /// .tmp_ oneki ve .meta izleri. Bunlar kutuphaneye sayilmaz.
+  static bool isTempFile(String filePath) {
+    final base = p.basename(filePath);
+    if (base.startsWith('.')) return true;
+    final lower = base.toLowerCase();
+    if (lower.endsWith('.part') || lower.contains('.part.')) return true;
+    if (lower.endsWith('.meta')) return true;
+    return false;
+  }
+
+  /// Bayatlamis ara dosyalari temizler (24 saatten eski .part/.tmp/.meta).
+  /// Basarili import sonrasi artiklar ile yarim kalmis indirmeler icin.
+  Future<int> sweepStaleTempFiles({Duration olderThan = const Duration(hours: 24)}) async {
+    final dir = Directory(await getStorageLocation());
+    if (!await dir.exists()) return 0;
+    final cutoff = DateTime.now().subtract(olderThan);
+    var removed = 0;
+    await for (final entity in dir.list(recursive: true)) {
+      if (entity is! File || !isTempFile(entity.path)) continue;
+      try {
+        final stat = await entity.stat();
+        if (stat.modified.isBefore(cutoff)) {
+          await entity.delete();
+          removed++;
+        }
+      } catch (_) {}
+    }
+    return removed;
+  }
+
   Future<int> getLibrarySize() async {
     final dir = Directory(await getStorageLocation());
     if (!await dir.exists()) return 0;
     int total = 0;
     await for (final entity in dir.list(recursive: true)) {
-      if (entity is File) {
+      if (entity is File && !isTempFile(entity.path)) {
         total += await entity.length();
       }
     }
@@ -202,7 +233,7 @@ class StorageManager {
     if (!await dir.exists()) return {'audio': 0, 'art': 0, 'other': 0};
     int audio = 0, art = 0, other = 0;
     await for (final entity in dir.list(recursive: true)) {
-      if (entity is File) {
+      if (entity is File && !isTempFile(entity.path)) {
         final size = await entity.length();
         final ext = entity.path.split('.').last.toLowerCase();
         if (_audioExtensions.contains(ext)) {
@@ -222,7 +253,7 @@ class StorageManager {
     if (!await dir.exists()) return 0;
     int count = 0;
     await for (final entity in dir.list(recursive: true)) {
-      if (entity is File) count++;
+      if (entity is File && !isTempFile(entity.path)) count++;
     }
     return count;
   }

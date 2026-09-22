@@ -212,11 +212,14 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Colors.black,
-      systemNavigationBarIconBrightness: Brightness.light,
+      statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      systemNavigationBarColor:
+          isDark ? Colors.black : Theme.of(context).colorScheme.surface,
+      systemNavigationBarIconBrightness:
+          isDark ? Brightness.light : Brightness.dark,
     ));
     return Consumer2<PlayerProvider, LocaleNotifier>(
       builder: (context, player, locale, _) {
@@ -1476,21 +1479,21 @@ class _SpeedButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white .withValues(alpha: 0.1),
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white24),
+          border: Border.all(color: Theme.of(context).colorScheme.outline),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.speed, color: Colors.white70, size: 16),
+            Icon(Icons.speed, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 16),
             const SizedBox(width: 4),
             Text(
               '${currentSpeed.toStringAsFixed(2)}x'
                   .replaceAll(RegExp(r'0+$'), '')
                   .replaceAll(RegExp(r'\.$'), ''),
               style: TextStyle(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
@@ -1524,10 +1527,10 @@ class _VolumeBoostButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: showSlider
               ? accentColor .withValues(alpha: 0.2)
-              : Colors.white .withValues(alpha: 0.1),
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: showSlider ? accentColor : Colors.white24,
+            color: showSlider ? accentColor : Theme.of(context).colorScheme.outline,
           ),
         ),
         child: Row(
@@ -1535,14 +1538,14 @@ class _VolumeBoostButton extends StatelessWidget {
           children: [
             Icon(
               Icons.volume_up_rounded,
-              color: showSlider ? accentColor : Colors.white70,
+              color: showSlider ? accentColor : Theme.of(context).colorScheme.onSurfaceVariant,
               size: 16,
             ),
             const SizedBox(width: 4),
             Text(
               '${(player.volumeBoost * 100).round()}%',
               style: TextStyle(
-                color: showSlider ? accentColor : Colors.white,
+                color: showSlider ? accentColor : Theme.of(context).colorScheme.onSurface,
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),

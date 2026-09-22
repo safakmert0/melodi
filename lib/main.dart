@@ -76,6 +76,11 @@ Future<void> main() async {
           'relinked: ${migration.relinked}',
         );
       }
+      final swept =
+          await StorageManager.instance.sweepStaleTempFiles();
+      if (swept > 0) {
+        AppLogger.i('Stale temp files cleaned: $swept');
+      }
     } catch (e) {
       AppLogger.e('Private download migration failed: $e');
     }

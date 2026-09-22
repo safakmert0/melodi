@@ -12,6 +12,7 @@ import '../services/database_service.dart';
 import '../services/watched_folder_service.dart';
 import 'support_screen.dart';
 import 'downloads_screen.dart';
+import 'follows_screen.dart';
 import 'storage_screen.dart';
 import 'diagnostics_screen.dart';
 import 'debug_log_screen.dart';
@@ -256,6 +257,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const DownloadsScreen()),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _SettingsTile(
+                  icon: Icons.subscriptions_rounded,
+                  iconColor: Colors.red,
+                  title: 'Takip Edilen Kanallar',
+                  subtitle: 'Yeni yüklemeleri otomatik indir',
+                  trailing:
+                      Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const FollowsScreen()),
                   ),
                 ),
                 const SizedBox(height: 8),

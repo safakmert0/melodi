@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../services/database_service.dart';
 import '../theme/app_theme.dart' as spotiflac_theme;
+import '../theme/theme_presets.dart';
 
 class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
   ThemeProvider() {
     WidgetsBinding.instance.addObserver(this);
   }
 
-  ThemeMode _themeMode = ThemeMode.dark;
+  ThemeMode _themeMode = ThemeMode.light;
   static const Color _melodiAccent = Color(0xFF1DB954);
   static const int _legacyBlue = 0xFF2196F3;
   Color _accentColor = _melodiAccent;

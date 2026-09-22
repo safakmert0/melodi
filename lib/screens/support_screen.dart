@@ -5,6 +5,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/app_tokens.dart';
+import '../widgets/loading_button.dart';
 import '../core/constants.dart';
 
 /// Donation / "purchase" screen. The app is free and ad-free; supporters can
@@ -34,6 +35,7 @@ class _SupportScreenState extends State<SupportScreen> {
   bool _loading = true;
   String? _error;
   final Set<String> _pending = {};
+  String? _selectedId;
 
   String _t(String tr, String en, String de) {
     switch (AppLocale.currentLocale) {
@@ -158,29 +160,35 @@ class _SupportScreenState extends State<SupportScreen> {
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
         children: [
           Center(
-            child: Icon(
-              Icons.volunteer_activism_rounded,
-              size: 64,
-              color: MelodiTheme.primaryGreen,
+            child: Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: theme.colorScheme.primaryContainer,
+              ),
+              child: Icon(
+                Icons.volunteer_activism_rounded,
+                size: 44,
+                color: theme.colorScheme.onPrimaryContainer,
+              ),
             ),
           ),
           const SizedBox(height: 14),
           Text(
             _t('Melodi’yi destekle', 'Support Melodi', 'Unterstütze Melodi'),
-            style: theme.textTheme.headlineSmall,
+            style: theme.textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.3),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 10),
           Text(
             _t(
-              'Melodi tamamen ücretsiz ve reklamsızdır. İstersen bir bağış (satın alma) yaparak '
-              'geliştirmeyi destekleyebilirsin. Ödeme Apple üzerinden güvenle gerçekleşir; '
+              'Melodi tamamen ücretsiz ve reklamsızdır. Ödeme Apple üzerinden güvenle gerçekleşir; '
               'karşılığında kilitli bir özellik açılmaz, bu bir destek jestidir.',
-              'Melodi is completely free and ad-free. You can optionally leave a tip (in-app '
-              'purchase) to support development. Payment is handled securely by Apple; no feature '
+              'Melodi is completely free and ad-free. Payment is handled securely by Apple; no feature '
               'is unlocked — it is simply a gesture of support.',
-              'Melodi ist völlig kostenlos und werbefrei. Du kannst optional ein Trinkgeld (In-App-Kauf) '
-              'geben, um die Entwicklung zu unterstützen. Die Zahlung läuft sicher über Apple; es wird '
+              'Melodi ist völlig kostenlos und werbefrei. Die Zahlung läuft sicher über Apple; es wird '
               'keine Funktion freigeschaltet — es ist eine Geste der Unterstützung.',
             ),
             style: theme.textTheme.bodyMedium
@@ -242,7 +250,7 @@ class _SupportScreenState extends State<SupportScreen> {
               ],
             )
           else
-            ..._products.map(_buildTier),
+            ..._buildTierList(theme),
           if (!_loading && _storeAvailable && _products.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 12),
@@ -270,43 +278,122 @@ class _SupportScreenState extends State<SupportScreen> {
     );
   }
 
-  Widget _buildTier(ProductDetails product) {
-    final buying = _pending.contains(product.id);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: FilledButton.tonal(
-        onPressed: buying ? null : () => _buy(product),
-        style: FilledButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.favorite_rounded, color: MelodiTheme.primaryGreen),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                _t('Bağış yap', 'Leave a tip', 'Spende geben'),
-                style: const TextStyle(fontSize: 16),
-              ),
-            ),
-            if (buying)
-              const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            else
-              Text(
-                product.price,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+  /// Kademe kartlari (secili vurgulu) + tek CTA dugmesi.
+  List<Widget> _buildTierList(ThemeData theme) {
+    final scheme = theme.colorScheme;
+    if (_selectedId == null ||
+        !_products.any((p) => p.id == _selectedId)) {
+      _selectedId = _products.length > 1
+          ? _products[1].id
+          : _products.first.id;
+    }
+    final selected = _products.firstWhere(
+      (p) => p.id == _selectedId,
+      orElse: () => _products.first,
+    );
+    final buying = _pending.contains(selected.id);
+    return [
+      ..._products.map((product) {
+        final isSel = product.id == _selectedId;
+        final isFeatured =
+            _products.length > 1 && product.id == _products[1].id;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: buying
+                ? null
+                : () => setState(() => _selectedId = product.id),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+              decoration: BoxDecoration(
+                color: isSel
+                    ? scheme.primaryContainer.withValues(alpha: 0.45)
+                    : scheme.surfaceContainer,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color:
+                      isSel ? scheme.primary : scheme.outlineVariant,
+                  width: isSel ? 2 : 1,
                 ),
               ),
-          ],
-        ),
+              child: Row(
+                children: [
+                  Icon(
+                    isFeatured
+                        ? Icons.star_rounded
+                        : Icons.favorite_rounded,
+                    color: isSel
+                        ? scheme.primary
+                        : scheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          product.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          product.description,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isFeatured && !isSel)
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: scheme.primary,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        _t('Öne çıkan', 'Popular', 'Beliebt'),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onPrimary,
+                        ),
+                      ),
+                    ),
+                  Text(
+                    product.price,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }),
+      const SizedBox(height: 6),
+      LoadingButton(
+        label: _t('Destekle · ${selected.price}', 'Support · ${selected.price}',
+            'Unterstützen · ${selected.price}'),
+        icon: Icons.volunteer_activism_rounded,
+        isLoading: buying,
+        onPressed: () => _buy(selected),
       ),
-    );
+    ];
   }
 
   Widget _infoCard(String message) {

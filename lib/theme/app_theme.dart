@@ -38,6 +38,39 @@ const ColorScheme kSpotifyDarkScheme = ColorScheme(
   surfaceTint: Colors.transparent,
 );
 
+/// Melodi temiz acik tema: beyaz zemin, arduvaz metin, derin yesil vurgu.
+const ColorScheme kMelodiLightScheme = ColorScheme(
+  brightness: Brightness.light,
+  primary: Color(0xFF15803D),
+  onPrimary: Color(0xFFFFFFFF),
+  primaryContainer: Color(0xFFDCFCE7),
+  onPrimaryContainer: Color(0xFF14532D),
+  secondary: Color(0xFF475569),
+  onSecondary: Color(0xFFFFFFFF),
+  secondaryContainer: Color(0xFFF1F5F9),
+  onSecondaryContainer: Color(0xFF0F172A),
+  tertiary: Color(0xFF0EA5E9),
+  onTertiary: Color(0xFFFFFFFF),
+  error: Color(0xFFDC2626),
+  onError: Color(0xFFFFFFFF),
+  surface: Color(0xFFFFFFFF),
+  onSurface: Color(0xFF0F172A),
+  surfaceContainerLowest: Color(0xFFFFFFFF),
+  surfaceContainerLow: Color(0xFFF8FAFC),
+  surfaceContainer: Color(0xFFF1F5F9),
+  surfaceContainerHigh: Color(0xFFE2E8F0),
+  surfaceContainerHighest: Color(0xFFCBD5E1),
+  onSurfaceVariant: Color(0xFF475569),
+  outline: Color(0xFFE2E8F0),
+  outlineVariant: Color(0xFFF1F5F9),
+  shadow: Color(0xFF0F172A),
+  scrim: Color(0xFF0F172A),
+  inverseSurface: Color(0xFF0F172A),
+  onInverseSurface: Color(0xFFF8FAFC),
+  inversePrimary: Color(0xFF4ADE80),
+  surfaceTint: Colors.transparent,
+);
+
 class AppTheme {
   static const Color defaultSeedColor = Color(kDefaultSeedColor);
 
@@ -53,12 +86,13 @@ class AppTheme {
       );
 
   static ThemeData light({ColorScheme? dynamicScheme, Color? seedColor}) {
-    final scheme =
-        dynamicScheme ??
-        ColorScheme.fromSeed(
-          seedColor: seedColor ?? defaultSeedColor,
-          brightness: Brightness.light,
-        );
+    final scheme = dynamicScheme ??
+        (seedColor != null
+            ? ColorScheme.fromSeed(
+                seedColor: seedColor,
+                brightness: Brightness.light,
+              )
+            : kMelodiLightScheme);
 
     return ThemeData(
       useMaterial3: true,
@@ -81,8 +115,9 @@ class AppTheme {
       switchTheme: _switchTheme(scheme),
       chipTheme: _chipTheme(scheme),
       dividerTheme: _dividerTheme(scheme),
+      textTheme: _textTheme(scheme),
       extensions: const <ThemeExtension<dynamic>>[AppTokens.standard],
-      fontFamily: null, // sistem fontu — LA Player sade
+      fontFamily: 'Google Sans Flex',
     );
   }
 
@@ -118,29 +153,29 @@ class AppTheme {
       dividerTheme: _dividerTheme(scheme),
       textTheme: _textTheme(scheme),
       extensions: const <ThemeExtension<dynamic>>[AppTokens.standard],
-      fontFamily: null,
+      fontFamily: 'Google Sans Flex',
     );
   }
 
-  /// Spotify tipografisi: 700/400 ikiligi, kompakt olcek.
+  /// Tipografi: 700/400 ikiligi, kompakt olcek; renkler semadan gelir.
   static TextTheme _textTheme(ColorScheme scheme) {
-    const white = SpotifyColors.white;
-    const silver = SpotifyColors.silver;
+    final ink = scheme.onSurface;
+    final muted = scheme.onSurfaceVariant;
     return TextTheme(
-      headlineSmall: const TextStyle(
-          color: white, fontSize: 24, fontWeight: FontWeight.w700),
-      titleLarge: const TextStyle(
-          color: white, fontSize: 18, fontWeight: FontWeight.w600),
-      titleMedium: const TextStyle(
-          color: white, fontSize: 16, fontWeight: FontWeight.w700),
-      bodyLarge: const TextStyle(
-          color: white, fontSize: 16, fontWeight: FontWeight.w400),
-      bodyMedium: const TextStyle(
-          color: silver, fontSize: 14, fontWeight: FontWeight.w400),
-      bodySmall: const TextStyle(
-          color: silver, fontSize: 12, fontWeight: FontWeight.w400),
-      labelLarge: const TextStyle(
-          color: white,
+      headlineSmall: TextStyle(
+          color: ink, fontSize: 24, fontWeight: FontWeight.w700),
+      titleLarge: TextStyle(
+          color: ink, fontSize: 18, fontWeight: FontWeight.w600),
+      titleMedium: TextStyle(
+          color: ink, fontSize: 16, fontWeight: FontWeight.w700),
+      bodyLarge: TextStyle(
+          color: ink, fontSize: 16, fontWeight: FontWeight.w400),
+      bodyMedium: TextStyle(
+          color: muted, fontSize: 14, fontWeight: FontWeight.w400),
+      bodySmall: TextStyle(
+          color: muted, fontSize: 12, fontWeight: FontWeight.w400),
+      labelLarge: TextStyle(
+          color: ink,
           fontSize: 14,
           fontWeight: FontWeight.w700,
           letterSpacing: 1.4),

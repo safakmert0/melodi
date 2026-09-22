@@ -106,8 +106,8 @@ class _EditPlaylistScreenState extends State<EditPlaylistScreen> {
                           borderRadius: const BorderRadius.vertical(
                               bottom: Radius.circular(12)),
                         ),
-                        child: Icon(Icons.camera_alt_rounded,
-                            size: 20, color: MelodiTheme.onSurface),
+                        child: const Icon(Icons.camera_alt_rounded,
+                            size: 20, color: Colors.white),
                       ),
                     ),
                   ],

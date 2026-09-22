@@ -14,12 +14,52 @@ import 'parallel_downloader.dart';
 import 'webview_stream_service.dart';
 import 'storage_manager.dart';
 import 'audio_quality_service.dart';
+import 'stream_quality.dart';
 import 'explode_stream_service.dart';
 import 'hls_stream_service.dart';
 import 'sources/hifi_source.dart';
 import 'ytmusic_service.dart';
 
 enum DownloadState { pending, downloading, completed, failed }
+
+/// Backend (`main.py:_safe_filename`) ile ayni kural: yasakli karakter
+/// silinmez, `-` olur; 120 karakter kesilir; bas/son nokta-bosluk temizlenir.
+String sanitizeFileName(String input, {int maxLength = 120}) {
+  var s = input
+      .replaceAll(RegExp(r'[\\/:*?"<>|]'), '-')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+  s = s.replaceAll(RegExp(r'^\.+'), '');
+  s = s.replaceAll(RegExp(r'[. ]+$'), '');
+  if (s.length > maxLength) {
+    s = s.substring(0, maxLength).trim().replaceAll(RegExp(r'[. ]+$'), '');
+  }
+  if (s.isEmpty) s = 'download';
+  return s;
+}
+
+/// `Content-Disposition: attachment; filename="..."` basligindan dosya adi.
+/// RFC 5987 (`filename*=UTF-8''...`) oncelikli, tirnaklar soyulur.
+String? parseContentDisposition(String? headerValue) {
+  if (headerValue == null || headerValue.isEmpty) return null;
+  final star = RegExp(r'''filename\*\s*=\s*UTF-8''([^;]+)''',
+          caseSensitive: false)
+      .firstMatch(headerValue);
+  if (star != null) {
+    try {
+      final decoded = Uri.decodeComponent(star.group(1)!.trim());
+      if (decoded.isNotEmpty) return decoded;
+    } catch (_) {}
+  }
+  final plain =
+      RegExp(r'''filename\s*=\s*"([^"]+)"''', caseSensitive: false)
+          .firstMatch(headerValue) ??
+      RegExp(r'filename\s*=\s*([^;]+)', caseSensitive: false)
+          .firstMatch(headerValue);
+  final name = plain?.group(1)?.trim();
+  if (name == null || name.isEmpty) return null;
+  return name;
+}
 
 class DownloadTask {
   final String id;
@@ -479,13 +519,8 @@ class DownloadManager {
       return null;
     }
     try {
-      // Dosya adı: yasaklı karakterler tamamen kaldırılır (yerine
-      // alt çizgi konmaz); Türkçe/Unicode harfler korunur.
-      final sanitized = task.title
-          .replaceAll(RegExp(r'[\\/:*?"<>|]'), '')
-          .replaceAll(RegExp(r'\s+'), ' ')
-          .trim();
-      final safeTitle = sanitized.isEmpty ? 'download' : sanitized;
+      // Dosya adı backend ile aynı kuralda temizlenir.
+      final safeTitle = sanitizeFileName(task.title);
 
       // Önce HEAD ile uzantıyı tahmin et (ucuz, 6 sn cap).
       String ext = 'm4a';
@@ -497,7 +532,18 @@ class DownloadManager {
             'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
         final headResp =
             await headReq.close().timeout(const Duration(seconds: 6));
-        if (headResp.headers.contentType != null) {
+        // Sunucu dosya adı verdiyse (Content-Disposition) uzantı oradan.
+        final serverName = parseContentDisposition(
+            headResp.headers.value('content-disposition'));
+        final serverExt = (serverName != null && serverName.contains('.'))
+            ? serverName.split('.').last.toLowerCase()
+            : null;
+        const supported = {
+          'flac', 'mp3', 'm4a', 'aac', 'ogg', 'opus', 'wav', 'mp4', 'webm'
+        };
+        if (serverExt != null && supported.contains(serverExt)) {
+          ext = serverExt;
+        } else if (headResp.headers.contentType != null) {
           ext = _downloadExtension(url, headResp.headers.contentType);
         }
         headClient.close();
@@ -564,7 +610,7 @@ class DownloadManager {
       // tarafindan ~32KB/sn kisildigi icin hizli cihaz-dogrudan hatlar
       // (HLS, innertube, explode) once denenir.
       final safeTitle =
-          '${task.artist} - ${task.title}'.replaceAll(RegExp(r'[\\/:*?"<>|]'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
+          sanitizeFileName('${task.artist} - ${task.title}');
       final baseName =
           safeTitle.isEmpty ? videoId : '${safeTitle}_$videoId';
       final tmpPath = '${downloadDir.path}/.tmp_$baseName.bin';
@@ -618,13 +664,15 @@ class DownloadManager {
       // 0b. Hizli hat: el yapimi istemci (ANDROID 19.29.1) ile URL cozup
       // paralel indir. Kutuphane manifest'i bot duvarina takilsa bile
       // bu hat calisir; timeout'lari beklemez.
+      // iOS'ta indirilen dosya AVPlayer ile calinacagi icin yalnizca m4a
+      // kabul edilir (opus indirilirse dosya durur ama calarken (-1) verir).
       try {
         if (!task.cancelled) {
           task.progress = 0.12;
           task.error = 'Kaynak çözümleniyor...';
           _notify();
           final fastUrl = await YtMusicService.instance
-              .getStreamUrl(videoId)
+              .getM4aStreamUrl(videoId)
               .timeout(const Duration(seconds: 25), onTimeout: () => null);
           if (fastUrl != null &&
               fastUrl.startsWith('http') &&
@@ -696,7 +744,8 @@ class DownloadManager {
       task.error = 'Kaynak çözümleniyor...';
       _notify();
       final resolved = await ExplodeStreamService.instance
-          .resolveStream(videoId)
+          .resolveStream(videoId,
+              maxBitrateKbps: qualityCapKbps(task.requestedQuality))
           .timeout(const Duration(seconds: 45), onTimeout: () => null);
       if (resolved != null && !task.cancelled) {
         // HIZLI YOL ÖNCE: paralel foreground indirme (tek-baglanti
@@ -750,6 +799,7 @@ class DownloadManager {
       final path = await ExplodeStreamService.instance.downloadToFile(
         videoId: videoId,
         outputPath: tmpPath,
+        maxBitrateKbps: qualityCapKbps(task.requestedQuality),
         onProgress: (received, total) {
           if (total != null && total > 0) {
             task.progress = (0.2 + (received / total) * 0.55).clamp(0.2, 0.75);
@@ -918,9 +968,7 @@ class DownloadManager {
         'avi',
         'mkv',
       }.contains(ext.toLowerCase());
-      final safeName = '${task.artist} - ${task.title}'
-          .replaceAll(RegExp(r'[\\/:*?"<>|]'), '')
-          .replaceAll(RegExp(r'\s+'), ' ').trim();
+      final safeName = sanitizeFileName('${task.artist} - ${task.title}');
       var destPath = '${musicDir.path}/$safeName.$ext';
       var counter = 1;
       while (File(destPath).existsSync()) {

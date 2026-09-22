@@ -750,6 +750,35 @@ class YtMusicService {
     }
   }
 
+  /// Oynatma için: yalnızca AVPlayer uyumlu m4a/mp3 URL'i döner.
+  /// Opus/webm gelirse null döner (çağıran explode AAC veya proxy'ye düşer).
+  /// İndirme hattı etkilenmez (dosyada opus sorunsuzdur).
+  Future<String?> getM4aStreamUrl(String videoId) async {
+    try {
+      final result = await _requestInnerTubeAudioDownload(videoId.trim())
+          .timeout(const Duration(seconds: 15));
+      final url = result['url']?.toString() ?? '';
+      if (url.isEmpty || !url.startsWith('http')) return null;
+      final ext = result['extension']?.toString().toLowerCase() ?? '';
+      final mime = result['mimeType']?.toString().toLowerCase() ?? '';
+      final isPlayable = ext == '.m4a' ||
+          ext == '.mp3' ||
+          ((mime.contains('mp4') ||
+                  mime.contains('m4a') ||
+                  mime.contains('aac')) &&
+              !mime.contains('opus') &&
+              !mime.contains('webm'));
+      if (!isPlayable) {
+        debugPrint('YtMusic m4a-only: oynatılamaz format elendi ($ext $mime)');
+        return null;
+      }
+      return url;
+    } catch (e) {
+      debugPrint('YtMusic m4a stream error $e');
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>?> downloadToFile({
     required String trackId,
     String title = '',

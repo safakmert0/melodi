@@ -24,8 +24,11 @@ class ParallelDownloader {
 
   /// Dosyayi indirir, basarida [outputPath]'i dondurur, olmazsa null.
   ///
-  /// Ara dosyalar `<outputPath>.part` ve `<outputPath>.part.<i>` adlarini
-  /// kullanir; basarisizlikta/iptalde temizlenir.
+  /// Ara dosyalar `<outputPath>.part`, `<outputPath>.part.<i>` ve
+  /// `<outputPath>.meta` adlarini kullanir. Basarisiz/iptal durumunda
+  /// parcalar SAKLANIR; ayni URL+boyut+baglanti sayisiyla tekrar
+  /// cagrildiginda kalan kisimdan devam edilir (kaldigi yerden surdurme).
+  /// Icerik degismisse (meta uyusmazligi) temiz baslanir.
   ///
   /// [stallTimeout]/[minStallBytes]: verim bekcisi. Bu surede bu kadar
   /// bayttan az veri akan parca oldurulur (damlayan kisitli baglantida
@@ -74,6 +77,18 @@ class ParallelDownloader {
       debugPrint('ParallelDownloader error: $e');
       return null;
     }
+  }
+
+  /// URL+toplam+baglanti icin kararli meta anahtari (calismalar arasi).
+  /// Dart String.hashCode calisma basina degisir, o yuzden FNV-1a.
+  static int _metaHash(String url, int total, int n) {
+    var h = 0x811c9dc5;
+    final s = '$url|$total|$n';
+    for (var i = 0; i < s.length; i++) {
+      h ^= s.codeUnitAt(i);
+      h = (h * 0x01000193) & 0xffffffff;
+    }
+    return h;
   }
 
   static Future<String?> _run({
@@ -134,6 +149,59 @@ class ParallelDownloader {
     var received = 0;
     void report() => onProgress?.call(received, total);
 
+    // Kaldigi yerden surdurme: meta uyusuyorsa bitmis/eksik parcalari kullan.
+    final metaFile = File('$partPath.meta');
+    var resumable = false;
+    try {
+      if (await metaFile.exists()) {
+        final meta = (await metaFile.readAsString()).trim().split(':');
+        if (meta.length == 3 &&
+            int.tryParse(meta[0]) == total &&
+            int.tryParse(meta[1]) == n &&
+            int.tryParse(meta[2]) == _metaHash(uri.toString(), total, n)) {
+          resumable = true;
+        }
+      }
+    } catch (_) {
+      resumable = false;
+    }
+    if (!resumable) {
+      // Farkli baglanti sayisindan kalma parcalar icin tum olasiliklari sil.
+      await _cleanup(partPath, _maxConnections);
+    }
+    try {
+      await metaFile.writeAsString('$total:$n:${_metaHash(uri.toString(), total, n)}');
+    } catch (_) {}
+    final resumeFrom = List<int>.filled(n, 0);
+    if (resumable) {
+      for (var i = 0; i < n; i++) {
+        final start = i * chunkSize;
+        final end = (i == n - 1) ? total - 1 : (start + chunkSize - 1);
+        final want = end - start + 1;
+        try {
+          final f = File('$partPath.$i');
+          if (await f.exists()) {
+            final len = await f.length();
+            if (len >= want) {
+              resumeFrom[i] = want;
+              received += want;
+            } else if (len > 0) {
+              resumeFrom[i] = len;
+              received += len;
+            } else {
+              try {
+                await f.delete();
+              } catch (_) {}
+            }
+          }
+        } catch (_) {}
+      }
+      if (received > 0) {
+        debugPrint('ParallelDownloader: $received/$total bayt hazir, devam ediliyor');
+        report();
+      }
+    }
+
     final futures = <Future<bool>>[];
     for (var i = 0; i < n; i++) {
       final start = i * chunkSize;
@@ -144,6 +212,7 @@ class ParallelDownloader {
         tmpPath: '$partPath.$i',
         start: start,
         end: end,
+        resumeFrom: resumeFrom[i],
         onBytes: (count) {
           received += count;
           report();
@@ -155,11 +224,10 @@ class ParallelDownloader {
     }
     final results = await Future.wait(futures);
     if (results.any((ok) => !ok)) {
-      await _cleanup(partPath, n);
+      // Parcalar saklanir; sonraki deneme kaldigi yerden surer.
       return null;
     }
     if (isCancelled != null && isCancelled()) {
-      await _cleanup(partPath, n);
       return null;
     }
 
@@ -180,7 +248,10 @@ class ParallelDownloader {
       final len = await File(partPath).length();
       if (len != total) {
         debugPrint('ParallelDownloader: eksik dosya ($len/$total)');
-        await _cleanup(partPath, n);
+        // Birlesmis hatali cikti silinir, parcalar saklanir (devam icin).
+        try {
+          await File(partPath).delete();
+        } catch (_) {}
         return null;
       }
       await File(partPath).rename(path);
@@ -189,11 +260,16 @@ class ParallelDownloader {
           await File('$partPath.$i').delete();
         } catch (_) {}
       }
+      try {
+        await File('$partPath.meta').delete();
+      } catch (_) {}
       onProgress?.call(total, total);
       return path;
     } catch (e) {
       debugPrint('ParallelDownloader merge error: $e');
-      await _cleanup(partPath, n);
+      try {
+        await File(partPath).delete();
+      } catch (_) {}
       return null;
     }
   }
@@ -248,6 +324,9 @@ class ParallelDownloader {
 
   /// Tek parcayi indir (1 otomatik tekrarli).
   ///
+  /// [resumeFrom]: parcadaki hazir bayt sayisi; istek `start+resumeFrom`'dan
+  /// baslar ve dosya uzerine eklenir. Hazir kisim tamamsa indirmeden doner.
+  ///
   /// Damlayan baglanti korumasi: [stallTimeout] surede [minStallBytes]'tan
   /// az veri gelirse parca iptal edilir. `Stream.timeout` her veri
   /// olayinda sifirlandigi icin yavas ama olu baglantiyi yakalayamaz;
@@ -258,33 +337,58 @@ class ParallelDownloader {
     required String tmpPath,
     required int start,
     required int end,
+    int resumeFrom = 0,
     required void Function(int count) onBytes,
     bool Function()? isCancelled,
     Duration stallTimeout = const Duration(seconds: 45),
     int minStallBytes = 32 * 1024,
   }) async {
+    final want = end - start + 1;
     for (var attempt = 0; attempt < 2; attempt++) {
       if (isCancelled != null && isCancelled()) return false;
       HttpClient? client;
       try {
-        debugPrint('ParallelDownloader chunk $start-$end deneme ${attempt + 1}');
         final file = File(tmpPath);
-        if (attempt > 0 && await file.exists()) await file.delete();
+        // Tekrar denemede dosyadaki gercek durumdan devam et (ekleme kipi).
+        var offset = resumeFrom;
+        if (attempt > 0 || offset > 0) {
+          try {
+            final len = await file.exists() ? await file.length() : 0;
+            if (len >= want) return true;
+            if (len > offset) offset = len;
+          } catch (_) {}
+        }
+        if (offset >= want) return true;
+        final reqStart = start + offset;
+        if (offset > 0) {
+          debugPrint('ParallelDownloader chunk $start-$end '
+              'kaldigi yerden ($reqStart)');
+        } else {
+          debugPrint('ParallelDownloader chunk $start-$end deneme ${attempt + 1}');
+          try {
+            if (await file.exists()) await file.delete();
+          } catch (_) {}
+        }
         client = HttpClient()..connectionTimeout = const Duration(seconds: 15);
         final req = await client
             .getUrl(uri)
             .timeout(const Duration(seconds: 15));
         headers.forEach(req.headers.set);
-        req.headers.set(HttpHeaders.rangeHeader, 'bytes=$start-$end');
+        req.headers.set(HttpHeaders.rangeHeader, 'bytes=$reqStart-$end');
         final resp = await req.close().timeout(const Duration(seconds: 15));
         if (resp.statusCode != 206) {
           debugPrint(
               'ParallelDownloader chunk $start-$end HTTP ${resp.statusCode}');
+          if (offset > 0) {
+            // Sunucu araligi yoksaydi (200/416): ekleme bozmasin diye bastan.
+            try {
+              await file.delete();
+            } catch (_) {}
+          }
           continue;
         }
-        final sink = file.openWrite(mode: FileMode.write);
-        var got = 0;
-        final want = end - start + 1;
+        final sink = file.openWrite(mode: FileMode.append);
+        var got = offset;
         // Son anlamli veri zamani: damlama 45 sn'de 32 KB altindaysa olu.
         var windowStart = DateTime.now();
         var windowBytes = 0;

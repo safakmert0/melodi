@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../core/constants.dart';
 import '../models/song_model.dart';
 import '../theme/app_tokens.dart';
 import '../providers/player_provider.dart';
@@ -88,8 +87,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                                 icon: const Icon(Icons.play_arrow_rounded),
                                 label: const Text('Tümünü Çal'),
                                 style: FilledButton.styleFrom(
-                                  backgroundColor: MelodiTheme.primaryGreen,
-                                  foregroundColor: Colors.black,
+                                  backgroundColor: Theme.of(context).colorScheme.primary,
+                                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                 ),
                               ),
                           ],

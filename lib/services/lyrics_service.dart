@@ -328,6 +328,9 @@ class LyricsService {
         () => _tryLyricsPlus(artist, track, durationSec),
         () => _tryGenius(artist, track),
       ],
+      [
+        () => _tryAzLyrics(artist, track),
+      ],
     ];
     for (final batch in batches) {
       final result = await _firstLyrics(batch);
@@ -553,6 +556,67 @@ class LyricsService {
       if (parsed != null) return parsed;
     }
     return null;
+  }
+
+  static String _formatForAz(String s, {required bool isArtist}) {
+    var str = s.toLowerCase();
+    // AZLyrics strips "The " from the beginning of artist names.
+    if (isArtist && str.startsWith('the ')) {
+      str = str.substring(4);
+    }
+    // Remove featured artists from title.
+    if (!isArtist) {
+      str = str.split('feat.')[0].split('ft.')[0].split('(')[0];
+    }
+    return str.replaceAll(RegExp(r'[^a-z0-9]'), '');
+  }
+
+  static String? _parseAzHtml(String html) {
+    const startMarker =
+        '<!-- Usage of azlyrics.com content by any third-party lyrics provider is prohibited by our licensing agreement. Sorry about that. -->';
+    final startIndex = html.indexOf(startMarker);
+    if (startIndex == -1) return null;
+    final afterStart = html.substring(startIndex + startMarker.length);
+    final endIndex = afterStart.indexOf('</div>');
+    if (endIndex == -1) return null;
+    final rawLyrics = afterStart.substring(0, endIndex).trim();
+    final plainText = rawLyrics
+        .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+        .replaceAll(RegExp(r'<[^>]+>'), '')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .trim();
+    return plainText.isEmpty ? null : plainText;
+  }
+
+  static Future<LyricsResult?> _tryAzLyrics(
+      String artist, String track) async {
+    final cleanArtist = _formatForAz(artist, isArtist: true);
+    final cleanTitle = _formatForAz(track, isArtist: false);
+    if (cleanArtist.isEmpty || cleanTitle.isEmpty) return null;
+    final uri = Uri.parse(
+        'https://www.azlyrics.com/lyrics/$cleanArtist/$cleanTitle.html');
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 8);
+    try {
+      final request = await client.getUrl(uri);
+      request.headers.set('User-Agent',
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+      request.headers.set('Accept',
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8');
+      final response =
+          await request.close().timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) return null;
+      final html = await response.transform(utf8.decoder).join();
+      final text = _parseAzHtml(html);
+      if (text == null || text.isEmpty) return null;
+      return LyricsResult(plainText: text, source: 'azlyrics');
+    } catch (_) {
+      return null;
+    } finally {
+      client.close(force: true);
+    }
   }
 
   static Future<dynamic> _getJson(Uri uri) async {

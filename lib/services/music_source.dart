@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
-enum MusicSourceType { youtube, hifi }
+enum MusicSourceType { youtube, hifi, soundcloud }
 
 extension MusicSourceTypeCapabilities on MusicSourceType {
-  bool get supportsFullTrack => this == MusicSourceType.youtube || this == MusicSourceType.hifi;
+  bool get supportsFullTrack => true;
 
   bool get isPreviewCatalogue => false;
 }
@@ -46,6 +46,8 @@ class OnlineTrack {
         return 'YouTube';
       case MusicSourceType.hifi:
         return 'Hi-Fi';
+      case MusicSourceType.soundcloud:
+        return 'SoundCloud';
     }
   }
 

@@ -129,8 +129,8 @@ class _MixesScreenState extends State<MixesScreen> {
               icon: const Icon(Icons.refresh_rounded),
               label: Text(AppLocale.tr('regenerate')),
               style: FilledButton.styleFrom(
-                backgroundColor: MelodiTheme.primaryGreen,
-                foregroundColor: Colors.black,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),

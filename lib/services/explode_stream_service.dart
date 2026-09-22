@@ -78,17 +78,29 @@ class ExplodeStreamService {
   AudioOnlyStreamInfo? _pickAudioFromManifest(
     StreamManifest manifest, {
     bool forDownload = false,
+    int? maxBitrateKbps,
   }) {
     final audios = manifest.audioOnly.toList();
     if (audios.isEmpty) return null;
     int byBitrate(AudioOnlyStreamInfo a, AudioOnlyStreamInfo b) =>
         _score(b).compareTo(_score(a));
+    List<AudioOnlyStreamInfo> cap(List<AudioOnlyStreamInfo> list) {
+      if (maxBitrateKbps == null) return list;
+      final capped = list
+          .where((a) => a.bitrate.bitsPerSecond ~/ 1000 <= maxBitrateKbps)
+          .toList();
+      if (capped.isNotEmpty) return capped;
+      // Tavanin altinda hicbir sey yoksa en dusugu dondur.
+      final sorted = list.toList()..sort(byBitrate);
+      return sorted.isEmpty ? list : [sorted.last];
+    }
     // Indirme: uzanti fark etmez, ne varsa en yuksek bitrate'li dosya
     // (mp3/m4a/opus/webm). Yalnizca canli-yayin listesi (m3u8) indirilemez.
     if (forDownload) {
-      final files = audios.where((a) => !_isHls(a)).toList()..sort(byBitrate);
+      final files = cap(audios.where((a) => !_isHls(a)).toList())
+        ..sort(byBitrate);
       if (files.isNotEmpty) return files.first;
-      final any = audios.toList()..sort(byBitrate);
+      final any = cap(audios.toList())..sort(byBitrate);
       return any.firstOrNull ?? manifest.audioOnly.withHighestBitrate();
     }
     // Akis: HLS listesi just_audio AVPlayer'da acilmaz, elenir.
@@ -97,7 +109,7 @@ class ExplodeStreamService {
     // bitrate. totalBytes DEGIL bitrate karsilastirilir (uzun dusuk
     // kalite dosya, kisa yuksek kaliteden buyuk olabilir).
     final playable = audios.where((a) => !_isHls(a)).toList();
-    final pool = playable.isNotEmpty ? playable : audios;
+    final pool = cap(playable.isNotEmpty ? playable : audios);
     final aac = pool
         .where((a) {
           final codec = a.audioCodec.toLowerCase();
@@ -114,17 +126,19 @@ class ExplodeStreamService {
     // AVPlayer opus/webm calamaz (-1 hatasi): oynatilabilir secim yoksa
     // opus dondurmek yerine null don, yedek hat devreye girsin.
     if (!forDownload) return null;
-    pool.sort(byBitrate);
-    return pool.firstOrNull ?? manifest.audioOnly.withHighestBitrate();
+    final capped = cap(pool)..sort(byBitrate);
+    return capped.firstOrNull ?? manifest.audioOnly.withHighestBitrate();
   }
 
   Future<AudioOnlyStreamInfo?> _pickAudio(
     String videoId, {
     bool forDownload = false,
+    int? maxBitrateKbps,
   }) async {
     final manifest = await _fetchManifest(videoId);
     if (manifest == null) return null;
-    return _pickAudioFromManifest(manifest, forDownload: forDownload);
+    return _pickAudioFromManifest(manifest,
+        forDownload: forDownload, maxBitrateKbps: maxBitrateKbps);
   }
 
   /// Yalnizca HLS URL'i (m3u8). Yoksa null.
@@ -145,12 +159,14 @@ class ExplodeStreamService {
   /// Dogrudan calinabilir akis URL'i (just_audio AudioSource.uri ile).
   /// Dosya indirmeden streaming calis — JollyTone hizi buradan gelir.
   /// Gecici InnerTube/manifest hatalarina karsi 2 deneme yapar.
-  Future<String?> getStreamUrl(String videoId) async {
+  Future<String?> getStreamUrl(String videoId,
+      {int? maxBitrateKbps}) async {
     _lastError = null;
     Object? lastException;
     for (var attempt = 0; attempt < 2; attempt++) {
       try {
-        final info = await _pickAudio(videoId);
+        final info =
+            await _pickAudio(videoId, maxBitrateKbps: maxBitrateKbps);
         final url = info?.url.toString() ?? '';
         if (url.isEmpty || !url.startsWith('http')) {
           _lastError = 'Akış bulunamadı (manifest boş)';
@@ -175,10 +191,11 @@ class ExplodeStreamService {
   /// Cozumlenmis akis (arka plan indiriciye verilir).
   /// Donus null ise [_lastError] sebebi aciklar.
   Future<({String url, Map<String, String> headers, int totalBytes, String ext})?>
-      resolveStream(String videoId) async {
+      resolveStream(String videoId, {int? maxBitrateKbps}) async {
     _lastError = null;
     try {
-      final info = await _pickAudio(videoId, forDownload: true);
+      final info = await _pickAudio(videoId,
+          forDownload: true, maxBitrateKbps: maxBitrateKbps);
       if (info == null) {
         _lastError = _lastError ?? 'Akış bulunamadı (manifest boş)';
         return null;
@@ -210,6 +227,7 @@ class ExplodeStreamService {
     required String outputPath,
     void Function(int received, int? total)? onProgress,
     bool Function()? isCancelled,
+    int? maxBitrateKbps,
   }) async {
     _lastError = null;
     try {
@@ -239,8 +257,8 @@ class ExplodeStreamService {
         if (isCancelled != null && isCancelled()) return null;
         debugPrint('Explode: HLS olmadi, asamaliya dusuluyor');
       }
-      final info =
-          _pickAudioFromManifest(manifest, forDownload: true);
+      final info = _pickAudioFromManifest(manifest,
+          forDownload: true, maxBitrateKbps: maxBitrateKbps);
       if (info == null) {
         _lastError = _lastError ?? 'Akış bulunamadı (manifest boş)';
         return null;
