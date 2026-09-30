@@ -1,0 +1,60 @@
+name: Build APK
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: '3.35.4'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-warnings --no-fatal-infos
+
+      - name: Test
+        run: flutter test
+
+      - name: Build debug APK (sideload)
+        run: flutter build apk --debug
+
+      - name: Rename APK
+        run: |
+          mkdir -p build/release-apk
+          cp build/app/outputs/flutter-apk/app-debug.apk "build/release-apk/Melodi-${GITHUB_REF_NAME}.apk"
+          ls -lh build/release-apk/
+
+      - name: Upload APK to release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: build/release-apk/Melodi-${{ github.ref_name }}.apk
+          fail_on_unmatched_files: false
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Melodi-${{ github.ref_name }}-apk
+          path: build/release-apk/Melodi-${{ github.ref_name }}.apk
