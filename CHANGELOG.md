@@ -4,6 +4,12 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.11.20] - 2026-09-30
+
+### Debug Ekran Kaldirma + YouTube URL Dogrulama
+- Ayarlar'daki 'Debug Loglar' ekrani kaldirildi (Tanilama duruyor); `LogService`/provider temizlendi.
+- YouTube katmanlari artik AVPlayer'a vermeden once kisa Range yoklamasiyla dogrulaniyor: 403/bos donen olu link atlanip sonraki katmana geciliyor, opus/webm en sona birakiliyor. `-1 bilinmeyen hata` yerine calan katman bulunur.
+
 ## [5.11.19] - 2026-09-30
 
 ### Sürüm Numarası Toparlama

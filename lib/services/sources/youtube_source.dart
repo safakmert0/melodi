@@ -91,6 +91,48 @@ class YouTubeSource implements MusicSource {
     return Duration.zero;
   }
 
+  static const _probeUA =
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) '
+      'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
+
+  /// googlevideo URL'sini kisa Range istegiyle dogrular.
+  /// true = calar, false = olu (403/bos), null = kararsiz (gecilir).
+  /// Sadece googlevideo hostlarina uygulanir; proxy/kendi sunucusu aynen gecer.
+  static Future<bool?> _probeAudioUrl(String url) async {
+    Uri? uri;
+    try {
+      uri = Uri.parse(url);
+    } catch (_) {
+      return false;
+    }
+    if (uri.scheme != 'https' && uri.scheme != 'http') return false;
+    if (!uri.host.contains('googlevideo.com')) return null;
+    try {
+      final resp = await http
+          .get(uri, headers: {'Range': 'bytes=0-1023', 'User-Agent': _probeUA})
+          .timeout(const Duration(seconds: 8));
+      if (resp.statusCode == 403) return false;
+      if (resp.statusCode == 200 || resp.statusCode == 206) {
+        return resp.bodyBytes.isNotEmpty ? true : false;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// googlevideo mime parametresinden opus/webm eleme.
+  /// AVPlayer bunlari acamaz (-1); o katman en sona birakilir.
+  static bool _isOpusLike(String url) {
+    try {
+      final mime =
+          Uri.parse(url).queryParameters['mime']?.toLowerCase() ?? '';
+      return mime.contains('opus') || mime.contains('webm');
+    } catch (_) {
+      return false;
+    }
+  }
+
   @override
   Future<String?> getStreamUrl(OnlineTrack track) async {
     final videoId = track.id.trim();
@@ -98,9 +140,9 @@ class YouTubeSource implements MusicSource {
     // Kalite: hucrede hucre ayari, degilse akış ayari (veri tasarrufu).
     final quality = await effectiveStreamingQuality();
     final cap = qualityCapKbps(quality);
+    String? opusFallback;
     // 1) Backend proxy (yt-dlp Range): stabil, expire olmaz, AVPlayer uyumlu
-    // m4a döner. Cihazdan çözülen googlevideo URL'leri iOS'ta sık sık
-    // -11849/-1 ile patlıyordu; proxy'de bu sorun yok.
+    // m4a döner. HEAD ile dogrulanmis gelir, aynen gecer.
     if (videoId.isNotEmpty) {
       try {
         final proxy = await backendStreamUrl(videoId, quality: quality);
@@ -122,27 +164,45 @@ class YouTubeSource implements MusicSource {
           .timeout(const Duration(seconds: 40), onTimeout: () => null);
       final webUrl = web?['url']?.toString() ?? '';
       if (webUrl.isNotEmpty) {
-        debugPrint('✅ WebView OK: $videoId');
-        return webUrl;
+        if (_isOpusLike(webUrl)) {
+          opusFallback ??= webUrl;
+          debugPrint('⏳ WebView opus, sona birakildi: $videoId');
+        } else {
+          final ok = await _probeAudioUrl(webUrl);
+          if (ok != false) {
+            debugPrint('✅ WebView OK: $videoId');
+            return webUrl;
+          }
+          debugPrint('❌ WebView URL olu (403): $videoId');
+        }
+      } else {
+        debugPrint('❌ WebView returned empty URL');
       }
-      debugPrint('❌ WebView returned empty URL');
     } catch (e) {
       debugPrint('❌ WebView exception: $e');
     }
-    // 3) Cihazda el yapimi InnerTube (ANDROID 19.29.1, bot takilmaz,
-    // AAC oncelikli). Kutuphane istemcileri (20.x) su an bot korumali
-    // oldugu icin once bu denenir; explode yedekte kalir.
-    // Oynatma hattı: yalnızca m4a istenir, opus/webm AVPlayer'da (-1)
-    // verir. İndirme hattı (download_manager) opus'u kabul eder, etkilenmez.
+    // 3) Cihazda el yapimi InnerTube (ANDROID 19.29.1, AAC oncelikli).
+    // Cozulmemis n/imza linkleri AVPlayer'da -1 verir; probe'dan
+    // gecemeyen katman atlanir.
     try {
       debugPrint('🎵 InnerTube (19.29.1) resolving: $videoId');
       final innerTube =
           await YtMusicService.instance.getM4aStreamUrl(videoId);
       if (innerTube != null && innerTube.isNotEmpty) {
-        debugPrint('✅ InnerTube OK: $videoId');
-        return innerTube;
+        if (_isOpusLike(innerTube)) {
+          opusFallback ??= innerTube;
+          debugPrint('⏳ InnerTube opus, sona birakildi: $videoId');
+        } else {
+          final ok = await _probeAudioUrl(innerTube);
+          if (ok != false) {
+            debugPrint('✅ InnerTube OK: $videoId');
+            return innerTube;
+          }
+          debugPrint('❌ InnerTube URL olu (403): $videoId');
+        }
+      } else {
+        debugPrint('❌ InnerTube returned empty');
       }
-      debugPrint('❌ InnerTube returned empty');
     } catch (e) {
       debugPrint('❌ InnerTube exception: $e');
     }
@@ -152,12 +212,26 @@ class YouTubeSource implements MusicSource {
       final direct =
           await ExplodeStreamService.instance.getStreamUrl(videoId, maxBitrateKbps: cap);
       if (direct != null && direct.isNotEmpty) {
-        debugPrint('✅ Explode OK: $videoId');
-        return direct;
+        if (_isOpusLike(direct)) {
+          opusFallback ??= direct;
+          debugPrint('⏳ Explode opus, sona birakildi: $videoId');
+        } else {
+          final ok = await _probeAudioUrl(direct);
+          if (ok != false) {
+            debugPrint('✅ Explode OK: $videoId');
+            return direct;
+          }
+          debugPrint('❌ Explode URL olu (403): $videoId');
+        }
+      } else {
+        debugPrint('❌ Explode returned empty');
       }
-      debugPrint('❌ Explode returned empty');
     } catch (e) {
       debugPrint('❌ Explode exception: $e');
+    }
+    if (opusFallback != null) {
+      debugPrint('⚠️ Opus yedegi donuluyor: $videoId');
+      return opusFallback;
     }
     debugPrint('🚫 ALL METHODS FAILED for: $videoId');
     return null;
