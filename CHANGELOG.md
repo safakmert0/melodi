@@ -4,6 +4,11 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.11.22] - 2026-09-30
+
+### APK Build Fix (AGP 8 namespace)
+- `on_audio_query_android 1.1.0` paketinde `namespace` yoktu, AGP 8 derlemeyi patlatıyordu. Kök `build.gradle.kts` o modüle manifest paketini (`com.lucasjosino.on_audio_query`) namespace olarak atıyor; diğer modüllere dokunulmuyor.
+
 ## [5.11.20] - 2026-09-30
 
 ### Debug Ekran Kaldirma + YouTube URL Dogrulama
