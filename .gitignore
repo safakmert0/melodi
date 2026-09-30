@@ -13,6 +13,7 @@ ios/.symlinks/
 ios/Flutter/Generated.xcconfig
 ios/Flutter/flutter_export_environment.sh
 *.ipa
+melodi-dev.db
 
 # Yerel derleme çıktıları
 release*/

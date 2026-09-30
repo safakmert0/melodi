@@ -4,6 +4,11 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.11.19] - 2026-09-30
+
+### Sürüm Numarası Toparlama
+- Tag'ler v5.11.18'e ilerlemişken pubspec/CHANGELOG 5.11.3'te kalmıştı (`git log`: proxy/webview/hifi/soundcloud katmanları, m4a-only, paralel indirme). Numara tag ile hizalandı (5.11.19+36); kod değişikliği yok. Bu sürüm cihaz testi için referans derlemedir.
+
 ## [5.11.3] - 2026-09-11
 
 ### Daha Hizli Calma + Indirme Yedegi + Gizli Sunucu
