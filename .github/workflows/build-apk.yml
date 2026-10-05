@@ -36,13 +36,13 @@ jobs:
       - name: Test
         run: flutter test
 
-      - name: Build debug APK (sideload)
-        run: flutter build apk --debug
+      - name: Build release APK (sideload)
+        run: flutter build apk --release
 
       - name: Rename APK
         run: |
           mkdir -p build/release-apk
-          cp build/app/outputs/flutter-apk/app-debug.apk "build/release-apk/Melodi-${GITHUB_REF_NAME}.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "build/release-apk/Melodi-${GITHUB_REF_NAME}.apk"
           ls -lh build/release-apk/
 
       - name: Upload APK to release

@@ -4,6 +4,17 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.11.23] - 2026-10-05
+
+### APK Build Fix (CI yesil) + Release APK
+- `flutter build apk` CI'da ve yerelde patliyordu; 5 asamali cozumle derleme yesile donduruldu:
+  - AGP `8.7.3` → `8.9.1` (androidx.core 1.17.0 en az 8.9.1 ister).
+  - `compileSdk` 35 → 36, NDK `27.0.12077973` sabitlendi.
+  - `flutter_local_notifications` icin core library desugaring acildi.
+  - Tum modullerde Java/Kotlin hedefi 17 (dynamic_color 1.7.0 ve on_audio_query_android Java 8'e kilitliydi, JVM-target dogrulamasi patliyordu).
+  - `build-apk.yml` artik **release** APK uretiyor (`Melodi-vX.apk`, debug imzali sideload).
+- Yerelde dogrulandi: `app-release.apk` (64.8 MB, com.melodi.app, minSdk 23).
+
 ## [5.11.22] - 2026-09-30
 
 ### APK Build Fix (AGP 8 namespace)
