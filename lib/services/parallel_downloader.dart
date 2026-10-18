@@ -108,7 +108,12 @@ class ParallelDownloader {
     } catch (_) {}
 
     // 1. Kapa: tek baytlik Range ile toplam boyut + Range destegini ogren.
-    final probe = await _probe(uri, headers);
+    var probe = await _probe(uri, headers);
+    if (probe == null) {
+      // Bazi aglarda ilk HEAD paketi kaybolur; kisa bekleyip bir kez daha dene.
+      await Future.delayed(const Duration(milliseconds: 400));
+      probe = await _probe(uri, headers);
+    }
     if (probe == null) return null;
     if (isCancelled != null && isCancelled()) return null;
 

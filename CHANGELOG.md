@@ -4,6 +4,25 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.12.0] - 2026-10-19
+
+### Android Kararlilik + Indirme Gorunurlugu (ANR duzeltmesi)
+- **ANR duzeltmesi**: Agir baslatma adimlari (SQLite, goc, bildirim, audio_service)
+  `runApp`'ten SONRA kosmaya basladi (`_BootstrapApp`); pencere ilk kareyi hemen
+  cizip odaklanir → "Input dispatching timed out" (soguk baslangicta 10. sn ANR) giderildi.
+- **audio_service baglantisi**: `MainActivity` artik `AudioServiceActivity`;
+  manifest'te `com.ryanheise.audioservice.AudioService`
+  (`foregroundServiceType="mediaPlayback"`, MediaBrowserService intent-filter) ve
+  `MediaButtonReceiver` beyani eklendi → "MediaBrowserService r4.a not found"
+  ve FlutterEngine uyari gitti; medya bildirimi/Bluetooth tuslari duzgun calisir.
+- **Indirme sessiz takilmasi**: tum hatlar (WebView, hizli istemci, HLS, manifest,
+  paralel, arka plan, InnerTube, sunucu proxy) arizalandiginda `task.error`
+  katman bazli guncelleniyor ve son basarisizlik sebebi (`_lastMissReason`)
+  kullaniciya gorunur yaziliyor; eski sessiz NULL donusu kalkti.
+- **ParallelDownloader probe**: ilk HEAD paketi kaybolursa 400 ms bekleyip
+  bir kez daha dener (googlevideo ilk baglanti kisitina karsi).
+- pubspec.lock yeniden cozellendi (kisit icinde; tum testler gecen).
+
 ## [5.11.23] - 2026-10-05
 
 ### APK Build Fix (CI yesil) + Release APK

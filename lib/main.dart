@@ -41,186 +41,243 @@ Future<void> main() async {
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
+  } catch (_) {}
 
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: MelodiTheme.background,
-      systemNavigationBarIconBrightness: Brightness.light,
+  SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+    systemNavigationBarColor: MelodiTheme.background,
+    systemNavigationBarIconBrightness: Brightness.light,
+  ));
+
+  try {
+    CrashReporter.init();
+  } catch (e) {
+    AppLogger.e('CrashReporter init failed: $e');
+  }
+  try {
+    DiagnosticsService.instance;
+  } catch (e) {
+    AppLogger.e('DiagnosticsService init failed: $e');
+  }
+
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    unawaited(DiagnosticsService.instance.logError(
+      'FlutterError',
+      details.exceptionAsString(),
+      details.stack,
     ));
+    debugPrint(
+        '=== FLUTTER ERROR ===\n${details.exceptionAsString()}\n${details.stack}');
+  };
 
-    try {
-      CrashReporter.init();
-    } catch (e) {
-      AppLogger.e('CrashReporter init failed: $e');
-    }
-    try {
-      DiagnosticsService.instance;
-    } catch (e) {
-      AppLogger.e('DiagnosticsService init failed: $e');
-    }
-    AppLogger.i('Melodi v${AppConstants.appVersion} starting...');
+  ErrorWidget.builder = buildStartupCrashScreen;
 
-    final db = DatabaseService.instance;
-    try {
-      await db.database;
-    } catch (e) {
-      AppLogger.e('Database init failed: $e');
-    }
-    try {
-      final migration = await StorageManager.instance.migrateLegacyDownloads();
-      if (migration.moved > 0 || migration.relinked > 0) {
-        AppLogger.i(
-          'Private downloads migrated: ${migration.moved}, '
-          'relinked: ${migration.relinked}',
-        );
-      }
-      final swept =
-          await StorageManager.instance.sweepStaleTempFiles();
-      if (swept > 0) {
-        AppLogger.i('Stale temp files cleaned: $swept');
-      }
-    } catch (e) {
-      AppLogger.e('Private download migration failed: $e');
-    }
+  runZonedGuarded(() {
+    runApp(const _BootstrapApp());
+  }, (error, stack) {
+    unawaited(DiagnosticsService.instance
+        .logError('UncaughtZone', error.toString(), stack));
+    debugPrint('=== UNCAUGHT ERROR ===\n$error\n$stack');
+  });
+}
 
-    try {
-      await NotificationService.instance.init();
-    } catch (e) {
-      AppLogger.e('NotificationService init failed: $e');
-    }
-    try {
-      // Arka plan indirmeler (iOS URLSession): uygulama arkaplandayken surer.
-      await FileDownloader().start();
-    } catch (e) {
-      AppLogger.e('FileDownloader start failed: $e');
-    }
-    try {
-      await AudioEffectsService().initialize();
-    } catch (e) {
-      AppLogger.e('AudioEffectsService init failed: $e');
-    }
-    try {
-      BluetoothService.instance.detectBluetoothConnection();
-    } catch (e) {
-      AppLogger.e('BluetoothService init failed: $e');
-    }
-    try {
-      VoiceControlService.instance.registerShortcuts();
-    } catch (e) {
-      AppLogger.e('VoiceControlService init failed: $e');
-    }
-
-    // İzlenecek klasör: her açılışta otomatik tara (arka planda, UI bloklamadan)
-    try {
-      unawaited(WatchedFolderService.instance.scanOnLaunchIfEnabled());
-    } catch (e) {
-      AppLogger.e('WatchedFolder scan failed: $e');
-    }
-
-    AppLogger.i('Services initialized');
-
-    final savedLocale = await db.getSetting('app_locale');
-    if (savedLocale != null && savedLocale.isNotEmpty) {
-      AppLocale.currentLocale = savedLocale;
-    } else {
-      AppLocale.currentLocale = 'tr';
-    }
-
-    late final AudioPlayerHandler audioHandler;
-    try {
-      audioHandler = await AudioService.init(
-        builder: () => AudioPlayerHandler(),
-        config: AudioServiceConfig(
-          androidNotificationChannelId: 'com.melodi.channel',
-          androidNotificationChannelName: 'Melodi Playback',
-          androidNotificationOngoing: true,
-          androidStopForegroundOnPause: true,
-          androidShowNotificationBadge: true,
-          notificationColor: MelodiTheme.primaryGreen,
-          fastForwardInterval: const Duration(seconds: 10),
-          rewindInterval: const Duration(seconds: 10),
+Widget buildStartupCrashScreen(FlutterErrorDetails details) {
+  return MaterialApp(
+    home: Scaffold(
+      backgroundColor: MelodiTheme.background,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.error_outline, color: MelodiTheme.errorRed, size: 48),
+              const SizedBox(height: 16),
+              Text('HATA:',
+                  style: TextStyle(
+                      color: MelodiTheme.errorRed,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text('${details.exception}',
+                  style: TextStyle(
+                      color: MelodiTheme.onSurface, fontSize: 12)),
+              const SizedBox(height: 16),
+              if (details.stack != null)
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Text('${details.stack}',
+                        style: TextStyle(
+                            color: MelodiTheme.onSurfaceVariant,
+                            fontSize: 10)),
+                  ),
+                ),
+            ],
+          ),
         ),
-      ).timeout(const Duration(seconds: 8));
-    } catch (_) {
-      audioHandler = AudioPlayerHandler();
+      ),
+    ),
+  );
+}
+
+/// Agir baslatma adimlari ilk kare cizildikten SONRA kosar.
+/// Boylece pencere hemen odaklanir ve Android input ANR cozulur
+/// (iOS'ta bu siralama fark etmez, davranis ayni kalir).
+Future<AudioPlayerHandler> _initServices() async {
+  AppLogger.i('Melodi v${AppConstants.appVersion} starting...');
+
+  final db = DatabaseService.instance;
+  try {
+    await db.database;
+  } catch (e) {
+    AppLogger.e('Database init failed: $e');
+  }
+  try {
+    final migration = await StorageManager.instance.migrateLegacyDownloads();
+    if (migration.moved > 0 || migration.relinked > 0) {
+      AppLogger.i(
+        'Private downloads migrated: ${migration.moved}, '
+        'relinked: ${migration.relinked}',
+      );
     }
+    final swept = await StorageManager.instance.sweepStaleTempFiles();
+    if (swept > 0) {
+      AppLogger.i('Stale temp files cleaned: $swept');
+    }
+  } catch (e) {
+    AppLogger.e('Private download migration failed: $e');
+  }
 
-    FlutterError.onError = (details) {
-      FlutterError.presentError(details);
-      unawaited(DiagnosticsService.instance.logError(
-        'FlutterError',
-        details.exceptionAsString(),
-        details.stack,
-      ));
-      debugPrint(
-          '=== FLUTTER ERROR ===\n${details.exceptionAsString()}\n${details.stack}');
-    };
+  try {
+    await NotificationService.instance.init();
+  } catch (e) {
+    AppLogger.e('NotificationService init failed: $e');
+  }
+  try {
+    await FileDownloader().start();
+  } catch (e) {
+    AppLogger.e('FileDownloader start failed: $e');
+  }
+  try {
+    await AudioEffectsService().initialize();
+  } catch (e) {
+    AppLogger.e('AudioEffectsService init failed: $e');
+  }
+  try {
+    BluetoothService.instance.detectBluetoothConnection();
+  } catch (e) {
+    AppLogger.e('BluetoothService init failed: $e');
+  }
+  try {
+    VoiceControlService.instance.registerShortcuts();
+  } catch (e) {
+    AppLogger.e('VoiceControlService init failed: $e');
+  }
 
-    ErrorWidget.builder = (details) {
+  // İzlenecek klasör: her açılışta otomatik tara (arka planda, UI bloklamadan)
+  try {
+    unawaited(WatchedFolderService.instance.scanOnLaunchIfEnabled());
+  } catch (e) {
+    AppLogger.e('WatchedFolder scan failed: $e');
+  }
+
+  AppLogger.i('Services initialized');
+
+  final savedLocale = await db.getSetting('app_locale');
+  if (savedLocale != null && savedLocale.isNotEmpty) {
+    AppLocale.currentLocale = savedLocale;
+  } else {
+    AppLocale.currentLocale = 'tr';
+  }
+
+  late final AudioPlayerHandler audioHandler;
+  try {
+    audioHandler = await AudioService.init(
+      builder: () => AudioPlayerHandler(),
+      config: AudioServiceConfig(
+        androidNotificationChannelId: 'com.melodi.channel',
+        androidNotificationChannelName: 'Melodi Playback',
+        androidNotificationOngoing: true,
+        androidStopForegroundOnPause: true,
+        androidShowNotificationBadge: true,
+        notificationColor: MelodiTheme.primaryGreen,
+        fastForwardInterval: const Duration(seconds: 10),
+        rewindInterval: const Duration(seconds: 10),
+      ),
+    ).timeout(const Duration(seconds: 8));
+  } catch (_) {
+    audioHandler = AudioPlayerHandler();
+  }
+  return audioHandler;
+}
+
+class _BootstrapApp extends StatefulWidget {
+  const _BootstrapApp();
+
+  @override
+  State<_BootstrapApp> createState() => _BootstrapAppState();
+}
+
+class _BootstrapAppState extends State<_BootstrapApp> {
+  Widget? _root;
+  Object? _bootError;
+  bool _booting = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _boot());
+  }
+
+  Future<void> _boot() async {
+    try {
+      final audioHandler = await _initServices();
+      if (!mounted) return;
+      setState(() {
+        _root = MelodiApp(audioHandler: audioHandler);
+        _booting = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _bootError = e;
+        _booting = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_root != null) return _root!;
+    if (!_booting && _bootError != null) {
       return MaterialApp(
         home: Scaffold(
           backgroundColor: MelodiTheme.background,
           body: Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.error_outline,
-                      color: MelodiTheme.errorRed, size: 48),
-                  const SizedBox(height: 16),
-                  Text('HATA:',
-                      style: TextStyle(
-                          color: MelodiTheme.errorRed,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Text('${details.exception}',
-                      style: TextStyle(
-                          color: MelodiTheme.onSurface, fontSize: 12)),
-                  const SizedBox(height: 16),
-                  if (details.stack != null)
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Text('${details.stack}',
-                            style: TextStyle(
-                                color: MelodiTheme.onSurfaceVariant,
-                                fontSize: 10)),
-                      ),
-                    ),
-                ],
+              child: Text(
+                'Startup error:\n$_bootError',
+                style: TextStyle(color: MelodiTheme.onSurface, fontSize: 16),
+                textAlign: TextAlign.center,
               ),
             ),
           ),
         ),
       );
-    };
-
-    runZonedGuarded(() {
-      runApp(MelodiApp(audioHandler: audioHandler));
-    }, (error, stack) {
-      unawaited(DiagnosticsService.instance
-          .logError('UncaughtZone', error.toString(), stack));
-      debugPrint('=== UNCAUGHT ERROR ===\n$error\n$stack');
-    });
-  } catch (e) {
-    runApp(MaterialApp(
+    }
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
       home: Scaffold(
         backgroundColor: MelodiTheme.background,
         body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              'Startup error:\n$e',
-              style: TextStyle(color: MelodiTheme.onSurface, fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-          ),
+          child: CircularProgressIndicator(color: MelodiTheme.primaryGreen),
         ),
       ),
-    ));
+    );
   }
 }
 
@@ -349,7 +406,7 @@ class MelodiApp extends StatelessWidget {
             localeResolutionCallback: (locale, supportedLocales) {
               if (locale != null) {
                 for (final supported in supportedLocales) {
-                  if (supported.languageCode == locale.languageCode) {
+                  if (locale.languageCode == supported.languageCode) {
                     return supported;
                   }
                 }
