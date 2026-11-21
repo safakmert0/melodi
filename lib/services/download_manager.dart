@@ -114,6 +114,7 @@ class DownloadManager {
   int _maxParallel = 2;
   bool _wifiOnly = false;
   final Map<String, int> _retryCounts = {};
+  String? _lastMissReason;
   static const int _maxRetries = 3;
   final StreamController<List<DownloadTask>> _controller =
       StreamController<List<DownloadTask>>.broadcast();
@@ -340,6 +341,7 @@ class DownloadManager {
         // YouTube: InnerTube ile dogrudan indirme dizinine indir.
         task.progress = 0.15;
         task.error = 'YouTube indiriliyor...';
+        _lastMissReason = null;
         _notify();
         resultPath = await _downloadViaBundle(task, downloadDir)
             .timeout(const Duration(minutes: 8), onTimeout: () => null);
@@ -349,7 +351,7 @@ class DownloadManager {
               .timeout(const Duration(minutes: 5), onTimeout: () => null);
         }
         if (resultPath == null) {
-          final detail = ExplodeStreamService.instance.lastError;
+          final detail = _lastMissReason ?? ExplodeStreamService.instance.lastError;
           task.state = DownloadState.failed;
           task.error = (detail != null && detail.isNotEmpty)
               ? 'İndirme başarısız: $detail'
@@ -653,9 +655,13 @@ class DownloadManager {
               return webPath;
             }
             debugPrint('📥 DownloadManager: WebView download returned null');
+            _lastMissReason = 'WebView hattından indirme başarısız';
             if (task.cancelled) return null;
           } else {
             debugPrint('📥 DownloadManager: WebView returned empty/invalid URL: $webUrl');
+            if (!task.cancelled) {
+              _lastMissReason = 'WebView kaynak çözümleme başarısız';
+            }
           }
         }
       } catch (e) {
@@ -669,7 +675,7 @@ class DownloadManager {
       try {
         if (!task.cancelled) {
           task.progress = 0.12;
-          task.error = 'Kaynak çözümleniyor...';
+          task.error = 'Hızlı kaynak deneniyor...';
           _notify();
           final fastUrl = await YtMusicService.instance
               .getM4aStreamUrl(videoId)
@@ -700,6 +706,9 @@ class DownloadManager {
               _notify();
               return fastPath;
             }
+            if (!task.cancelled) {
+              _lastMissReason = 'İstemci hattından indirme başarısız';
+            }
             if (task.cancelled) return null;
           }
         }
@@ -708,7 +717,7 @@ class DownloadManager {
       }
       // 0. HLS hatti (en hizli): fMP4 segmentler paralel cekilir.
       task.progress = 0.1;
-      task.error = 'Kaynak çözümleniyor...';
+      task.error = 'HLS kaynağı deneniyor...';
       _notify();
       try {
         final hlsUrl = await ExplodeStreamService.instance
@@ -736,12 +745,15 @@ class DownloadManager {
             _notify();
             return hlsPath;
           }
+          if (!task.cancelled) {
+            _lastMissReason = 'HLS hattından indirme başarısız';
+          }
           if (task.cancelled) return null;
         }
       } catch (_) {}
       // 1. Akışı çözümle (manifest; hızlı olmalı).
       task.progress = 0.15;
-      task.error = 'Kaynak çözümleniyor...';
+      task.error = 'Akış manifesti çözülüyor...';
       _notify();
       final resolved = await ExplodeStreamService.instance
           .resolveStream(videoId,
@@ -791,7 +803,12 @@ class DownloadManager {
           _notify();
           return bgPath;
         }
+        if (!task.cancelled) {
+          _lastMissReason = 'Paralel/arka plan indirme başarısız';
+        }
         if (task.cancelled) return null;
+      } else if (!task.cancelled) {
+        _lastMissReason = 'Akış manifesti çözülmedi';
       }
       task.progress = 0.2;
       task.error = 'YouTube indiriliyor...';
@@ -810,6 +827,9 @@ class DownloadManager {
         isCancelled: () => task.cancelled,
       ).timeout(const Duration(minutes: 10), onTimeout: () => null);
       if (path == null || path.isEmpty || !await File(path).exists()) {
+        if (!task.cancelled) {
+          _lastMissReason = 'Explode indirme başarısız';
+        }
         debugPrint('Explode download failed for $videoId, trying InnerTube');
         // Yedek hat: uygulamanın kendi müzik-istemcili InnerTube indiricisi.
         // Explode istemcileri LOGIN_REQUIRED döndüğünde bunlar çalışabilir.
@@ -832,9 +852,13 @@ class DownloadManager {
             _notify();
             return innerPath;
           }
-        } catch (e) {
-          debugPrint('InnerTube download fallback error: $e');
-        }
+          } catch (e) {
+            debugPrint('InnerTube download fallback error: $e');
+            if (!task.cancelled) _lastMissReason = 'InnerTube hata: $e';
+          }
+          if (!task.cancelled) {
+            _lastMissReason = 'InnerTube yedeği başarısız';
+          }
         // SON YEDEK: Backend proxy (yt-dlp, Range). Cihaz IP'si bot
         // duvarına takıldıysa sunucu üzerinden iner; ancak sunucu IP'si
         // YouTube tarafindan ~32KB/sn kisildigi icin yavastir, en sonda.
@@ -859,9 +883,13 @@ class DownloadManager {
               return viaProxy;
             }
             if (task.cancelled) return null;
+            if (base.isNotEmpty && !task.cancelled) {
+              _lastMissReason = 'Sunucu proxy yedeği başarısız';
+            }
           }
         } catch (e) {
           debugPrint('Backend proxy download miss: $e');
+          if (!task.cancelled) _lastMissReason = 'Sunucu proxy hata: $e';
         }
         return null;
       }
