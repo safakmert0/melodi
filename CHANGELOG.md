@@ -4,6 +4,16 @@ All notable changes to Melodi will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [5.13.0] - 2026-11-21
+
+### iOS Build + Bagimlilik Modernizasyonu
+- file_picker 13, flutter_local_notifications 22, just_audio 0.10.6, permission_handler 13,
+  share_plus 13, connectivity_plus 7, flutter_secure_storage 11, package_info_plus 10.
+- LastFM, slskd kaynagi, lyrics resolver, replay gain ve playback queue altyapisi.
+- iOS native EQ/CarPlay koprusu build disi (AppDelegate referanslari kaldirildi);
+  Dart MethodChannel cagrilari eksik plugin durumuna karsi korundu.
+- CI: Flutter 3.47.1, SPM/UIScene migration kapatildi, iOS minimum 15.0.
+
 ## [5.12.0] - 2026-10-19
 
 ### Android Kararlilik + Indirme Gorunurlugu (ANR duzeltmesi)
