@@ -14,11 +14,11 @@ on:
       flutter_version:
         description: 'Flutter version'
         required: false
-        default: '3.35.4'
+        default: '3.47.1'
         type: string
 
 env:
-  FLUTTER_VERSION: ${{ github.event.inputs.flutter_version || '3.35.4' }}
+  FLUTTER_VERSION: ${{ github.event.inputs.flutter_version || '3.47.1' }}
   BUILD_TYPE: ${{ github.event.inputs.build_type || 'release' }}
   IOS_DEPLOYMENT_TARGET: '16.0'
   GO_VERSION: '1.25'
@@ -151,11 +151,11 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '16.4'
+          xcode-version: '26.1.1'
 
       - name: Select Xcode
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.4.app || sudo xcode-select -s /Applications/Xcode_26.1.1.app
+          sudo xcode-select -s /Applications/Xcode_26.1.1.app
           xcodebuild -version
 
       - name: Install CocoaPods
