@@ -17,23 +17,23 @@ dependencies:
   provider: ^6.1.2
 
   # Audio Playback
-  just_audio: ^0.9.39
+  just_audio: ^0.10.6
   audio_service: ^0.18.13
-  audio_session: ^0.1.21
+  audio_session: ^0.2.4
 
   # Music Scanning & Metadata
   on_audio_query: ^2.9.0
-  permission_handler: ^11.3.1
+  permission_handler: ^13.0.2
   audio_metadata_reader: ^1.4.1
 
   # File Import
-  file_picker: ^8.0.3
-  open_filex: ^4.7.0
+  file_picker: ^13.3.2
+  open_filex: ^5.0.0
 
   # UI
   audio_video_progress_bar: ^2.0.3
-  cached_network_image: ^3.3.1
-  shimmer: ^3.0.0
+  cached_network_image: ^4.0.6
+  shimmer: ^4.0.0
 
   # URL Launcher
   url_launcher: ^6.3.1
@@ -49,7 +49,7 @@ dependencies:
   flutter_inappwebview: ^6.1.5
 
   # Sharing
-  share_plus: ^12.0.2
+  share_plus: ^13.3.1
 
   # Store review prompt
   in_app_review: ^2.0.9
@@ -58,7 +58,7 @@ dependencies:
   in_app_purchase: ^3.1.0
 
   # Local notifications
-  flutter_local_notifications: ^18.0.1
+  flutter_local_notifications: ^22.3.3
 
   # Color extraction from images
   palette_generator: ^0.3.3
@@ -67,7 +67,7 @@ dependencies:
   crypto: ^3.0.6
   uuid: ^4.4.2
   collection: ^1.18.0
-  connectivity_plus: ^6.0.5
+  connectivity_plus: ^7.3.2
   http: ^1.2.1
   html: ^0.15.6
   http_parser: ^4.1.2
@@ -75,17 +75,17 @@ dependencies:
   path: ^1.9.1
 
   dynamic_color: 1.7.0
-  flutter_secure_storage: ^10.3.1
+  flutter_secure_storage: ^11.2.0
   logger: ^2.5.0
   sqflite: ^2.4.2
 
   intl: ^0.20.2
-  package_info_plus: ^9.0.1
+  package_info_plus: ^10.2.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^6.0.0
 
 dependency_overrides:
   path: 1.9.1

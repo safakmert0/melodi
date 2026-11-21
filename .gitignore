@@ -32,3 +32,6 @@ android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
 
 # Reference extracted IPAs (third-party apps) - never commit
 reference/
+
+# Yerel unsigned IPA artefaktlari
+Melodi-unsigned*.zip

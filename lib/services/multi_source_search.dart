@@ -2,11 +2,12 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'music_source.dart';
 import 'sources/hifi_source.dart';
+import 'sources/slskd_source.dart';
 import 'sources/soundcloud_source.dart';
 import 'sources/youtube_source.dart';
 
 /// Çevrimiçi yapı: YouTube (hesapsız, sunucusuz) + Hi-Fi (kayıpsız FLAC,
-/// Melodi backend üzerinden) + SoundCloud (backend scsearch).
+/// Melodi backend üzerinden) + SoundCloud (backend scsearch) + Soulseek (slskd).
 class MultiSourceSearch {
   static final MultiSourceSearch _instance = MultiSourceSearch._();
   factory MultiSourceSearch() => _instance;
@@ -16,6 +17,7 @@ class MultiSourceSearch {
     YouTubeSource(),
     HiFiSource(),
     SoundCloudSource(),
+    SlskdSource(),
   ];
 
   List<MusicSource> get sources => List.unmodifiable(_sources);
@@ -24,6 +26,7 @@ class MultiSourceSearch {
     MusicSourceType.youtube: 0,
     MusicSourceType.hifi: 1,
     MusicSourceType.soundcloud: 2,
+    MusicSourceType.slskd: 3,
   };
 
   int _displayRank(OnlineTrack track) {

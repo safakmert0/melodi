@@ -550,7 +550,7 @@ class _StorageScreenState extends State<StorageScreen> {
   }
 
   Future<void> _moveLibrary() async {
-    final newPath = await FilePicker.platform.getDirectoryPath();
+    final newPath = await FilePicker.getDirectoryPath();
     if (newPath == null || newPath.isEmpty) return;
     setState(() => _isMoving = true);
     try {

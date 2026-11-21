@@ -202,8 +202,7 @@ class WatchedFolderService {
           debugPrint('WatchedFolder native picker yok, kopyalama akışına düşüldü');
         }
         // ... (aşağıdaki dosya seçici akışı yalnızca kanal yoksa çalışır)
-        final result = await FilePicker.platform.pickFiles(
-          allowMultiple: true,
+        final result = await FilePicker.pickFiles(
           type: FileType.custom,
           allowedExtensions: const [
             'mp3',
@@ -220,7 +219,7 @@ class WatchedFolderService {
             'wv',
           ],
         );
-        if (result == null || result.files.isEmpty) return null;
+        if (result.isEmpty) return null;
         final documents = await getApplicationDocumentsDirectory();
         final docsNorm = p.normalize(documents.path);
         final inbox = Directory(
@@ -228,7 +227,7 @@ class WatchedFolderService {
         await inbox.create(recursive: true);
         var copied = 0;
         var inPlace = 0;
-        for (final picked in result.files) {
+        for (final picked in result) {
           final sourcePath = picked.path;
           if (sourcePath == null || !await File(sourcePath).exists()) continue;
           if (_isWithin(p.normalize(sourcePath), docsNorm)) {
@@ -256,7 +255,7 @@ class WatchedFolderService {
         if (inPlace > 0) return systemFolderPath();
         return null;
       }
-      String? dir = await FilePicker.platform.getDirectoryPath(
+      String? dir = await FilePicker.getDirectoryPath(
         dialogTitle: 'İzlenecek klasörü seç',
       );
       if (dir != null && dir.trim().isNotEmpty) {

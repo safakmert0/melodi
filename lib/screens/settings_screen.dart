@@ -15,6 +15,7 @@ import 'downloads_screen.dart';
 import 'follows_screen.dart';
 import 'storage_screen.dart';
 import 'diagnostics_screen.dart';
+import 'lastfm_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -29,6 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _systemFolder;
   bool _watchedAutoScan = true;
   bool _watchedLoading = false;
+  bool _replaygainEnabled = true;
 
   @override
   void initState() {
@@ -36,6 +38,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _selectedLanguage = _localeName(AppLocale.currentLocale);
     PackageInfo.fromPlatform().then((info) {
       if (mounted) setState(() => _appVersion = info.version);
+    });
+    DatabaseService.instance.getSetting('replaygain_enabled').then((v) {
+      if (mounted) setState(() => _replaygainEnabled = v != 'false');
     });
     _loadWatchedFolder();
   }
@@ -429,6 +434,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 const SizedBox(height: 16),
                 Divider(color: MelodiTheme.outlineVariant, height: 1),
+                _SectionTitle(AppLocale.tr('scrobbling')),
+                _SettingsTile(
+                  icon: Icons.album_rounded,
+                  iconColor: Colors.redAccent,
+                  title: 'Last.fm',
+                  subtitle: AppLocale.tr('connect_for_scrobbling'),
+                  trailing:
+                      Icon(Icons.chevron_right, color: MelodiTheme.textMuted),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const LastfmScreen()),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                      color: Theme.of(context).cardTheme.color ??
+                          Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12)),
+                  child: SwitchListTile(
+                    secondary: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                          color: Colors.teal.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8)),
+                      child: const Icon(Icons.graphic_eq_rounded,
+                          color: Colors.teal, size: 20),
+                    ),
+                    title: const Text('ReplayGain',
+                        style: TextStyle(fontSize: 15)),
+                    subtitle: const Text(
+                        'Parçalar arası ses seviyesi farklarını eşitle',
+                        style: TextStyle(fontSize: 12)),
+                    value: _replaygainEnabled,
+                    onChanged: (v) async {
+                      await DatabaseService.instance
+                          .setSetting('replaygain_enabled', v.toString());
+                      if (mounted) setState(() => _replaygainEnabled = v);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
                 _SectionTitle(AppLocale.tr('about')),
                 _SettingsTile(
                   icon: Icons.monitor_heart_outlined,

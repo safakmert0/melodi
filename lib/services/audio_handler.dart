@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
@@ -9,12 +11,14 @@ import 'package:path_provider/path_provider.dart';
 import '../models/song_model.dart';
 import 'database_service.dart';
 import 'explode_stream_service.dart';
+import 'playback_service.dart';
 import 'sources/youtube_source.dart';
 import 'review_service.dart';
 import 'track_matcher.dart';
 import 'multi_source_search.dart';
 import 'music_source.dart';
 import 'ytmusic_service.dart';
+import 'replay_gain_service.dart';
 
 class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
   final AudioPlayer _player = AudioPlayer();
@@ -38,6 +42,40 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     unawaited(_configureAudioSession());
     _initPlayer();
     _startAutoSave();
+    _initCarplay();
+  }
+
+  static const MethodChannel _carplayChannel = MethodChannel('com.melodi/carplay');
+
+  void _initCarplay() {
+    _carplayChannel.setMethodCallHandler((call) async {
+      switch (call.method) {
+        case 'getQueue':
+          return _queue
+              .asMap()
+              .entries
+              .map((e) => {
+                    'index': e.key,
+                    'title': e.value.title,
+                    'artist': e.value.artist,
+                  })
+              .toList();
+        case 'playAt':
+          final i = (call.arguments as num).toInt();
+          if (i >= 0 && i < _queue.length) {
+            _currentIndex = i;
+            await _playCurrent();
+          }
+          return null;
+      }
+      return null;
+    });
+  }
+
+  Future<void> _refreshCarplay() async {
+    try {
+      await _carplayChannel.invokeMethod('refresh');
+    } catch (_) {}
   }
 
   Future<void> _configureAudioSession() async {
@@ -132,18 +170,74 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     });
   }
 
-  // Equalizer stubs - actual equalizer is handled by playback_service
-  // These methods save settings to database; on Android, playback_service applies them
-  Future<void> _restoreEqualizerSettings() async {}
+  // Equalizer: settings persist to DB; iOS applies via native AVAudioUnitEQ
+  // (MTAudioProcessingTap), Android via playback_service.
+  static const MethodChannel _eqChannel = MethodChannel('com.melodi/equalizer');
+  final List<double> _eqBands = List.filled(10, 0.0);
+
+  Future<void> _invokeEq(String method, [Object? arguments]) async {
+    if (!Platform.isIOS) return;
+    try {
+      await _eqChannel.invokeMethod(method, arguments);
+    } catch (e) {
+      debugPrint('EQ $method failed: $e');
+    }
+  }
+
+  Future<void> _restoreEqualizerSettings() async {
+    if (!Platform.isIOS) return;
+    try {
+      final enabled = await _db.getSetting('eq_enabled') == 'true';
+      final preset = await _db.getSetting('eq_preset');
+      final custom = await getCustomEQFromDb();
+      _eqBands.setAll(0, _resolvePresetBands(preset ?? 'normal', custom));
+      await _invokeEq('setBands', List<double>.from(_eqBands));
+      await _invokeEq('setEnabled', enabled);
+    } catch (e) {
+      debugPrint('EQ restore failed: $e');
+    }
+  }
+
+  List<double> _resolvePresetBands(String name, List<double>? custom) {
+    if (name == 'custom' && custom != null && custom.length >= 10) {
+      return custom.sublist(0, 10);
+    }
+    final presets = PlaybackService.equalizerPresets;
+    final match =
+        presets.firstWhere((p) => p.name == name, orElse: () => presets.first);
+    return List<double>.from(match.bands.map((b) => b.toDouble()));
+  }
+
   Future<void> applyEqualizerPreset(String name) async {
     await _db.setSetting('eq_preset', name);
+    final custom = await getCustomEQFromDb();
+    _eqBands.setAll(0, _resolvePresetBands(name, custom));
+    await _invokeEq('setBands', List<double>.from(_eqBands));
+  }
+
+  Future<List<double>?> getCustomEQFromDb() async {
+    final raw = await _db.getSetting('eq_custom_bands');
+    if (raw == null || raw.trim().isEmpty) return null;
+    final parts = raw.split(',').map((s) => double.tryParse(s.trim()));
+    if (parts.any((p) => p == null)) return null;
+    return parts.cast<double>().toList();
   }
 
   Future<void> setEqualizerEnabled(bool enabled) async {
     await _db.setSetting('eq_enabled', enabled.toString());
+    await _invokeEq('setEnabled', enabled);
   }
 
-  Future<void> setEqualizerBand(int index, double gain) async {}
+  Future<void> setEqualizerBand(int index, double gain) async {
+    if (index < 0 || index >= _eqBands.length) return;
+    _eqBands[index] = gain;
+    await _db.setSetting(
+      'eq_custom_bands',
+      _eqBands.map((b) => b.toStringAsFixed(1)).join(','),
+    );
+    await _db.setSetting('eq_preset', 'custom');
+    await _invokeEq('setBands', List<double>.from(_eqBands));
+  }
 
   void _startAutoSave() {
     _saveStateTimer = Timer.periodic(const Duration(seconds: 5), (_) {
@@ -242,9 +336,8 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
               if (_playbackSpeedOverride != null) {
                 await _player.setSpeed(_playbackSpeedOverride!);
               }
-              if (_volumeOverride != null) {
-                await _player.setVolume(_volumeOverride!.clamp(0.5, 2.0));
-              }
+              await _loadReplayGain(song.filePath);
+              await _applyVolume();
               _isInitialized = true;
               _broadcastState();
 
@@ -358,7 +451,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       _player.processingStateStream;
   Stream<bool> get playingStream => _player.playingStream;
   double get playbackSpeed => _player.speed;
-  double get volume => _player.volume;
+  double get volume => _volumeOverride ?? 1.0;
   Duration get crossfadeDuration => _crossfadeDuration;
   bool get autoShuffleEnabled => _autoShuffleEnabled;
 
@@ -621,6 +714,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
 
     _isInitialized = false;
     _crossfadeSubscription?.cancel();
+    _rgGain = null;
     var song = _queue[_currentIndex];
 
     try {
@@ -667,6 +761,7 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       } else if (song.filePath.startsWith('online://')) {
         audioSource = await _resolveOnlineAudioSource(song);
       } else {
+        await _loadReplayGain(song.filePath);
         audioSource = AudioSource.file(song.filePath);
       }
       await _player.setAudioSource(
@@ -698,12 +793,11 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
       if (_playbackSpeedOverride != null) {
         await _player.setSpeed(_playbackSpeedOverride!);
       }
-      if (_volumeOverride != null) {
-        await _player.setVolume(_volumeOverride!.clamp(0.5, 2.0));
-      }
+      await _applyVolume();
 
       // Restore equalizer settings for new track
       await _restoreEqualizerSettings();
+      await _refreshCarplay();
 
       // Crossfade: monitor position and trigger next track early (effective duration)
       if (_crossfadeDuration > Duration.zero && _queue.length > 1) {
@@ -1037,10 +1131,39 @@ class AudioPlayerHandler extends BaseAudioHandler with SeekHandler {
     await _player.setSpeed(speed);
   }
 
+  double? _rgGain;
   double? _volumeOverride;
+
+  Future<void> _loadReplayGain(String path) async {
+    _rgGain = null;
+    if (path.startsWith('http') ||
+        path.startsWith('youtube://') ||
+        path.startsWith('online://')) {
+      return;
+    }
+    try {
+      final enabled = await _db.getSetting('replaygain_enabled') != 'false';
+      if (!enabled) return;
+      final gain = await ReplayGainService.readTrackGain(path);
+      if (gain != null) {
+        _rgGain = (gain < -24 || gain > 24) ? null : math.pow(10.0, gain / 20.0).toDouble();
+      }
+    } catch (e) {
+      debugPrint('ReplayGain load failed: $e');
+    }
+  }
+
+  Future<void> _applyVolume() async {
+    final user = (_volumeOverride ?? 1.0).clamp(0.5, 2.0);
+    var v = user;
+    if (_rgGain != null) {
+      v = (user * _rgGain!).clamp(0.0, 2.0);
+    }
+    await _player.setVolume(v);
+  }
   Future<void> setVolume(double boost) async {
     _volumeOverride = boost.clamp(0.5, 2.0);
-    await _player.setVolume(_volumeOverride!);
+    await _applyVolume();
   }
 
   Future<void> setCrossfade(Duration duration) async {

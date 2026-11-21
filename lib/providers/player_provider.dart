@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../models/song_model.dart';
 import '../services/audio_handler.dart';
 import '../services/database_service.dart';
+import '../services/lastfm_service.dart';
 import '../services/listening_recorder.dart';
 import '../services/widget_service.dart';
 
@@ -24,6 +25,15 @@ class PlayerProvider extends ChangeNotifier {
 
   PlayerProvider(this._handler) {
     _setupListeners();
+    onScrobble = (song, ts) {
+      unawaited(LastfmService.instance.scrobble(
+        artist: song.artist,
+        track: song.title,
+        album: song.album,
+        durationMs: _handler.duration.inMilliseconds,
+        timestamp: ts,
+      ));
+    };
     _periodicTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (hasListeners) notifyListeners();
     });
@@ -183,6 +193,12 @@ class PlayerProvider extends ChangeNotifier {
     try {
       WidgetService.instance.updateNowPlaying(song);
     } catch (_) {}
+    unawaited(LastfmService.instance.updateNowPlaying(
+      artist: song.artist,
+      track: song.title,
+      album: song.album,
+      durationMs: _handler.duration.inMilliseconds,
+    ));
     onNowPlaying?.call();
     notifyListeners();
   }
@@ -190,6 +206,17 @@ class PlayerProvider extends ChangeNotifier {
   Future<void> playFromQueue(List<SongModel> songs, int index) async {
     await _handler.playFromQueue(List<SongModel>.from(songs), index);
     _handler.savePlayerState();
+    if (index >= 0 && index < songs.length) {
+      final song = songs[index];
+      _playStartTime = DateTime.now();
+      _startScrobbleTimer(song);
+      unawaited(LastfmService.instance.updateNowPlaying(
+        artist: song.artist,
+        track: song.title,
+        album: song.album,
+        durationMs: _handler.duration.inMilliseconds,
+      ));
+    }
     notifyListeners();
   }
 

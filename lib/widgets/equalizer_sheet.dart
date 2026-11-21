@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
@@ -84,44 +83,6 @@ class _EqualizerSheetState extends State<EqualizerSheet> {
     if (!_loaded) {
       return const SafeArea(
         child: Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator(strokeWidth: 2))),
-      );
-    }
-
-    if (Platform.isIOS) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(width: 32, height: 3, decoration: BoxDecoration(color: scheme.outlineVariant, borderRadius: BorderRadius.circular(2))),
-              const SizedBox(height: 20),
-              Icon(Icons.tune_rounded, color: scheme.onSurfaceVariant, size: 32),
-              const SizedBox(height: 12),
-              Text(AppLocale.tr('equalizer'), style: Theme.of(context).textTheme.titleMedium?.copyWith(color: scheme.onSurface, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              Text(
-                'Ekolayzır şu anda iOS ses motoruna uygulanamıyor.\nAyarlar kaydedilir; gerçek iOS ses işleme sonraki sürümde eklenecek.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: scheme.surfaceContainerHighest,
-                    foregroundColor: scheme.onSurface,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: Text(AppLocale.tr('close')),
-                ),
-              ),
-            ],
-          ),
-        ),
       );
     }
 

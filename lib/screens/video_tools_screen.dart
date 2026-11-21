@@ -53,12 +53,10 @@ class _VideoToolsScreenState extends State<VideoToolsScreen> {
 
   Future<void> _pickVideo() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.video,
-        allowMultiple: false,
-      );
-      if (result != null && result.files.single.path != null) {
-        final file = File(result.files.single.path!);
+      final picked = await FilePicker.pickFile(type: FileType.video);
+      final pickedPath = picked?.path;
+      if (pickedPath != null) {
+        final file = File(pickedPath);
         final duration = await FFmpegRingtoneService.getVideoDuration(file.path);
         setState(() {
           _selectedVideo = file;

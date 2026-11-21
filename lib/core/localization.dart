@@ -115,6 +115,8 @@ class AppLocale {
       'accounts': 'Accounts',
       'connected_as': 'Connected as',
       'disconnect': 'Disconnect',
+      'connect': 'Connect',
+      'confirm': 'Confirm',
       'spotify': 'Spotify',
       'connect_spotify_description':
           'Import your Spotify playlists and liked songs. Connect with your browser cookie.',
@@ -668,6 +670,8 @@ class AppLocale {
       'accounts': 'Hesaplar',
       'connected_as': 'Bağlı:',
       'disconnect': 'Bağlantıyı Kes',
+      'connect': 'Bağlan',
+      'confirm': 'Onayla',
       'spotify': 'Spotify',
       'connect_spotify_description':
           'Spotify çalma listelerini ve beğenilen şarkılarını içe aktar. Tarayıcı çerezinle bağlan.',
@@ -1226,6 +1230,8 @@ class AppLocale {
       'accounts': 'Konten',
       'connected_as': 'Verbunden als',
       'disconnect': 'Trennen',
+      'connect': 'Verbinden',
+      'confirm': 'Bestätigen',
       'spotify': 'Spotify',
       'connect_spotify_description':
           'Importiere deine Spotify-Playlists und Lieblingssongs. Verbinde mit deinem Browser-Cookie.',

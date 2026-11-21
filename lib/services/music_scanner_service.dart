@@ -158,9 +158,8 @@ class MusicScannerService {
 
   Future<List<app.SongModel>> importFromFilePicker() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
-        allowMultiple: true,
         allowedExtensions: const [
           'mp3',
           'm4a',
@@ -177,9 +176,9 @@ class MusicScannerService {
         ],
       );
 
-      if (result == null || result.files.isEmpty) return [];
+      if (result.isEmpty) return [];
 
-      final paths = result.files
+      final paths = result
           .where((f) => f.path != null)
           .map((f) => f.path!)
           .toList();
@@ -309,9 +308,8 @@ class MusicScannerService {
   Future<List<app.SongModel>> importFromDirectory() async {
     try {
       if (Platform.isIOS) {
-        final result = await FilePicker.platform.pickFiles(
+        final result = await FilePicker.pickFiles(
           type: FileType.custom,
-          allowMultiple: true,
           allowedExtensions: const [
             'mp3',
             'm4a',
@@ -327,15 +325,15 @@ class MusicScannerService {
             'wv',
           ],
         );
-        if (result == null || result.files.isEmpty) return [];
-        final paths = result.files
+        if (result.isEmpty) return [];
+        final paths = result
             .where((f) => f.path != null)
             .map((f) => f.path!)
             .toList();
         return await importFromPaths(paths);
       }
 
-      String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+      String? selectedDirectory = await FilePicker.getDirectoryPath();
       if (selectedDirectory == null) return [];
 
       return await importFromDirectoryPath(selectedDirectory);

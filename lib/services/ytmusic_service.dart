@@ -779,6 +779,48 @@ class YtMusicService {
     }
   }
 
+  /// InnerTube `next` endpoint — continuation token ile radyo/playlist akışı.
+  Future<Map<String, dynamic>?> next(String endpoint, String? continuation) async {
+    try {
+      final body = <String, dynamic>{
+        'context': {
+          'client': {
+            'clientName': 'IOS_MUSIC',
+            'clientVersion': '5.26.1',
+            'hl': 'en',
+            'gl': 'US',
+            'osName': 'iOS',
+            'osVersion': '17.0',
+            'deviceMake': 'Apple',
+            'deviceModel': 'iPhone15,2',
+          },
+        },
+        'endpoint': endpoint,
+      };
+      if (continuation != null) {
+        body['continuation'] = continuation;
+      }
+
+      final response = await http.post(
+        Uri.parse('https://music.youtube.com/youtubei/v1/next?key=$_innerTubeApiKey'),
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'com.google.ios.youtube.music/5.26.1 (iPhone15,2; U; CPU iOS 17_0 like Mac OS X)',
+          'X-Goog-Api-Key': _innerTubeApiKey,
+        },
+        body: jsonEncode(body),
+      ).timeout(_fetchTimeout);
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      debugPrint('YtMusic next failed: ${response.statusCode}');
+    } catch (e) {
+      debugPrint('YtMusic next error: $e');
+    }
+    return null;
+  }
+
   Future<Map<String, dynamic>?> downloadToFile({
     required String trackId,
     String title = '',

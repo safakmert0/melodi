@@ -21,7 +21,7 @@ class NotificationService {
     );
     const settings =
         InitializationSettings(android: androidSettings, iOS: iosSettings);
-    await _plugin.initialize(settings);
+    await _plugin.initialize(settings: settings);
     _initialized = true;
   }
 
@@ -39,7 +39,13 @@ class NotificationService {
       priority: Priority.defaultPriority,
     );
     const details = NotificationDetails(android: androidDetails);
-    await _plugin.show(id, title, body, details, payload: payload);
+    await _plugin.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: details,
+      payload: payload,
+    );
   }
 
   Future<void> showDownloadComplete(String trackName) async {
@@ -60,7 +66,7 @@ class NotificationService {
   }
 
   Future<void> cancel({required int id}) async {
-    await _plugin.cancel(id);
+    await _plugin.cancel(id: id);
   }
 
   Future<void> cancelAll() async {

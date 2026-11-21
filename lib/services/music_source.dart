@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-enum MusicSourceType { youtube, hifi, soundcloud }
+enum MusicSourceType { youtube, hifi, soundcloud, slskd }
 
 extension MusicSourceTypeCapabilities on MusicSourceType {
   bool get supportsFullTrack => true;
@@ -48,6 +48,8 @@ class OnlineTrack {
         return 'Hi-Fi';
       case MusicSourceType.soundcloud:
         return 'SoundCloud';
+      case MusicSourceType.slskd:
+        return 'Soulseek';
     }
   }
 
@@ -84,6 +86,37 @@ class OnlineTrack {
       itemType: itemType ?? this.itemType,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'artist': artist,
+        'album': album,
+        'durationMs': duration.inMilliseconds,
+        'thumbnailUrl': thumbnailUrl,
+        'source': source.name,
+        'streamUrl': streamUrl,
+        'extensionId': extensionId,
+        'extensionName': extensionName,
+        'itemType': itemType,
+      };
+
+  factory OnlineTrack.fromJson(Map<String, dynamic> json) => OnlineTrack(
+        id: json['id'] as String,
+        title: json['title'] as String,
+        artist: json['artist'] as String,
+        album: json['album'] as String?,
+        duration: Duration(milliseconds: json['durationMs'] as int? ?? 0),
+        thumbnailUrl: json['thumbnailUrl'] as String?,
+        source: MusicSourceType.values.firstWhere(
+          (e) => e.name == json['source'],
+          orElse: () => MusicSourceType.youtube,
+        ),
+        streamUrl: json['streamUrl'] as String?,
+        extensionId: json['extensionId'] as String?,
+        extensionName: json['extensionName'] as String?,
+        itemType: json['itemType'] as String? ?? '',
+      );
 }
 
 abstract class MusicSource {
